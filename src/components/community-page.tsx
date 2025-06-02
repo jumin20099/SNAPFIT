@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { PostDetailPage } from "@/components/post-detail-page"
+import { useModals } from "@/contexts/ModalContext"
 
 interface Post {
   id: number
@@ -168,18 +170,15 @@ const mockPosts: Post[] = [
 
 const sortOptions = ["최신순", "좋아요순", "댓글순", "스크랩순"]
 
-interface CommunityPageProps {
-  isOpen: boolean
-  onClose: () => void
-}
-
-export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
+export default function CommunityPage() {
   const [posts, setPosts] = useState(mockPosts)
   const [activeSortOption, setActiveSortOption] = useState("최신순")
   const [showSortOptions, setShowSortOptions] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [activeTab, setActiveTab] = useState("home")
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null)
+  const { isCommunityOpen, closeCommunity } = useModals()
 
   const toggleLike = (postId: number) => {
     setPosts(
@@ -245,14 +244,27 @@ export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
     return `${date.getMonth() + 1}월 ${date.getDate()}일`
   }
 
-  if (!isOpen) return null
+  const handlePostClick = (postId: number) => {
+    setSelectedPostId(postId)
+  }
+
+  const handleClosePostDetail = () => {
+    setSelectedPostId(null)
+  }
+
+  if (!isCommunityOpen) return null
+
+  // 게시글 상세 페이지가 열려있으면 해당 컴포넌트 렌더링
+  if (selectedPostId !== null) {
+    return <PostDetailPage isOpen={true} onClose={handleClosePostDetail} postId={selectedPostId} />
+  }
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col h-screen">
       {/* Header */}
       <div className="bg-white border-b p-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onClose} className="p-1 h-8 w-8">
+          <Button variant="ghost" size="sm" onClick={closeCommunity} className="p-1 h-8 w-8">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="font-bold text-xl">SNAPFIT</div>
@@ -311,92 +323,58 @@ export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
             <TabsContent value="home" className="h-full m-0">
-              <div className="p-4 space-y-6 pb-20">
+              <div className="pb-20">
                 {getSortedPosts().map((post) => (
-                  <Card key={post.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
-                    <div className="aspect-[4/3] w-full overflow-hidden">
-                      <img
-                        src={post.thumbnail || "/placeholder.svg"}
-                        alt={post.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary" className={`text-xs ${getTypeColor(post.type)}`}>
-                          {post.type === "trend"
-                            ? "트렌드"
-                            : post.type === "styling"
-                              ? "스타일링"
-                              : post.type === "review"
-                                ? "리뷰"
-                                : post.type === "info"
-                                  ? "정보"
-                                  : "패션팁"}
-                        </Badge>
-                        {post.tags.slice(0, 2).map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
+                  <div
+                    key={post.id}
+                    className="border-b border-gray-100 p-4 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handlePostClick(post.id)}
+                  >
+                    <div className="flex gap-3">
+                      {/* 썸네일 이미지 */}
+                      <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded">
+                        <img
+                          src={post.thumbnail || "/placeholder.svg"}
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                      <h3 className="font-bold text-lg mb-2 line-clamp-2">{post.title}</h3>
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-3">{post.content}</p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={post.authorImage || "/placeholder.svg"}
-                            alt={post.author}
-                            className="w-6 h-6 rounded-full object-cover"
-                          />
-                          <span className="text-sm font-medium">{post.author}</span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
+
+                      {/* 게시글 정보 */}
+                      <div className="flex-1 min-w-0">
+                        {/* 제목과 댓글수 */}
+                        <h3 className="font-medium text-base mb-1 line-clamp-2 text-blue-600">
+                          {post.title} <span className="text-blue-500">[{post.comments}]</span>
+                        </h3>
+
+                        {/* 작성자와 시간 */}
+                        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                          <span>{post.author}</span>
+                          <span>-</span>
                           <span>{formatDate(post.date)}</span>
-                          <span>{post.readTime}</span>
                         </div>
-                      </div>
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                        <div className="flex items-center gap-4">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="p-0 h-auto flex items-center gap-1"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleLike(post.id)
-                            }}
-                          >
-                            <Heart
-                              className={`w-4 h-4 ${post.liked ? "fill-red-500 text-red-500" : "text-gray-500"}`}
-                            />
-                            <span className="text-sm">{post.likes}</span>
-                          </Button>
-                          <div className="flex items-center gap-1 text-gray-500">
-                            <MessageSquare className="w-4 h-4" />
-                            <span className="text-sm">{post.comments}</span>
+
+                        {/* 통계 정보 */}
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Heart className="w-4 h-4" />
+                            <span>{post.likes}</span>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="p-0 h-auto flex items-center gap-1"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleScrap(post.id)
-                            }}
-                          >
-                            <Bookmark
-                              className={`w-4 h-4 ${post.scraped ? "fill-blue-500 text-blue-500" : "text-gray-500"}`}
-                            />
-                            <span className="text-sm">{post.scraps}</span>
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <MessageSquare className="w-4 h-4" />
+                            <span>{post.comments}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Bookmark className="w-4 h-4" />
+                            <span>{post.scraps}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span>조회 {Math.floor(Math.random() * 1000) + 100}</span>
+                          </div>
                         </div>
-                        <Button variant="ghost" size="sm" className="p-0 h-auto">
-                          <MoreHorizontal className="w-4 h-4 text-gray-500" />
-                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
             </TabsContent>

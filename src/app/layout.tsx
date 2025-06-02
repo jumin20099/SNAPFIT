@@ -1,9 +1,13 @@
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
+import { ModalProvider } from '@/contexts/ModalContext'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'SnapFit',
-  description: 'SnapFit - Your Fashion Assistant',
+  title: 'SNAPFIT',
+  description: '패션을 더 스마트하게',
 }
 
 export default function RootLayout({
@@ -13,8 +17,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className="min-h-screen bg-background">
-        {children}
+      <body className={inter.className}>
+        <ModalProvider>{children}</ModalProvider>
       </body>
     </html>
   )
