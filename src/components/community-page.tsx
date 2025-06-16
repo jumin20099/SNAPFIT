@@ -39,6 +39,7 @@ interface Post {
   type: "fashion-tip" | "review" | "trend" | "styling" | "info"
 }
 
+// 추후 백엔드 코드로 대체 예정
 const mockPosts: Post[] = [
   {
     id: 1,
@@ -171,6 +172,7 @@ const mockPosts: Post[] = [
 const sortOptions = ["최신순", "좋아요순", "댓글순", "스크랩순"]
 
 export default function CommunityPage() {
+  // 추후 백엔드 코드로 대체 예정
   const [posts, setPosts] = useState(mockPosts)
   const [activeSortOption, setActiveSortOption] = useState("최신순")
   const [showSortOptions, setShowSortOptions] = useState(false)
@@ -180,6 +182,7 @@ export default function CommunityPage() {
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null)
   const { isCommunityOpen, closeCommunity } = useModals()
 
+  // 추후 백엔드 API로 대체 예정
   const toggleLike = (postId: number) => {
     setPosts(
       posts.map((post) =>
@@ -190,6 +193,7 @@ export default function CommunityPage() {
     )
   }
 
+  // 추후 백엔드 API로 대체 예정
   const toggleScrap = (postId: number) => {
     setPosts(
       posts.map((post) =>
@@ -200,6 +204,7 @@ export default function CommunityPage() {
     )
   }
 
+  // 추후 백엔드 API로 대체 예정
   const getSortedPosts = () => {
     const sortedPosts = [...posts]
     switch (activeSortOption) {
@@ -215,6 +220,7 @@ export default function CommunityPage() {
     }
   }
 
+  // 추후 백엔드 API로 대체 예정
   const getTypeColor = (type: string) => {
     switch (type) {
       case "trend":
@@ -232,6 +238,7 @@ export default function CommunityPage() {
     }
   }
 
+  // 추후 백엔드 API로 대체 예정
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -244,10 +251,12 @@ export default function CommunityPage() {
     return `${date.getMonth() + 1}월 ${date.getDate()}일`
   }
 
+  // 추후 백엔드 API로 대체 예정
   const handlePostClick = (postId: number) => {
     setSelectedPostId(postId)
   }
 
+  // 추후 백엔드 API로 대체 예정
   const handleClosePostDetail = () => {
     setSelectedPostId(null)
   }
@@ -333,12 +342,12 @@ export default function CommunityPage() {
                     <div className="flex gap-3">
                       {/* 썸네일 이미지 */}
                       <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded">
-                        <img
-                          src={post.thumbnail || "/placeholder.svg"}
-                          alt={post.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
+                      <img
+                        src={post.thumbnail || "/placeholder.svg"}
+                        alt={post.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
 
                       {/* 게시글 정보 */}
                       <div className="flex-1 min-w-0">
@@ -359,7 +368,7 @@ export default function CommunityPage() {
                           <div className="flex items-center gap-1">
                             <Heart className="w-4 h-4" />
                             <span>{post.likes}</span>
-                          </div>
+                        </div>
                           <div className="flex items-center gap-1">
                             <MessageSquare className="w-4 h-4" />
                             <span>{post.comments}</span>

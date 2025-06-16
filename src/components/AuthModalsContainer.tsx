@@ -1,8 +1,7 @@
 "use client"
 
 import MyPage from "@/components/my-page"
-import LoginPage from "@/components/login-page"
-import SignupPage from "@/components/signup-page"
+import LoginPage from "@/components/social-login"
 import { useModals } from "@/contexts/ModalContext"
 
 export const AuthModalsContainer = () => {
@@ -11,8 +10,6 @@ export const AuthModalsContainer = () => {
     setIsMyPageOpen,
     isLoginOpen,
     setIsLoginOpen,
-    isSignupOpen,
-    setIsSignupOpen,
     handleSwitchToSignup,
     handleSwitchToLogin,
   } = useModals()
@@ -24,11 +21,6 @@ export const AuthModalsContainer = () => {
         open={isLoginOpen}
         onOpenChange={setIsLoginOpen}
         onSwitchToSignup={handleSwitchToSignup}
-      />
-      <SignupPage
-        isOpen={isSignupOpen}
-        onClose={() => setIsSignupOpen(false)}
-        onSwitchToLogin={handleSwitchToLogin}
       />
     </>
   )
