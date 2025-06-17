@@ -10,6 +10,7 @@
     "frontend": "npm run dev",
     "lint": "next lint"
   },
+  "proxy": "http://localhost:8080",
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-checkbox": "^1.3.2",

@@ -1,127 +1,117 @@
 package com.snapfit.api.service;
 
-import com.snapfit.api.entity.User;
-import com.snapfit.api.repository.UserRepository;
-import com.snapfit.api.security.CustomOAuth2User;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
-import java.util.Optional;
+import com.snapfit.api.entity.User;
+import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.security.JwtUtil;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
-public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
+@Transactional
+public class CustomOAuth2UserService
+        implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
-    private final UserRepository userRepository;
+    private final UserRepository userRepo;
+    private final JwtUtil jwtUtil;
 
     @Override
-    public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-        OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate = new DefaultOAuth2UserService();
-        OAuth2User oauth2User = delegate.loadUser(userRequest);
-        
-        String provider = userRequest.getClientRegistration().getRegistrationId();
-        Map<String, Object> attributes = oauth2User.getAttributes();
-        
-        String email = extractEmail(provider, attributes);
-        String providerId = extractProviderId(provider, attributes);
-        String nickname = extractNickname(provider, attributes);
-        String profileImage = extractProfileImage(provider, attributes);
+    public OAuth2User loadUser(OAuth2UserRequest userRequest)
+            throws OAuth2AuthenticationException {
+        try {
+            // 1) DefaultOAuth2UserService 로 프로필 로드
+            OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate =
+                    new DefaultOAuth2UserService();
+            OAuth2User oauthUser = delegate.loadUser(userRequest);
 
-        Optional<User> existingUser = userRepository.findByProviderAndProviderId(provider, providerId);
-        
-        User user = existingUser.orElseGet(() -> {
-            User newUser = User.builder()
-                    .email(email)
-                    .provider(provider)
-                    .providerId(providerId)
-                    .nickname(nickname)
-                    .profileImage(profileImage)
-                    .build();
-            return userRepository.save(newUser);
-        });
+            // 2) kakao 공급자만 처리
+            String registrationId = userRequest.getClientRegistration().getRegistrationId();
+            if (!"kakao".equals(registrationId)) {
+                throw new OAuth2AuthenticationException("지원하지 않는 OAuth2 공급자: " + registrationId);
+            }
 
-        // 기존 사용자의 정보 업데이트
-        user.setEmail(email);
-        user.setNickname(nickname);
-        user.setProfileImage(profileImage);
-        userRepository.save(user);
+            // 3) 속성에서 id, email, nickname 추출
+            Map<String, Object> attrs = oauthUser.getAttributes();
+            Long kakaoId = ((Number) attrs.get("id")).longValue();
+            log.info("카카오 로그인 시도 - 카카오 ID: {}", kakaoId);
 
-        return new CustomOAuth2User(user, attributes);
-    }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> account = (Map<String, Object>) attrs.get("kakao_account");
+            String rawEmail = account != null ? (String) account.get("email") : null;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> profile = account != null
+                    ? (Map<String, Object>) account.get("profile")
+                    : null;
+            String rawNickname = profile != null ? (String) profile.get("nickname") : null;
 
-    private String extractEmail(String provider, Map<String, Object> attributes) {
-        return switch (provider.toLowerCase()) {
-            case "google" -> (String) attributes.get("email");
-            case "kakao" -> {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
-                @SuppressWarnings("unchecked")
-                Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
-                yield (String) profile.get("email");
-            }
-            case "naver" -> {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> response = (Map<String, Object>) attributes.get("response");
-                yield (String) response.get("email");
-            }
-            default -> throw new OAuth2AuthenticationException("Unsupported provider: " + provider);
-        };
-    }
+            // 4) final 변수에 넣어서 람다 캡처 가능하게
+            final String email = (rawEmail == null || rawEmail.isBlank())
+                    ? "kakao_" + kakaoId + "@kakao.anon"
+                    : rawEmail;
+            final String nickname = rawNickname != null
+                    ? rawNickname
+                    : "카카오사용자";
 
-    private String extractProviderId(String provider, Map<String, Object> attributes) {
-        return switch (provider.toLowerCase()) {
-            case "google" -> (String) attributes.get("sub");
-            case "kakao" -> String.valueOf(attributes.get("id"));
-            case "naver" -> {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> response = (Map<String, Object>) attributes.get("response");
-                yield (String) response.get("id");
-            }
-            default -> throw new OAuth2AuthenticationException("Unsupported provider: " + provider);
-        };
-    }
+            log.info("카카오 사용자 정보 - 이메일: {}, 닉네임: {}", email, nickname);
 
-    private String extractNickname(String provider, Map<String, Object> attributes) {
-        return switch (provider.toLowerCase()) {
-            case "google" -> (String) attributes.get("name");
-            case "kakao" -> {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
-                @SuppressWarnings("unchecked")
-                Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
-                yield (String) profile.get("nickname");
+            // 5) DB 조회·생성
+            Optional<User> opt = userRepo.findByProviderAndProviderId("kakao", kakaoId.toString());
+            User user;
+            
+            if (opt.isPresent()) {
+                user = opt.get();
+                log.info("기존 사용자 발견 - ID: {}", user.getUserIdx());
+            } else {
+                user = User.builder()
+                        .email(email)
+                        .nickname(nickname)
+                        .provider("kakao")
+                        .providerId(kakaoId.toString())
+                        .role("ROLE_USER")
+                        .build();
+                log.info("새 사용자 생성 - 이메일: {}", email);
             }
-            case "naver" -> {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> response = (Map<String, Object>) attributes.get("response");
-                yield (String) response.get("nickname");
-            }
-            default -> throw new OAuth2AuthenticationException("Unsupported provider: " + provider);
-        };
-    }
 
-    private String extractProfileImage(String provider, Map<String, Object> attributes) {
-        return switch (provider.toLowerCase()) {
-            case "google" -> (String) attributes.get("picture");
-            case "kakao" -> {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
-                @SuppressWarnings("unchecked")
-                Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
-                yield (String) profile.get("profile_image_url");
-            }
-            case "naver" -> {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> response = (Map<String, Object>) attributes.get("response");
-                yield (String) response.get("profile_image");
-            }
-            default -> null;
-        };
+            // 6) 정보 최신화
+            user.setEmail(email);
+            user.setNickname(nickname);
+            user = userRepo.save(user);
+            log.info("사용자 정보 저장 완료 - ID: {}", user.getUserIdx());
+
+            // 7) JWT 토큰 생성
+            String token = jwtUtil.generateToken(email);
+            log.info("JWT 토큰 생성 완료");
+
+            // 8) DefaultOAuth2User 리턴 (ROLE_USER)
+            return new DefaultOAuth2User(
+                    List.of(new SimpleGrantedAuthority("ROLE_USER")),
+                    Map.of(
+                        "id", kakaoId,
+                        "email", email,
+                        "nickname", nickname,
+                        "token", token
+                    ),
+                    "id"
+            );
+        } catch (Exception e) {
+            log.error("카카오 로그인 처리 중 오류 발생", e);
+            throw new OAuth2AuthenticationException("카카오 로그인 처리 실패");
+        }
     }
 }

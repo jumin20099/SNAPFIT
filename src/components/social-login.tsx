@@ -2,6 +2,7 @@
 
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
 
 interface SocialLoginPageProps {
   open: boolean
@@ -10,9 +11,56 @@ interface SocialLoginPageProps {
 }
 
 export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }: SocialLoginPageProps) {
+  const [user, setUser] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const handleSocialLogin = (provider: string) => {
-    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`
-  }
+    // 카카오 로그인 URL로 직접 이동
+    // const kakaoClientId = "65fbb7b639d4563b52a83fa1ddae5977";
+    // const redirectUri = "http://localhost:8080/login/oauth2/code/kakao";
+    // const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${kakaoClientId}&redirect_uri=${redirectUri}&response_type=code`;
+    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
+  };
+
+  const checkLoginStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/auth/me', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          setUser(data);
+          setIsLoggedIn(true);
+          onOpenChange(false);
+          // URL에서 인증 코드 제거
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } else {
+        console.error('로그인 상태 확인 실패:', response.status);
+      }
+    } catch (error) {
+      console.error('로그인 상태 확인 중 오류:', error);
+    }
+  };
+
+  useEffect(() => {
+    // URL에서 인증 코드 확인
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+
+    if (code && state) {
+      // 인증 코드가 있으면 한 번만 로그인 상태 확인
+      checkLoginStatus();
+    }
+  }, []);
 
   if (!open) return null
 

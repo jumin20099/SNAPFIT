@@ -1,15 +1,69 @@
-// src/main/java/com/snapfit/api/controller/AuthController.java
 package com.snapfit.api.controller;
 
-import com.snapfit.api.entity.User;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.snapfit.api.entity.User;
+import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.security.JwtUtil;
+import com.snapfit.api.util.KakaoUtil;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
+
+    private final KakaoUtil kakaoUtil;
+    private final UserRepository userRepo;
+    private final JwtUtil jwtUtil;
+
+    @GetMapping("/login/kakao")
+    public ResponseEntity<?> kakaoLogin(@RequestParam String code) {
+        var oauthToken = kakaoUtil.requestToken(code);
+        var profile    = kakaoUtil.requestProfile(oauthToken);
+
+        String email    = profile.getKakao_account().getEmail();
+        String nickname = profile.getProperties().getNickname();
+
+        User user = userRepo.findByEmail(email)
+            .orElseGet(() -> User.builder()
+                                 .email(email)
+                                 .nickname(nickname)
+                                 .provider("kakao")
+                                 .providerId(profile.getId().toString())
+                                 .build());
+        userRepo.save(user);
+
+        String token = jwtUtil.generateToken(email);
+
+        System.out.println("[ME] email=" + email + ", nickname=" + nickname);
+
+        return ResponseEntity.ok(Map.of(
+            "token",    token,
+            "email",    email,
+            "nickname", nickname
+        ));
+    }
+
     @GetMapping("/me")
-    public User getCurrentUser(@AuthenticationPrincipal User user) {
-        return user;
+    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            return ResponseEntity.ok().body(Map.of("message", "로그인이 필요합니다."));
+        }
+
+        String token = jwtUtil.generateToken(user.getEmail());
+        return ResponseEntity.ok().body(Map.of(
+            "token", token,
+            "email", user.getEmail(),
+            "nickname", user.getNickname()
+        ));
     }
 }
