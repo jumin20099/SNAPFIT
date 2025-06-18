@@ -105,7 +105,8 @@ public class CustomOAuth2UserService
                         "id", kakaoId,
                         "email", email,
                         "nickname", nickname,
-                        "token", token
+                        "token", token,
+                        "userIdx", user.getUserIdx()
                     ),
                     "id"
             );

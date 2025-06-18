@@ -12,8 +12,11 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.snapfit.api.service.CustomOAuth2UserService;
+import com.snapfit.api.security.JwtAuthenticationFilter;
+import com.snapfit.api.security.JwtUtil;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 
 @Configuration
 @EnableWebSecurity
@@ -38,8 +41,6 @@ public class SecurityConfig {
                     "/api/health",
                     "/api/email/verify/**",
                     "/api/email/resend",
-                    "/api/auth/**",
-                    "/oauth2/**",
                     "/api/auth/signup",
                     "/api/auth/login",
                     "/api/auth/refresh",
@@ -64,6 +65,17 @@ public class SecurityConfig {
                     .userService(customOAuth2UserService))
                 .successHandler((request, response, authentication) -> {
                     // OAuth2 로그인 성공 후 프론트엔드로 리다이렉트
+                    OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+                    String token = (String) oauth2User.getAttributes().get("token");
+                    
+                    // 쿠키에 토큰 저장
+                    jakarta.servlet.http.Cookie tokenCookie = new jakarta.servlet.http.Cookie("auth_token", token);
+                    tokenCookie.setPath("/");
+                    tokenCookie.setHttpOnly(false); // JavaScript에서 접근 가능하도록
+                    tokenCookie.setSecure(false); // 개발 환경에서는 false
+                    tokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7일
+                    response.addCookie(tokenCookie);
+                    
                     response.sendRedirect("http://localhost:3000");
                 })
             )
@@ -76,14 +88,15 @@ public class SecurityConfig {
     /** CORS 전역 설정 */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        var config = new CorsConfiguration();
-        config.addAllowedOrigin("http://localhost:3000");
-        config.addAllowedMethod("*");
-        config.addAllowedHeader("*");
-        config.setAllowCredentials(true);
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.addAllowedOrigin("http://localhost:3000");
+        configuration.addAllowedMethod("*");
+        configuration.addAllowedHeader("*");
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
 
-        var source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }
