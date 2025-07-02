@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { ChevronDown, User, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -71,8 +71,8 @@ const mockLikedProducts: Product[] = [
 ]
 
 interface MyPageProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 export default function MyPage({ open, onOpenChange }: MyPageProps) {
@@ -84,46 +84,6 @@ export default function MyPage({ open, onOpenChange }: MyPageProps) {
   const [currentPage, setCurrentPage] = useState<"main" | "liked-brands" | "liked-products" | "scrap" | "my-cody">(
     "main",
   )
-  const [userNickname, setUserNickname] = useState<string>("익명")
-
-  // 사용자 정보 가져오기
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      const token = localStorage.getItem('token')
-      if (token) {
-        try {
-          const response = await fetch('http://localhost:8080/api/auth/me', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            credentials: 'include'
-          })
-          
-          if (response.ok) {
-            const data = await response.json()
-            console.log("데이터: " + data)
-            if (data.nickname) {
-              setUserNickname(data.nickname)
-            }
-          }
-        } catch (error) {
-          console.error('사용자 정보 가져오기 실패:', error)
-        }
-      }
-    }
-
-    fetchUserInfo()
-  }, [])
-
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-
-  useEffect(() => {
-    // 로컬 스토리지에 JWT 토큰이 있으면 로그인된 상태로 간주
-    const token = localStorage.getItem("token")
-    setIsLoggedIn(!!token)
-  }, [])
 
   const toggleBrandLike = (brandId: number) => {
     setBrands(brands.map((brand) => (brand.id === brandId ? { ...brand, liked: !brand.liked } : brand)))
@@ -133,13 +93,6 @@ export default function MyPage({ open, onOpenChange }: MyPageProps) {
     setLikedProducts(
       likedProducts.map((product) => (product.id === productId ? { ...product, liked: !product.liked } : product)),
     )
-  }
-
-  const handleLogout = () => {
-    // localStorage에서 토큰 제거
-    localStorage.removeItem('token')
-    // 페이지 새로고침하여 로그인 상태 초기화
-    window.location.reload()
   }
 
   if (!open) return null
@@ -178,7 +131,7 @@ export default function MyPage({ open, onOpenChange }: MyPageProps) {
             <User className="w-8 h-8 text-gray-500" />
           </div>
           <div>
-            <h2 className="font-medium">{userNickname}님</h2>
+            <h2 className="font-medium">사용자님</h2>
             <p className="text-sm text-gray-600">프로필을 설정해보세요</p>
           </div>
         </div>
@@ -241,19 +194,6 @@ export default function MyPage({ open, onOpenChange }: MyPageProps) {
             </Button>
           </CollapsibleContent>
         </Collapsible>
-
-        {/* 로그아웃 버튼 */}
-        {isLoggedIn && (
-        <div className="pt-4 border-t">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start h-12 text-red-600 hover:text-red-700 hover:bg-red-50"
-            onClick={handleLogout}
-          >
-            로그아웃
-          </Button>
-        </div>
-        )}
       </div>
     </div>
   )

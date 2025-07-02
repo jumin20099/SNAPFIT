@@ -18,6 +18,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 모든 요청마다 헤더의 Authorization: Bearer <token> 을 체크하여
@@ -28,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     /**
      * OAuth2 콜백이나 에러 페이지 등에서는 JWT 필터를 건너뛰도록.
@@ -48,10 +51,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
-
-        // "Bearer " 로 시작하는 경우에만 토큰 유효성 검사 수행
-        if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
+        if (header == null || !header.startsWith("Bearer ")) {
+            log.warn("Authorization 헤더 없음 또는 Bearer 누락");
+            filterChain.doFilter(request, response);
+            return;
+        }
+        String token = header.substring(7);
+        try {
             if (jwtUtil.validateToken(token)) {
                 String subject = jwtUtil.getSubjectFromToken(token);
                 // 권한 정보만 USER로 고정 (필요 시 DB 조회하여 권한 추가)
@@ -64,10 +70,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                log.info("JWT 인증 성공: " + token);
             }
+        } catch (Exception e) {
+            log.error("JWT 인증 실패: " + e.getMessage());
         }
-
-        // 토큰이 없거나 검증이 안 돼도 다음 필터로 진행
         filterChain.doFilter(request, response);
     }
 }

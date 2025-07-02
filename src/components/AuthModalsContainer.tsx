@@ -2,7 +2,7 @@
 
 import MyPage from "@/components/my-page"
 import LoginPage from "@/components/social-login"
-import { useModals } from "@/contexts/ModalContext"
+import { useModals } from "../contexts/ModalContext"
 
 export const AuthModalsContainer = () => {
   const {

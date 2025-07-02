@@ -10,6 +10,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.http.HttpMethod;
+import java.util.List;
 
 import com.snapfit.api.service.CustomOAuth2UserService;
 import com.snapfit.api.security.JwtAuthenticationFilter;
@@ -31,31 +36,16 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers(
-                    "/api/auth/**",
-                    "/oauth2/**",
-                    "/login/oauth2/**",
-                    "/api/health",
-                    "/api/email/verify/**",
-                    "/api/email/resend",
-                    "/api/auth/signup",
-                    "/api/auth/login",
-                    "/api/auth/refresh",
-                    "/api/auth/check-email",
-                    "/api/auth/check-nickname",
-                    "/api/auth/verify-email/**",
-                    "/api/auth/resend-verification",
-                    "/api/auth/forgot-password",
-                    "/api/auth/reset-password",
-                    "/api/auth/change-password",
-                    "/api/auth/me",
-                    "/api/auth/login/kakao"
+                    "/", "/css/**", "/js/**",
+                    "/login", "/login/oauth2/**", "/oauth2/**",
+                    "/api/auth/**", "/error"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .oauth2Login(oauth2 -> oauth2
                 .authorizationEndpoint(auth -> auth
                     .baseUri("/oauth2/authorization"))
@@ -80,7 +70,13 @@ public class SecurityConfig {
                 })
             )
             .addFilterBefore(new JwtAuthenticationFilter(jwtUtil),
-                    UsernamePasswordAuthenticationFilter.class);
+                    UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(ex -> ex
+                .defaultAuthenticationEntryPointFor(
+                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                    new AntPathRequestMatcher("/api/**")
+                )
+            );
 
         return http.build();
     }
@@ -88,15 +84,14 @@ public class SecurityConfig {
     /** CORS 전역 설정 */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("http://localhost:3000");
-        configuration.addAllowedMethod("*");
-        configuration.addAllowedHeader("*");
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 }

@@ -27,13 +27,12 @@ export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const handleSocialLogin = (provider: string) => {
-    window.location.href = `http://localhost:8080/oauth2/authorization/${provider}`;
+  const handleSocialLogin = () => {
+    window.location.href = '/oauth2/authorization/kakao';
   };
 
   const checkLoginStatus = async () => {
     try {
-      console.log('로그인 상태 확인 시작');
       const response = await fetch('http://localhost:8080/api/auth/me', {
         method: 'GET',
         headers: {
@@ -45,7 +44,6 @@ export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }
       
       if (response.ok) {
         const data = await response.json();
-        console.log('받은 데이터:', data);
         
         if (data.token) {
           console.log('토큰 저장:', data.token);
@@ -53,16 +51,12 @@ export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }
           setUser(data);
           setIsLoggedIn(true);
           onOpenChange(false);
-        } else {
-          console.log('토큰이 없습니다:', data);
         }
       } else {
-        console.error('로그인 상태 확인 실패:', response.status);
         const errorData = await response.json();
         console.error('에러 데이터:', errorData);
       }
     } catch (error) {
-      console.error('로그인 상태 확인 중 오류:', error);
     }
   };
 
@@ -118,7 +112,7 @@ export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }
           <div className="space-y-4">
             {/* Kakao Login */}
             <Button
-              onClick={() => handleSocialLogin("kakao")}
+              onClick={handleSocialLogin}
               className="w-full h-14 bg-yellow-400 hover:bg-yellow-500 text-black font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 border-0"
             >
               <div className="flex items-center justify-center gap-3">
@@ -131,7 +125,7 @@ export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }
 
             {/* Google Login */}
             <Button
-              onClick={() => handleSocialLogin("google")}
+              onClick={() => handleSocialLogin()}
               variant="outline"
               className="w-full h-14 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 border-gray-200"
             >
@@ -162,7 +156,7 @@ export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }
 
             {/* Naver Login */}
             <Button
-              onClick={() => handleSocialLogin("naver")}
+              onClick={() => handleSocialLogin()}
               className="w-full h-14 bg-green-500 hover:bg-green-600 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 border-0"
             >
               <div className="flex items-center justify-center gap-3">

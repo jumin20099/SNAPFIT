@@ -27,7 +27,7 @@ interface PostDetailProps {
   postId: number
 }
 
-export function PostDetailPage({ isOpen, onClose, postId = 1 }: PostDetailProps) {
+export default function PostDetailPage({ isOpen, onClose, postId = 1 }: PostDetailProps) {
   const [activeTab, setActiveTab] = useState<"comments" | "related">("comments")
   const [commentText, setCommentText] = useState("")
   const [isLiked, setIsLiked] = useState(false)
@@ -396,44 +396,44 @@ export function PostDetailPage({ isOpen, onClose, postId = 1 }: PostDetailProps)
                           답글
                         </Button>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* 답글 */}
-                  {comment.replies && comment.replies.length > 0 && (
-                    <div className="mt-3 pl-4 border-l-2 border-gray-100">
-                      {comment.replies.map((reply) => (
-                        <div key={reply.id} className="mb-2">
-                          <div className="flex gap-2">
-                            <Avatar className="w-6 h-6">
-                              <AvatarImage src={reply.authorImage || "/placeholder.svg"} alt={reply.author} />
-                              <AvatarFallback>{reply.author.charAt(0).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between">
-                                <div className="font-medium text-xs">{reply.author}</div>
-                                <div className="text-xs text-gray-500">{reply.date}</div>
-                              </div>
-                              <p className="text-xs mt-1">{reply.content}</p>
-                              <div className="flex items-center gap-4 mt-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => toggleCommentLike(reply.id)}
-                                  className={`p-0 h-auto text-xs flex items-center gap-1 ${
-                                    reply.liked ? "text-red-500" : "text-gray-500"
-                                  }`}
-                                >
-                                  <Heart className={`w-3 h-3 ${reply.liked ? "fill-red-500" : ""}`} />
-                                  <span>{reply.likes}</span>
-                                </Button>
+                      {/* 답글 */}
+                      {comment.replies && comment.replies.length > 0 && (
+                        <div className="mt-3 pl-4 border-l-2 border-gray-100">
+                          {comment.replies.map((reply) => (
+                            <div key={reply.id} className="mb-2">
+                              <div className="flex gap-2">
+                                <Avatar className="w-6 h-6">
+                                  <AvatarImage src={reply.authorImage || "/placeholder.svg"} alt={reply.author} />
+                                  <AvatarFallback>{reply.author.charAt(0).toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <div className="font-medium text-xs">{reply.author}</div>
+                                    <div className="text-xs text-gray-500">{reply.date}</div>
+                                  </div>
+                                  <p className="text-xs mt-1">{reply.content}</p>
+                                  <div className="flex items-center gap-4 mt-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => toggleCommentLike(reply.id)}
+                                      className={`p-0 h-auto text-xs flex items-center gap-1 ${
+                                        reply.liked ? "text-red-500" : "text-gray-500"
+                                      }`}
+                                    >
+                                      <Heart className={`w-3 h-3 ${reply.liked ? "fill-red-500" : ""}`} />
+                                      <span>{reply.likes}</span>
+                                    </Button>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -475,4 +475,4 @@ export function PostDetailPage({ isOpen, onClose, postId = 1 }: PostDetailProps)
       </div>
     </div>
   )
-} 
+}

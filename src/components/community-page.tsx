@@ -1,25 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import {
-  ArrowLeft,
-  Heart,
-  MessageSquare,
-  Search,
-  ChevronDown,
-  MoreHorizontal,
-  Home,
-  Users,
-  User,
-  Bookmark,
-} from "lucide-react"
+import { ArrowLeft, Heart, MessageSquare, Search, ChevronDown, Home, Users, User, Bookmark } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { PostDetailPage } from "@/components/post-detail-page"
-import { useModals } from "@/contexts/ModalContext"
+import PostDetailPage from "./post-detail-page"
+import PostCreatePage from "./post-create-page"
 
 interface Post {
   id: number
@@ -39,7 +26,6 @@ interface Post {
   type: "fashion-tip" | "review" | "trend" | "styling" | "info"
 }
 
-// 추후 백엔드 코드로 대체 예정
 const mockPosts: Post[] = [
   {
     id: 1,
@@ -171,8 +157,12 @@ const mockPosts: Post[] = [
 
 const sortOptions = ["최신순", "좋아요순", "댓글순", "스크랩순"]
 
-export default function CommunityPage() {
-  // 추후 백엔드 코드로 대체 예정
+interface CommunityPageProps {
+  isOpen: boolean
+  onClose: () => void
+}
+
+export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
   const [posts, setPosts] = useState(mockPosts)
   const [activeSortOption, setActiveSortOption] = useState("최신순")
   const [showSortOptions, setShowSortOptions] = useState(false)
@@ -180,9 +170,8 @@ export default function CommunityPage() {
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [activeTab, setActiveTab] = useState("home")
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null)
-  const { isCommunityOpen, closeCommunity } = useModals()
+  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false)
 
-  // 추후 백엔드 API로 대체 예정
   const toggleLike = (postId: number) => {
     setPosts(
       posts.map((post) =>
@@ -193,7 +182,6 @@ export default function CommunityPage() {
     )
   }
 
-  // 추후 백엔드 API로 대체 예정
   const toggleScrap = (postId: number) => {
     setPosts(
       posts.map((post) =>
@@ -204,7 +192,6 @@ export default function CommunityPage() {
     )
   }
 
-  // 추후 백엔드 API로 대체 예정
   const getSortedPosts = () => {
     const sortedPosts = [...posts]
     switch (activeSortOption) {
@@ -220,25 +207,6 @@ export default function CommunityPage() {
     }
   }
 
-  // 추후 백엔드 API로 대체 예정
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "trend":
-        return "bg-purple-100 text-purple-800"
-      case "styling":
-        return "bg-blue-100 text-blue-800"
-      case "review":
-        return "bg-green-100 text-green-800"
-      case "info":
-        return "bg-orange-100 text-orange-800"
-      case "fashion-tip":
-        return "bg-pink-100 text-pink-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
-  // 추후 백엔드 API로 대체 예정
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -251,21 +219,24 @@ export default function CommunityPage() {
     return `${date.getMonth() + 1}월 ${date.getDate()}일`
   }
 
-  // 추후 백엔드 API로 대체 예정
   const handlePostClick = (postId: number) => {
     setSelectedPostId(postId)
   }
 
-  // 추후 백엔드 API로 대체 예정
   const handleClosePostDetail = () => {
     setSelectedPostId(null)
   }
 
-  if (!isCommunityOpen) return null
+  if (!isOpen) return null
 
   // 게시글 상세 페이지가 열려있으면 해당 컴포넌트 렌더링
   if (selectedPostId !== null) {
     return <PostDetailPage isOpen={true} onClose={handleClosePostDetail} postId={selectedPostId} />
+  }
+
+  // 글 작성 페이지가 열려있으면 해당 컴포넌트 렌더링
+  if (isCreatePostOpen) {
+    return <PostCreatePage isOpen={true} onClose={() => setIsCreatePostOpen(false)} />
   }
 
   return (
@@ -273,12 +244,15 @@ export default function CommunityPage() {
       {/* Header */}
       <div className="bg-white border-b p-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={closeCommunity} className="p-1 h-8 w-8">
+          <Button variant="ghost" size="sm" onClick={onClose} className="p-1 h-8 w-8">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div className="font-bold text-xl">SNAPFIT</div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setIsCreatePostOpen(true)} className="text-blue-600">
+            글쓰기
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setIsSearchMode(!isSearchMode)}>
             <Search className="w-5 h-5" />
           </Button>
@@ -342,12 +316,12 @@ export default function CommunityPage() {
                     <div className="flex gap-3">
                       {/* 썸네일 이미지 */}
                       <div className="w-16 h-16 flex-shrink-0 overflow-hidden rounded">
-                      <img
-                        src={post.thumbnail || "/placeholder.svg"}
-                        alt={post.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                        <img
+                          src={post.thumbnail || "/placeholder.svg"}
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
 
                       {/* 게시글 정보 */}
                       <div className="flex-1 min-w-0">
@@ -368,7 +342,7 @@ export default function CommunityPage() {
                           <div className="flex items-center gap-1">
                             <Heart className="w-4 h-4" />
                             <span>{post.likes}</span>
-                        </div>
+                          </div>
                           <div className="flex items-center gap-1">
                             <MessageSquare className="w-4 h-4" />
                             <span>{post.comments}</span>

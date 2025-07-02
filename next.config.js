@@ -7,11 +7,15 @@ const nextConfig = {
         destination: 'http://localhost:8080/api/:path*',
       },
       {
-        source: '/oauth2/:path*',
-        destination: 'http://localhost:8080/oauth2/:path*',
+        source: '/oauth2/authorization/:provider',
+        destination: 'http://localhost:8080/oauth2/authorization/:provider',
+      },
+      {
+        source: '/login/oauth2/code/:provider',
+        destination: 'http://localhost:8080/login/oauth2/code/:provider',
       },
     ];
   },
 };
 
-module.exports = nextConfig; 
+export default nextConfig; 
