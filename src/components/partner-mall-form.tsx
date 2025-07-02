@@ -14,6 +14,7 @@ import { addPartnerMall } from "../actions/admin-actions"
 interface PartnerMall {
   id?: number
   mall_name: string
+  contact: string
   mall_url: string
   commission_rate: number
   status: "active" | "inactive"
@@ -28,6 +29,7 @@ interface PartnerMallFormProps {
 
 export default function PartnerMallForm({ isOpen, onClose, editingMall }: PartnerMallFormProps) {
   const [formData, setFormData] = useState({
+    contact: editingMall?.contact || "",
     mall_name: editingMall?.mall_name || "",
     mall_url: editingMall?.mall_url || "",
     commission_rate: editingMall?.commission_rate?.toString() || "",
@@ -102,6 +104,18 @@ export default function PartnerMallForm({ isOpen, onClose, editingMall }: Partne
                     value={formData.mall_name}
                     onChange={(e) => handleInputChange("mall_name", e.target.value)}
                     placeholder="제휴몰 이름을 입력하세요"
+                    required
+                  />
+                </div>
+
+                {/* 연락처 */}
+                <div className="space-y-2">
+                  <Label htmlFor="contact">몰 연락처 *</Label>
+                  <Input
+                    id="contact"
+                    value={formData.contact}
+                    onChange={(e) => handleInputChange("contact", e.target.value)}
+                    placeholder="제휴몰 연락처를 입력하세요"
                     required
                   />
                 </div>

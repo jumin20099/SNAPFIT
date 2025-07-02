@@ -14,6 +14,7 @@ import { addProduct, updateProduct } from "../actions/admin-actions"
 interface Product {
   id?: number
   product_name: string
+  product_content: string
   product_image: string
   product_link: string
   product_category: string
@@ -43,6 +44,7 @@ const categories = ["상의", "하의", "아우터", "신발", "가방", "패션
 export default function ProductForm({ isOpen, onClose, editingProduct, partnerMalls }: ProductFormProps) {
   const [formData, setFormData] = useState({
     product_name: editingProduct?.product_name || "",
+    product_content: editingProduct?.product_content || "",
     product_image: editingProduct?.product_image || "",
     product_link: editingProduct?.product_link || "",
     product_category: editingProduct?.product_category || "",
@@ -168,6 +170,18 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
                     value={formData.product_name}
                     onChange={(e) => handleInputChange("product_name", e.target.value)}
                     placeholder="상품명을 입력하세요"
+                    required
+                  />
+                </div>
+
+                {/* 상품 설명 */}
+                <div className="space-y-2">
+                  <Label htmlFor="product_name">상품 설명 *</Label>
+                  <Input
+                    id="product_content"
+                    value={formData.product_content}
+                    onChange={(e) => handleInputChange("product_content", e.target.value)}
+                    placeholder="상품 설명을 입력하세요"
                     required
                   />
                 </div>
