@@ -3,6 +3,7 @@ package com.snapfit.api.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -17,5 +18,8 @@ public class Media {
     private String mediaType;       // contentType
     private String mediaUrl;        // S3 public URL
     private String mediaPurpose;    // (예: "post", "profile" 등)
-    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(updatable = false)
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 }
