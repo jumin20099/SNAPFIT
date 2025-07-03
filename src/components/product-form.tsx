@@ -69,32 +69,28 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
-      const formDataObj = new FormData()
-      Object.entries(formData).forEach(([key, value]) => {
-        formDataObj.append(key, value)
-      })
-
-      let result
-      if (editingProduct?.id) {
-        result = await updateProduct(editingProduct.id, formDataObj)
-      } else {
-        result = await addProduct(formDataObj)
-      }
-
-      if (result.success) {
-        alert(result.message)
-        onClose()
-      } else {
-        alert("오류가 발생했습니다.")
-      }
-    } catch (error) {
-      console.error("Submit error:", error)
-      alert("오류가 발생했습니다.")
-    } finally {
-      setIsSubmitting(false)
+    const token = localStorage.getItem("token")
+    const res = await fetch("/api/admin/products/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        storeIdx: partnerMalls.find(mall => mall.mall_name === formData.partner_mall)?.id,
+        productName: formData.product_name,
+        productContent: formData.product_content,
+        productPrice: formData.price,
+        productImage: imageUrl,
+        productCategory: formData.product_category,
+        productLink: formData.product_link,
+      }),
+    })
+    if (res.ok) {
+      alert("상품이 등록되었습니다!")
+      onClose()
+    } else {
+      alert("등록 실패")
     }
   }
 

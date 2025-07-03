@@ -70,7 +70,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                log.info("JWT 인증 성공: " + token);
             }
         } catch (Exception e) {
             log.error("JWT 인증 실패: " + e.getMessage());
