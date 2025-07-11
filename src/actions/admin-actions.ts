@@ -1,6 +1,7 @@
 "use server"
 
 interface Product {
+  product_content: string
   id?: number
   product_name: string
   product_image: string
@@ -70,6 +71,7 @@ const products: Product[] = [
   {
     id: 1,
     product_name: "나이키 에어포스 1",
+    product_content: "편하고 이쁜 나이키 신발",
     product_image: "/placeholder.svg?height=200&width=200",
     product_link: "https://example-mall.com/nike-airforce1",
     product_category: "신발",
@@ -80,6 +82,7 @@ const products: Product[] = [
   {
     id: 2,
     product_name: "유니클로 화이트 티셔츠",
+    product_content: "시원한 티셔츠",
     product_image: "/placeholder.svg?height=200&width=200",
     product_link: "https://example-mall.com/uniqlo-tshirt",
     product_category: "상의",
@@ -185,6 +188,7 @@ export async function addProduct(formData: FormData) {
   const newProduct: Product = {
     id: products.length + 1,
     product_name: formData.get("product_name") as string,
+    product_content: formData.get("product_content") as string,
     product_image: formData.get("product_image") as string,
     product_link: formData.get("product_link") as string,
     product_category: formData.get("product_category") as string,

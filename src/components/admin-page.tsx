@@ -25,6 +25,7 @@ import ProductApprovalPage from "./product-approval"
 interface Product {
   id?: number
   product_name: string
+  product_content: string
   product_image: string
   product_link: string
   product_category: string
@@ -41,6 +42,7 @@ interface PartnerMall {
   commission_rate: number
   status: "active" | "inactive"
   created_at?: string
+  contact?: string
 }
 
 interface AdminPageProps {
@@ -69,7 +71,10 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
     setLoading(true)
     try {
       const [productsData, mallsData] = await Promise.all([getProducts(), getPartnerMalls()])
-      setProducts(productsData)
+      setProducts(productsData.map(p => ({
+        ...p,
+        product_content: p.product_content ?? "",
+      })))
       setPartnerMalls(mallsData)
     } catch (error) {
       console.error("데이터 로드 실패:", error)
@@ -169,7 +174,25 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
 
   // 제휴몰 폼이 열려있으면 해당 컴포넌트 렌더링
   if (isPartnerMallFormOpen) {
-    return <PartnerMallForm isOpen={true} onClose={handleFormClose} editingMall={editingMall} />
+    return (
+      <PartnerMallForm
+        isOpen={true}
+        onClose={handleFormClose}
+        editingMall={
+          editingMall
+            ? {
+                ...editingMall,
+                mall_name: editingMall.mall_name ?? "",
+                mall_url: editingMall.mall_url ?? "",
+                commission_rate: editingMall.commission_rate ?? 0,
+                status: editingMall.status ?? "inactive",
+                created_at: editingMall.created_at ?? "",
+                contact: editingMall.contact ?? "",
+              }
+            : undefined
+        }
+      />
+    )
   }
 
   return (
@@ -276,35 +299,6 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                   </Card>
                 </div>
 
-                {/* 최근 추가된 상품 */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>최근 추가된 상품</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {products
-                        .slice(-5)
-                        .reverse()
-                        .map((product) => (
-                          <div key={product.id} className="flex items-center gap-3 p-2 border rounded">
-                            <img
-                              src={product.product_image || "/placeholder.svg"}
-                              alt={product.product_name}
-                              className="w-12 h-12 object-cover rounded"
-                            />
-                            <div className="flex-1">
-                              <h4 className="font-medium">{product.product_name}</h4>
-                              <p className="text-sm text-gray-600">
-                                {product.partner_mall} • {product.product_category}
-                              </p>
-                            </div>
-                            <div className="text-sm font-medium">{product.price}</div>
-                          </div>
-                        ))}
-                    </div>
-                  </CardContent>
-                </Card>
                 {/* 대시보드 탭에 새로운 카드들 추가 */}
                 <div className="grid grid-cols-2 gap-4 mt-6">
                   <Card
