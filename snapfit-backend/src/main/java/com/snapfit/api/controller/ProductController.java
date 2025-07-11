@@ -5,6 +5,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import java.util.List;
 
 import com.snapfit.api.dto.ProductDto;
 import com.snapfit.api.entity.Product;
@@ -31,5 +34,10 @@ public class ProductController {
             .isActive(true)
             .build();
         return ResponseEntity.ok(productRepository.save(product));
+    }
+
+    @GetMapping("/list")
+    public List<Product> getAllProducts() {
+        return productRepository.findAll();
     }
 }
