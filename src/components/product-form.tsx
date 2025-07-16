@@ -25,9 +25,9 @@ interface Product {
 
 interface PartnerMall {
   id?: number
-  mall_name: string
-  mall_url: string
-  commission_rate: number
+  storeName: string
+  storeLink: string
+  royaltyRate: number
   status: "active" | "inactive"
   created_at?: string
 }
@@ -77,7 +77,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        storeIdx: partnerMalls.find(mall => mall.mall_name === formData.partner_mall)?.id,
+        storeIdx: partnerMalls.find(mall => mall.storeName === formData.partner_mall)?.id,
         productName: formData.product_name,
         productContent: formData.product_content,
         productPrice: formData.price,
@@ -288,8 +288,8 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
                       {partnerMalls
                         .filter((mall) => mall.status === "active")
                         .map((mall) => (
-                          <SelectItem key={mall.id} value={mall.mall_name}>
-                            {mall.mall_name}
+                          <SelectItem key={mall.id} value={mall.storeName}>
+                            {mall.storeName}
                           </SelectItem>
                         ))}
                     </SelectContent>

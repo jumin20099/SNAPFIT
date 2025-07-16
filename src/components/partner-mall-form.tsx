@@ -9,14 +9,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { addPartnerMall } from "../actions/admin-actions"
 
 interface PartnerMall {
   id?: number
-  mall_name: string
+  storeName: string
   contact: string
-  mall_url: string
+  storeLink: string
   commission_rate: number
+  royaltyRate: number
+  storeLogo: string
   status: "active" | "inactive"
   created_at?: string
 }
@@ -28,49 +29,61 @@ interface PartnerMallFormProps {
 }
 
 export default function PartnerMallForm({ isOpen, onClose, editingMall }: PartnerMallFormProps) {
-  const [formData, setFormData] = useState({
+  const [form, setForm] = useState({
+    storeName: editingMall?.storeName || "",
+    storeLogo: editingMall?.storeLogo || "",
+    storeLink: editingMall?.storeLink || "",
+    royaltyRate: editingMall?.royaltyRate || "",
     contact: editingMall?.contact || "",
-    mall_name: editingMall?.mall_name || "",
-    mall_url: editingMall?.mall_url || "",
-    commission_rate: editingMall?.commission_rate?.toString() || "",
-    status: editingMall?.status || "active",
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  });
+  const [logoUploading, setLogoUploading] = useState(false);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("purpose", "store_logo");
+    setLogoUploading(true);
+    try {
+      const res = await fetch("/api/admin/media/upload", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const url = await res.text();
+      setForm((prev) => ({ ...prev, storeLogo: url }));
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    try {
-      const formDataObj = new FormData()
-      Object.entries(formData).forEach(([key, value]) => {
-        formDataObj.append(key, value)
-      })
-
-      const result = await addPartnerMall(formDataObj)
-
-      if (result.success) {
-        alert(result.message)
-        onClose()
-      } else {
-        alert("오류가 발생했습니다.")
-      }
-    } catch (error) {
-      console.error("Submit error:", error)
-      alert("오류가 발생했습니다.")
-    } finally {
-      setIsSubmitting(false)
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+    const res = await fetch("/api/admin/stores/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(form),
+    });
+    if (res.ok) {
+      alert("제휴몰이 등록되었습니다!");
+      onClose();
+    } else {
+      alert("등록 실패");
     }
-  }
+  };
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col h-screen">
@@ -82,8 +95,8 @@ export default function PartnerMallForm({ isOpen, onClose, editingMall }: Partne
           </Button>
           <h1 className="text-xl font-bold">{editingMall ? "제휴몰 수정" : "제휴몰 추가"}</h1>
         </div>
-        <Button type="submit" form="mall-form" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
-          {isSubmitting ? "저장 중..." : "저장"}
+        <Button type="submit" form="mall-form" disabled={logoUploading} className="bg-blue-600 hover:bg-blue-700">
+          {logoUploading ? "저장 중..." : "저장"}
         </Button>
       </div>
 
@@ -98,11 +111,12 @@ export default function PartnerMallForm({ isOpen, onClose, editingMall }: Partne
               <form id="mall-form" onSubmit={handleSubmit} className="space-y-6">
                 {/* 몰 이름 */}
                 <div className="space-y-2">
-                  <Label htmlFor="mall_name">몰 이름 *</Label>
+                  <Label htmlFor="storeName">몰 이름 *</Label>
                   <Input
-                    id="mall_name"
-                    value={formData.mall_name}
-                    onChange={(e) => handleInputChange("mall_name", e.target.value)}
+                    id="storeName"
+                    name="storeName"
+                    value={form.storeName}
+                    onChange={handleChange}
                     placeholder="제휴몰 이름을 입력하세요"
                     required
                   />
@@ -113,8 +127,9 @@ export default function PartnerMallForm({ isOpen, onClose, editingMall }: Partne
                   <Label htmlFor="contact">몰 연락처 *</Label>
                   <Input
                     id="contact"
-                    value={formData.contact}
-                    onChange={(e) => handleInputChange("contact", e.target.value)}
+                    name="contact"
+                    value={form.contact}
+                    onChange={handleChange}
                     placeholder="제휴몰 연락처를 입력하세요"
                     required
                   />
@@ -122,12 +137,13 @@ export default function PartnerMallForm({ isOpen, onClose, editingMall }: Partne
 
                 {/* 몰 URL */}
                 <div className="space-y-2">
-                  <Label htmlFor="mall_url">몰 URL *</Label>
+                  <Label htmlFor="storeLink">몰 URL *</Label>
                   <Input
-                    id="mall_url"
+                    id="storeLink"
+                    name="storeLink"
                     type="url"
-                    value={formData.mall_url}
-                    onChange={(e) => handleInputChange("mall_url", e.target.value)}
+                    value={form.storeLink}
+                    onChange={handleChange}
                     placeholder="https://example-mall.com"
                     required
                   />
@@ -135,36 +151,34 @@ export default function PartnerMallForm({ isOpen, onClose, editingMall }: Partne
 
                 {/* 수수료율 */}
                 <div className="space-y-2">
-                  <Label htmlFor="commission_rate">수수료율 (%) *</Label>
+                  <Label htmlFor="royaltyRate">수수료율 (%) *</Label>
                   <Input
-                    id="commission_rate"
+                    id="royaltyRate"
+                    name="royaltyRate"
                     type="number"
                     step="0.1"
                     min="0"
                     max="100"
-                    value={formData.commission_rate}
-                    onChange={(e) => handleInputChange("commission_rate", e.target.value)}
+                    value={form.royaltyRate}
+                    onChange={handleChange}
                     placeholder="예: 5.5"
                     required
                   />
                 </div>
 
-                {/* 상태 */}
+                {/* 로고 */}
                 <div className="space-y-2">
-                  <Label htmlFor="status">상태 *</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value) => handleInputChange("status", value)}
+                  <Label htmlFor="storeLogo">로고 *</Label>
+                  <Input
+                    id="storeLogo"
+                    name="storeLogo"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoChange}
                     required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="상태를 선택하세요" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">활성</SelectItem>
-                      <SelectItem value="inactive">비활성</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  />
+                  {logoUploading && <p>로고 업로드 중...</p>}
+                  {form.storeLogo && <img src={form.storeLogo} alt="로고 미리보기" style={{ maxWidth: 100 }} />}
                 </div>
               </form>
             </CardContent>

@@ -92,25 +92,6 @@ const products: Product[] = [
   },
 ]
 
-const partnerMalls: PartnerMall[] = [
-  {
-    id: 1,
-    mall_name: "패션몰A",
-    mall_url: "https://fashion-mall-a.com",
-    commission_rate: 5.5,
-    status: "active",
-    created_at: "2024-01-01",
-  },
-  {
-    id: 2,
-    mall_name: "패션몰B",
-    mall_url: "https://fashion-mall-b.com",
-    commission_rate: 4.0,
-    status: "active",
-    created_at: "2024-01-02",
-  },
-]
-
 // 임시 데이터 추가
 const productAnalytics: ProductAnalytics[] = [
   {
@@ -242,45 +223,6 @@ export async function updateProduct(productId: number, formData: FormData) {
   }
 
   return { success: false, message: "상품을 찾을 수 없습니다." }
-}
-
-// 제휴몰 관련 액션들
-export async function addPartnerMall(formData: FormData) {
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  const newMall: PartnerMall = {
-    id: partnerMalls.length + 1,
-    mall_name: formData.get("mall_name") as string,
-    mall_url: formData.get("mall_url") as string,
-    commission_rate: Number.parseFloat(formData.get("commission_rate") as string),
-    status: formData.get("status") as "active" | "inactive",
-    created_at: new Date().toISOString().split("T")[0],
-  }
-
-  partnerMalls.push(newMall)
-
-  return {
-    success: true,
-    message: "제휴몰이 성공적으로 추가되었습니다.",
-    mall: newMall,
-  }
-}
-
-export async function getPartnerMalls() {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return partnerMalls
-}
-
-export async function deletePartnerMall(mallId: number) {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  const index = partnerMalls.findIndex((m) => m.id === mallId)
-  if (index > -1) {
-    partnerMalls.splice(index, 1)
-    return { success: true, message: "제휴몰이 삭제되었습니다." }
-  }
-
-  return { success: false, message: "제휴몰을 찾을 수 없습니다." }
 }
 
 // 새로운 액션들 추가
