@@ -28,6 +28,8 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const editorRef = useRef<HTMLDivElement>(null)
+  const [isEmpty, setIsEmpty] = useState(true);
+  const placeholder = "내용을 입력하세요...";
 
   // 에디터 초기화
   useEffect(() => {
@@ -121,6 +123,11 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
       setContent(editorRef.current.innerHTML)
     }
   }
+
+  const handleEditorInput = (e: React.FormEvent<HTMLDivElement>) => {
+    setIsEmpty(e.currentTarget.textContent === "");
+    handleEditorChange(); // 기존 함수도 호출
+  };
 
   // 게시글 발행
   const handlePublish = () => {
@@ -271,9 +278,11 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
               ref={editorRef}
               contentEditable
               className="min-h-[300px] p-4 focus:outline-none"
-              onInput={handleEditorChange}
-              placeholder="내용을 입력하세요..."
-            />
+              onInput={handleEditorInput}
+              suppressContentEditableWarning
+            >
+              {isEmpty && <span className="placeholder">{placeholder}</span>}
+            </div>
           </div>
 
           {/* 드래그 앤 드롭 영역 */}
