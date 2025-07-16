@@ -37,17 +37,34 @@ interface Product {
 
 interface PartnerMall {
   id?: number
-  mall_name: string
-  mall_url: string
+  storeName: string
+  contact: string
+  storeLink: string
   commission_rate: number
+  royaltyRate: number
+  storeLogo: string
   status: "active" | "inactive"
   created_at?: string
-  contact?: string
 }
 
 interface AdminPageProps {
   isOpen: boolean
   onClose: () => void
+}
+
+// snake_case -> camelCase 변환 함수
+function toCamelMall(mall: any): PartnerMall {
+  return {
+    id: mall.id,
+    storeName: mall.mall_name ?? mall.storeName ?? "",
+    contact: mall.contact ?? "",
+    storeLink: mall.mall_url ?? mall.storeLink ?? "",
+    commission_rate: mall.commission_rate ?? 0,
+    royaltyRate: mall.royaltyRate ?? 0,
+    storeLogo: mall.storeLogo ?? "",
+    status: mall.status,
+    created_at: mall.created_at,
+  };
 }
 
 export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
@@ -75,7 +92,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
         ...p,
         product_content: p.product_content ?? "",
       })))
-      setPartnerMalls(mallsData)
+      setPartnerMalls(mallsData.map(toCamelMall))
     } catch (error) {
       console.error("데이터 로드 실패:", error)
     } finally {
@@ -178,19 +195,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
       <PartnerMallForm
         isOpen={true}
         onClose={handleFormClose}
-        editingMall={
-          editingMall
-            ? {
-                ...editingMall,
-                mall_name: editingMall.mall_name ?? "",
-                mall_url: editingMall.mall_url ?? "",
-                commission_rate: editingMall.commission_rate ?? 0,
-                status: editingMall.status ?? "inactive",
-                created_at: editingMall.created_at ?? "",
-                contact: editingMall.contact ?? "",
-              }
-            : undefined
-        }
+        editingMall={editingMall ? toCamelMall(editingMall) : undefined}
       />
     )
   }
@@ -234,13 +239,6 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
               >
                 <Store className="w-4 h-4" />
                 <span className="hidden sm:inline">제휴몰</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="users"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
-              >
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">사용자</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -362,7 +360,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                   <div className="text-center py-8">로딩 중...</div>
                 ) : (
                   <div className="grid gap-4">
-                    {products.map((product) => (
+                    {products.map((product: Product) => (
                       <Card key={product.id}>
                         <CardContent className="p-4">
                           <div className="flex items-center gap-4">
@@ -428,13 +426,13 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                   <div className="text-center py-8">로딩 중...</div>
                 ) : (
                   <div className="grid gap-4">
-                    {partnerMalls.map((mall) => (
+                    {partnerMalls.map((mall: PartnerMall) => (
                       <Card key={mall.id}>
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <h3 className="font-medium">{mall.mall_name}</h3>
-                              <p className="text-sm text-gray-600 mb-2">{mall.mall_url}</p>
+                              <h3 className="font-medium">{mall.storeName}</h3>
+                              <p className="text-sm text-gray-600 mb-2">{mall.storeLink}</p>
                               <div className="flex items-center gap-2">
                                 <Badge variant={mall.status === "active" ? "default" : "secondary"}>
                                   {mall.status === "active" ? "활성" : "비활성"}
@@ -449,7 +447,15 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleDeleteMall(mall.id!)}
+                                onClick={async () => {
+                                  try {
+                                    await deletePartnerMall(mall.id!);
+                                    alert("삭제 성공!");
+                                    loadData(); // 목록 새로고침
+                                  } catch (e) {
+                                    alert("삭제 실패");
+                                  }
+                                }}
                                 className="text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -461,19 +467,6 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                     ))}
                   </div>
                 )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="users" className="h-full m-0 p-4">
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold">사용자 관리</h2>
-                <Card>
-                  <CardContent className="p-8 text-center">
-                    <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <h3 className="text-lg font-medium mb-2">사용자 관리 기능</h3>
-                    <p className="text-gray-600">사용자 관리 기능은 추후 구현 예정입니다.</p>
-                  </CardContent>
-                </Card>
               </div>
             </TabsContent>
           </div>

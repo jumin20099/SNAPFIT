@@ -231,15 +231,23 @@ export async function getProductAnalytics() {
   return productAnalytics
 }
 
+export async function getPartnerMalls() {
+  const token = localStorage.getItem("token");
+  const res = await fetch("/api/admin/stores", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("제휴몰 목록 불러오기 실패");
+  return await res.json();
+}
+
 export async function deletePartnerMall(id: number) {
-  const token = localStorage.getItem("token"); // 토큰 필요시
+  const token = localStorage.getItem("token");
   const res = await fetch(`/api/admin/stores/${id}`, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error("삭제 실패");
+  if (res.ok) return { success: true, message: "삭제 성공" };
+  return { success: false, message: "삭제 실패" };
 }
 
 export async function getPartnerAnalytics() {
