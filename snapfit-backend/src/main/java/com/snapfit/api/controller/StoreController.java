@@ -33,7 +33,7 @@ public class StoreController {
         return ResponseEntity.ok(storeRepository.save(store));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/api/admin/stores/{id}")
     public ResponseEntity<?> deleteStore(@PathVariable Long id) {
         storeRepository.deleteById(id);
         return ResponseEntity.ok().build();
