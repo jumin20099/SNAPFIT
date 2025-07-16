@@ -25,59 +25,14 @@ interface Product {
   liked: boolean
 }
 
-const mockBrands: Brand[] = [
-  {
-    id: 1,
-    name: "나이키",
-    logo: "/placeholder.svg?height=40&width=40",
-    liked: true,
-  },
-  {
-    id: 2,
-    name: "아디다스",
-    logo: "/placeholder.svg?height=40&width=40",
-    liked: true,
-  },
-  {
-    id: 3,
-    name: "유니클로",
-    logo: "/placeholder.svg?height=40&width=40",
-    liked: true,
-  },
-]
-
-const mockLikedProducts: Product[] = [
-  {
-    id: 1,
-    name: "화이트 티셔츠",
-    description: "편안한 면 소재의 기본 티셔츠",
-    image: "/placeholder.svg?height=60&width=60",
-    liked: true,
-  },
-  {
-    id: 2,
-    name: "블루 청바지",
-    description: "슬림핏 스트레치 데님",
-    image: "/placeholder.svg?height=60&width=60",
-    liked: true,
-  },
-  {
-    id: 3,
-    name: "화이트 스니커즈",
-    description: "클래식 화이트 운동화",
-    image: "/placeholder.svg?height=60&width=60",
-    liked: true,
-  },
-]
-
 interface MyPageProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export default function MyPage({ open, onOpenChange }: MyPageProps) {
-  const [brands, setBrands] = useState(mockBrands)
-  const [likedProducts, setLikedProducts] = useState(mockLikedProducts)
+  const [brands, setBrands] = useState<Brand[]>([])
+  const [likedProducts, setLikedProducts] = useState<Product[]>([])
   const [isLikesOpen, setIsLikesOpen] = useState(false)
   const [isScrapOpen, setIsScrapOpen] = useState(false)
   const [isCodyOpen, setIsCodyOpen] = useState(false)

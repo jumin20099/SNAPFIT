@@ -19,110 +19,13 @@ interface Notification {
   userName?: string
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: 1,
-    type: "like",
-    title: "좋아요",
-    message: "스타일리스트_민지님이 회원님의 코디를 좋아합니다.",
-    timestamp: "2024-01-23T10:30:00Z",
-    read: false,
-    avatar: "/placeholder.svg?height=40&width=40",
-    userName: "스타일리스트_민지",
-    image: "/placeholder.svg?height=60&width=60",
-  },
-  {
-    id: 2,
-    type: "comment",
-    title: "댓글",
-    message: '패션_준호님이 회원님의 게시물에 댓글을 남겼습니다: "정말 멋진 스타일이네요!"',
-    timestamp: "2024-01-23T09:15:00Z",
-    read: false,
-    avatar: "/placeholder.svg?height=40&width=40",
-    userName: "패션_준호",
-    image: "/placeholder.svg?height=60&width=60",
-  },
-  {
-    id: 3,
-    type: "follow",
-    title: "팔로우",
-    message: "코디_소희님이 회원님을 팔로우하기 시작했습니다.",
-    timestamp: "2024-01-23T08:45:00Z",
-    read: true,
-    avatar: "/placeholder.svg?height=40&width=40",
-    userName: "코디_소희",
-  },
-  {
-    id: 4,
-    type: "like",
-    title: "좋아요",
-    message: "멋쟁이_현우님이 회원님의 코디를 좋아합니다.",
-    timestamp: "2024-01-22T16:20:00Z",
-    read: true,
-    avatar: "/placeholder.svg?height=40&width=40",
-    userName: "멋쟁이_현우",
-    image: "/placeholder.svg?height=60&width=60",
-  },
-  {
-    id: 5,
-    type: "system",
-    title: "시스템",
-    message: "새로운 트렌드 분석 리포트가 업데이트되었습니다.",
-    timestamp: "2024-01-22T14:00:00Z",
-    read: true,
-  },
-  {
-    id: 6,
-    type: "comment",
-    title: "댓글",
-    message: '패션_지은님이 회원님의 게시물에 댓글을 남겼습니다: "어디서 구매하셨나요?"',
-    timestamp: "2024-01-22T11:30:00Z",
-    read: true,
-    avatar: "/placeholder.svg?height=40&width=40",
-    userName: "패션_지은",
-    image: "/placeholder.svg?height=60&width=60",
-  },
-  {
-    id: 7,
-    type: "follow",
-    title: "팔로우",
-    message: "스타일_태민님이 회원님을 팔로우하기 시작했습니다.",
-    timestamp: "2024-01-21T19:45:00Z",
-    read: true,
-    avatar: "/placeholder.svg?height=40&width=40",
-    userName: "스타일_태민",
-  },
-]
-
 interface NotificationPageProps {
   isOpen: boolean
   onClose: () => void
 }
 
 export default function NotificationPage({ isOpen, onClose }: NotificationPageProps) {
-  const [notifications, setNotifications] = useState(mockNotifications)
-
-  const removeNotification = (notificationId: number) => {
-    setNotifications(notifications.filter((notification) => notification.id !== notificationId))
-  }
-
-  const markAsRead = (notificationId: number) => {
-    setNotifications(
-      notifications.map((notification) =>
-        notification.id === notificationId ? { ...notification, read: true } : notification,
-      ),
-    )
-  }
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((notification) => ({ ...notification, read: true })))
-  }
-
-  const clearAllNotifications = () => {
-    if (confirm("모든 알림을 삭제하시겠습니까?")) {
-      setNotifications([])
-    }
-  }
+  const [notifications, setNotifications] = useState<Notification[]>([])
 
   const getTimeAgo = (timestamp: string) => {
     const now = new Date()
@@ -183,12 +86,12 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
         </div>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-blue-600 text-sm">
+            <Button variant="ghost" size="sm" onClick={() => {}} className="text-blue-600 text-sm">
               모두 읽음
             </Button>
           )}
           {notifications.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearAllNotifications} className="text-red-600">
+            <Button variant="ghost" size="sm" onClick={() => {}} className="text-red-600">
               <Trash2 className="w-4 h-4" />
             </Button>
           )}
@@ -242,7 +145,7 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => markAsRead(notification.id)}
+                                onClick={() => {}}
                                 className="text-blue-600 text-xs h-6 px-2"
                               >
                                 읽음 처리
@@ -268,7 +171,7 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => removeNotification(notification.id)}
+                      onClick={() => {}}
                       className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 flex-shrink-0"
                     >
                       <X className="w-4 h-4" />

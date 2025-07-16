@@ -12,45 +12,12 @@ interface Brand {
   liked: boolean
 }
 
-const mockBrands: Brand[] = [
-  {
-    id: 1,
-    name: "나이키",
-    logo: "/placeholder.svg?height=40&width=40",
-    liked: true,
-  },
-  {
-    id: 2,
-    name: "아디다스",
-    logo: "/placeholder.svg?height=40&width=40",
-    liked: true,
-  },
-  {
-    id: 3,
-    name: "유니클로",
-    logo: "/placeholder.svg?height=40&width=40",
-    liked: true,
-  },
-  {
-    id: 4,
-    name: "자라",
-    logo: "/placeholder.svg?height=40&width=40",
-    liked: true,
-  },
-  {
-    id: 5,
-    name: "H&M",
-    logo: "/placeholder.svg?height=40&width=40",
-    liked: true,
-  },
-]
-
 interface LikedBrandsPageProps {
   onBack: () => void
 }
 
 export default function LikedBrandsPage({ onBack }: LikedBrandsPageProps) {
-  const [brands, setBrands] = useState(mockBrands)
+  const [brands, setBrands] = useState<Brand[]>([])
 
   const toggleBrandLike = (brandId: number) => {
     setBrands(brands.map((brand) => (brand.id === brandId ? { ...brand, liked: !brand.liked } : brand)))

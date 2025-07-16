@@ -26,135 +26,6 @@ interface Post {
   type: "fashion-tip" | "review" | "trend" | "styling" | "info"
 }
 
-const mockPosts: Post[] = [
-  {
-    id: 1,
-    title: "2024 가을/겨울 트렌드 완벽 분석: 꼭 알아야 할 5가지 스타일",
-    content:
-      "올해 가을겨울 시즌의 핵심 트렌드를 분석해보았습니다. 오버사이즈 코트부터 레트로 컬러까지, 패션 위크에서 발견한 트렌드들을 실제 코디에 어떻게 적용할 수 있는지 상세히 알아보세요. 특히 한국 브랜드들의 해석과 글로벌 트렌드의 차이점도...",
-    author: "fashion_analyst",
-    authorImage: "/placeholder.svg?height=40&width=40",
-    thumbnail: "/placeholder.svg?height=300&width=400",
-    likes: 342,
-    comments: 67,
-    scraps: 89,
-    date: "2024-05-19",
-    readTime: "8분",
-    tags: ["트렌드", "가을패션", "스타일링"],
-    type: "trend",
-    liked: false,
-    scraped: false,
-  },
-  {
-    id: 2,
-    title: "작은 키를 위한 스타일링 가이드: 비율 살리는 코디 법칙",
-    content:
-      "키가 작다고 해서 포기할 필요 없어요! 시각적으로 키를 커 보이게 하는 스타일링 팁들을 정리했습니다. 하이웨스트 활용법, 세로 라인 만들기, 적절한 기장 선택까지. 실제 코디 예시와 함께 자세히 설명드려요.",
-    author: "petite_stylist",
-    authorImage: "/placeholder.svg?height=40&width=40",
-    thumbnail: "/placeholder.svg?height=300&width=400",
-    likes: 289,
-    comments: 45,
-    scraps: 67,
-    date: "2024-05-18",
-    readTime: "6분",
-    tags: ["스타일링", "체형보완", "코디팁"],
-    type: "styling",
-    liked: false,
-    scraped: false,
-  },
-  {
-    id: 3,
-    title: "유니클로 vs 자라 vs H&M: 가성비 브랜드 완벽 비교 리뷰",
-    content:
-      "SPA 브랜드 3사의 2024년 신상품을 직접 구매해서 비교해봤습니다. 소재의 질, 핏, 가격 대비 만족도까지 솔직한 후기를 공유합니다. 각 브랜드별 추천 아이템과 피해야 할 아이템도 함께 정리했어요.",
-    author: "honest_reviewer",
-    authorImage: "/placeholder.svg?height=40&width=40",
-    thumbnail: "/placeholder.svg?height=300&width=400",
-    likes: 456,
-    comments: 89,
-    scraps: 123,
-    date: "2024-05-17",
-    readTime: "12분",
-    tags: ["리뷰", "가성비", "브랜드비교"],
-    type: "review",
-    liked: false,
-    scraped: false,
-  },
-  {
-    id: 4,
-    title: "직장인을 위한 캡슐 워드로브 구성법: 30벌로 1년 버티기",
-    content:
-      "최소한의 옷으로 최대한의 스타일링을 만들어내는 캡슐 워드로브 구성법을 소개합니다. 기본 아이템 선정부터 믹스앤매치 방법까지, 실용적이면서도 세련된 직장인 스타일을 완성해보세요. 계절별 추가 아이템 리스트도 포함되어 있어요.",
-    author: "office_style",
-    authorImage: "/placeholder.svg?height=40&width=40",
-    thumbnail: "/placeholder.svg?height=300&width=400",
-    likes: 378,
-    comments: 52,
-    scraps: 95,
-    date: "2024-05-16",
-    readTime: "10분",
-    tags: ["직장인패션", "캡슐워드로브", "미니멀"],
-    type: "info",
-    liked: false,
-    scraped: false,
-  },
-  {
-    id: 5,
-    title: "컬러 매칭의 과학: 피부톤별 완벽한 색상 조합 찾기",
-    content:
-      "퍼스널 컬러 진단부터 실제 코디 적용까지! 웜톤, 쿨톤별로 어울리는 색상 조합을 과학적으로 분석했습니다. 단순히 유행하는 색이 아닌, 나에게 진짜 어울리는 색을 찾는 방법을 알려드려요. 메이크업과의 조화까지 고려한 토탈 컬러링 가이드입니다.",
-    author: "color_expert",
-    authorImage: "/placeholder.svg?height=40&width=40",
-    thumbnail: "/placeholder.svg?height=300&width=400",
-    likes: 267,
-    comments: 34,
-    scraps: 78,
-    date: "2024-05-15",
-    readTime: "7분",
-    tags: ["컬러매칭", "퍼스널컬러", "스타일링"],
-    type: "fashion-tip",
-    liked: false,
-    scraped: false,
-  },
-  {
-    id: 6,
-    title: "지속가능한 패션: 환경을 생각하는 스마트한 쇼핑법",
-    content:
-      "패스트 패션의 문제점과 지속가능한 패션의 중요성에 대해 이야기해보려고 합니다. 오래 입을 수 있는 옷을 고르는 기준, 빈티지 쇼핑 노하우, 옷 관리법까지. 환경도 지키고 스타일도 살리는 현명한 소비 방법을 제안합니다.",
-    author: "eco_fashionista",
-    authorImage: "/placeholder.svg?height=40&width=40",
-    thumbnail: "/placeholder.svg?height=300&width=400",
-    likes: 198,
-    comments: 28,
-    scraps: 56,
-    date: "2024-05-14",
-    readTime: "9분",
-    tags: ["지속가능패션", "환경", "빈티지"],
-    type: "info",
-    liked: false,
-    scraped: false,
-  },
-  {
-    id: 7,
-    title: "K-패션의 글로벌 진출: 한국 브랜드가 세계를 사로잡는 이유",
-    content:
-      "한국 패션이 전 세계적으로 주목받고 있는 현상을 분석해봤습니다. K-pop과 K-드라마의 영향, 한국 디자이너들의 독창성, 그리고 글로벌 시장에서의 성공 사례들을 통해 K-패션의 미래를 전망해보세요.",
-    author: "k_fashion_insider",
-    authorImage: "/placeholder.svg?height=40&width=40",
-    thumbnail: "/placeholder.svg?height=300&width=400",
-    likes: 423,
-    comments: 76,
-    scraps: 134,
-    date: "2024-05-13",
-    readTime: "11분",
-    tags: ["K패션", "글로벌", "트렌드"],
-    type: "trend",
-    liked: false,
-    scraped: false,
-  },
-]
-
 const sortOptions = ["최신순", "좋아요순", "댓글순", "스크랩순"]
 
 interface CommunityPageProps {
@@ -163,7 +34,7 @@ interface CommunityPageProps {
 }
 
 export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
-  const [posts, setPosts] = useState(mockPosts)
+  const [posts, setPosts] = useState<Post[]>([])
   const [activeSortOption, setActiveSortOption] = useState("최신순")
   const [showSortOptions, setShowSortOptions] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")

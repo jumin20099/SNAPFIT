@@ -21,81 +21,6 @@ interface OutfitPost {
   gender: string
 }
 
-const mockOutfitPosts: OutfitPost[] = [
-  {
-    id: 1,
-    image: "/placeholder.svg?height=400&width=300",
-    user: "스타일리스트_민지",
-    userAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 234,
-    liked: false,
-    tags: ["캐주얼", "데일리"],
-    style: "캐주얼",
-    season: "봄",
-    gender: "여성",
-  },
-  {
-    id: 2,
-    image: "/placeholder.svg?height=500&width=300",
-    user: "패션_준호",
-    userAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 189,
-    liked: true,
-    tags: ["스트릿", "힙합"],
-    style: "스트릿",
-    season: "여름",
-    gender: "남성",
-  },
-  {
-    id: 3,
-    image: "/placeholder.svg?height=350&width=300",
-    user: "코디_소희",
-    userAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 456,
-    liked: false,
-    tags: ["오피스룩", "정장"],
-    style: "포멀",
-    season: "가을",
-    gender: "여성",
-  },
-  {
-    id: 4,
-    image: "/placeholder.svg?height=450&width=300",
-    user: "멋쟁이_현우",
-    userAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 321,
-    liked: true,
-    tags: ["빈티지", "레트로"],
-    style: "빈티지",
-    season: "겨울",
-    gender: "남성",
-  },
-  {
-    id: 5,
-    image: "/placeholder.svg?height=380&width=300",
-    user: "패션_지은",
-    userAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 567,
-    liked: false,
-    tags: ["미니멀", "심플"],
-    style: "미니멀",
-    season: "봄",
-    gender: "여성",
-  },
-  {
-    id: 6,
-    image: "/placeholder.svg?height=420&width=300",
-    user: "스타일_태민",
-    userAvatar: "/placeholder.svg?height=40&width=40",
-    likes: 298,
-    liked: false,
-    tags: ["스포티", "애슬레저"],
-    style: "스포티",
-    season: "여름",
-    gender: "남성",
-  },
-]
-
 const filterOptions = {
   gender: ["전체", "남성", "여성"],
   style: ["전체", "캐주얼", "스트릿", "포멀", "빈티지", "미니멀", "스포티"],
@@ -110,7 +35,7 @@ interface OutfitSharingPageProps {
 
 export default function OutfitSharingPage({ isOpen, onClose }: OutfitSharingPageProps) {
   const [activeTab, setActiveTab] = useState("cody")
-  const [posts, setPosts] = useState(mockOutfitPosts)
+  const [posts, setPosts] = useState<OutfitPost[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [showFilters, setShowFilters] = useState(false)

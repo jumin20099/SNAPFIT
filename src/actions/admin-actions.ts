@@ -231,6 +231,17 @@ export async function getProductAnalytics() {
   return productAnalytics
 }
 
+export async function deletePartnerMall(id: number) {
+  const token = localStorage.getItem("token"); // 토큰 필요시
+  const res = await fetch(`/api/admin/stores/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error("삭제 실패");
+}
+
 export async function getPartnerAnalytics() {
   await new Promise((resolve) => setTimeout(resolve, 500))
   return partnerAnalytics

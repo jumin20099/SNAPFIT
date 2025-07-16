@@ -14,58 +14,6 @@ interface CodyItem {
   position: "hat" | "top" | "bottom" | "shoes" | "bag" | "necklace" | "accessory"
 }
 
-const mockCodyItems: CodyItem[] = [
-  {
-    id: 1,
-    name: "블랙 캡",
-    category: "모자",
-    image: "/placeholder.svg?height=100&width=100",
-    position: "hat",
-  },
-  {
-    id: 2,
-    name: "화이트 티셔츠",
-    category: "상의",
-    image: "/placeholder.svg?height=120&width=100",
-    position: "top",
-  },
-  {
-    id: 3,
-    name: "블루 청바지",
-    category: "하의",
-    image: "/placeholder.svg?height=120&width=100",
-    position: "bottom",
-  },
-  {
-    id: 4,
-    name: "화이트 스니커즈",
-    category: "신발",
-    image: "/placeholder.svg?height=80&width=120",
-    position: "shoes",
-  },
-  {
-    id: 5,
-    name: "블랙 백팩",
-    category: "가방",
-    image: "/placeholder.svg?height=100&width=80",
-    position: "bag",
-  },
-  {
-    id: 6,
-    name: "실버 목걸이",
-    category: "목걸이",
-    image: "/placeholder.svg?height=60&width=60",
-    position: "necklace",
-  },
-  {
-    id: 7,
-    name: "골드 반지",
-    category: "반지",
-    image: "/placeholder.svg?height=40&width=40",
-    position: "accessory",
-  },
-]
-
 const categories = ["전체", "모자", "상의", "하의", "신발", "가방", "목걸이", "반지", "팔찌"]
 
 interface CodySystemProps {
@@ -76,7 +24,7 @@ interface CodySystemProps {
 export default function CodySystem({ isOpen, onClose }: CodySystemProps) {
   const [selectedItems, setSelectedItems] = useState<{ [key: string]: CodyItem }>({})
   const [selectedCategory, setSelectedCategory] = useState("전체")
-  const [availableItems] = useState(mockCodyItems)
+  const [availableItems, setAvailableItems] = useState<CodyItem[]>([])
 
   const addItemToCody = (item: CodyItem) => {
     setSelectedItems((prev) => ({

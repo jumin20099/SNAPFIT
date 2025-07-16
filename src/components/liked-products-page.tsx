@@ -14,55 +14,12 @@ interface Product {
   liked: boolean
 }
 
-const mockLikedProducts: Product[] = [
-  {
-    id: 1,
-    name: "화이트 티셔츠",
-    description: "편안한 면 소재의 기본 티셔츠",
-    price: "29,000원",
-    image: "/placeholder.svg?height=80&width=80",
-    liked: true,
-  },
-  {
-    id: 2,
-    name: "블루 청바지",
-    description: "슬림핏 스트레치 데님",
-    price: "89,000원",
-    image: "/placeholder.svg?height=80&width=80",
-    liked: true,
-  },
-  {
-    id: 3,
-    name: "화이트 스니커즈",
-    description: "클래식 화이트 운동화",
-    price: "129,000원",
-    image: "/placeholder.svg?height=80&width=80",
-    liked: true,
-  },
-  {
-    id: 4,
-    name: "블랙 자켓",
-    description: "캐주얼 블레이저 자켓",
-    price: "159,000원",
-    image: "/placeholder.svg?height=80&width=80",
-    liked: true,
-  },
-  {
-    id: 5,
-    name: "크로스백",
-    description: "가죽 크로스백",
-    price: "79,000원",
-    image: "/placeholder.svg?height=80&width=80",
-    liked: true,
-  },
-]
-
 interface LikedProductsPageProps {
   onBack: () => void
 }
 
 export default function LikedProductsPage({ onBack }: LikedProductsPageProps) {
-  const [products, setProducts] = useState(mockLikedProducts)
+  const [products, setProducts] = useState<Product[]>([])
 
   const toggleProductLike = (productId: number) => {
     setProducts(products.map((product) => (product.id === productId ? { ...product, liked: !product.liked } : product)))
