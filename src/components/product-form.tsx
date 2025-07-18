@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft, Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,7 @@ interface PartnerMall {
   royaltyRate: number
   status: "active" | "inactive"
   created_at?: string
+  logoUrl?: string; // 추가된 로고 URL 필드
 }
 
 interface ProductFormProps {
@@ -55,6 +56,11 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
   const [imagePreview, setImagePreview] = useState(editingProduct?.product_image || "")
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
+  const [selectedStore, setSelectedStore] = useState<PartnerMall | null>(
+    partnerMalls.find(mall => mall.storeName === editingProduct?.partner_mall) || null
+  );
+  const [tempSelectedStore, setTempSelectedStore] = useState<PartnerMall | null>(selectedStore);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -77,7 +83,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
-        storeIdx: partnerMalls.find(mall => mall.storeName === formData.partner_mall)?.id,
+        storeIdx: selectedStore?.id, // storeIdx로 변경
         productName: formData.product_name,
         productContent: formData.product_content,
         productPrice: formData.price,
@@ -273,28 +279,73 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
                   </Select>
                 </div>
 
-                {/* 제휴몰 */}
+                {/* 제휴몰 선택 (모달 방식) */}
                 <div className="space-y-2">
                   <Label htmlFor="partner_mall">제휴몰 *</Label>
-                  <Select
-                    value={formData.partner_mall}
-                    onValueChange={(value) => handleInputChange("partner_mall", value)}
-                    required
+                  <button
+                    type="button"
+                    className="w-full border rounded px-4 py-2 flex items-center gap-2 bg-gray-50 hover:bg-gray-100"
+                    onClick={() => {
+                      setTempSelectedStore(selectedStore);
+                      setIsStoreModalOpen(true);
+                    }}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="제휴몰을 선택하세요" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {partnerMalls
-                        .filter((mall) => mall.status === "active")
-                        .map((mall) => (
-                          <SelectItem key={mall.id} value={mall.storeName}>
-                            {mall.storeName}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                    {selectedStore ? (
+                      <>
+                        {selectedStore.logoUrl && (
+                          <img src={selectedStore.logoUrl} alt={selectedStore.storeName} style={{ width: 24, height: 24, marginRight: 8, borderRadius: 4 }} />
+                        )}
+                        <span>{selectedStore.storeName}</span>
+                        <a href={selectedStore.storeLink} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-500 underline text-xs">{selectedStore.storeLink}</a>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">제휴몰을 선택하세요</span>
+                    )}
+                  </button>
+                  {!selectedStore && <div className="text-red-500 text-xs mt-1">제휴몰을 선택해야 합니다.</div>}
                 </div>
+
+                {/* 제휴사 선택 모달 */}
+                {isStoreModalOpen && (
+                  <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-8 min-w-[350px] max-w-[90vw] max-h-[80vh] overflow-y-auto">
+                      <h2 className="text-lg font-bold mb-4">제휴사 선택</h2>
+                      <div className="grid gap-4">
+                        {partnerMalls.filter(mall => mall.status === "active").map((mall) => (
+                          <div
+                            key={mall.id}
+                            className={`flex items-center gap-4 p-3 border rounded cursor-pointer ${tempSelectedStore?.id === mall.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
+                            onClick={() => setTempSelectedStore(mall)}
+                          >
+                            {mall.logoUrl && (
+                              <img src={mall.logoUrl} alt={mall.storeName} style={{ width: 40, height: 40, borderRadius: 6 }} />
+                            )}
+                            <div>
+                              <div className="font-semibold">{mall.storeName}</div>
+                              <a href={mall.storeLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline text-xs">{mall.storeLink}</a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-end gap-2 mt-6">
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setSelectedStore(tempSelectedStore);
+                            setFormData(prev => ({ ...prev, partner_mall: tempSelectedStore?.storeName || "" }));
+                            setIsStoreModalOpen(false);
+                          }}
+                          disabled={!tempSelectedStore}
+                        >
+                          적용
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => setIsStoreModalOpen(false)}>
+                          취소
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* 가격 */}
                 <div className="space-y-2">

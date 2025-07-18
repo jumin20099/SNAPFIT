@@ -233,7 +233,7 @@ export async function getProductAnalytics() {
 
 export async function getPartnerMalls() {
   const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/stores", {
+  const res = await fetch("/api/stores", {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error("제휴몰 목록 불러오기 실패");
