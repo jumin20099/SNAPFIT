@@ -140,6 +140,7 @@ export async function getPartnerMalls() {
   if (typeof window === "undefined") {
     return [];
   }
+  console.log("fetching partner malls");
   const token = localStorage.getItem("token");
   const res = await fetch("/api/admin/stores/list", {
     headers: token ? { Authorization: `Bearer ${token}` } : {},

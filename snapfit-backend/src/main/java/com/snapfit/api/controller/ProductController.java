@@ -44,4 +44,9 @@ public class ProductController {
     public List<Product> getProductsByStoreIdx(@RequestParam Long store_idx) {
         return productService.getProductsByStoreIdx(store_idx);
     }
+
+    @GetMapping("/list")
+    public List<Product> getAllProducts() {
+        return productRepository.findAll();
+    }
 }

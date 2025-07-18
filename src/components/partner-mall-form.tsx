@@ -12,14 +12,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface PartnerMall {
   id?: number
+  storeIdx?: number
   storeName: string
   contact: string
   storeLink: string
-  commission_rate: number
   royaltyRate: number
   storeLogo: string
-  status: "active" | "inactive"
-  created_at?: string
+  isDeleted?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 interface PartnerMallFormProps {

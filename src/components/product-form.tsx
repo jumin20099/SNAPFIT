@@ -25,12 +25,15 @@ interface Product {
 
 interface PartnerMall {
   id?: number
+  storeIdx?: number
   storeName: string
+  contact: string
   storeLink: string
   royaltyRate: number
-  status: "active" | "inactive"
-  created_at?: string
-  logoUrl?: string; // 추가된 로고 URL 필드
+  storeLogo: string
+  isDeleted?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 interface ProductFormProps {
@@ -100,43 +103,35 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
     }
   }
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     const formData = new FormData();
     formData.append("file", file);
     formData.append("purpose", "product_image");
-
-    const token = localStorage.getItem("token")
-    if (!token) {
-      alert("로그인이 필요합니다.");
-      return;
-    }
-    setUploading(true)
+    formData.append("refId", "0"); // 신규 상품은 0으로 보냄
+    setUploading(true);
     try {
       const res = await fetch("/api/media/upload", {
         method: "POST",
         body: formData,
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-      if (res.status === 401) {
-        alert("인증이 필요합니다. 다시 로그인 해주세요.");
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("업로드 에러:", errorText);
+        alert("이미지 업로드 실패: " + errorText);
         return;
       }
-      if (!res.ok) throw new Error("업로드 실패")
-      const { url } = await res.json()
-      setImageUrl(url)
-      handleInputChange("product_image", url)
-      setImagePreview(url)
-    } catch (err) {
-      alert("이미지 업로드 실패")
+      const { url } = await res.json();
+      setImageUrl(url);
+      setFormData((prev) => ({ ...prev, product_image: url }));
     } finally {
-      setUploading(false)
+      setUploading(false);
     }
-  }
+  };
 
   if (!isOpen) return null
 
@@ -205,7 +200,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={handleImageChange}
+                        onChange={handleImageUpload}
                         className="hidden"
                         id="image-upload"
                       />
@@ -292,8 +287,8 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
                   >
                     {selectedStore ? (
                       <>
-                        {selectedStore.logoUrl && (
-                          <img src={selectedStore.logoUrl} alt={selectedStore.storeName} style={{ width: 24, height: 24, marginRight: 8, borderRadius: 4 }} />
+                        {selectedStore.storeLogo && (
+                          <img src={selectedStore.storeLogo} alt={selectedStore.storeName} style={{ width: 24, height: 24, marginRight: 8, borderRadius: 4 }} />
                         )}
                         <span>{selectedStore.storeName}</span>
                         <a href={selectedStore.storeLink} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-500 underline text-xs">{selectedStore.storeLink}</a>
@@ -311,14 +306,14 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
                     <div className="bg-white rounded-lg shadow-lg p-8 min-w-[350px] max-w-[90vw] max-h-[80vh] overflow-y-auto">
                       <h2 className="text-lg font-bold mb-4">제휴사 선택</h2>
                       <div className="grid gap-4">
-                        {partnerMalls.filter(mall => mall.status === "active").map((mall) => (
+                        {partnerMalls.filter(mall => !mall.isDeleted).map((mall) => (
                           <div
                             key={mall.id}
                             className={`flex items-center gap-4 p-3 border rounded cursor-pointer ${tempSelectedStore?.id === mall.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
                             onClick={() => setTempSelectedStore(mall)}
                           >
-                            {mall.logoUrl && (
-                              <img src={mall.logoUrl} alt={mall.storeName} style={{ width: 40, height: 40, borderRadius: 6 }} />
+                            {mall.storeLogo && (
+                              <img src={mall.storeLogo} alt={mall.storeName} style={{ width: 40, height: 40, borderRadius: 6 }} />
                             )}
                             <div>
                               <div className="font-semibold">{mall.storeName}</div>

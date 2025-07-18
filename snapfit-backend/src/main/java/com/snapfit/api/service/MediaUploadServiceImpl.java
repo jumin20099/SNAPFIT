@@ -53,11 +53,11 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
         // 3) S3 업로드
         try (InputStream is = file.getInputStream()) {
-            PutObjectRequest req = new PutObjectRequest(bucket, key, is, meta)
-                    .withCannedAcl(CannedAccessControlList.PublicRead);
+            PutObjectRequest req = new PutObjectRequest(bucket, key, is, meta);
             amazonS3.putObject(req);
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "S3 업로드 실패", e);
+            e.printStackTrace(); // 콘솔에 실제 에러 메시지 출력
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "S3 업로드 실패: " + e.getMessage(), e);
         }
 
         // 4) public URL 얻기

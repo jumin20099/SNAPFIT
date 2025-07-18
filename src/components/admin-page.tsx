@@ -9,12 +9,11 @@ import { Badge } from "@/components/ui/badge"
 import ProductForm from "./product-form"
 import PartnerMallForm from "./partner-mall-form"
 import {
-  getProducts,
-  getPartnerMalls,
   deleteProduct,
   // deletePartnerMall,
   toggleProductStatus,
 } from "../actions/admin-actions"
+import { getProducts, getPartnerMalls } from "../actions/admin-client-fetch"
 
 // 새로운 import 추가
 import ProductAnalyticsPage from "./product-analytics"
@@ -35,16 +34,17 @@ interface Product {
   status?: "active" | "inactive"
 }
 
-interface PartnerMall {
+interface AdminPartnerMall {
   id?: number
+  storeIdx?: number
   storeName: string
   contact: string
   storeLink: string
-  commission_rate: number
   royaltyRate: number
   storeLogo: string
-  status: "active" | "inactive"
-  created_at?: string
+  isDeleted?: boolean
+  createdAt?: string
+  updatedAt?: string
 }
 
 interface AdminPageProps {
@@ -52,29 +52,30 @@ interface AdminPageProps {
   onClose: () => void
 }
 
-// snake_case -> camelCase 변환 함수
-function toCamelMall(mall: any): PartnerMall {
+// snake_case -> camelCase 변환 함수 (Store 엔티티 기준)
+function toCamelMall(mall: any): AdminPartnerMall {
   return {
-    id: mall.id,
-    storeName: mall.mall_name ?? "",
+    id: mall.storeIdx ?? mall.id,
+    storeIdx: mall.storeIdx,
+    storeName: mall.storeName ?? "",
     contact: mall.contact ?? "",
-    storeLink: mall.mall_url ?? "",
-    commission_rate: mall.commission_rate ?? 0,
+    storeLink: mall.storeLink ?? "",
     royaltyRate: mall.royaltyRate ?? 0,
-    storeLogo: mall.store_logo ?? "",
-    status: mall.status,
-    created_at: mall.created_at,
-  };
+    storeLogo: mall.storeLogo ?? "",
+    isDeleted: mall.isDeleted,
+    createdAt: mall.createdAt,
+    updatedAt: mall.updatedAt,
+  }
 }
 
 export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [products, setProducts] = useState<Product[]>([])
-  const [partnerMalls, setPartnerMalls] = useState<PartnerMall[]>([])
+  const [partnerMalls, setPartnerMalls] = useState<AdminPartnerMall[]>([])
   const [isProductFormOpen, setIsProductFormOpen] = useState(false)
   const [isPartnerMallFormOpen, setIsPartnerMallFormOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [editingMall, setEditingMall] = useState<PartnerMall | null>(null)
+  const [editingMall, setEditingMall] = useState<AdminPartnerMall | null>(null)
   const [loading, setLoading] = useState(false)
 
   // 새로운 state 추가
@@ -86,11 +87,20 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
   // 데이터 로드
   const loadData = async () => {
     setLoading(true)
+    console.log("loadData called");
     try {
       const [productsData, mallsData] = await Promise.all([getProducts(), getPartnerMalls()])
-      setProducts(productsData.map((p: Product) => ({
-        ...p,
-        product_content: p.product_content ?? "",
+      setProducts(productsData.map((p: any) => ({
+        id: p.productIdx,
+        product_name: p.productName,
+        product_content: p.productContent,
+        product_image: p.productImage,
+        product_link: p.productLink,
+        product_category: p.productCategory,
+        partner_mall: p.storeIdx, // 필요시 storeName 등으로 추가 매핑
+        price: p.productPrice,
+        created_at: p.createdAt,
+        status: p.isActive ? "active" : "inactive",
       })))
       setPartnerMalls(mallsData.map((m: any) => toCamelMall(m)))
     } catch (error) {
@@ -101,6 +111,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
   }
 
   useEffect(() => {
+    console.log("useEffect isOpen:", isOpen);
     if (isOpen) {
       loadData()
     }
@@ -135,7 +146,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
     setIsProductFormOpen(true)
   }
 
-  const handleEditMall = (mall: PartnerMall) => {
+  const handleEditMall = (mall: AdminPartnerMall) => {
     setEditingMall(mall)
     setIsPartnerMallFormOpen(true)
   }
@@ -266,7 +277,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {partnerMalls.filter((m: PartnerMall) => m.status === "active").length}
+                        {partnerMalls.filter((m: AdminPartnerMall) => !m.isDeleted).length}
                       </div>
                     </CardContent>
                   </Card>
@@ -286,8 +297,8 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {partnerMalls.length > 0
-                          ? (partnerMalls.reduce((sum, m) => sum + m.commission_rate, 0) / partnerMalls.length).toFixed(
+                        {partnerMalls.filter((m: AdminPartnerMall) => !m.isDeleted).length > 0
+                          ? (partnerMalls.filter((m: AdminPartnerMall) => !m.isDeleted).reduce((sum, m) => sum + m.royaltyRate, 0) / partnerMalls.filter((m: AdminPartnerMall) => !m.isDeleted).length).toFixed(
                               1,
                             )
                           : 0}
@@ -413,60 +424,57 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
             </TabsContent>
 
             <TabsContent value="partners" className="h-full m-0 p-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">제휴몰 관리</h2>
-                  <Button onClick={() => setIsPartnerMallFormOpen(true)} className="flex items-center gap-2">
-                    <Plus className="w-4 h-4" />
-                    제휴몰 추가
-                  </Button>
-                </div>
-
-                {loading ? (
-                  <div className="text-center py-8">로딩 중...</div>
-                ) : (
-                  <div className="grid gap-4">
-                    {partnerMalls.map((mall: PartnerMall) => (
-                      <Card key={mall.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <h3 className="font-medium">{mall.storeName}</h3>
-                              <p className="text-sm text-gray-600 mb-2">{mall.storeLink}</p>
-                              <div className="flex items-center gap-2">
-                                <Badge variant={mall.status === "active" ? "default" : "secondary"}>
-                                  {mall.status === "active" ? "활성" : "비활성"}
-                                </Badge>
-                                <span className="text-sm">수수료: {mall.commission_rate}%</span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button variant="outline" size="sm" onClick={() => handleEditMall(mall)}>
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={async () => {
-                                  // try {
-                                  //   await deletePartnerMall(mall.id!);
-                                  //   alert("삭제 성공!");
-                                  //   loadData(); // 목록 새로고침
-                                  // } catch (e) {
-                                  //   alert("삭제 실패");
-                                  // }
-                                }}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">제휴몰 관리</h2>
+                <Button onClick={() => setIsPartnerMallFormOpen(true)}>
+                  + 제휴몰 추가
+                </Button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border text-sm">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border px-3 py-2">로고</th>
+                      <th className="border px-3 py-2">이름</th>
+                      <th className="border px-3 py-2">링크</th>
+                      <th className="border px-3 py-2">담당자</th>
+                      <th className="border px-3 py-2">로열티율</th>
+                      <th className="border px-3 py-2">상태</th>
+                      <th className="border px-3 py-2">관리</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {partnerMalls.map((mall: AdminPartnerMall) => (
+                      <tr key={mall.id} className="text-center">
+                        <td className="border px-2 py-1">
+                          {mall.storeLogo ? (
+                            <img src={mall.storeLogo} alt={mall.storeName} className="w-10 h-10 object-contain mx-auto" />
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="border px-2 py-1 font-semibold">{mall.storeName}</td>
+                        <td className="border px-2 py-1">
+                          <a href={mall.storeLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                            {mall.storeLink}
+                          </a>
+                        </td>
+                        <td className="border px-2 py-1">{mall.contact}</td>
+                        <td className="border px-2 py-1">{mall.royaltyRate ?? '-'}%</td>
+                        <td className="border px-2 py-1">
+                          <span className={mall.isDeleted ? 'text-gray-400' : 'text-green-600'}>
+                            {mall.isDeleted ? '삭제됨' : '정상'}
+                          </span>
+                        </td>
+                        <td className="border px-2 py-1">
+                          <Button size="sm" variant="outline" onClick={() => handleEditMall(mall)}>
+                            수정
+                          </Button>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                )}
+                  </tbody>
+                </table>
               </div>
             </TabsContent>
           </div>
