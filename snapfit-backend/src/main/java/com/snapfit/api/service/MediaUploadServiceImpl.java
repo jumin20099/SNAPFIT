@@ -30,16 +30,17 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         String bucket = null;
         String key = null;
         String ext = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.'));
-        String uidName = UUID.randomUUID() + ext;
+        String originalName = file.getOriginalFilename();
+        String uidName = UUID.randomUUID() + "_" + originalName; // UUID+원본이름 조합
 
         switch (purpose) {
             case "partner_logo":
                 bucket = staticBucket;
-                key = "partners/" + refId + "/logo" + ext;
+                key = "partners/" + refId + "/" + uidName;
                 break;
             case "product_image":
                 bucket = staticBucket;
-                key = "products/" + refId + "/main" + ext;
+                key = "products/" + refId + "/" + uidName;
                 break;
             default:
                 throw new IllegalArgumentException("Unknown purpose");
