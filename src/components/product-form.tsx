@@ -77,31 +77,45 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const token = localStorage.getItem("token")
-    const res = await fetch("/api/admin/products/add", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        storeIdx: selectedStore?.id, // storeIdx로 변경
-        productName: formData.product_name,
-        productContent: formData.product_content,
-        productPrice: formData.price,
-        productImage: imageUrl,
-        productCategory: formData.product_category,
-        productLink: formData.product_link,
-      }),
-    })
-    if (res.ok) {
-      alert("상품이 등록되었습니다!")
-      onClose()
-    } else {
-      alert("등록 실패")
+    e.preventDefault();
+    if (!selectedStore) {
+      alert("제휴몰을 선택해야 합니다.");
+      setIsSubmitting(false);
+      return;
     }
-  }
+    const token = localStorage.getItem("token");
+    console.log("상품 등록 데이터:", formData);
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/products/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          storeIdx: selectedStore?.id, // partner_mall → storeIdx
+          productName: formData.product_name,
+          productContent: formData.product_content,
+          productPrice: Number(formData.price), // 반드시 number로 변환
+          productImage: formData.product_image,
+          productCategory: formData.product_category,
+          productLink: formData.product_link,
+        }),
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("상품 등록 에러:", errorText);
+        alert("상품 등록 실패: " + errorText);
+        return;
+      }
+      const data = await res.json();
+      alert("상품이 등록되었습니다!");
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -245,7 +259,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
                   <Label htmlFor="product_link">상품 링크 *</Label>
                   <Input
                     id="product_link"
-                    type="url"
+                    type="text"
                     value={formData.product_link}
                     onChange={(e) => handleInputChange("product_link", e.target.value)}
                     placeholder="https://example.com/product"
@@ -347,9 +361,11 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
                   <Label htmlFor="price">가격 *</Label>
                   <Input
                     id="price"
+                    type="number"
+                    min="0"
                     value={formData.price}
-                    onChange={(e) => handleInputChange("price", e.target.value)}
-                    placeholder="예: 29,000원"
+                    onChange={(e) => handleInputChange("price", e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="예: 29000"
                     required
                   />
                 </div>

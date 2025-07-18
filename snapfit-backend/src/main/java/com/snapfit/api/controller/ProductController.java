@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/api/admin/products")
 @RequiredArgsConstructor
 public class ProductController {
     private final ProductRepository productRepository;
@@ -27,17 +27,22 @@ public class ProductController {
 
     @PostMapping("/add")
     public ResponseEntity<Product> addProduct(@RequestBody ProductDto dto) {
-        Product product = Product.builder()
-            .storeIdx(dto.getStoreIdx())
-            .productName(dto.getProductName())
-            .productContent(dto.getProductContent())
-            .productPrice(dto.getProductPrice())
-            .productImage(dto.getProductImage()) // S3 URL
-            .productCategory(dto.getProductCategory())
-            .productLink(dto.getProductLink())
-            .isActive(true)
-            .build();
-        return ResponseEntity.ok(productRepository.save(product));
+        try {
+            Product product = Product.builder()
+                .storeIdx(dto.getStoreIdx())
+                .productName(dto.getProductName())
+                .productContent(dto.getProductContent())
+                .productPrice(dto.getProductPrice())
+                .productImage(dto.getProductImage())
+                .productCategory(dto.getProductCategory())
+                .productLink(dto.getProductLink())
+                .isActive(true)
+                .build();
+            return ResponseEntity.ok(productRepository.save(product));
+        } catch (Exception e) {
+            e.printStackTrace(); // 콘솔에 실제 에러 메시지 출력
+            throw new RuntimeException("상품 등록 실패: " + e.getMessage(), e);
+        }
     }
 
     @GetMapping
