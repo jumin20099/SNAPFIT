@@ -19,8 +19,9 @@ public class MediaController {
 
     @PostMapping("/upload")
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file,
-                                    @RequestParam("purpose") String purpose) {
-        Media saved = mediaService.uploadMedia(file, purpose);
+                                    @RequestParam("purpose") String purpose,
+                                    @RequestParam("refId") Long refId) {
+        Media saved = mediaService.uploadMedia(file, purpose, refId);
         return ResponseEntity.ok(Map.of(
             "id", saved.getId(),
             "url", saved.getMediaUrl()

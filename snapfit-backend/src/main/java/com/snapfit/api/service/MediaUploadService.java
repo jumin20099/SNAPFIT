@@ -5,6 +5,6 @@ import com.snapfit.api.entity.Media;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface MediaUploadService {
-    Media uploadMedia(MultipartFile file, String purpose);
+    Media uploadMedia(MultipartFile file, String purpose, Long refId);
     void deleteMedia(String uidName);
 }

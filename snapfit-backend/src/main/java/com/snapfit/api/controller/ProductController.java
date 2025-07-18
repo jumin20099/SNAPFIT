@@ -6,20 +6,24 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
 import com.snapfit.api.dto.ProductDto;
 import com.snapfit.api.entity.Product;
 import com.snapfit.api.repository.ProductRepository;
+import com.snapfit.api.service.ProductService;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @RestController
-@RequestMapping("/api/admin/products")
+@RequestMapping("/api/products")
 @RequiredArgsConstructor
 public class ProductController {
     private final ProductRepository productRepository;
+    private final ProductService productService;
 
     @PostMapping("/add")
     public ResponseEntity<Product> addProduct(@RequestBody ProductDto dto) {
@@ -36,8 +40,8 @@ public class ProductController {
         return ResponseEntity.ok(productRepository.save(product));
     }
 
-    @GetMapping("/list")
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    @GetMapping
+    public List<Product> getProductsByStoreIdx(@RequestParam Long store_idx) {
+        return productService.getProductsByStoreIdx(store_idx);
     }
 }

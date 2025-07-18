@@ -3,6 +3,8 @@ package com.snapfit.api.repository;
 import com.snapfit.api.entity.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    // 필요시 커스텀 메서드 추가
+    List<Product> findByStore_StoreIdx(Long storeIdx);
 }

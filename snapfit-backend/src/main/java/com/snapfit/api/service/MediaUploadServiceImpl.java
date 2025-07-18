@@ -17,18 +17,34 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Service
 public class MediaUploadServiceImpl implements MediaUploadService {
-    @Value("${cloud.aws.s3.bucket}")
-    private String bucket;
+    @Value("${cloud.aws.s3.user-bucket}")
+    private String userBucket;
+    @Value("${cloud.aws.s3.static-bucket}")
+    private String staticBucket;
 
     private final AmazonS3 amazonS3;
     private final MediaRepository mediaRepository;
 
     @Override
-    public Media uploadMedia(MultipartFile file, String purpose) {
-        // 1) UUID 파일명 생성
-        String ext = file.getOriginalFilename()
-                         .substring(file.getOriginalFilename().lastIndexOf('.'));
+    public Media uploadMedia(MultipartFile file, String purpose, Long refId) {
+        String bucket = null;
+        String key = null;
+        String ext = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.'));
         String uidName = UUID.randomUUID() + ext;
+
+        switch (purpose) {
+            case "partner_logo":
+                bucket = staticBucket;
+                key = "partners/" + refId + "/logo" + ext;
+                break;
+            case "product_image":
+                bucket = staticBucket;
+                key = "products/" + refId + "/main" + ext;
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown purpose");
+        }
+        if (bucket == null || key == null) throw new IllegalStateException("bucket/key not set");
 
         // 2) 메타데이터 세팅
         ObjectMetadata meta = new ObjectMetadata();
@@ -37,7 +53,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
         // 3) S3 업로드
         try (InputStream is = file.getInputStream()) {
-            PutObjectRequest req = new PutObjectRequest(bucket, uidName, is, meta)
+            PutObjectRequest req = new PutObjectRequest(bucket, key, is, meta)
                     .withCannedAcl(CannedAccessControlList.PublicRead);
             amazonS3.putObject(req);
         } catch (Exception e) {
@@ -45,12 +61,12 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         }
 
         // 4) public URL 얻기
-        String url = amazonS3.getUrl(bucket, uidName).toString();
+        String url = amazonS3.getUrl(bucket, key).toString();
 
         // 5) DB 저장
         Media media = Media.builder()
                 .mediaRealName(file.getOriginalFilename())
-                .mediaUidName(uidName)
+                .mediaUidName(key)
                 .mediaType(file.getContentType())
                 .mediaUrl(url)
                 .mediaPurpose(purpose)
@@ -60,6 +76,7 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
     @Override
     public void deleteMedia(String uidName) {
+        String bucket = (uidName.startsWith("profile/") || uidName.startsWith("posts/")) ? userBucket : staticBucket;
         // S3에서 삭제
         amazonS3.deleteObject(new DeleteObjectRequest(bucket, uidName));
         // DB에서 삭제
