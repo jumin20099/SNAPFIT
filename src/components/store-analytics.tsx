@@ -5,11 +5,11 @@ import { ArrowLeft, CheckCircle, XCircle, Power, PowerOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getPartnerAnalytics, togglePartnerStatus, markCommissionPaid } from "../actions/admin-actions"
+import { getStoreAnalytics, toggleStoreStatus, markStoreCommissionPaid } from "../actions/admin-actions"
 
-interface PartnerAnalytics {
-  partner_id: number
-  partner_name: string
+interface StoreAnalytics {
+  store_id: number
+  store_name: string
   total_sales: number
   commission_owed: number
   commission_paid: number
@@ -18,13 +18,13 @@ interface PartnerAnalytics {
   is_active: boolean
 }
 
-interface PartnerAnalyticsPageProps {
+interface StoreAnalyticsPageProps {
   isOpen: boolean
   onClose: () => void
 }
 
-export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyticsPageProps) {
-  const [analytics, setAnalytics] = useState<PartnerAnalytics[]>([])
+export default function StoreAnalyticsPage({ isOpen, onClose }: StoreAnalyticsPageProps) {
+  const [analytics, setAnalytics] = useState<StoreAnalytics[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
   const loadAnalytics = async () => {
     setLoading(true)
     try {
-      const data = await getPartnerAnalytics()
+      const data = await getStoreAnalytics()
       setAnalytics(data)
     } catch (error) {
       console.error("분석 데이터 로드 실패:", error)
@@ -45,8 +45,8 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
     }
   }
 
-  const handleTogglePartnerStatus = async (partnerId: number, isActive: boolean) => {
-    const result = await togglePartnerStatus(partnerId, isActive)
+  const handleToggleStoreStatus = async (storeId: number, isActive: boolean) => {
+    const result = await toggleStoreStatus(storeId, isActive)
     if (result.success) {
       alert(result.message)
       loadAnalytics()
@@ -55,9 +55,9 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
     }
   }
 
-  const handleMarkPaid = async (partnerId: number) => {
+  const handleMarkPaid = async (storeId: number) => {
     if (confirm("수수료 납부를 완료 처리하시겠습니까?")) {
-      const result = await markCommissionPaid(partnerId)
+      const result = await markStoreCommissionPaid(storeId)
       if (result.success) {
         alert(result.message)
         loadAnalytics()
@@ -87,8 +87,8 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
     }
   }
 
-  const activePartners = analytics.filter((p) => p.is_active)
-  const inactivePartners = analytics.filter((p) => !p.is_active)
+  const activeStores = analytics.filter((p) => p.is_active)
+  const inactiveStores = analytics.filter((p) => !p.is_active)
 
   if (!isOpen) return null
 
@@ -102,7 +102,7 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
           </Button>
           <h1 className="text-xl font-bold">제휴사 분석</h1>
         </div>
-        <Badge variant="secondary">Partner Analytics</Badge>
+        <Badge variant="secondary">Store Analytics</Badge>
       </div>
 
       {/* Content */}
@@ -139,7 +139,7 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
                 <CardTitle className="text-sm font-medium text-gray-600">활성 제휴사</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-600">{activePartners.length}</div>
+                <div className="text-2xl font-bold text-green-600">{activeStores.length}</div>
               </CardContent>
             </Card>
 
@@ -148,7 +148,7 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
                 <CardTitle className="text-sm font-medium text-gray-600">비활성 제휴사</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gray-600">{inactivePartners.length}</div>
+                <div className="text-2xl font-bold text-gray-600">{inactiveStores.length}</div>
               </CardContent>
             </Card>
           </div>
@@ -157,21 +157,21 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
           <div className="space-y-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-green-600" />
-              활성 제휴사 ({activePartners.length})
+              활성 제휴사 ({activeStores.length})
             </h2>
 
             {loading ? (
               <div className="text-center py-8">로딩 중...</div>
             ) : (
               <div className="space-y-4">
-                {activePartners.map((partner) => (
-                  <Card key={partner.partner_id}>
+                {activeStores.map((store) => (
+                  <Card key={store.store_id}>
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{partner.partner_name}</h3>
+                          <h3 className="font-medium">{store.store_name}</h3>
                           <div className="flex items-center gap-2">
-                            {getPaymentStatusBadge(partner.payment_status)}
+                            {getPaymentStatusBadge(store.payment_status)}
                             <Badge variant="outline" className="bg-green-50 text-green-700">
                               활성
                             </Badge>
@@ -181,35 +181,35 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <span className="text-gray-600">총 매출:</span>
-                            <div className="font-medium">{formatCurrency(partner.total_sales)}</div>
+                            <div className="font-medium">{formatCurrency(store.total_sales)}</div>
                           </div>
 
                           <div>
                             <span className="text-gray-600">수수료 총액:</span>
-                            <div className="font-medium">{formatCurrency(partner.commission_owed)}</div>
+                            <div className="font-medium">{formatCurrency(store.commission_owed)}</div>
                           </div>
 
                           <div>
                             <span className="text-gray-600">납부 완료:</span>
-                            <div className="font-medium text-green-600">{formatCurrency(partner.commission_paid)}</div>
+                            <div className="font-medium text-green-600">{formatCurrency(store.commission_paid)}</div>
                           </div>
 
                           <div>
                             <span className="text-gray-600">미납 금액:</span>
                             <div className="font-medium text-red-600">
-                              {formatCurrency(partner.commission_owed - partner.commission_paid)}
+                              {formatCurrency(store.commission_owed - store.commission_paid)}
                             </div>
                           </div>
                         </div>
 
                         <div className="flex items-center justify-between pt-2 border-t">
-                          <div className="text-sm text-gray-600">납부 기한: {partner.payment_due_date}</div>
+                          <div className="text-sm text-gray-600">납부 기한: {store.payment_due_date}</div>
                           <div className="flex items-center gap-2">
-                            {partner.payment_status !== "paid" && (
+                            {store.payment_status !== "paid" && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleMarkPaid(partner.partner_id)}
+                                onClick={() => handleMarkPaid(store.store_id)}
                                 className="text-green-600 hover:text-green-700"
                               >
                                 납부완료 처리
@@ -218,7 +218,7 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleTogglePartnerStatus(partner.partner_id, false)}
+                              onClick={() => handleToggleStoreStatus(store.store_id, false)}
                               className="text-red-600 hover:text-red-700"
                             >
                               <PowerOff className="w-4 h-4 mr-1" />
@@ -235,22 +235,22 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
           </div>
 
           {/* 비활성 제휴사 */}
-          {inactivePartners.length > 0 && (
+          {inactiveStores.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <XCircle className="w-5 h-5 text-red-600" />
-                비활성 제휴사 ({inactivePartners.length})
+                비활성 제휴사 ({inactiveStores.length})
               </h2>
 
               <div className="space-y-4">
-                {inactivePartners.map((partner) => (
-                  <Card key={partner.partner_id} className="bg-gray-50">
+                {inactiveStores.map((store) => (
+                  <Card key={store.store_id} className="bg-gray-50">
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <h3 className="font-medium text-gray-700">{partner.partner_name}</h3>
+                          <h3 className="font-medium text-gray-700">{store.store_name}</h3>
                           <div className="flex items-center gap-2">
-                            {getPaymentStatusBadge(partner.payment_status)}
+                            {getPaymentStatusBadge(store.payment_status)}
                             <Badge variant="outline" className="bg-red-50 text-red-700">
                               비활성
                             </Badge>
@@ -260,26 +260,26 @@ export default function PartnerAnalyticsPage({ isOpen, onClose }: PartnerAnalyti
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <span className="text-gray-600">총 매출:</span>
-                            <div className="font-medium">{formatCurrency(partner.total_sales)}</div>
+                            <div className="font-medium">{formatCurrency(store.total_sales)}</div>
                           </div>
 
                           <div>
                             <span className="text-gray-600">미납 금액:</span>
                             <div className="font-medium text-red-600">
-                              {formatCurrency(partner.commission_owed - partner.commission_paid)}
+                              {formatCurrency(store.commission_owed - store.commission_paid)}
                             </div>
                           </div>
 
                           <div>
                             <span className="text-gray-600">납부 기한:</span>
-                            <div className="font-medium text-red-600">{partner.payment_due_date} (연체)</div>
+                            <div className="font-medium text-red-600">{store.payment_due_date} (연체)</div>
                           </div>
 
                           <div className="flex items-center justify-end">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleTogglePartnerStatus(partner.partner_id, true)}
+                              onClick={() => handleToggleStoreStatus(store.store_id, true)}
                               className="text-green-600 hover:text-green-700"
                             >
                               <Power className="w-4 h-4 mr-1" />

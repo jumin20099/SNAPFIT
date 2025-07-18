@@ -10,7 +10,7 @@ import { getProductApprovals, approveProduct } from "../actions/admin-actions"
 interface ProductApproval {
   id: number
   product_name: string
-  partner_name: string
+  store_name: string
   images: string[]
   description: string
   price: string
@@ -163,7 +163,7 @@ export default function ProductApprovalPage({ isOpen, onClose }: ProductApproval
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="font-medium text-lg">{approval.product_name}</h3>
-                            <p className="text-sm text-gray-600">{approval.partner_name}</p>
+                            <p className="text-sm text-gray-600">{approval.store_name}</p>
                           </div>
                           {getStatusBadge(approval.status)}
                         </div>
@@ -259,7 +259,7 @@ export default function ProductApprovalPage({ isOpen, onClose }: ProductApproval
                           />
                           <div>
                             <h3 className="font-medium">{approval.product_name}</h3>
-                            <p className="text-sm text-gray-600">{approval.partner_name}</p>
+                            <p className="text-sm text-gray-600">{approval.store_name}</p>
                           </div>
                         </div>
                         <div className="text-right">

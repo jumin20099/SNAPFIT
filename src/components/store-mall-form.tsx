@@ -1,16 +1,12 @@
-"use client"
-
 import type React from "react"
-
 import { useState } from "react"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-interface PartnerMall {
+interface StoreMall {
   id?: number
   storeIdx?: number
   storeName: string
@@ -23,13 +19,13 @@ interface PartnerMall {
   updatedAt?: string
 }
 
-interface PartnerMallFormProps {
+interface StoreMallFormProps {
   isOpen: boolean
   onClose: () => void
-  editingMall?: PartnerMall | null
+  editingMall?: StoreMall | null
 }
 
-export default function PartnerMallForm({ isOpen, onClose, editingMall }: PartnerMallFormProps) {
+function StoreMallForm({ isOpen, onClose, editingMall }: StoreMallFormProps) {
   const [form, setForm] = useState({
     storeName: editingMall?.storeName || "",
     storeLogo: editingMall?.storeLogo || "",
@@ -45,16 +41,23 @@ export default function PartnerMallForm({ isOpen, onClose, editingMall }: Partne
     const formData = new FormData();
     formData.append("file", file);
     formData.append("purpose", "store_logo");
+    formData.append("refId", "0"); // 신규 제휴몰은 0
     setLogoUploading(true);
     try {
-      const res = await fetch("/api/admin/media/upload", {
+      const res = await fetch("/api/media/upload", {
         method: "POST",
         body: formData,
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-      const url = await res.text();
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("로고 업로드 에러:", errorText);
+        alert("로고 업로드 실패: " + errorText);
+        return;
+      }
+      const { url } = await res.json();
       setForm((prev) => ({ ...prev, storeLogo: url }));
     } finally {
       setLogoUploading(false);
@@ -189,3 +192,5 @@ export default function PartnerMallForm({ isOpen, onClose, editingMall }: Partne
     </div>
   )
 }
+
+export default StoreMallForm 

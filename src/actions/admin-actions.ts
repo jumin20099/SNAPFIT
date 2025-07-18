@@ -7,13 +7,13 @@ interface Product {
   product_image: string
   product_link: string
   product_category: string
-  partner_mall: string
+  store_mall: string
   price: string
   created_at?: string
   status?: "active" | "inactive"
 }
 
-interface PartnerMall {
+interface StoreMall {
   id?: number
   mall_name: string
   mall_url: string
@@ -32,9 +32,9 @@ interface ProductAnalytics {
   conversion_rate: number
 }
 
-interface PartnerAnalytics {
-  partner_id: number
-  partner_name: string
+interface StoreAnalytics {
+  store_id: number
+  store_name: string
   total_sales: number
   commission_owed: number
   commission_paid: number
@@ -43,7 +43,7 @@ interface PartnerAnalytics {
   is_active: boolean
 }
 
-interface PartnershipApplication {
+interface StoreApplication {
   id: number
   company_name: string
   contact_email: string
@@ -57,7 +57,7 @@ interface PartnershipApplication {
 interface ProductApproval {
   id: number
   product_name: string
-  partner_name: string
+  store_name: string
   images: string[]
   description: string
   price: string
@@ -136,11 +136,11 @@ export async function getProductAnalytics() {
   return res.json();
 }
 
-export async function getPartnerMalls() {
+export async function getStoreMalls() {
   if (typeof window === "undefined") {
     return [];
   }
-  console.log("fetching partner malls");
+  console.log("fetching store malls");
   const token = localStorage.getItem("token");
   const res = await fetch("/api/admin/stores/list", {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -149,7 +149,7 @@ export async function getPartnerMalls() {
   return res.json();
 }
 
-// export async function deletePartnerMall(id: number) {
+// export async function deleteStoreMall(id: number) {
 //   const token = localStorage.getItem("token");
 //   const res = await fetch(`/api/admin/stores/${id}`, {
 //     method: "DELETE",
@@ -160,7 +160,7 @@ export async function getPartnerMalls() {
 // }
 
 // 제휴사 통계
-export async function getPartnerAnalytics() {
+export async function getStoreAnalytics() {
   if (typeof window === "undefined") {
     return [];
   }
@@ -172,12 +172,12 @@ export async function getPartnerAnalytics() {
   return res.json();
 }
 
-export async function togglePartnerStatus(partnerId: number, isActive: boolean) {
+export async function toggleStoreStatus(storeId: number, isActive: boolean) {
   if (typeof window === "undefined") {
     throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
   const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/stores/${partnerId}/status`, {
+  const res = await fetch(`/api/admin/stores/${storeId}/status`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -189,12 +189,12 @@ export async function togglePartnerStatus(partnerId: number, isActive: boolean) 
   return res.json();
 }
 
-export async function markCommissionPaid(partnerId: number) {
+export async function markStoreCommissionPaid(storeId: number) {
   if (typeof window === "undefined") {
     throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
   const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/stores/${partnerId}/commission/paid`, {
+  const res = await fetch(`/api/admin/stores/${storeId}/commission/paid`, {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
@@ -202,24 +202,24 @@ export async function markCommissionPaid(partnerId: number) {
   return res.json();
 }
 
-export async function getPartnershipApplications() {
+export async function getStoreApplications() {
   if (typeof window === "undefined") {
     return [];
   }
   const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/partnership/applications", {
+  const res = await fetch("/api/admin/store/applications", {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new Error("제휴 신청 목록 불러오기 실패");
+  if (!res.ok) throw new Error("제휴몰 신청 목록 불러오기 실패");
   return res.json();
 }
 
-export async function approvePartnershipApplication(applicationId: number, approved: boolean) {
+export async function approveStoreApplication(applicationId: number, approved: boolean) {
   if (typeof window === "undefined") {
     throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
   const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/partnership/applications/${applicationId}/approve`, {
+  const res = await fetch(`/api/admin/store/applications/${applicationId}/approve`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -227,7 +227,7 @@ export async function approvePartnershipApplication(applicationId: number, appro
     },
     body: JSON.stringify({ approved }),
   });
-  if (!res.ok) throw new Error("제휴 신청 승인/거절 실패");
+  if (!res.ok) throw new Error("제휴몰 신청 승인/거절 실패");
   return res.json();
 }
 

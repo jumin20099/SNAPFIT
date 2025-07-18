@@ -5,9 +5,9 @@ import { ArrowLeft, FileText, Mail, Phone, Building, CheckCircle, XCircle, Clock
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getPartnershipApplications, approvePartnershipApplication } from "../actions/admin-actions"
+import { getStoreApplications, approveStoreApplication } from "../actions/admin-actions"
 
-interface PartnershipApplication {
+interface StoreApplication {
   id: number
   company_name: string
   contact_email: string
@@ -18,13 +18,13 @@ interface PartnershipApplication {
   documents: string[]
 }
 
-interface PartnershipApplicationsPageProps {
+interface StoreApplicationsPageProps {
   isOpen: boolean
   onClose: () => void
 }
 
-export default function PartnershipApplicationsPage({ isOpen, onClose }: PartnershipApplicationsPageProps) {
-  const [applications, setApplications] = useState<PartnershipApplication[]>([])
+export default function StoreApplicationsPage({ isOpen, onClose }: StoreApplicationsPageProps) {
+  const [applications, setApplications] = useState<StoreApplication[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function PartnershipApplicationsPage({ isOpen, onClose }: Partner
   const loadApplications = async () => {
     setLoading(true)
     try {
-      const data = await getPartnershipApplications()
+      const data = await getStoreApplications()
       setApplications(data)
     } catch (error) {
       console.error("신청서 로드 실패:", error)
@@ -48,7 +48,7 @@ export default function PartnershipApplicationsPage({ isOpen, onClose }: Partner
   const handleApprove = async (applicationId: number, approved: boolean) => {
     const action = approved ? "승인" : "거절"
     if (confirm(`이 제휴 신청을 ${action}하시겠습니까?`)) {
-      const result = await approvePartnershipApplication(applicationId, approved)
+      const result = await approveStoreApplication(applicationId, approved)
       if (result.success) {
         alert(result.message)
         loadApplications()

@@ -18,12 +18,12 @@ interface Product {
   product_image: string
   product_link: string
   product_category: string
-  partner_mall: string
+  store_mall: string
   price: string
   created_at?: string
 }
 
-interface PartnerMall {
+interface StoreMall {
   id?: number
   storeIdx?: number
   storeName: string
@@ -40,19 +40,19 @@ interface ProductFormProps {
   isOpen: boolean
   onClose: () => void
   editingProduct?: Product | null
-  partnerMalls: PartnerMall[]
+  storeMalls: StoreMall[]
 }
 
 const categories = ["상의", "하의", "아우터", "신발", "가방", "패션소품"]
 
-export default function ProductForm({ isOpen, onClose, editingProduct, partnerMalls }: ProductFormProps) {
+export default function ProductForm({ isOpen, onClose, editingProduct, storeMalls }: ProductFormProps) {
   const [formData, setFormData] = useState({
     product_name: editingProduct?.product_name || "",
     product_content: editingProduct?.product_content || "",
     product_image: editingProduct?.product_image || "",
     product_link: editingProduct?.product_link || "",
     product_category: editingProduct?.product_category || "",
-    partner_mall: editingProduct?.partner_mall || "",
+    store_mall: editingProduct?.store_mall || "",
     price: editingProduct?.price || "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -60,10 +60,10 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
-  const [selectedStore, setSelectedStore] = useState<PartnerMall | null>(
-    partnerMalls.find(mall => mall.storeName === editingProduct?.partner_mall) || null
+  const [selectedStore, setSelectedStore] = useState<StoreMall | null>(
+    storeMalls.find(mall => mall.storeName === editingProduct?.store_mall) || null
   );
-  const [tempSelectedStore, setTempSelectedStore] = useState<PartnerMall | null>(selectedStore);
+  const [tempSelectedStore, setTempSelectedStore] = useState<StoreMall | null>(selectedStore);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -87,14 +87,14 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
     console.log("상품 등록 데이터:", formData);
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/products/add", {
+      const res = await fetch("/api/admin/products/add", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          storeIdx: selectedStore?.id, // partner_mall → storeIdx
+          storeIdx: selectedStore?.id, // store_mall → storeIdx
           productName: formData.product_name,
           productContent: formData.product_content,
           productPrice: Number(formData.price), // 반드시 number로 변환
@@ -290,7 +290,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
 
                 {/* 제휴몰 선택 (모달 방식) */}
                 <div className="space-y-2">
-                  <Label htmlFor="partner_mall">제휴몰 *</Label>
+                  <Label htmlFor="store_mall">제휴몰 *</Label>
                   <button
                     type="button"
                     className="w-full border rounded px-4 py-2 flex items-center gap-2 bg-gray-50 hover:bg-gray-100"
@@ -320,7 +320,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
                     <div className="bg-white rounded-lg shadow-lg p-8 min-w-[350px] max-w-[90vw] max-h-[80vh] overflow-y-auto">
                       <h2 className="text-lg font-bold mb-4">제휴사 선택</h2>
                       <div className="grid gap-4">
-                        {partnerMalls.filter(mall => !mall.isDeleted).map((mall) => (
+                        {storeMalls.filter(mall => !mall.isDeleted).map((mall) => (
                           <div
                             key={mall.id}
                             className={`flex items-center gap-4 p-3 border rounded cursor-pointer ${tempSelectedStore?.id === mall.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
@@ -341,7 +341,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, partnerMa
                           type="button"
                           onClick={() => {
                             setSelectedStore(tempSelectedStore);
-                            setFormData(prev => ({ ...prev, partner_mall: tempSelectedStore?.storeName || "" }));
+                            setFormData(prev => ({ ...prev, store_mall: tempSelectedStore?.storeName || "" }));
                             setIsStoreModalOpen(false);
                           }}
                           disabled={!tempSelectedStore}

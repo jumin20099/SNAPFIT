@@ -34,9 +34,9 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         String uidName = UUID.randomUUID() + "_" + originalName; // UUID+원본이름 조합
 
         switch (purpose) {
-            case "partner_logo":
+            case "store_logo":
                 bucket = staticBucket;
-                key = "partners/" + refId + "/" + uidName;
+                key = "stores/" + refId + "/" + uidName;
                 break;
             case "product_image":
                 bucket = staticBucket;

@@ -7,18 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import ProductForm from "./product-form"
-import PartnerMallForm from "./partner-mall-form"
+import StoreMallForm from "./store-mall-form"
 import {
   deleteProduct,
-  // deletePartnerMall,
+  // deleteStoreMall,
   toggleProductStatus,
 } from "../actions/admin-actions"
-import { getProducts, getPartnerMalls } from "../actions/admin-client-fetch"
+import { getProducts, getStoreMalls } from "../actions/admin-client-fetch"
 
 // 새로운 import 추가
 import ProductAnalyticsPage from "./product-analytics"
-import PartnerAnalyticsPage from "./partner-analytics"
-import PartnershipApplicationsPage from "./partnership-applications"
+import StoreAnalyticsPage from "./store-analytics"
+import StoreApplicationsPage from "./store-applications"
 import ProductApprovalPage from "./product-approval"
 
 interface Product {
@@ -28,13 +28,13 @@ interface Product {
   product_image: string
   product_link: string
   product_category: string
-  partner_mall: string
+  store_mall: string
   price: string
   created_at?: string
   status?: "active" | "inactive"
 }
 
-interface AdminPartnerMall {
+interface AdminStoreMall {
   id?: number
   storeIdx?: number
   storeName: string
@@ -53,7 +53,7 @@ interface AdminPageProps {
 }
 
 // snake_case -> camelCase 변환 함수 (Store 엔티티 기준)
-function toCamelMall(mall: any): AdminPartnerMall {
+function toCamelMall(mall: any): AdminStoreMall {
   return {
     id: mall.storeIdx ?? mall.id,
     storeIdx: mall.storeIdx,
@@ -71,16 +71,16 @@ function toCamelMall(mall: any): AdminPartnerMall {
 export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [products, setProducts] = useState<Product[]>([])
-  const [partnerMalls, setPartnerMalls] = useState<AdminPartnerMall[]>([])
+  const [storeMalls, setStoreMalls] = useState<AdminStoreMall[]>([])
   const [isProductFormOpen, setIsProductFormOpen] = useState(false)
-  const [isPartnerMallFormOpen, setIsPartnerMallFormOpen] = useState(false)
+  const [isStoreMallFormOpen, setIsStoreMallFormOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [editingMall, setEditingMall] = useState<AdminPartnerMall | null>(null)
+  const [editingMall, setEditingMall] = useState<AdminStoreMall | null>(null)
   const [loading, setLoading] = useState(false)
 
   // 새로운 state 추가
   const [isProductAnalyticsOpen, setIsProductAnalyticsOpen] = useState(false)
-  const [isPartnerAnalyticsOpen, setIsPartnerAnalyticsOpen] = useState(false)
+  const [isStoreAnalyticsOpen, setIsStoreAnalyticsOpen] = useState(false)
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false)
   const [isProductApprovalOpen, setIsProductApprovalOpen] = useState(false)
 
@@ -89,7 +89,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
     setLoading(true)
     console.log("loadData called");
     try {
-      const [productsData, mallsData] = await Promise.all([getProducts(), getPartnerMalls()])
+      const [productsData, mallsData] = await Promise.all([getProducts(), getStoreMalls()])
       setProducts(productsData.map((p: any) => ({
         id: p.productIdx,
         product_name: p.productName,
@@ -97,12 +97,12 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
         product_image: p.productImage,
         product_link: p.productLink,
         product_category: p.productCategory,
-        partner_mall: p.storeIdx, // 필요시 storeName 등으로 추가 매핑
+        store_mall: p.storeIdx, // 필요시 storeName 등으로 추가 매핑
         price: p.productPrice,
         created_at: p.createdAt,
         status: p.isActive ? "active" : "inactive",
       })))
-      setPartnerMalls(mallsData.map((m: any) => toCamelMall(m)))
+      setStoreMalls(mallsData.map((m: any) => toCamelMall(m)))
     } catch (error) {
       console.error("데이터 로드 실패:", error)
     } finally {
@@ -131,7 +131,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
 
   // const handleDeleteMall = async (mallId: number) => {
   //   if (confirm("정말로 이 제휴몰을 삭제하시겠습니까?")) {
-  //     const result = await deletePartnerMall(mallId)
+  //     const result = await deleteStoreMall(mallId)
   //     if (result.success) {
   //       alert(result.message)
   //       loadData()
@@ -146,14 +146,14 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
     setIsProductFormOpen(true)
   }
 
-  const handleEditMall = (mall: AdminPartnerMall) => {
+  const handleEditMall = (mall: AdminStoreMall) => {
     setEditingMall(mall)
-    setIsPartnerMallFormOpen(true)
+    setIsStoreMallFormOpen(true)
   }
 
   const handleFormClose = () => {
     setIsProductFormOpen(false)
-    setIsPartnerMallFormOpen(false)
+    setIsStoreMallFormOpen(false)
     setEditingProduct(null)
     setEditingMall(null)
     loadData()
@@ -176,12 +176,12 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
     return <ProductAnalyticsPage isOpen={true} onClose={() => setIsProductAnalyticsOpen(false)} />
   }
 
-  if (isPartnerAnalyticsOpen) {
-    return <PartnerAnalyticsPage isOpen={true} onClose={() => setIsPartnerAnalyticsOpen(false)} />
+  if (isStoreAnalyticsOpen) {
+    return <StoreAnalyticsPage isOpen={true} onClose={() => setIsStoreAnalyticsOpen(false)} />
   }
 
   if (isApplicationsOpen) {
-    return <PartnershipApplicationsPage isOpen={true} onClose={() => setIsApplicationsOpen(false)} />
+    return <StoreApplicationsPage isOpen={true} onClose={() => setIsApplicationsOpen(false)} />
   }
 
   if (isProductApprovalOpen) {
@@ -195,15 +195,15 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
         isOpen={true}
         onClose={handleFormClose}
         editingProduct={editingProduct}
-        partnerMalls={partnerMalls}
+        storeMalls={storeMalls}
       />
     )
   }
 
   // 제휴몰 폼이 열려있으면 해당 컴포넌트 렌더링
-  if (isPartnerMallFormOpen) {
+  if (isStoreMallFormOpen) {
     return (
-      <PartnerMallForm
+      <StoreMallForm
         isOpen={true}
         onClose={handleFormClose}
         editingMall={editingMall ? toCamelMall(editingMall) : undefined}
@@ -245,7 +245,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                 <span className="hidden sm:inline">상품 관리</span>
               </TabsTrigger>
               <TabsTrigger
-                value="partners"
+                value="stores"
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
               >
                 <Store className="w-4 h-4" />
@@ -277,7 +277,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {partnerMalls.filter((m: AdminPartnerMall) => !m.isDeleted).length}
+                        {storeMalls.filter((m: AdminStoreMall) => !m.isDeleted).length}
                       </div>
                     </CardContent>
                   </Card>
@@ -297,8 +297,8 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {partnerMalls.filter((m: AdminPartnerMall) => !m.isDeleted).length > 0
-                          ? (partnerMalls.filter((m: AdminPartnerMall) => !m.isDeleted).reduce((sum, m) => sum + m.royaltyRate, 0) / partnerMalls.filter((m: AdminPartnerMall) => !m.isDeleted).length).toFixed(
+                        {storeMalls.filter((m: AdminStoreMall) => !m.isDeleted).length > 0
+                          ? (storeMalls.filter((m: AdminStoreMall) => !m.isDeleted).reduce((sum, m) => sum + m.royaltyRate, 0) / storeMalls.filter((m: AdminStoreMall) => !m.isDeleted).length).toFixed(
                               1,
                             )
                           : 0}
@@ -323,7 +323,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
 
                   <Card
                     className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => setIsPartnerAnalyticsOpen(true)}
+                    onClick={() => setIsStoreAnalyticsOpen(true)}
                   >
                     <CardContent className="p-4 text-center">
                       <Store className="w-8 h-8 mx-auto mb-2 text-green-600" />
@@ -382,7 +382,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                             />
                             <div className="flex-1">
                               <h3 className="font-medium">{product.product_name}</h3>
-                              <p className="text-sm text-gray-600 mb-1">{product.partner_mall}</p>
+                              <p className="text-sm text-gray-600 mb-1">{product.store_mall}</p>
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline">{product.product_category}</Badge>
                                 <span className="text-sm font-medium">{product.price}</span>
@@ -423,10 +423,10 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
               </div>
             </TabsContent>
 
-            <TabsContent value="partners" className="h-full m-0 p-4">
+            <TabsContent value="stores" className="h-full m-0 p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold">제휴몰 관리</h2>
-                <Button onClick={() => setIsPartnerMallFormOpen(true)}>
+                <Button onClick={() => setIsStoreMallFormOpen(true)}>
                   + 제휴몰 추가
                 </Button>
               </div>
@@ -444,7 +444,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {partnerMalls.map((mall: AdminPartnerMall) => (
+                    {storeMalls.map((mall: AdminStoreMall) => (
                       <tr key={mall.id} className="text-center">
                         <td className="border px-2 py-1">
                           {mall.storeLogo ? (
