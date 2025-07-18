@@ -18,6 +18,6 @@ public class ProductService {
     }
 
     public List<Product> getProductsByStoreIdx(Long storeIdx) {
-        return productRepository.findByStore_StoreIdx(storeIdx);
+        return productRepository.findByStoreIdx(storeIdx);
     }
 }
