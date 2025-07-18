@@ -12,7 +12,7 @@ import {
   getProducts,
   getPartnerMalls,
   deleteProduct,
-  deletePartnerMall,
+  // deletePartnerMall,
   toggleProductStatus,
 } from "../actions/admin-actions"
 
@@ -56,12 +56,12 @@ interface AdminPageProps {
 function toCamelMall(mall: any): PartnerMall {
   return {
     id: mall.id,
-    storeName: mall.mall_name ?? mall.storeName ?? "",
+    storeName: mall.mall_name ?? "",
     contact: mall.contact ?? "",
-    storeLink: mall.mall_url ?? mall.storeLink ?? "",
+    storeLink: mall.mall_url ?? "",
     commission_rate: mall.commission_rate ?? 0,
     royaltyRate: mall.royaltyRate ?? 0,
-    storeLogo: mall.storeLogo ?? "",
+    storeLogo: mall.store_logo ?? "",
     status: mall.status,
     created_at: mall.created_at,
   };
@@ -88,11 +88,11 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
     setLoading(true)
     try {
       const [productsData, mallsData] = await Promise.all([getProducts(), getPartnerMalls()])
-      setProducts(productsData.map(p => ({
+      setProducts(productsData.map((p: Product) => ({
         ...p,
         product_content: p.product_content ?? "",
       })))
-      setPartnerMalls(mallsData.map(toCamelMall))
+      setPartnerMalls(mallsData.map((m: any) => toCamelMall(m)))
     } catch (error) {
       console.error("데이터 로드 실패:", error)
     } finally {
@@ -118,17 +118,17 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
     }
   }
 
-  const handleDeleteMall = async (mallId: number) => {
-    if (confirm("정말로 이 제휴몰을 삭제하시겠습니까?")) {
-      const result = await deletePartnerMall(mallId)
-      if (result.success) {
-        alert(result.message)
-        loadData()
-      } else {
-        alert(result.message)
-      }
-    }
-  }
+  // const handleDeleteMall = async (mallId: number) => {
+  //   if (confirm("정말로 이 제휴몰을 삭제하시겠습니까?")) {
+  //     const result = await deletePartnerMall(mallId)
+  //     if (result.success) {
+  //       alert(result.message)
+  //       loadData()
+  //     } else {
+  //       alert(result.message)
+  //     }
+  //   }
+  // }
 
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product)
@@ -266,7 +266,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {partnerMalls.filter((m) => m.status === "active").length}
+                        {partnerMalls.filter((m: PartnerMall) => m.status === "active").length}
                       </div>
                     </CardContent>
                   </Card>
@@ -276,7 +276,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                       <CardTitle className="text-sm font-medium text-gray-600">카테고리</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{new Set(products.map((p) => p.product_category)).size}</div>
+                      <div className="text-2xl font-bold">{new Set(products.map((p: Product) => p.product_category)).size}</div>
                     </CardContent>
                   </Card>
 
@@ -448,13 +448,13 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                                 variant="outline"
                                 size="sm"
                                 onClick={async () => {
-                                  try {
-                                    await deletePartnerMall(mall.id!);
-                                    alert("삭제 성공!");
-                                    loadData(); // 목록 새로고침
-                                  } catch (e) {
-                                    alert("삭제 실패");
-                                  }
+                                  // try {
+                                  //   await deletePartnerMall(mall.id!);
+                                  //   alert("삭제 성공!");
+                                  //   loadData(); // 목록 새로고침
+                                  // } catch (e) {
+                                  //   alert("삭제 실패");
+                                  // }
                                 }}
                                 className="text-red-600 hover:text-red-700"
                               >

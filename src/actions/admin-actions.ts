@@ -66,262 +66,212 @@ interface ProductApproval {
   submitted_date: string
 }
 
-// 임시 데이터 저장소 (실제로는 데이터베이스 사용)
-const products: Product[] = [
-  {
-    id: 1,
-    product_name: "나이키 에어포스 1",
-    product_content: "편하고 이쁜 나이키 신발",
-    product_image: "/placeholder.svg?height=200&width=200",
-    product_link: "https://example-mall.com/nike-airforce1",
-    product_category: "신발",
-    partner_mall: "패션몰A",
-    price: "129,000원",
-    created_at: "2024-01-15",
-  },
-  {
-    id: 2,
-    product_name: "유니클로 화이트 티셔츠",
-    product_content: "시원한 티셔츠",
-    product_image: "/placeholder.svg?height=200&width=200",
-    product_link: "https://example-mall.com/uniqlo-tshirt",
-    product_category: "상의",
-    partner_mall: "패션몰B",
-    price: "29,000원",
-    created_at: "2024-01-14",
-  },
-]
-
-// 임시 데이터 추가
-const productAnalytics: ProductAnalytics[] = [
-  {
-    product_id: 1,
-    product_name: "나이키 에어포스 1",
-    view_count: 1250,
-    purchase_count: 45,
-    total_sales: 5805000,
-    conversion_rate: 3.6,
-  },
-  {
-    product_id: 2,
-    product_name: "유니클로 화이트 티셔츠",
-    view_count: 890,
-    purchase_count: 67,
-    total_sales: 1943000,
-    conversion_rate: 7.5,
-  },
-]
-
-const partnerAnalytics: PartnerAnalytics[] = [
-  {
-    partner_id: 1,
-    partner_name: "패션몰A",
-    total_sales: 15750000,
-    commission_owed: 866250,
-    commission_paid: 500000,
-    payment_status: "pending",
-    payment_due_date: "2024-02-15",
-    is_active: true,
-  },
-  {
-    partner_id: 2,
-    partner_name: "패션몰B",
-    total_sales: 8920000,
-    commission_owed: 356800,
-    commission_paid: 356800,
-    payment_status: "paid",
-    payment_due_date: "2024-01-31",
-    is_active: true,
-  },
-]
-
-const partnershipApplications: PartnershipApplication[] = [
-  {
-    id: 1,
-    company_name: "스타일샵",
-    contact_email: "contact@styleshop.com",
-    contact_phone: "02-1234-5678",
-    business_registration: "123-45-67890",
-    application_date: "2024-01-20",
-    status: "pending",
-    documents: ["business_license.pdf", "product_catalog.pdf"],
-  },
-]
-
-const productApprovals: ProductApproval[] = [
-  {
-    id: 1,
-    product_name: "프리미엄 가죽 재킷",
-    partner_name: "스타일샵",
-    images: ["/placeholder.svg?height=200&width=200"],
-    description: "고급 양가죽으로 제작된 프리미엄 가죽 재킷입니다.",
-    price: "299,000원",
-    category: "아우터",
-    status: "pending",
-    submitted_date: "2024-01-22",
-  },
-]
-
 // 상품 관련 액션들
-export async function addProduct(formData: FormData) {
-  await new Promise((resolve) => setTimeout(resolve, 1000)) // 로딩 시뮬레이션
-
-  const newProduct: Product = {
-    id: products.length + 1,
-    product_name: formData.get("product_name") as string,
-    product_content: formData.get("product_content") as string,
-    product_image: formData.get("product_image") as string,
-    product_link: formData.get("product_link") as string,
-    product_category: formData.get("product_category") as string,
-    partner_mall: formData.get("partner_mall") as string,
-    price: formData.get("price") as string,
-    created_at: new Date().toISOString().split("T")[0],
+export async function getProducts() {
+  if (typeof window === "undefined") {
+    return [];
   }
-
-  products.push(newProduct)
-
-  return {
-    success: true,
-    message: "상품이 성공적으로 추가되었습니다.",
-    product: newProduct,
-  }
+  const token = localStorage.getItem("token");
+  const res = await fetch("/api/admin/products/list", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("상품 목록을 불러오지 못했습니다.");
+  return res.json();
 }
 
-export async function getProducts() {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return products
+export async function addProduct(productData: any) {
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
+  }
+  const token = localStorage.getItem("token");
+  const res = await fetch("/api/admin/products/add", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(productData),
+  });
+  if (!res.ok) throw new Error("상품 등록 실패");
+  return res.json();
 }
 
 export async function deleteProduct(productId: number) {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  const index = products.findIndex((p) => p.id === productId)
-  if (index > -1) {
-    products.splice(index, 1)
-    return { success: true, message: "상품이 삭제되었습니다." }
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-
-  return { success: false, message: "상품을 찾을 수 없습니다." }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/admin/products/${productId}`, {
+    method: "DELETE",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("상품 삭제 실패");
+  return res.json();
 }
 
 export async function updateProduct(productId: number, formData: FormData) {
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  const index = products.findIndex((p) => p.id === productId)
-  if (index > -1) {
-    products[index] = {
-      ...products[index],
-      product_name: formData.get("product_name") as string,
-      product_image: formData.get("product_image") as string,
-      product_link: formData.get("product_link") as string,
-      product_category: formData.get("product_category") as string,
-      partner_mall: formData.get("partner_mall") as string,
-      price: formData.get("price") as string,
-    }
-
-    return { success: true, message: "상품이 수정되었습니다.", product: products[index] }
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-
-  return { success: false, message: "상품을 찾을 수 없습니다." }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/admin/products/${productId}`, {
+    method: "PUT",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) throw new Error("상품 수정 실패");
+  return res.json();
 }
 
-// 새로운 액션들 추가
+// 상품 통계
 export async function getProductAnalytics() {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return productAnalytics
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const token = localStorage.getItem("token");
+  const res = await fetch("/api/admin/products/analytics", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("상품 통계 불러오기 실패");
+  return res.json();
 }
 
 export async function getPartnerMalls() {
+  if (typeof window === "undefined") {
+    return [];
+  }
   const token = localStorage.getItem("token");
-  const res = await fetch("/api/stores", {
-    headers: { Authorization: `Bearer ${token}` },
+  const res = await fetch("/api/admin/stores/list", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new Error("제휴몰 목록 불러오기 실패");
-  return await res.json();
+  if (!res.ok) throw new Error("제휴몰 목록을 불러오지 못했습니다.");
+  return res.json();
 }
 
-export async function deletePartnerMall(id: number) {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/stores/${id}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (res.ok) return { success: true, message: "삭제 성공" };
-  return { success: false, message: "삭제 실패" };
-}
+// export async function deletePartnerMall(id: number) {
+//   const token = localStorage.getItem("token");
+//   const res = await fetch(`/api/admin/stores/${id}`, {
+//     method: "DELETE",
+//     headers: { Authorization: `Bearer ${token}` },
+//   });
+//   if (res.ok) return { success: true, message: "삭제 성공" };
+//   return { success: false, message: "삭제 실패" };
+// }
 
+// 제휴사 통계
 export async function getPartnerAnalytics() {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return partnerAnalytics
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const token = localStorage.getItem("token");
+  const res = await fetch("/api/admin/stores/analytics", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("제휴사 통계 불러오기 실패");
+  return res.json();
 }
 
 export async function togglePartnerStatus(partnerId: number, isActive: boolean) {
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  const partner = partnerAnalytics.find((p) => p.partner_id === partnerId)
-  if (partner) {
-    partner.is_active = isActive
-    return { success: true, message: `제휴사가 ${isActive ? "활성화" : "비활성화"}되었습니다.` }
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-
-  return { success: false, message: "제휴사를 찾을 수 없습니다." }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/admin/stores/${partnerId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ isActive }),
+  });
+  if (!res.ok) throw new Error("제휴사 상태 변경 실패");
+  return res.json();
 }
 
 export async function markCommissionPaid(partnerId: number) {
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  const partner = partnerAnalytics.find((p) => p.partner_id === partnerId)
-  if (partner) {
-    partner.commission_paid = partner.commission_owed
-    partner.payment_status = "paid"
-    return { success: true, message: "수수료 납부가 완료되었습니다." }
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-
-  return { success: false, message: "제휴사를 찾을 수 없습니다." }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/admin/stores/${partnerId}/commission/paid`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("커미션 지급 처리 실패");
+  return res.json();
 }
 
 export async function getPartnershipApplications() {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return partnershipApplications
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const token = localStorage.getItem("token");
+  const res = await fetch("/api/admin/partnership/applications", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("제휴 신청 목록 불러오기 실패");
+  return res.json();
 }
 
 export async function approvePartnershipApplication(applicationId: number, approved: boolean) {
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  const application = partnershipApplications.find((a) => a.id === applicationId)
-  if (application) {
-    application.status = approved ? "approved" : "rejected"
-    return { success: true, message: `제휴 신청이 ${approved ? "승인" : "거절"}되었습니다.` }
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-
-  return { success: false, message: "신청서를 찾을 수 없습니다." }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/admin/partnership/applications/${applicationId}/approve`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ approved }),
+  });
+  if (!res.ok) throw new Error("제휴 신청 승인/거절 실패");
+  return res.json();
 }
 
 export async function getProductApprovals() {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return productApprovals
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const token = localStorage.getItem("token");
+  const res = await fetch("/api/admin/products/approvals", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("상품 승인 목록 불러오기 실패");
+  return res.json();
 }
 
 export async function approveProduct(productId: number, approved: boolean) {
-  await new Promise((resolve) => setTimeout(resolve, 1000))
-
-  const product = productApprovals.find((p) => p.id === productId)
-  if (product) {
-    product.status = approved ? "approved" : "rejected"
-    return { success: true, message: `상품이 ${approved ? "승인" : "거절"}되었습니다.` }
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-
-  return { success: false, message: "상품을 찾을 수 없습니다." }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/admin/products/${productId}/approve`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ approved }),
+  });
+  if (!res.ok) throw new Error("상품 승인/거절 실패");
+  return res.json();
 }
 
 export async function toggleProductStatus(productId: number, isActive: boolean) {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  const product = products.find((p) => p.id === productId)
-  if (product) {
-    product.status = isActive ? "active" : "inactive"
-    return { success: true, message: `상품이 ${isActive ? "활성화" : "비활성화"}되었습니다.` }
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-
-  return { success: false, message: "상품을 찾을 수 없습니다." }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/admin/products/${productId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ isActive }),
+  });
+  if (!res.ok) throw new Error("상품 상태 변경 실패");
+  return res.json();
 }
