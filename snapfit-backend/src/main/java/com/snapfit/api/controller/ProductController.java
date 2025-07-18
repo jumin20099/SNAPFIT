@@ -7,8 +7,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 
 import java.util.List;
+import java.util.Map;
 
 import com.snapfit.api.dto.ProductDto;
 import com.snapfit.api.entity.Product;
@@ -53,5 +57,20 @@ public class ProductController {
     @GetMapping("/list")
     public List<Product> getAllProducts() {
         return productRepository.findAll();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
+        productRepository.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateProductStatus(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Boolean isActive = (Boolean) body.get("isActive");
+        Product product = productRepository.findById(id).orElseThrow();
+        product.setIsActive(isActive);
+        productRepository.save(product);
+        return ResponseEntity.ok().body(Map.of("success", true, "message", "상태 변경 완료"));
     }
 }

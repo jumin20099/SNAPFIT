@@ -9,11 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import ProductForm from "./product-form"
 import StoreMallForm from "./store-mall-form"
 import {
-  deleteProduct,
   // deleteStoreMall,
-  toggleProductStatus,
 } from "../actions/admin-actions"
-import { getProducts, getStoreMalls } from "../actions/admin-client-fetch"
+import { getProducts, getStoreMalls, toggleProductStatus, deleteProduct } from "../actions/admin-client-fetch"
 
 // 새로운 import 추가
 import ProductAnalyticsPage from "./product-analytics"
@@ -120,11 +118,11 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
   const handleDeleteProduct = async (productId: number) => {
     if (confirm("정말로 이 상품을 삭제하시겠습니까?")) {
       const result = await deleteProduct(productId)
-      if (result.success) {
-        alert(result.message)
+      if (!result || result.success) {
+        alert("삭제 성공")
         loadData()
       } else {
-        alert(result.message)
+        alert(result.message || "삭제 실패")
       }
     }
   }
