@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import java.util.List;
 import java.util.Map;
@@ -72,5 +73,32 @@ public class ProductController {
         product.setIsActive(isActive);
         productRepository.save(product);
         return ResponseEntity.ok().body(Map.of("success", true, "message", "상태 변경 완료"));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody ProductDto dto) {
+        try {
+            // 1. 기존 상품 조회
+            Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
+
+            // 2. 전달받은 값으로 필드만 업데이트
+            product.setStoreIdx(dto.getStoreIdx());
+            product.setProductName(dto.getProductName());
+            product.setProductContent(dto.getProductContent());
+            product.setProductPrice(dto.getProductPrice());
+            product.setProductImage(dto.getProductImage());
+            product.setProductCategory(dto.getProductCategory());
+            product.setProductLink(dto.getProductLink());
+            // 필요하다면 isActive 등도 업데이트
+
+            // 3. 저장
+            productRepository.save(product);
+
+            return ResponseEntity.ok(product);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("상품 수정 실패: " + e.getMessage(), e);
+        }
     }
 }

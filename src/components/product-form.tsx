@@ -87,8 +87,14 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
     console.log("상품 등록 데이터:", formData);
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/admin/products/add", {
-        method: "POST",
+      const isEditing = editingProduct?.id;
+      const url = isEditing 
+        ? `/api/admin/products/${editingProduct.id}` 
+        : "/api/admin/products/add";
+      const method = isEditing ? "PUT" : "POST";
+      
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -105,12 +111,12 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
       });
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("상품 등록 에러:", errorText);
-        alert("상품 등록 실패: " + errorText);
+        console.error("상품 처리 에러:", errorText);
+        alert(isEditing ? "상품 수정 실패: " + errorText : "상품 등록 실패: " + errorText);
         return;
       }
       const data = await res.json();
-      alert("상품이 등록되었습니다!");
+      alert(isEditing ? "상품이 수정되었습니다!" : "상품이 등록되었습니다!");
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -123,7 +129,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
     const formData = new FormData();
     formData.append("file", file);
     formData.append("purpose", "product_image");
-    formData.append("refId", "0"); // 신규 상품은 0으로 보냄
+    formData.append("refId", editingProduct?.id?.toString() || "0"); // 수정 시에는 실제 상품 ID 사용
     setUploading(true);
     try {
       const res = await fetch("/api/media/upload", {
@@ -341,7 +347,8 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
                           type="button"
                           onClick={() => {
                             setSelectedStore(tempSelectedStore);
-                            setFormData(prev => ({ ...prev, store_mall: tempSelectedStore?.storeName || "" }));
+                            // store의 id를 저장 (백엔드에서 storeIdx로 사용)
+                            setFormData(prev => ({ ...prev, store_mall: tempSelectedStore?.id?.toString() || "" }));
                             setIsStoreModalOpen(false);
                           }}
                           disabled={!tempSelectedStore}
