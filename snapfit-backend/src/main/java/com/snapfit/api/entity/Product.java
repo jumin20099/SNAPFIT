@@ -41,5 +41,10 @@ public class Product {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    @Column(name = "deactivated_at")
     private LocalDateTime deactivatedAt;
+
+    public void setDeactivatedAt(LocalDateTime deactivatedAt) {
+        this.deactivatedAt = deactivatedAt;
+    }
 }

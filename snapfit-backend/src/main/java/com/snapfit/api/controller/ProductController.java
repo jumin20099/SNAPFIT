@@ -71,6 +71,12 @@ public class ProductController {
         Boolean isActive = (Boolean) body.get("isActive");
         Product product = productRepository.findById(id).orElseThrow();
         product.setIsActive(isActive);
+        // 활성화/비활성화에 따라 deactivatedAt 처리
+        if (isActive != null && !isActive) {
+            product.setDeactivatedAt(java.time.LocalDateTime.now());
+        } else if (isActive != null && isActive) {
+            product.setDeactivatedAt(null);
+        }
         productRepository.save(product);
         return ResponseEntity.ok().body(Map.of("success", true, "message", "상태 변경 완료"));
     }
