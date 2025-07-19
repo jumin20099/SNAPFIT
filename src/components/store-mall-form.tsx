@@ -81,8 +81,13 @@ function StoreMallForm({ isOpen, onClose, editingMall }: StoreMallFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    const res = await fetch("/api/admin/stores/add", {
-      method: "POST",
+    const isEditing = !!editingMall?.id;
+    const url = isEditing
+      ? `/api/admin/stores/${editingMall.id}`
+      : "/api/admin/stores/add";
+    const method = isEditing ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
@@ -90,10 +95,10 @@ function StoreMallForm({ isOpen, onClose, editingMall }: StoreMallFormProps) {
       body: JSON.stringify(form),
     });
     if (res.ok) {
-      alert("제휴몰이 등록되었습니다!");
+      alert(isEditing ? "제휴몰이 수정되었습니다!" : "제휴몰이 등록되었습니다!");
       onClose();
     } else {
-      alert("등록 실패");
+      alert(isEditing ? "수정 실패" : "등록 실패");
     }
   };
 

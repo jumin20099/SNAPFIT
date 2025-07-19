@@ -58,4 +58,17 @@ public class StoreController {
         storeRepository.save(store);
         return ResponseEntity.ok().body(Map.of("success", true, "message", "상태 변경 완료"));
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateStore(@PathVariable Long id, @RequestBody StoreDto dto) {
+        Store store = storeRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("제휴몰을 찾을 수 없습니다."));
+        store.setStoreName(dto.getStoreName());
+        store.setStoreLogo(dto.getStoreLogo());
+        store.setStoreLink(dto.getStoreLink());
+        store.setRoyaltyRate(dto.getRoyaltyRate());
+        store.setContact(dto.getContact());
+        storeRepository.save(store);
+        return ResponseEntity.ok().body(Map.of("success", true, "message", "수정 완료"));
+    }
 }
