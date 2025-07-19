@@ -394,11 +394,11 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                                 onClick={() => handleToggleProductStatus(product.id!, product.status === "inactive")}
                                 className={
                                   product.status === "active"
-                                    ? "text-red-600 hover:text-red-700"
-                                    : "text-green-600 hover:text-green-700"
+                                  ? "text-green-600 hover:text-green-700"
+                                  : "text-red-600 hover:text-red-700"
                                 }
                               >
-                                {product.status === "active" ? "비활성화" : "활성화"}
+                                {product.status === "active" ? "활성화됨" : "비활성화됨"}
                               </Button>
                               <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}>
                                 <Edit className="w-4 h-4" />
