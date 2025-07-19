@@ -11,7 +11,7 @@ import StoreMallForm from "./store-mall-form"
 import {
   // deleteStoreMall,
 } from "../actions/admin-actions"
-import { getProducts, getStoreMalls, toggleProductStatus, deleteProduct, deleteStoreMall } from "../actions/admin-client-fetch"
+import { getProducts, getStoreMalls, toggleProductStatus, deleteProduct, deleteStoreMall, toggleStoreStatus } from "../actions/admin-client-fetch"
 
 // 새로운 import 추가
 import ProductAnalyticsPage from "./product-analytics"
@@ -170,11 +170,14 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
   }
 
   const handleToggleMallStatus = async (mallId: number, newStatus: boolean) => {
-    // 실제 API 연동 필요: isActive 상태 토글
-    // 예시: await toggleStoreMallStatus(mallId, newStatus)
-    alert('제휴몰 상태 변경 기능은 아직 구현되지 않았습니다.');
-    loadData();
-  };
+    const result = await toggleStoreStatus(mallId, newStatus)
+    if (result.success) {
+      alert(result.message)
+      loadData()
+    } else {
+      alert(result.message)
+    }
+  }
 
   const handleDeleteMall = async (mallId: number) => {
     if (confirm('정말로 이 제휴몰을 삭제하시겠습니까?')) {

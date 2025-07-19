@@ -185,7 +185,7 @@ export async function toggleStoreStatus(storeId: number, isActive: boolean) {
     },
     body: JSON.stringify({ isActive }),
   });
-  if (!res.ok) throw new Error("제휴사 상태 변경 실패");
+  if (!res.ok) throw new Error("제휴몰 상태 변경 실패");
   return res.json();
 }
 

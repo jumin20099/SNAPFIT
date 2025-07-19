@@ -80,4 +80,21 @@ export async function deleteStoreMall(mallId: number) {
     return;
   }
 }
+
+export async function toggleStoreStatus(storeId: number, isActive: boolean) {
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
+  }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/admin/stores/${storeId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ isActive }),
+  });
+  if (!res.ok) throw new Error("제휴몰 상태 변경 실패");
+  return res.json();
+}
 // 필요시 addProduct, deleteProduct 등도 이 파일로 옮길 수 있음 
