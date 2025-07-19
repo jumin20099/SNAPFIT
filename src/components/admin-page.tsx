@@ -369,53 +369,57 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                   <div className="text-center py-8">로딩 중...</div>
                 ) : (
                   <div className="grid gap-4">
-                    {products.map((product: Product) => (
-                      <Card key={product.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-4">
-                            <img
-                              src={product.product_image || "/placeholder.svg"}
-                              alt={product.product_name}
-                              className="w-16 h-16 object-cover rounded"
-                            />
-                            <div className="flex-1">
-                              <h3 className="font-medium">{product.product_name}</h3>
-                              <p className="text-sm text-gray-600 mb-1">{product.store_mall}</p>
+                    {products.map((product: Product) => {
+                      const mall = storeMalls.find(m => m.id?.toString() === product.store_mall?.toString());
+                      return (
+                        <Card key={product.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <img
+                                src={product.product_image || "/placeholder.svg"}
+                                alt={product.product_name}
+                                className="w-16 h-16 object-cover rounded"
+                              />
+                              <div className="flex-1">
+                                <h3 className="font-medium">{product.product_name}</h3>
+                                {/* 제휴몰 이름 표시 */}
+                                <p className="text-sm text-gray-600 mb-1">{mall ? mall.storeName : '-'}</p>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline">{product.product_category}</Badge>
+                                  <span className="text-sm font-medium">{product.price}</span>
+                                </div>
+                              </div>
+                              {/* 상품 관리 탭에 활성화/비활성화 버튼 등 기존 코드 유지 */}
                               <div className="flex items-center gap-2">
-                                <Badge variant="outline">{product.product_category}</Badge>
-                                <span className="text-sm font-medium">{product.price}</span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleToggleProductStatus(product.id!, product.status === "inactive")}
+                                  className={
+                                    product.status === "active"
+                                    ? "text-green-600 hover:text-green-700"
+                                    : "text-red-600 hover:text-red-700"
+                                  }
+                                >
+                                  {product.status === "active" ? "활성화됨" : "비활성화됨"}
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}>
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteProduct(product.id!)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </div>
                             </div>
-                            {/* 상품 관리 탭에 활성화/비활성화 버튼 추가 */}
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleToggleProductStatus(product.id!, product.status === "inactive")}
-                                className={
-                                  product.status === "active"
-                                  ? "text-green-600 hover:text-green-700"
-                                  : "text-red-600 hover:text-red-700"
-                                }
-                              >
-                                {product.status === "active" ? "활성화됨" : "비활성화됨"}
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}>
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteProduct(product.id!)}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </div>

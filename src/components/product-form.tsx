@@ -60,10 +60,20 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [isStoreModalOpen, setIsStoreModalOpen] = useState(false);
-  const [selectedStore, setSelectedStore] = useState<StoreMall | null>(
-    storeMalls.find(mall => mall.storeName === editingProduct?.store_mall) || null
-  );
-  const [tempSelectedStore, setTempSelectedStore] = useState<StoreMall | null>(selectedStore);
+  // selectedStore 초기값을 id 기준으로
+  const [selectedStore, setSelectedStore] = useState<StoreMall | null>(null);
+  const [tempSelectedStore, setTempSelectedStore] = useState<StoreMall | null>(null);
+
+  // 상품 수정 폼이 열릴 때마다 selectedStore를 동기화
+  useEffect(() => {
+    if (editingProduct && storeMalls.length > 0) {
+      const found = storeMalls.find(
+        mall => mall.id?.toString() === editingProduct.store_mall?.toString()
+      );
+      setSelectedStore(found || null);
+      setTempSelectedStore(found || null);
+    }
+  }, [editingProduct, storeMalls]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
