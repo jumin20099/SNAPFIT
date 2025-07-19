@@ -1,5 +1,5 @@
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,6 +34,16 @@ function StoreMallForm({ isOpen, onClose, editingMall }: StoreMallFormProps) {
     contact: editingMall?.contact || "",
   });
   const [logoUploading, setLogoUploading] = useState(false);
+
+  // 수정 모드일 때 로고가 항상 미리보기로 보이도록 동기화
+  useEffect(() => {
+    if (editingMall) {
+      setForm(prev => ({
+        ...prev,
+        storeLogo: editingMall.storeLogo || ""
+      }));
+    }
+  }, [editingMall]);
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -179,7 +189,7 @@ function StoreMallForm({ isOpen, onClose, editingMall }: StoreMallFormProps) {
                     type="file"
                     accept="image/*"
                     onChange={handleLogoChange}
-                    required
+                    // required는 제거 (수정 시 기존 로고가 있으면 필수 아님)
                   />
                   {logoUploading && <p>로고 업로드 중...</p>}
                   {form.storeLogo && <img src={form.storeLogo} alt="로고 미리보기" style={{ maxWidth: 100 }} />}
