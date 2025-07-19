@@ -61,4 +61,23 @@ export async function toggleProductStatus(productId: number, isActive: boolean) 
   if (!res.ok) throw new Error("상품 상태 변경 실패");
   return res.json();
 }
+
+export async function deleteStoreMall(mallId: number) {
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
+  }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/admin/stores/${mallId}`, {
+    method: "DELETE",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("제휴몰 삭제 실패");
+  const text = await res.text();
+  if (!text) return;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return;
+  }
+}
 // 필요시 addProduct, deleteProduct 등도 이 파일로 옮길 수 있음 

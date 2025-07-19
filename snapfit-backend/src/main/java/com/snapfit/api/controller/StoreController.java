@@ -33,9 +33,12 @@ public class StoreController {
         return ResponseEntity.ok(storeRepository.save(store));
     }
 
-    @DeleteMapping("/api/admin/stores/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteStore(@PathVariable Long id) {
-        storeRepository.deleteById(id);
-        return ResponseEntity.ok().build();
+        Store store = storeRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("제휴몰을 찾을 수 없습니다."));
+        store.setIsDeleted(true);
+        storeRepository.save(store);
+        return ResponseEntity.ok().body("제휴몰 삭제 완료");
     }
 }

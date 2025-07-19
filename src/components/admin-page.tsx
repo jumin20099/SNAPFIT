@@ -11,7 +11,7 @@ import StoreMallForm from "./store-mall-form"
 import {
   // deleteStoreMall,
 } from "../actions/admin-actions"
-import { getProducts, getStoreMalls, toggleProductStatus, deleteProduct } from "../actions/admin-client-fetch"
+import { getProducts, getStoreMalls, toggleProductStatus, deleteProduct, deleteStoreMall } from "../actions/admin-client-fetch"
 
 // 새로운 import 추가
 import ProductAnalyticsPage from "./product-analytics"
@@ -176,9 +176,13 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
 
   const handleDeleteMall = async (mallId: number) => {
     if (confirm('정말로 이 제휴몰을 삭제하시겠습니까?')) {
-      // 실제 API 연동 필요: await deleteStoreMall(mallId)
-      alert('제휴몰 삭제 기능은 아직 구현되지 않았습니다.');
-      loadData();
+      try {
+        const result = await deleteStoreMall(mallId);
+        alert('삭제 성공');
+        loadData();
+      } catch (e: any) {
+        alert(e?.message || '삭제 실패');
+      }
     }
   };
 
