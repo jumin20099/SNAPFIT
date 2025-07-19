@@ -31,7 +31,7 @@ interface StoreMall {
   storeLink: string
   royaltyRate: number
   storeLogo: string
-  isDeleted?: boolean
+  isActive?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -336,7 +336,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
                     <div className="bg-white rounded-lg shadow-lg p-8 min-w-[350px] max-w-[90vw] max-h-[80vh] overflow-y-auto">
                       <h2 className="text-lg font-bold mb-4">제휴사 선택</h2>
                       <div className="grid gap-4">
-                        {storeMalls.filter(mall => !mall.isDeleted).map((mall) => (
+                        {storeMalls.filter(mall => mall.isActive).map((mall) => (
                           <div
                             key={mall.id}
                             className={`flex items-center gap-4 p-3 border rounded cursor-pointer ${tempSelectedStore?.id === mall.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}

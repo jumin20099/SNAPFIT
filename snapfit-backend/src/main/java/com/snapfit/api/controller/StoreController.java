@@ -28,7 +28,7 @@ public class StoreController {
             .storeLink(dto.getStoreLink())
             .royaltyRate(dto.getRoyaltyRate())
             .contact(dto.getContact())
-            .isDeleted(false)
+            .isActive(true)
             .build();
         return ResponseEntity.ok(storeRepository.save(store));
     }
@@ -37,7 +37,7 @@ public class StoreController {
     public ResponseEntity<?> deleteStore(@PathVariable Long id) {
         Store store = storeRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("제휴몰을 찾을 수 없습니다."));
-        store.setIsDeleted(true);
+        store.setIsActive(false);
         storeRepository.save(store);
         return ResponseEntity.ok().body("제휴몰 삭제 완료");
     }

@@ -32,6 +32,8 @@ interface Product {
   status?: "active" | "inactive"
 }
 
+// isDeleted -> isActive로 일괄 변경
+// 타입 정의
 interface AdminStoreMall {
   id?: number
   storeIdx?: number
@@ -40,7 +42,7 @@ interface AdminStoreMall {
   storeLink: string
   royaltyRate: number
   storeLogo: string
-  isDeleted?: boolean
+  isActive?: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -60,7 +62,7 @@ function toCamelMall(mall: any): AdminStoreMall {
     storeLink: mall.storeLink ?? "",
     royaltyRate: mall.royaltyRate ?? 0,
     storeLogo: mall.storeLogo ?? "",
-    isDeleted: mall.isDeleted,
+    isActive: mall.isActive ?? mall.is_active,
     createdAt: mall.createdAt,
     updatedAt: mall.updatedAt,
   }
@@ -168,7 +170,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
   }
 
   const handleToggleMallStatus = async (mallId: number, newStatus: boolean) => {
-    // 실제 API 연동 필요: isDeleted 상태 토글
+    // 실제 API 연동 필요: isActive 상태 토글
     // 예시: await toggleStoreMallStatus(mallId, newStatus)
     alert('제휴몰 상태 변경 기능은 아직 구현되지 않았습니다.');
     loadData();
@@ -294,7 +296,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {storeMalls.filter((m: AdminStoreMall) => !m.isDeleted).length}
+                        {storeMalls.filter((m: AdminStoreMall) => !m.isActive).length}
                       </div>
                     </CardContent>
                   </Card>
@@ -314,8 +316,8 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {storeMalls.filter((m: AdminStoreMall) => !m.isDeleted).length > 0
-                          ? (storeMalls.filter((m: AdminStoreMall) => !m.isDeleted).reduce((sum, m) => sum + m.royaltyRate, 0) / storeMalls.filter((m: AdminStoreMall) => !m.isDeleted).length).toFixed(
+                        {storeMalls.filter((m: AdminStoreMall) => !m.isActive).length > 0
+                          ? (storeMalls.filter((m: AdminStoreMall) => !m.isActive).reduce((sum, m) => sum + m.royaltyRate, 0) / storeMalls.filter((m: AdminStoreMall) => !m.isActive).length).toFixed(
                               1,
                             )
                           : 0}
@@ -471,8 +473,8 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                               <div className="text-sm text-gray-600 mt-1">담당자: {mall.contact || '-'}</div>
                               <div className="flex items-center gap-2 mt-1">
                                 <Badge variant="outline">로열티율: {mall.royaltyRate ?? '-'}%</Badge>
-                                <span className={mall.isDeleted ? 'text-gray-400' : 'text-green-600'}>
-                                  {mall.isDeleted ? '삭제됨' : '정상'}
+                                <span className={!mall.isActive ? 'text-gray-400' : 'text-green-600'}>
+                                  {!mall.isActive ? '비활성화됨' : '정상'}
                                 </span>
                               </div>
                             </div>
@@ -481,14 +483,14 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleToggleMallStatus(mall.id!, !mall.isDeleted)}
+                                onClick={() => handleToggleMallStatus(mall.id!, !mall.isActive)}
                                 className={
-                                  !mall.isDeleted
+                                  !mall.isActive
                                     ? "text-green-600 hover:text-green-700 border-green-200"
                                     : "text-red-600 hover:text-red-700 border-red-200"
                                 }
                               >
-                                {!mall.isDeleted ? "활성화됨" : "비활성화됨"}
+                                {!mall.isActive ? "활성화됨" : "비활성화됨"}
                               </Button>
                               {/* 수정 버튼 */}
                               <Button size="sm" variant="outline" onClick={() => handleEditMall(mall)}>

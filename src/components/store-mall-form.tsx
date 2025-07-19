@@ -14,7 +14,7 @@ interface StoreMall {
   storeLink: string
   royaltyRate: number
   storeLogo: string
-  isDeleted?: boolean
+  isActive?: boolean
   createdAt?: string
   updatedAt?: string
 }

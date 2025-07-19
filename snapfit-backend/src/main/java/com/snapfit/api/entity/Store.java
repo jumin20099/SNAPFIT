@@ -19,7 +19,7 @@ public class Store {
     private String storeLink;
     private Float royaltyRate;
     private String contact;
-    private Boolean isDeleted = false;
+    private Boolean isActive = true;
 
     @Column(updatable = false)
     @CreationTimestamp
