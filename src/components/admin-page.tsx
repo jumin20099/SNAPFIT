@@ -476,9 +476,6 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                               <div className="text-sm text-gray-600 mt-1">담당자: {mall.contact || '-'}</div>
                               <div className="flex items-center gap-2 mt-1">
                                 <Badge variant="outline">로열티율: {mall.royaltyRate ?? '-'}%</Badge>
-                                <span className={!mall.isActive ? 'text-gray-400' : 'text-green-600'}>
-                                  {!mall.isActive ? '비활성화됨' : '정상'}
-                                </span>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -489,11 +486,11 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                                 onClick={() => handleToggleMallStatus(mall.id!, !mall.isActive)}
                                 className={
                                   !mall.isActive
-                                    ? "text-green-600 hover:text-green-700 border-green-200"
-                                    : "text-red-600 hover:text-red-700 border-red-200"
+                                  ? "text-red-600 hover:text-red-700 border-red-200"
+                                    : "text-green-600 hover:text-green-700 border-green-200"
                                 }
                               >
-                                {!mall.isActive ? "활성화됨" : "비활성화됨"}
+                                {!mall.isActive ? "비활성화됨" : "활성화됨"}
                               </Button>
                               {/* 수정 버튼 */}
                               <Button size="sm" variant="outline" onClick={() => handleEditMall(mall)}>
