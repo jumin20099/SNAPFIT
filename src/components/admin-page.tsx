@@ -167,6 +167,21 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
     }
   }
 
+  const handleToggleMallStatus = async (mallId: number, newStatus: boolean) => {
+    // 실제 API 연동 필요: isDeleted 상태 토글
+    // 예시: await toggleStoreMallStatus(mallId, newStatus)
+    alert('제휴몰 상태 변경 기능은 아직 구현되지 않았습니다.');
+    loadData();
+  };
+
+  const handleDeleteMall = async (mallId: number) => {
+    if (confirm('정말로 이 제휴몰을 삭제하시겠습니까?')) {
+      // 실제 API 연동 필요: await deleteStoreMall(mallId)
+      alert('제휴몰 삭제 기능은 아직 구현되지 않았습니다.');
+      loadData();
+    }
+  };
+
   if (!isOpen) return null
 
   // 새로운 페이지 조건문들 추가
@@ -426,57 +441,71 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
             </TabsContent>
 
             <TabsContent value="stores" className="h-full m-0 p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">제휴몰 관리</h2>
-                <Button onClick={() => setIsStoreMallFormOpen(true)}>
-                  + 제휴몰 추가
-                </Button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full border text-sm">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border px-3 py-2">로고</th>
-                      <th className="border px-3 py-2">이름</th>
-                      <th className="border px-3 py-2">링크</th>
-                      <th className="border px-3 py-2">담당자</th>
-                      <th className="border px-3 py-2">로열티율</th>
-                      <th className="border px-3 py-2">상태</th>
-                      <th className="border px-3 py-2">관리</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold">제휴몰 관리</h2>
+                  <Button onClick={() => setIsStoreMallFormOpen(true)}>
+                    + 제휴몰 추가
+                  </Button>
+                </div>
+                {loading ? (
+                  <div className="text-center py-8">로딩 중...</div>
+                ) : (
+                  <div className="grid gap-4">
                     {storeMalls.map((mall: AdminStoreMall) => (
-                      <tr key={mall.id} className="text-center">
-                        <td className="border px-2 py-1">
-                          {mall.storeLogo ? (
-                            <img src={mall.storeLogo} alt={mall.storeName} className="w-10 h-10 object-contain mx-auto" />
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="border px-2 py-1 font-semibold">{mall.storeName}</td>
-                        <td className="border px-2 py-1">
-                          <a href={mall.storeLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                            {mall.storeLink}
-                          </a>
-                        </td>
-                        <td className="border px-2 py-1">{mall.contact}</td>
-                        <td className="border px-2 py-1">{mall.royaltyRate ?? '-'}%</td>
-                        <td className="border px-2 py-1">
-                          <span className={mall.isDeleted ? 'text-gray-400' : 'text-green-600'}>
-                            {mall.isDeleted ? '삭제됨' : '정상'}
-                          </span>
-                        </td>
-                        <td className="border px-2 py-1">
-                          <Button size="sm" variant="outline" onClick={() => handleEditMall(mall)}>
-                            수정
-                          </Button>
-                        </td>
-                      </tr>
+                      <Card key={mall.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-4">
+                            <img
+                              src={mall.storeLogo || "/placeholder.svg"}
+                              alt={mall.storeName}
+                              className="w-16 h-16 object-contain rounded"
+                            />
+                            <div className="flex-1">
+                              <h3 className="font-medium">{mall.storeName}</h3>
+                              <a href={mall.storeLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">{mall.storeLink}</a>
+                              <div className="text-sm text-gray-600 mt-1">담당자: {mall.contact || '-'}</div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline">로열티율: {mall.royaltyRate ?? '-'}%</Badge>
+                                <span className={mall.isDeleted ? 'text-gray-400' : 'text-green-600'}>
+                                  {mall.isDeleted ? '삭제됨' : '정상'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {/* 상태 변경 버튼 */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleMallStatus(mall.id!, !mall.isDeleted)}
+                                className={
+                                  !mall.isDeleted
+                                    ? "text-green-600 hover:text-green-700 border-green-200"
+                                    : "text-red-600 hover:text-red-700 border-red-200"
+                                }
+                              >
+                                {!mall.isDeleted ? "활성화됨" : "비활성화됨"}
+                              </Button>
+                              {/* 수정 버튼 */}
+                              <Button size="sm" variant="outline" onClick={() => handleEditMall(mall)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              {/* 삭제 버튼 */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteMall(mall.id!)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </div>
