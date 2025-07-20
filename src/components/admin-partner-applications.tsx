@@ -67,55 +67,51 @@ export default function AdminPartnerApplications() {
     setIsActionDialogOpen(true)
   }
 
-  const submitAction = async () => {
-    if (!selectedApplication) return
-    
-    if (actionType === "reject" && !rejectionReason.trim()) {
-      alert("거절 사유를 입력해주세요.")
-      return
-    }
-
-    setIsSubmitting(true)
+  const submitAction = async (applicationId: number, action: 'approve' | 'reject', rejectionReason?: string) => {
     try {
-      const token = localStorage.getItem("token")
-      const actionData: PartnerApplicationAction = {
-        action: actionType,
-        ...(actionType === "reject" && { rejectionReason })
-      }
-
-      console.log("Sending action data:", actionData)
-      console.log("URL:", `/api/admin/partner/applications/${selectedApplication.id}/status`)
-
-      const res = await fetch(`/api/admin/partner/applications/${selectedApplication.id}/status`, {
-        method: "PUT",
+      const actionData = action === 'approve' 
+        ? { action: 'approve' }
+        : { action: 'reject', rejectionReason };
+      
+      console.log('Sending action data:', actionData);
+      const url = `/api/admin/partner-status?id=${applicationId}`;
+      console.log('URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'PUT',
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(actionData),
-      })
+      });
 
-      console.log("Response status:", res.status)
-      console.log("Response headers:", Object.fromEntries(res.headers.entries()))
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
-      if (res.ok) {
-        const data = await res.json()
-        console.log("Response data:", data)
-        alert(actionType === "approve" ? "승인되었습니다!" : "거절되었습니다!")
-        loadApplications()
-        setIsActionDialogOpen(false)
-      } else {
-        const errorText = await res.text()
-        console.error("Error response:", errorText)
-        alert("처리 실패: " + errorText)
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const result = await response.json();
+      console.log('Success response:', result);
+      
+      // 성공 후 목록 새로고침
+      setApplications(prev => 
+        prev.map(app => 
+          app.id === applicationId 
+            ? { ...app, status: action === 'approve' ? 'approved' : 'rejected', rejectionReason }
+            : app
+        )
+      );
+      
+      alert(`파트너 신청이 ${action === 'approve' ? '승인' : '거절'}되었습니다.`);
     } catch (error) {
-      console.error("처리 실패:", error)
-      alert("처리 중 오류가 발생했습니다.")
-    } finally {
-      setIsSubmitting(false)
+      console.error('Error:', error);
+      alert('작업 중 오류가 발생했습니다.');
     }
-  }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -295,7 +291,7 @@ export default function AdminPartnerApplications() {
                 취소
               </Button>
               <Button
-                onClick={submitAction}
+                onClick={() => submitAction(selectedApplication?.id || 0, actionType, rejectionReason)}
                 disabled={isSubmitting}
                 className={actionType === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
               >
