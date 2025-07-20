@@ -17,6 +17,7 @@ interface PartnerApplication {
   businessRegistrationFile?: string
   applicationDate?: string
   status: "pending" | "approved" | "rejected"
+  rejectionReason?: string
   documents?: string[]
 }
 
@@ -277,8 +278,9 @@ export default function PartnerApplicationPage({ isOpen, onClose }: PartnerAppli
                   </div>
                   {application.status === "rejected" && (
                     <div className="p-3 bg-red-50 border border-red-200 rounded">
-                      <p className="text-sm text-red-800">
-                        신청이 거절되었습니다. 자세한 사유는 관리자에게 문의해주세요.
+                      <Label className="text-sm font-medium text-red-800">거절 사유</Label>
+                      <p className="text-sm text-red-700 mt-1">
+                        {application.rejectionReason || "거절 사유가 없습니다."}
                       </p>
                     </div>
                   )}

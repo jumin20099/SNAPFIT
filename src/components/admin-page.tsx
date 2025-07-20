@@ -18,6 +18,7 @@ import ProductAnalyticsPage from "./product-analytics"
 import StoreAnalyticsPage from "./store-analytics"
 import StoreApplicationsPage from "./store-applications"
 import ProductApprovalPage from "./product-approval"
+import AdminPartnerApplications from "./admin-partner-applications"
 
 interface Product {
   id?: number
@@ -251,7 +252,7 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           {/* Tab Navigation */}
           <div className="border-b bg-white flex-shrink-0">
-            <TabsList className="w-full grid grid-cols-4 bg-transparent h-12 p-0">
+            <TabsList className="w-full grid grid-cols-5 bg-transparent h-12 p-0">
               <TabsTrigger
                 value="dashboard"
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
@@ -272,6 +273,13 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
               >
                 <Store className="w-4 h-4" />
                 <span className="hidden sm:inline">제휴몰</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="applications"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">제휴 신청</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -510,6 +518,21 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
                         </CardContent>
                       </Card>
                     ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="applications" className="h-full m-0 p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">제휴 신청 관리</h2>
+                </div>
+                {loading ? (
+                  <div className="text-center py-8">로딩 중...</div>
+                ) : (
+                  <div className="grid gap-4">
+                    <AdminPartnerApplications />
                   </div>
                 )}
               </div>

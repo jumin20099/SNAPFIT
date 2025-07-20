@@ -3,6 +3,8 @@ package com.snapfit.api.service;
 import com.snapfit.api.dto.PartnerApplicationDto;
 import com.snapfit.api.dto.PartnerProductDto;
 import com.snapfit.api.dto.PartnerDashboardDto;
+import com.snapfit.api.dto.PartnerApplicationAdminDto;
+import com.snapfit.api.dto.PartnerApplicationActionDto;
 import com.snapfit.api.entity.PartnerApplication;
 import com.snapfit.api.entity.PartnerProduct;
 import com.snapfit.api.repository.PartnerApplicationRepository;
@@ -161,6 +163,7 @@ public class PartnerService {
             application.getBusinessRegistrationFile(),
             application.getApplicationDate(),
             application.getStatus().name().toLowerCase(),
+            application.getRejectionReason(),
             application.getCreatedAt(),
             application.getUpdatedAt()
         );
@@ -182,5 +185,56 @@ public class PartnerService {
             product.getCreatedAt(),
             product.getUpdatedAt()
         );
+    }
+    
+    // Entity를 Admin DTO로 변환
+    private PartnerApplicationAdminDto convertToAdminDto(PartnerApplication application) {
+        return new PartnerApplicationAdminDto(
+            application.getId(),
+            application.getCompanyName(),
+            application.getContactEmail(),
+            application.getContactPhone(),
+            application.getBusinessRegistration(),
+            application.getBusinessRegistrationFile(),
+            application.getApplicationDate(),
+            application.getStatus().name().toLowerCase(),
+            application.getRejectionReason(),
+            application.getCreatedAt(),
+            application.getUpdatedAt()
+        );
+    }
+    
+    // 어드민용 제휴 신청 목록 조회
+    public List<PartnerApplicationAdminDto> getAllApplications() {
+        List<PartnerApplication> applications = partnerApplicationRepository.findAllByOrderByCreatedAtDesc();
+        return applications.stream()
+                .map(this::convertToAdminDto)
+                .collect(Collectors.toList());
+    }
+    
+    // 어드민용 제휴 신청 상세 조회
+    public PartnerApplicationAdminDto getApplicationById(Long id) {
+        Optional<PartnerApplication> application = partnerApplicationRepository.findById(id);
+        return application.map(this::convertToAdminDto).orElse(null);
+    }
+    
+    // 어드민용 제휴 신청 승인/거절
+    public PartnerApplicationAdminDto updateApplicationStatus(Long id, PartnerApplicationActionDto actionDto) {
+        Optional<PartnerApplication> existing = partnerApplicationRepository.findById(id);
+        if (existing.isPresent()) {
+            PartnerApplication application = existing.get();
+            
+            if ("approve".equals(actionDto.getAction())) {
+                application.setStatus(PartnerApplication.ApplicationStatus.APPROVED);
+                application.setRejectionReason(null);
+            } else if ("reject".equals(actionDto.getAction())) {
+                application.setStatus(PartnerApplication.ApplicationStatus.REJECTED);
+                application.setRejectionReason(actionDto.getRejectionReason());
+            }
+            
+            PartnerApplication saved = partnerApplicationRepository.save(application);
+            return convertToAdminDto(saved);
+        }
+        return null;
     }
 } 

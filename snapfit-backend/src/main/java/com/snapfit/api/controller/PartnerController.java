@@ -3,6 +3,8 @@ package com.snapfit.api.controller;
 import com.snapfit.api.dto.PartnerApplicationDto;
 import com.snapfit.api.dto.PartnerProductDto;
 import com.snapfit.api.dto.PartnerDashboardDto;
+import com.snapfit.api.dto.PartnerApplicationAdminDto;
+import com.snapfit.api.dto.PartnerApplicationActionDto;
 import com.snapfit.api.service.PartnerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -102,6 +104,51 @@ public class PartnerController {
             Long applicationId = partnerApplicationId != null ? partnerApplicationId : 1L;
             PartnerDashboardDto result = partnerService.getDashboard(applicationId);
             return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    // ========== 어드민용 API ==========
+    
+    // 어드민용 제휴 신청 목록 조회
+    @GetMapping("/admin/applications")
+    public ResponseEntity<List<PartnerApplicationAdminDto>> getAllApplications() {
+        try {
+            List<PartnerApplicationAdminDto> result = partnerService.getAllApplications();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    // 어드민용 제휴 신청 상세 조회
+    @GetMapping("/admin/applications/{id}")
+    public ResponseEntity<PartnerApplicationAdminDto> getApplicationById(@PathVariable Long id) {
+        try {
+            PartnerApplicationAdminDto result = partnerService.getApplicationById(id);
+            if (result != null) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    // 어드민용 제휴 신청 승인/거절
+    @PutMapping("/admin/applications/{id}/status")
+    public ResponseEntity<PartnerApplicationAdminDto> updateApplicationStatus(
+            @PathVariable Long id, 
+            @RequestBody PartnerApplicationActionDto actionDto) {
+        try {
+            PartnerApplicationAdminDto result = partnerService.updateApplicationStatus(id, actionDto);
+            if (result != null) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }

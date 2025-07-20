@@ -39,6 +39,9 @@ public class PartnerApplication {
     @Column(name = "status", nullable = false)
     private ApplicationStatus status;
     
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     

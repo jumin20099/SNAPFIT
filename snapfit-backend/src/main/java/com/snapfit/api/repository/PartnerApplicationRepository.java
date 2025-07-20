@@ -4,6 +4,7 @@ import com.snapfit.api.entity.PartnerApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface PartnerApplicationRepository extends JpaRepository<PartnerApplication, Long> {
@@ -13,4 +14,7 @@ public interface PartnerApplicationRepository extends JpaRepository<PartnerAppli
     
     // 이메일로 신청 조회
     Optional<PartnerApplication> findByContactEmail(String contactEmail);
+    
+    // 어드민용 전체 신청 목록 조회
+    List<PartnerApplication> findAllByOrderByCreatedAtDesc();
 } 
