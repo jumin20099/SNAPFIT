@@ -36,6 +36,12 @@ public class PartnerApplication {
     @Column(name = "logo")
     private String logo;
     
+    @Column(name = "store_link")
+    private String storeLink;
+
+    @Column(name = "royalty_rate")
+    private Float royaltyRate;
+    
     @Column(name = "user_idx")
     private UUID userIdx;
     

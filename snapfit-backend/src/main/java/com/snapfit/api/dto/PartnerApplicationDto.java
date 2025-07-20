@@ -18,6 +18,8 @@ public class PartnerApplicationDto {
     private String businessRegistration;
     private String businessRegistrationFile;
     private String logo;
+    private String storeLink;
+    private Float royaltyRate;
     private UUID userIdx;
     private LocalDateTime applicationDate;
     private String status;

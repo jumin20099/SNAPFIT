@@ -17,6 +17,8 @@ public class PartnerApplicationAdminDto {
     private String businessRegistration;
     private String businessRegistrationFile;
     private String logo;
+    private String storeLink;
+    private Float royaltyRate;
     private LocalDateTime applicationDate;
     private String status;
     private String rejectionReason;

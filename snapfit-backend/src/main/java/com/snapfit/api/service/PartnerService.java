@@ -47,6 +47,8 @@ public class PartnerService {
         application.setBusinessRegistration(dto.getBusinessRegistration());
         application.setBusinessRegistrationFile(dto.getBusinessRegistrationFile());
         application.setLogo(dto.getLogo());
+        application.setStoreLink(dto.getStoreLink());
+        application.setRoyaltyRate(dto.getRoyaltyRate());
 
         // 인증 정보가 없으면 401 에러 발생
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
@@ -188,6 +190,8 @@ public class PartnerService {
             application.getBusinessRegistration(),
             application.getBusinessRegistrationFile(),
             application.getLogo(),
+            application.getStoreLink(),
+            application.getRoyaltyRate(),
             application.getUserIdx(),
             application.getApplicationDate(),
             application.getStatus().name().toLowerCase(),
@@ -226,6 +230,8 @@ public class PartnerService {
             application.getBusinessRegistration(),
             application.getBusinessRegistrationFile(),
             application.getLogo(),
+            application.getStoreLink(),
+            application.getRoyaltyRate(),
             application.getApplicationDate(),
             application.getStatus().name().toLowerCase(),
             application.getRejectionReason(),
@@ -270,6 +276,9 @@ public class PartnerService {
                 Store store = Store.builder()
                     .storeName(application.getCompanyName())
                     .contact(application.getContactPhone())
+                    .storeLogo(application.getLogo())
+                    .storeLink(application.getStoreLink())
+                    .royaltyRate(application.getRoyaltyRate())
                     .isActive(true)
                     .build();
                 storeRepository.save(store);
