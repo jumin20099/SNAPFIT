@@ -5,6 +5,8 @@ import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -22,6 +24,10 @@ import lombok.Setter;
 @Builder
 public class User {
 
+    public enum Role {
+        USER, PARTNER, ADMIN
+    }
+
     @Id
     private UUID userIdx;
 
@@ -30,7 +36,6 @@ public class User {
 
     @Column(nullable = false, unique = true)
     private String email;
-
 
     private String nickname;
     private String profileImage;
@@ -43,8 +48,9 @@ public class User {
 
     /** 롤 기본값 USER */
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     @Builder.Default
-    private String role = "USER";
+    private Role role = Role.USER;
 
     /** 최초 저장 시 UUID와 타임스탬프 */
     @PrePersist

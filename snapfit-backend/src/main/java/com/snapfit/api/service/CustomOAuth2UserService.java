@@ -83,7 +83,7 @@ public class CustomOAuth2UserService
                         .nickname(nickname)
                         .provider("kakao")
                         .providerId(kakaoId.toString())
-                        .role("ROLE_USER")
+                        .role(User.Role.USER)
                         .build();
                 log.info("새 사용자 생성 - 이메일: {}", email);
             }

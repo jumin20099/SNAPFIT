@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "partner_applications")
@@ -31,6 +32,9 @@ public class PartnerApplication {
     
     @Column(name = "business_registration_file")
     private String businessRegistrationFile;
+    
+    @Column(name = "user_idx")
+    private UUID userIdx;
     
     @Column(name = "application_date")
     private LocalDateTime applicationDate;

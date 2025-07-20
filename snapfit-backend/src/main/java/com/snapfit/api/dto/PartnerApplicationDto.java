@@ -4,6 +4,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -16,6 +17,7 @@ public class PartnerApplicationDto {
     private String contactPhone;
     private String businessRegistration;
     private String businessRegistrationFile;
+    private UUID userIdx;
     private LocalDateTime applicationDate;
     private String status;
     private String rejectionReason;

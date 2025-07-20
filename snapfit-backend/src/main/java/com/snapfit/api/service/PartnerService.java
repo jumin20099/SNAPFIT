@@ -7,8 +7,10 @@ import com.snapfit.api.dto.PartnerApplicationAdminDto;
 import com.snapfit.api.dto.PartnerApplicationActionDto;
 import com.snapfit.api.entity.PartnerApplication;
 import com.snapfit.api.entity.PartnerProduct;
+import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.PartnerApplicationRepository;
 import com.snapfit.api.repository.PartnerProductRepository;
+import com.snapfit.api.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -26,6 +28,9 @@ public class PartnerService {
     @Autowired
     private PartnerProductRepository partnerProductRepository;
     
+    @Autowired
+    private UserRepository userRepository;
+    
     // 제휴사 신청 제출
     public PartnerApplicationDto submitApplication(PartnerApplicationDto dto) {
         PartnerApplication application = new PartnerApplication();
@@ -34,6 +39,7 @@ public class PartnerService {
         application.setContactPhone(dto.getContactPhone());
         application.setBusinessRegistration(dto.getBusinessRegistration());
         application.setBusinessRegistrationFile(dto.getBusinessRegistrationFile());
+        application.setUserIdx(dto.getUserIdx());
         application.setStatus(PartnerApplication.ApplicationStatus.PENDING);
         
         PartnerApplication saved = partnerApplicationRepository.save(application);
@@ -161,6 +167,7 @@ public class PartnerService {
             application.getContactPhone(),
             application.getBusinessRegistration(),
             application.getBusinessRegistrationFile(),
+            application.getUserIdx(),
             application.getApplicationDate(),
             application.getStatus().name().toLowerCase(),
             application.getRejectionReason(),
@@ -227,6 +234,14 @@ public class PartnerService {
             if ("approve".equals(actionDto.getAction())) {
                 application.setStatus(PartnerApplication.ApplicationStatus.APPROVED);
                 application.setRejectionReason(null);
+                
+                // 승인 시 사용자 권한 변경
+                Optional<User> user = userRepository.findByUserIdx(application.getUserIdx());
+                if (user.isPresent()) {
+                    User updatedUser = user.get();
+                    updatedUser.setRole(User.Role.PARTNER);
+                    userRepository.save(updatedUser);
+                }
             } else if ("reject".equals(actionDto.getAction())) {
                 application.setStatus(PartnerApplication.ApplicationStatus.REJECTED);
                 application.setRejectionReason(actionDto.getRejectionReason());

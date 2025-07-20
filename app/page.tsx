@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, Heart, Grid3X3, User, X, Users, Settings, Store } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,6 +12,7 @@ import OutfitSharingPage from "@/components/outfit-sharing-page"
 import SocialLoginPage from "@/components/social-login"
 import AdminPage from "@/components/admin-page"
 import PartnerMainPage from "@/components/partner-main-page"
+import PartnerApplicationStandalone from "@/components/partner-application-standalone"
 
 const categories = ["전체", "남성복", "여성복", "유니섹스"]
 const majorCategories = ["좋아요", "상의", "하의", "아우터", "신발", "가방", "패션소품"]
@@ -213,7 +214,30 @@ export default function SnapFitMobile() {
   const [isOutfitSharingOpen, setIsOutfitSharingOpen] = useState(false)
   const [isAdminPageOpen, setIsAdminPageOpen] = useState(false)
   const [isPartnerPageOpen, setIsPartnerPageOpen] = useState(false)
+  const [isPartnerApplicationOpen, setIsPartnerApplicationOpen] = useState(false)
+  const [userInfo, setUserInfo] = useState<{ role?: string; email?: string } | null>(null)
   const [codyItems, setCodyItems] = useState<{ [key: string]: any }>({})
+
+  // 사용자 정보 가져오기
+  const fetchUserInfo = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const response = await fetch('/api/user/info', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setUserInfo(data)
+      }
+    } catch (error) {
+      console.error('사용자 정보 가져오기 실패:', error)
+    }
+  }
+
+  // 컴포넌트 마운트 시 사용자 정보 가져오기
+  useEffect(() => {
+    fetchUserInfo()
+  }, [])
 
   const addToCody = (product: any) => {
     const position = getCodyPosition(product.category, product.name)
@@ -487,6 +511,8 @@ export default function SnapFitMobile() {
     </div>
   )
 
+  console.log(userInfo?.role)
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col relative overflow-hidden">
       {/* Main Cody Display - 카테고리 창이 열렸을 때는 숨김 */}
@@ -510,14 +536,28 @@ export default function SnapFitMobile() {
         >
           <Users className="w-4 h-4" />
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsPartnerPageOpen(true)}
-          className="bg-white/90 backdrop-blur-sm"
-        >
-          <Store className="w-4 h-4" />
-        </Button>
+        {/* 제휴사 대시보드 버튼 - PARTNER 또는 ADMIN 권한 */}
+        {(userInfo?.role === 'PARTNER' || userInfo?.role === 'ADMIN') && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPartnerPageOpen(true)}
+            className="bg-white/90 backdrop-blur-sm"
+          >
+            <Store className="w-4 h-4" />
+          </Button>
+        )}
+        {/* 제휴 신청 버튼 - USER 권한만 표시 */}
+        {userInfo?.role === 'USER' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPartnerApplicationOpen(true)}
+            className="bg-white/90 backdrop-blur-sm"
+          >
+            제휴신청
+          </Button>
+        )}
       </div>
 
       {/* Category Button */}
@@ -533,17 +573,19 @@ export default function SnapFitMobile() {
         </Button>
       </div>
 
-      {/* Admin Button */}
-      <div className="absolute bottom-4 right-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsAdminPageOpen(true)}
-          className="bg-white/90 backdrop-blur-sm"
-        >
-          <Settings className="w-4 h-4" />
-        </Button>
-      </div>
+      {/* Admin Button - ADMIN 권한만 표시 */}
+      {userInfo?.role === 'ADMIN' && (
+        <div className="absolute bottom-4 right-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAdminPageOpen(true)}
+            className="bg-white/90 backdrop-blur-sm"
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
 
       {/* Login Button (temporary for testing) */}
       <div className="absolute bottom-4 left-4">
@@ -768,10 +810,13 @@ export default function SnapFitMobile() {
       <OutfitSharingPage isOpen={isOutfitSharingOpen} onClose={() => setIsOutfitSharingOpen(false)} />
 
       {/* Admin Page */}
-      <AdminPage isOpen={isAdminPageOpen} onClose={() => setIsAdminPageOpen(false)} />
+      <AdminPage isOpen={isAdminPageOpen} onClose={() => setIsAdminPageOpen(false)} userRole={userInfo?.role} />
 
       {/* Partner Page */}
-      <PartnerMainPage isOpen={isPartnerPageOpen} onClose={() => setIsPartnerPageOpen(false)} />
+      <PartnerMainPage isOpen={isPartnerPageOpen} onClose={() => setIsPartnerPageOpen(false)} userRole={userInfo?.role} />
+
+      {/* Partner Application Page */}
+      <PartnerApplicationStandalone isOpen={isPartnerApplicationOpen} onClose={() => setIsPartnerApplicationOpen(false)} />
     </div>
   )
 }

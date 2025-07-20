@@ -51,6 +51,7 @@ interface AdminStoreMall {
 interface AdminPageProps {
   isOpen: boolean
   onClose: () => void
+  userRole?: string // 추가
 }
 
 // snake_case -> camelCase 변환 함수 (Store 엔티티 기준)
@@ -69,7 +70,7 @@ function toCamelMall(mall: any): AdminStoreMall {
   }
 }
 
-export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
+export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps) {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [products, setProducts] = useState<Product[]>([])
   const [storeMalls, setStoreMalls] = useState<AdminStoreMall[]>([])
@@ -193,6 +194,19 @@ export default function AdminPage({ isOpen, onClose }: AdminPageProps) {
   };
 
   if (!isOpen) return null
+  if (userRole !== "ADMIN") {
+    return (
+      <div className="fixed inset-0 bg-white z-50 flex flex-col h-screen items-center justify-center">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <h2 className="text-2xl font-bold mb-2">권한이 없습니다.</h2>
+            <p className="text-gray-600">이 페이지에 접근할 수 있는 권한이 없습니다.</p>
+            <Button className="mt-4" onClick={onClose}>닫기</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   // 새로운 페이지 조건문들 추가
   if (isProductAnalyticsOpen) {
