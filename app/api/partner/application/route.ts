@@ -19,6 +19,12 @@ export async function GET(request: NextRequest) {
       throw new Error(`Backend responded with status: ${response.status}`)
     }
 
+    // 빈 응답인 경우 null 반환
+    const contentLength = response.headers.get('content-length')
+    if (contentLength === '0') {
+      return NextResponse.json(null)
+    }
+
     const data = await response.json()
     return NextResponse.json(data)
   } catch (error) {

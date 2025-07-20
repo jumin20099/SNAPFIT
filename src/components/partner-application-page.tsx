@@ -77,7 +77,7 @@ export default function PartnerApplicationPage({ isOpen, onClose }: PartnerAppli
 
     const formData = new FormData()
     formData.append("file", file)
-    formData.append("purpose", "business_registration")
+    formData.append("purpose", "partner_application")
     formData.append("refId", "0")
 
     setUploading(true)
