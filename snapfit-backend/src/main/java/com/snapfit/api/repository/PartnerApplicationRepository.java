@@ -17,4 +17,7 @@ public interface PartnerApplicationRepository extends JpaRepository<PartnerAppli
     
     // 어드민용 전체 신청 목록 조회
     List<PartnerApplication> findAllByOrderByCreatedAtDesc();
+    
+    // 상태별 신청 목록 조회
+    List<PartnerApplication> findByStatusOrderByCreatedAtDesc(PartnerApplication.ApplicationStatus status);
 } 

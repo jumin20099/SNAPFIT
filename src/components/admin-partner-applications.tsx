@@ -97,14 +97,11 @@ export default function AdminPartnerApplications() {
       const result = await response.json();
       console.log('Success response:', result);
       
-      // 성공 후 목록 새로고침
-      setApplications(prev => 
-        prev.map(app => 
-          app.id === applicationId 
-            ? { ...app, status: action === 'approve' ? 'approved' : 'rejected', rejectionReason }
-            : app
-        )
-      );
+      // 성공 후 팝업창 닫기
+      setIsActionDialogOpen(false);
+      
+      // 목록 다시 로드 (승인/거절된 항목이 제외된 새로운 목록)
+      await loadApplications();
       
       alert(`파트너 신청이 ${action === 'approve' ? '승인' : '거절'}되었습니다.`);
     } catch (error) {

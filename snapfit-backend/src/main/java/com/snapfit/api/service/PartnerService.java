@@ -206,7 +206,7 @@ public class PartnerService {
     
     // 어드민용 제휴 신청 목록 조회
     public List<PartnerApplicationAdminDto> getAllApplications() {
-        List<PartnerApplication> applications = partnerApplicationRepository.findAllByOrderByCreatedAtDesc();
+        List<PartnerApplication> applications = partnerApplicationRepository.findByStatusOrderByCreatedAtDesc(PartnerApplication.ApplicationStatus.PENDING);
         return applications.stream()
                 .map(this::convertToAdminDto)
                 .collect(Collectors.toList());
