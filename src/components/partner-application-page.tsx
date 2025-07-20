@@ -49,14 +49,17 @@ export default function PartnerApplicationPage({ isOpen, onClose }: PartnerAppli
       })
       if (res.ok) {
         const data = await res.json()
-        setApplication(data)
         if (data) {
+          setApplication(data)
           setForm({
             companyName: data.companyName || "",
             contactEmail: data.contactEmail || "",
             contactPhone: data.contactPhone || "",
             businessRegistration: data.businessRegistration || "",
           })
+        } else {
+          // 신청이 없는 경우 기본 상태 유지
+          setApplication(null)
         }
       } else {
         console.error("신청 정보 로드 실패:", res.status, res.statusText)

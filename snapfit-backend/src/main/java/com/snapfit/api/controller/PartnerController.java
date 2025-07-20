@@ -34,11 +34,7 @@ public class PartnerController {
     public ResponseEntity<PartnerApplicationDto> getApplication() {
         try {
             PartnerApplicationDto result = partnerService.getApplication();
-            if (result != null) {
-                return ResponseEntity.ok(result);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }
