@@ -42,8 +42,12 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 bucket = staticBucket;
                 key = "products/" + refId + "/" + uidName;
                 break;
+            case "partner_application":
+                bucket = staticBucket;
+                key = "partner_applications/" + refId + "/" + uidName;
+                break;
             default:
-                throw new IllegalArgumentException("Unknown purpose");
+                throw new IllegalArgumentException("Unknown purpose: " + purpose);
         }
         if (bucket == null || key == null) throw new IllegalStateException("bucket/key not set");
 
