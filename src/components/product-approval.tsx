@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { getProductApprovals, approveProduct } from "../actions/admin-actions"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 interface ProductApproval {
   id: number
@@ -27,6 +30,11 @@ interface ProductApprovalPageProps {
 export default function ProductApprovalPage({ isOpen, onClose }: ProductApprovalPageProps) {
   const [approvals, setApprovals] = useState<ProductApproval[]>([])
   const [loading, setLoading] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false)
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject'>('approve')
+  const [bulkRejectionReason, setBulkRejectionReason] = useState('')
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -56,6 +64,43 @@ export default function ProductApprovalPage({ isOpen, onClose }: ProductApproval
       } else {
         alert(result.message)
       }
+    }
+  }
+
+  // 일괄 승인/거절 핸들러
+  const handleBulkAction = (action: 'approve' | 'reject') => {
+    setBulkAction(action)
+    setBulkRejectionReason('')
+    setIsBulkDialogOpen(true)
+  }
+
+  const submitBulkAction = async () => {
+    setIsBulkSubmitting(true)
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/admin/products/bulk-status', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ids: selectedIds,
+          action: bulkAction,
+          rejectionReason: bulkAction === 'reject' ? bulkRejectionReason : undefined,
+        }),
+      })
+      if (res.ok) {
+        alert(`상품이 ${bulkAction === 'approve' ? '일괄 승인' : '일괄 거절'}되었습니다.`)
+        setSelectedIds([])
+        setIsBulkDialogOpen(false)
+        loadApprovals()
+      } else {
+        const errorText = await res.text()
+        alert('일괄 처리 실패: ' + errorText)
+      }
+    } finally {
+      setIsBulkSubmitting(false)
     }
   }
 
@@ -91,6 +136,13 @@ export default function ProductApprovalPage({ isOpen, onClose }: ProductApproval
   const processedApprovals = approvals.filter((approval) => approval.status !== "pending")
 
   if (!isOpen) return null
+
+  // 체크박스 핸들러
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+  }
+  const selectAll = () => setSelectedIds(pendingApprovals.map(a => a.id))
+  const deselectAll = () => setSelectedIds([])
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col h-screen">
@@ -140,11 +192,13 @@ export default function ProductApprovalPage({ isOpen, onClose }: ProductApproval
 
           {/* 승인 대기 상품 */}
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Clock className="w-5 h-5 text-yellow-600" />
-              승인 대기 ({pendingApprovals.length})
-            </h2>
-
+            <div className="flex items-center gap-2 mb-2">
+              <Button size="sm" variant="outline" onClick={selectAll}>전체 선택</Button>
+              <Button size="sm" variant="outline" onClick={deselectAll}>선택 해제</Button>
+              <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" disabled={selectedIds.length === 0} onClick={() => handleBulkAction('approve')}>일괄 승인</Button>
+              <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" disabled={selectedIds.length === 0} onClick={() => handleBulkAction('reject')}>일괄 거절</Button>
+              <span className="text-sm text-gray-500">선택: {selectedIds.length}개</span>
+            </div>
             {loading ? (
               <div className="text-center py-8">로딩 중...</div>
             ) : pendingApprovals.length === 0 ? (
@@ -161,7 +215,8 @@ export default function ProductApprovalPage({ isOpen, onClose }: ProductApproval
                     <CardContent className="p-4">
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <div>
+                          <div className="flex items-center gap-2">
+                            <input type="checkbox" checked={selectedIds.includes(approval.id)} onChange={() => toggleSelect(approval.id)} />
                             <h3 className="font-medium text-lg">{approval.product_name}</h3>
                             <p className="text-sm text-gray-600">{approval.store_name}</p>
                           </div>
@@ -275,6 +330,45 @@ export default function ProductApprovalPage({ isOpen, onClose }: ProductApproval
           )}
         </div>
       </div>
+
+      {/* 일괄 거절/승인 다이얼로그 */}
+      <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {bulkAction === 'approve' ? '일괄 승인' : '일괄 거절'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600 mb-2">
+              {bulkAction === 'approve'
+                ? `${selectedIds.length}개의 상품을 일괄 승인하시겠습니까?`
+                : `${selectedIds.length}개의 상품을 일괄 거절하시겠습니까?`}
+            </p>
+            {bulkAction === 'reject' && (
+              <div className="space-y-2">
+                <Label htmlFor="bulkRejectionReason">거절 사유 *</Label>
+                <Input
+                  id="bulkRejectionReason"
+                  value={bulkRejectionReason}
+                  onChange={e => setBulkRejectionReason(e.target.value)}
+                  placeholder="거절 사유를 입력하세요"
+                />
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsBulkDialogOpen(false)} disabled={isBulkSubmitting}>취소</Button>
+              <Button
+                onClick={submitBulkAction}
+                disabled={isBulkSubmitting || (bulkAction === 'reject' && !bulkRejectionReason)}
+                className={bulkAction === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+              >
+                {isBulkSubmitting ? '처리 중...' : (bulkAction === 'approve' ? '일괄 승인' : '일괄 거절')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

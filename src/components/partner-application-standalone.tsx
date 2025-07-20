@@ -36,10 +36,15 @@ export default function PartnerApplicationStandalone({ isOpen, onClose }: Partne
       const formData = new FormData()
       formData.append('file', file)
       formData.append('purpose', 'partner_application')
+      formData.append('refId', '0') // refId는 기본값 0으로
 
-      const response = await fetch('/api/media/upload', {
-        method: 'POST',
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
         body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       })
 
       if (response.ok) {
@@ -67,10 +72,12 @@ export default function PartnerApplicationStandalone({ isOpen, onClose }: Partne
 
     setIsSubmitting(true)
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch('/api/partner/application', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(form),
       })
@@ -110,7 +117,10 @@ export default function PartnerApplicationStandalone({ isOpen, onClose }: Partne
               <h2 className="text-2xl font-bold mb-2">제휴 신청이 완료되었습니다!</h2>
               <p className="text-gray-600 mb-4">
                 제휴 신청이 성공적으로 접수되었습니다. 
-                관리자 검토 후 승인 여부를 이메일로 안내드리겠습니다.
+                관리자 검토 후 승인 여부를 연락처로 안내드리겠습니다.
+              <p>
+                귀사의 제휴 신청에 진심으로 감사드립니다.
+              </p>
               </p>
               <p className="text-sm text-gray-500">
                 승인 후 제휴사 대시보드에 접속할 수 있습니다.

@@ -19,6 +19,7 @@ interface PartnerProduct {
   productPrice: number
   status: "pending" | "approved" | "rejected"
   submittedDate?: string
+  rejectionReason?: string // 추가
 }
 
 interface PartnerProductUploadPageProps {
@@ -42,8 +43,19 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [userInfo, setUserInfo] = useState<any>(null)
 
   useEffect(() => {
+    // 사용자 정보 가져오기
+    const fetchUserInfo = async () => {
+      const res = await fetch('/api/user/info')
+      if (res.ok) {
+        const data = await res.json()
+        setUserInfo(data)
+      }
+    }
+    fetchUserInfo()
     loadProducts()
   }, [])
 
@@ -112,6 +124,7 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
         body: JSON.stringify({
           ...form,
           productPrice: Number(form.productPrice),
+          partnerApplicationId: userInfo?.partner_application_id ? Number(userInfo.partner_application_id) : undefined,
         }),
       })
 
@@ -286,6 +299,11 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
                       required
                     />
                   </div>
+                  <div className="flex justify-end">
+                    <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
+                      {isSubmitting ? "등록 중..." : "등록"}
+                    </Button>
+                  </div>
                 </form>
               </CardContent>
             </Card>
@@ -295,12 +313,52 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
     )
   }
 
+  // 필터링된 상품 목록
+  const filteredProducts = products.filter(product => {
+    if (filterStatus === 'all') return true
+    return product.status === filterStatus
+  })
+
+  // 상품 목록 상단에 필터 UI 추가
   return (
     <div className="h-full flex flex-col">
-      {/* Content */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold">상품 목록</h2>
+        <div className="flex items-center gap-2">
+          <label className="text-sm">상태</label>
+          <select
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value)}
+            className="border rounded px-2 py-1 text-sm"
+          >
+            <option value="all">전체</option>
+            <option value="pending">검토중</option>
+            <option value="approved">승인</option>
+            <option value="rejected">거절</option>
+          </select>
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => {
+              setEditingProduct(null);
+              setForm({
+                productName: "",
+                productContent: "",
+                productImage: "",
+                productLink: "",
+                productCategory: "",
+                productPrice: "",
+              });
+              setIsFormOpen(true);
+            }}
+          >
+            상품 추가
+          </Button>
+        </div>
+      </div>
+      {/* 상품 목록 렌더링 시 filteredProducts 사용 */}
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-4">
-          {products.length === 0 ? (
+        <div className="grid gap-4">
+          {filteredProducts.length === 0 ? (
             <div className="text-center py-8">
               <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600">등록된 상품이 없습니다.</p>
@@ -309,40 +367,44 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
               </Button>
             </div>
           ) : (
-            <div className="grid gap-4">
-              {products.map((product) => (
-                <Card key={product.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      <img
-                        src={product.productImage || "/placeholder.svg"}
-                        alt={product.productName}
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-medium">{product.productName}</h3>
-                        <p className="text-sm text-gray-600 mb-1">{product.productContent}</p>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{product.productCategory}</Badge>
-                          <span className="text-sm font-medium">₩{product.productPrice?.toLocaleString()}</span>
-                          {getStatusBadge(product.status)}
-                        </div>
-                      </div>
+            filteredProducts.map((product) => (
+              <Card key={product.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={product.productImage || "/placeholder.svg"}
+                      alt={product.productName}
+                      className="w-16 h-16 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-medium">{product.productName}</h3>
+                      <p className="text-sm text-gray-600 mb-1">{product.productContent}</p>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditProduct(product)}
-                          disabled={product.status === "approved"}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
+                        <Badge variant="outline">{product.productCategory}</Badge>
+                        <span className="text-sm font-medium">₩{product.productPrice?.toLocaleString()}</span>
+                        {getStatusBadge(product.status)}
                       </div>
+                      {product.status === "rejected" && product.rejectionReason && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                          <Label className="text-sm font-medium text-red-800">거절 사유</Label>
+                          <p className="text-sm text-red-700 mt-1">{product.rejectionReason}</p>
+                        </div>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditProduct(product)}
+                        disabled={product.status === "approved"}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </div>
       </div>

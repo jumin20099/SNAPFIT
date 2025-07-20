@@ -12,6 +12,7 @@ import {
   // deleteStoreMall,
 } from "../actions/admin-actions"
 import { getProducts, getStoreMalls, toggleProductStatus, deleteProduct, deleteStoreMall, toggleStoreStatus } from "../actions/admin-client-fetch"
+import { getPartnerProducts } from "../actions/admin-actions" // 추가
 
 // 새로운 import 추가
 import ProductAnalyticsPage from "./product-analytics"
@@ -31,6 +32,7 @@ interface Product {
   price: string
   created_at?: string
   status?: "active" | "inactive"
+  type?: "일반" | "제휴사" // 추가
 }
 
 // isDeleted -> isActive로 일괄 변경
@@ -89,21 +91,42 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
   // 데이터 로드
   const loadData = async () => {
     setLoading(true)
-    console.log("loadData called");
     try {
-      const [productsData, mallsData] = await Promise.all([getProducts(), getStoreMalls()])
-      setProducts(productsData.map((p: any) => ({
-        id: p.productIdx,
-        product_name: p.productName,
-        product_content: p.productContent,
-        product_image: p.productImage,
-        product_link: p.productLink,
-        product_category: p.productCategory,
-        store_mall: p.storeIdx, // 필요시 storeName 등으로 추가 매핑
-        price: p.productPrice,
-        created_at: p.createdAt,
-        status: p.isActive ? "active" : "inactive",
-      })))
+      const [productsData, mallsData, partnerProductsData] = await Promise.all([
+        getProducts(),
+        getStoreMalls(),
+        getPartnerProducts(), // 제휴사 상품 추가
+      ])
+      // 기존 상품 + 제휴사 상품 합치기
+      const allProducts = [
+        ...productsData.map((p: any) => ({
+          id: p.productIdx,
+          product_name: p.productName,
+          product_content: p.productContent,
+          product_image: p.productImage,
+          product_link: p.productLink,
+          product_category: p.productCategory,
+          store_mall: p.storeIdx,
+          price: p.productPrice,
+          created_at: p.createdAt,
+          status: p.isActive ? "active" : "inactive",
+          type: "일반"
+        })),
+        ...partnerProductsData.map((p: any) => ({
+          id: p.id,
+          product_name: p.productName,
+          product_content: p.productContent,
+          product_image: p.productImage,
+          product_link: p.productLink,
+          product_category: p.productCategory,
+          store_mall: p.partnerApplicationId,
+          price: p.productPrice,
+          created_at: p.createdAt,
+          status: p.status,
+          type: "제휴사"
+        }))
+      ]
+      setProducts(allProducts)
       setStoreMalls(mallsData.map((m: any) => toCamelMall(m)))
     } catch (error) {
       console.error("데이터 로드 실패:", error)
@@ -433,6 +456,7 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline">{product.product_category}</Badge>
                                   <span className="text-sm font-medium">{product.price}</span>
+                                  <Badge variant="secondary">{product.type}</Badge>
                                 </div>
                               </div>
                               {/* 상품 관리 탭에 활성화/비활성화 버튼 등 기존 코드 유지 */}

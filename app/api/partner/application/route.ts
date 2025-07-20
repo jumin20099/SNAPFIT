@@ -36,29 +36,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
-    const response = await fetch(`${backendUrl}/api/partner/application`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
+export async function POST(req: NextRequest) {
+  const authHeader = req.headers.get('authorization') || '';
+  const body = await req.text();
 
-    if (!response.ok) {
-      throw new Error(`Backend responded with status: ${response.status}`)
-    }
+  const response = await fetch('http://localhost:8080/api/partner/application', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': authHeader,
+    },
+    body,
+  });
 
-    const data = await response.json()
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('Application API error:', error)
-    return NextResponse.json(
-      { error: 'Failed to submit application' },
-      { status: 500 }
-    )
-  }
+  const data = await response.json();
+  return NextResponse.json(data, { status: response.status });
 } 

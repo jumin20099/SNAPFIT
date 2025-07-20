@@ -175,9 +175,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
           </Button>
           <h1 className="text-xl font-bold">{editingProduct ? "상품 수정" : "상품 추가"}</h1>
         </div>
-        <Button type="submit" form="product-form" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
-          {isSubmitting ? "저장 중..." : "저장"}
-        </Button>
+        {/* 상단 등록 버튼 제거 */}
       </div>
 
       {/* Content */}
@@ -385,6 +383,11 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
                     placeholder="예: 29000"
                     required
                   />
+                </div>
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
+                    {isSubmitting ? "등록 중..." : "등록"}
+                  </Button>
                 </div>
               </form>
             </CardContent>

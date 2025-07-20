@@ -34,7 +34,10 @@ public class PartnerProduct {
     
     @Column(name = "product_price", nullable = false)
     private Integer productPrice;
-    
+
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private ProductStatus status;

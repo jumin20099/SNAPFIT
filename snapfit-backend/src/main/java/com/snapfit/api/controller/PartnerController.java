@@ -5,6 +5,8 @@ import com.snapfit.api.dto.PartnerProductDto;
 import com.snapfit.api.dto.PartnerDashboardDto;
 import com.snapfit.api.dto.PartnerApplicationAdminDto;
 import com.snapfit.api.dto.PartnerApplicationActionDto;
+import com.snapfit.api.dto.ProductApprovalActionDto;
+import com.snapfit.api.dto.BulkProductApprovalActionDto;
 import com.snapfit.api.service.PartnerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -149,6 +151,45 @@ public class PartnerController {
             } else {
                 return ResponseEntity.notFound().build();
             }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // 어드민용 상품 승인 대기 목록 조회
+    @GetMapping("/admin/products/approvals")
+    public ResponseEntity<List<PartnerProductDto>> getPendingProducts() {
+        try {
+            List<PartnerProductDto> result = partnerService.getPendingProducts();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // 어드민용 상품 개별 승인/거절
+    @PutMapping("/admin/products/{id}/status")
+    public ResponseEntity<PartnerProductDto> updateProductStatus(
+            @PathVariable Long id,
+            @RequestBody ProductApprovalActionDto actionDto) {
+        try {
+            PartnerProductDto result = partnerService.updateProductStatus(id, actionDto);
+            if (result != null) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // 어드민용 상품 일괄 승인/거절
+    @PutMapping("/admin/products/bulk-status")
+    public ResponseEntity<List<PartnerProductDto>> bulkUpdateProductStatus(@RequestBody BulkProductApprovalActionDto bulkDto) {
+        try {
+            List<PartnerProductDto> result = partnerService.bulkUpdateProductStatus(bulkDto);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }

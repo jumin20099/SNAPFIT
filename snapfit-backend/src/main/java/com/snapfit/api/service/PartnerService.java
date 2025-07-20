@@ -5,12 +5,16 @@ import com.snapfit.api.dto.PartnerProductDto;
 import com.snapfit.api.dto.PartnerDashboardDto;
 import com.snapfit.api.dto.PartnerApplicationAdminDto;
 import com.snapfit.api.dto.PartnerApplicationActionDto;
+import com.snapfit.api.dto.ProductApprovalActionDto;
+import com.snapfit.api.dto.BulkProductApprovalActionDto;
 import com.snapfit.api.entity.PartnerApplication;
 import com.snapfit.api.entity.PartnerProduct;
 import com.snapfit.api.entity.User;
+import com.snapfit.api.entity.Store;
 import com.snapfit.api.repository.PartnerApplicationRepository;
 import com.snapfit.api.repository.PartnerProductRepository;
 import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.repository.StoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -30,6 +34,9 @@ public class PartnerService {
     
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private StoreRepository storeRepository;
     
     // 제휴사 신청 제출
     public PartnerApplicationDto submitApplication(PartnerApplicationDto dto) {
@@ -39,7 +46,19 @@ public class PartnerService {
         application.setContactPhone(dto.getContactPhone());
         application.setBusinessRegistration(dto.getBusinessRegistration());
         application.setBusinessRegistrationFile(dto.getBusinessRegistrationFile());
-        application.setUserIdx(dto.getUserIdx());
+
+        // 인증 정보가 없으면 401 에러 발생
+        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
+            throw new org.springframework.security.access.AccessDeniedException("로그인 후 신청 가능합니다.");
+        }
+        String email = authentication.getName();
+        java.util.Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            throw new RuntimeException("유저 정보를 찾을 수 없습니다.");
+        }
+        application.setUserIdx(userOpt.get().getUserIdx());
+
         application.setStatus(PartnerApplication.ApplicationStatus.PENDING);
         
         PartnerApplication saved = partnerApplicationRepository.save(application);
@@ -188,6 +207,7 @@ public class PartnerService {
             product.getProductPrice(),
             product.getStatus().name().toLowerCase(),
             product.getPartnerApplicationId(),
+            product.getRejectionReason(),
             product.getSubmittedDate(),
             product.getCreatedAt(),
             product.getUpdatedAt()
@@ -213,7 +233,7 @@ public class PartnerService {
     
     // 어드민용 제휴 신청 목록 조회
     public List<PartnerApplicationAdminDto> getAllApplications() {
-        List<PartnerApplication> applications = partnerApplicationRepository.findByStatusOrderByCreatedAtDesc(PartnerApplication.ApplicationStatus.PENDING);
+        List<PartnerApplication> applications = partnerApplicationRepository.findAllByOrderByCreatedAtDesc();
         return applications.stream()
                 .map(this::convertToAdminDto)
                 .collect(Collectors.toList());
@@ -242,6 +262,14 @@ public class PartnerService {
                     updatedUser.setRole(User.Role.PARTNER);
                     userRepository.save(updatedUser);
                 }
+
+                // ★ 승인 시 stores 테이블에 제휴사 정보 등록
+                Store store = Store.builder()
+                    .storeName(application.getCompanyName())
+                    .contact(application.getContactPhone())
+                    .isActive(true)
+                    .build();
+                storeRepository.save(store);
             } else if ("reject".equals(actionDto.getAction())) {
                 application.setStatus(PartnerApplication.ApplicationStatus.REJECTED);
                 application.setRejectionReason(actionDto.getRejectionReason());
@@ -251,5 +279,45 @@ public class PartnerService {
             return convertToAdminDto(saved);
         }
         return null;
+    }
+
+    // 어드민용 상품 승인 대기 목록 조회
+    public List<PartnerProductDto> getPendingProducts() {
+        List<PartnerProduct> products = partnerProductRepository.findByStatus(PartnerProduct.ProductStatus.PENDING);
+        return products.stream()
+            .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+            .map(this::convertToProductDto)
+            .collect(Collectors.toList());
+    }
+
+    // 어드민용 상품 개별 승인/거절
+    public PartnerProductDto updateProductStatus(Long id, ProductApprovalActionDto actionDto) {
+        Optional<PartnerProduct> existing = partnerProductRepository.findById(id);
+        if (existing.isPresent()) {
+            PartnerProduct product = existing.get();
+            if ("approve".equals(actionDto.getAction())) {
+                product.setStatus(PartnerProduct.ProductStatus.APPROVED);
+                product.setRejectionReason(null);
+            } else if ("reject".equals(actionDto.getAction())) {
+                product.setStatus(PartnerProduct.ProductStatus.REJECTED);
+                product.setRejectionReason(actionDto.getRejectionReason());
+            }
+            PartnerProduct saved = partnerProductRepository.save(product);
+            return convertToProductDto(saved);
+        }
+        return null;
+    }
+
+    // 어드민용 상품 일괄 승인/거절
+    public List<PartnerProductDto> bulkUpdateProductStatus(BulkProductApprovalActionDto bulkDto) {
+        List<PartnerProductDto> result = new java.util.ArrayList<>();
+        for (Long id : bulkDto.getIds()) {
+            ProductApprovalActionDto actionDto = new ProductApprovalActionDto();
+            actionDto.setAction(bulkDto.getAction());
+            actionDto.setRejectionReason(bulkDto.getRejectionReason());
+            PartnerProductDto updated = updateProductStatus(id, actionDto);
+            if (updated != null) result.add(updated);
+        }
+        return result;
     }
 } 

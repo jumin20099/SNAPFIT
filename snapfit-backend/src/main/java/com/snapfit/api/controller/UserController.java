@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import com.snapfit.api.repository.PartnerApplicationRepository;
 
 @RestController
 @RequestMapping("/api/user")
@@ -20,6 +21,9 @@ public class UserController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PartnerApplicationRepository partnerApplicationRepository;
 
     @GetMapping("/info")
     public ResponseEntity<Map<String, Object>> getUserInfo() {
@@ -38,6 +42,9 @@ public class UserController {
                     userInfo.put("email", user.getEmail());
                     userInfo.put("role", user.getRole().name());
                     userInfo.put("nickname", user.getNickname());
+                    // partner_application_id 추가
+                    partnerApplicationRepository.findByUserIdx(user.getUserIdx())
+                      .ifPresent(app -> userInfo.put("partner_application_id", app.getId()));
                     
                     return ResponseEntity.ok(userInfo);
                 }

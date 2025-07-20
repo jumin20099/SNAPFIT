@@ -276,3 +276,15 @@ export async function toggleProductStatus(productId: number, isActive: boolean) 
   if (!res.ok) throw new Error("상품 상태 변경 실패");
   return res.json();
 }
+
+export async function getPartnerProducts() {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const token = localStorage.getItem("token");
+  const res = await fetch("/api/partner/products", {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("제휴사 상품 목록 불러오기 실패");
+  return res.json();
+}

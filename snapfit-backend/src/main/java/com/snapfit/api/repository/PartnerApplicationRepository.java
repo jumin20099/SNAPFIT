@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface PartnerApplicationRepository extends JpaRepository<PartnerApplication, Long> {
@@ -14,6 +15,9 @@ public interface PartnerApplicationRepository extends JpaRepository<PartnerAppli
     
     // 이메일로 신청 조회
     Optional<PartnerApplication> findByContactEmail(String contactEmail);
+
+    // userIdx로 신청 조회
+    Optional<PartnerApplication> findByUserIdx(UUID userIdx);
     
     // 어드민용 전체 신청 목록 조회
     List<PartnerApplication> findAllByOrderByCreatedAtDesc();
