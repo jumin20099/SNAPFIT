@@ -13,6 +13,7 @@ interface PartnerApplicationForm {
   contactPhone: string
   businessRegistration: string
   businessRegistrationFile?: string
+  logo?: string
 }
 
 interface PartnerApplicationStandaloneProps {
@@ -26,7 +27,8 @@ export default function PartnerApplicationStandalone({ isOpen, onClose }: Partne
     contactEmail: '',
     contactPhone: '',
     businessRegistration: '',
-    businessRegistrationFile: ''
+    businessRegistrationFile: '',
+    logo: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -59,6 +61,37 @@ export default function PartnerApplicationStandalone({ isOpen, onClose }: Partne
     } catch (error) {
       console.error('File upload error:', error)
       alert('파일 업로드 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleLogoUpload = async (file: File) => {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('purpose', 'partner_logo')
+      formData.append('refId', '0') // 임시 refId
+
+      const token = localStorage.getItem("token")
+      const response = await fetch("/api/media/upload", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setForm(prev => ({
+          ...prev,
+          logo: data.url
+        }))
+      } else {
+        alert('로고 업로드에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('Logo upload error:', error)
+      alert('로고 업로드 중 오류가 발생했습니다.')
     }
   }
 
@@ -168,6 +201,40 @@ export default function PartnerApplicationStandalone({ isOpen, onClose }: Partne
                     placeholder="회사명을 입력하세요"
                     required
                   />
+                </div>
+
+                {/* 제휴사 로고 업로드 */}
+                <div className="space-y-2">
+                  <Label htmlFor="logoFile">제휴사 로고</Label>
+                  <div className="mt-2">
+                    <input
+                      type="file"
+                      id="logoFile"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          handleLogoUpload(file)
+                        }
+                      }}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="logoFile"
+                      className="flex items-center gap-2 p-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400"
+                    >
+                      <Upload className="w-5 h-5 text-gray-500" />
+                      <span className="text-gray-600">
+                        {form.logo ? '로고가 업로드되었습니다' : '로고 파일을 선택하세요'}
+                      </span>
+                    </label>
+                    {form.logo && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
+                        <FileText className="w-4 h-4" />
+                        로고 업로드 완료
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* 연락처 이메일 */}

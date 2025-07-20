@@ -46,6 +46,7 @@ public class PartnerService {
         application.setContactPhone(dto.getContactPhone());
         application.setBusinessRegistration(dto.getBusinessRegistration());
         application.setBusinessRegistrationFile(dto.getBusinessRegistrationFile());
+        application.setLogo(dto.getLogo());
 
         // 인증 정보가 없으면 401 에러 발생
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
@@ -186,6 +187,7 @@ public class PartnerService {
             application.getContactPhone(),
             application.getBusinessRegistration(),
             application.getBusinessRegistrationFile(),
+            application.getLogo(),
             application.getUserIdx(),
             application.getApplicationDate(),
             application.getStatus().name().toLowerCase(),
@@ -223,6 +225,7 @@ public class PartnerService {
             application.getContactPhone(),
             application.getBusinessRegistration(),
             application.getBusinessRegistrationFile(),
+            application.getLogo(),
             application.getApplicationDate(),
             application.getStatus().name().toLowerCase(),
             application.getRejectionReason(),

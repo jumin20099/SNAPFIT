@@ -17,6 +17,7 @@ public class PartnerApplicationDto {
     private String contactPhone;
     private String businessRegistration;
     private String businessRegistrationFile;
+    private String logo;
     private UUID userIdx;
     private LocalDateTime applicationDate;
     private String status;

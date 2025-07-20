@@ -33,6 +33,9 @@ public class PartnerApplication {
     @Column(name = "business_registration_file")
     private String businessRegistrationFile;
     
+    @Column(name = "logo")
+    private String logo;
+    
     @Column(name = "user_idx")
     private UUID userIdx;
     

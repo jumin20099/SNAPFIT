@@ -46,6 +46,10 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 bucket = staticBucket;
                 key = "partner_applications/" + refId + "/" + uidName;
                 break;
+            case "partner_logo":
+                bucket = staticBucket;
+                key = "partner_logos/" + refId + "/" + uidName;
+                break;
             default:
                 throw new IllegalArgumentException("Unknown purpose: " + purpose);
         }
