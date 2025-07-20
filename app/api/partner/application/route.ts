@@ -10,6 +10,11 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    if (response.status === 404) {
+      // 신청이 없는 경우 null 반환
+      return NextResponse.json(null)
+    }
+
     if (!response.ok) {
       throw new Error(`Backend responded with status: ${response.status}`)
     }

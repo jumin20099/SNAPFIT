@@ -58,9 +58,13 @@ export default function PartnerApplicationPage({ isOpen, onClose }: PartnerAppli
             businessRegistration: data.businessRegistration || "",
           })
         }
+      } else {
+        console.error("신청 정보 로드 실패:", res.status, res.statusText)
+        // API 실패 시 기본 폼 상태 유지
       }
     } catch (error) {
       console.error("신청 정보 로드 실패:", error)
+      // 네트워크 에러 시 기본 폼 상태 유지
     }
   }
 
