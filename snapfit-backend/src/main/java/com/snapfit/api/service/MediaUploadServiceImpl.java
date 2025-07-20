@@ -65,7 +65,6 @@ public class MediaUploadServiceImpl implements MediaUploadService {
             PutObjectRequest req = new PutObjectRequest(bucket, key, is, meta);
             amazonS3.putObject(req);
         } catch (Exception e) {
-            e.printStackTrace(); // 콘솔에 실제 에러 메시지 출력
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "S3 업로드 실패: " + e.getMessage(), e);
         }
 

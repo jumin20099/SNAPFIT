@@ -14,10 +14,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import com.snapfit.api.repository.PartnerApplicationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
+
+    private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -27,38 +31,26 @@ public class UserController {
 
     @GetMapping("/info")
     public ResponseEntity<Map<String, Object>> getUserInfo() {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            
-            if (authentication != null && authentication.isAuthenticated() && 
-                !"anonymousUser".equals(authentication.getName())) {
-                
-                String email = authentication.getName();
-                Optional<User> userOpt = userRepository.findByEmail(email);
-                
-                if (userOpt.isPresent()) {
-                    User user = userOpt.get();
-                    Map<String, Object> userInfo = new HashMap<>();
-                    userInfo.put("email", user.getEmail());
-                    userInfo.put("role", user.getRole().name());
-                    userInfo.put("nickname", user.getNickname());
-                    // partner_application_id 추가
-                    partnerApplicationRepository.findByUserIdx(user.getUserIdx())
-                      .ifPresent(app -> userInfo.put("partner_application_id", app.getId()));
-                    
-                    return ResponseEntity.ok(userInfo);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() && 
+            !"anonymousUser".equals(authentication.getName())) {
+            String email = authentication.getName();
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("email", user.getEmail());
+                userInfo.put("role", user.getRole().name());
+                userInfo.put("nickname", user.getNickname());
+                var apps = partnerApplicationRepository.findByUserIdx(user.getUserIdx());
+                if (!apps.isEmpty()) {
+                    userInfo.put("partner_application_id", apps.get(0).getId());
                 }
+                return ResponseEntity.ok(userInfo);
             }
-            
-            // 인증되지 않은 사용자 또는 사용자를 찾을 수 없는 경우
-            Map<String, Object> defaultInfo = new HashMap<>();
-            defaultInfo.put("role", "USER");
-            return ResponseEntity.ok(defaultInfo);
-            
-        } catch (Exception e) {
-            Map<String, Object> errorInfo = new HashMap<>();
-            errorInfo.put("role", "USER");
-            return ResponseEntity.ok(errorInfo);
         }
+        Map<String, Object> defaultInfo = new HashMap<>();
+        defaultInfo.put("role", "USER");
+        return ResponseEntity.ok(defaultInfo);
     }
 } 

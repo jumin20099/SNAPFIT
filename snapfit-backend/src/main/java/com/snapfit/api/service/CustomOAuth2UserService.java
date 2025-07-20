@@ -49,7 +49,6 @@ public class CustomOAuth2UserService
             // 3) 속성에서 id, email, nickname 추출
             Map<String, Object> attrs = oauthUser.getAttributes();
             Long kakaoId = ((Number) attrs.get("id")).longValue();
-            log.info("카카오 로그인 시도 - 카카오 ID: {}", kakaoId);
 
             @SuppressWarnings("unchecked")
             Map<String, Object> account = (Map<String, Object>) attrs.get("kakao_account");
@@ -68,7 +67,6 @@ public class CustomOAuth2UserService
                     ? rawNickname
                     : "카카오사용자";
 
-            log.info("카카오 사용자 정보 - 이메일: {}, 닉네임: {}", email, nickname);
 
             // 5) DB 조회·생성
             Optional<User> opt = userRepo.findByProviderAndProviderId("kakao", kakaoId.toString());
@@ -76,7 +74,6 @@ public class CustomOAuth2UserService
             
             if (opt.isPresent()) {
                 user = opt.get();
-                log.info("기존 사용자 발견 - ID: {}", user.getUserIdx());
             } else {
                 user = User.builder()
                         .email(email)
@@ -85,18 +82,21 @@ public class CustomOAuth2UserService
                         .providerId(kakaoId.toString())
                         .role(User.Role.USER)
                         .build();
-                log.info("새 사용자 생성 - 이메일: {}", email);
             }
 
             // 6) 정보 최신화
             user.setEmail(email);
             user.setNickname(nickname);
             user = userRepo.save(user);
-            log.info("사용자 정보 저장 완료 - ID: {}", user.getUserIdx());
+
+            // 저장 후 freshUser로 다시 조회해서 role 값 확인
+            User freshUser = userRepo.findByEmail(email).orElse(null);
+            if (freshUser != null) {
+            } else {
+            }
 
             // 7) JWT 토큰 생성
-            String token = jwtUtil.generateToken(email);
-            log.info("JWT 토큰 생성 완료");
+            String token = jwtUtil.generateToken(email, user.getRole().name());
 
             // 8) DefaultOAuth2User 리턴 (ROLE_USER)
             return new DefaultOAuth2User(
@@ -111,7 +111,6 @@ public class CustomOAuth2UserService
                     "id"
             );
         } catch (Exception e) {
-            log.error("카카오 로그인 처리 중 오류 발생", e);
             throw new OAuth2AuthenticationException("카카오 로그인 처리 실패");
         }
     }

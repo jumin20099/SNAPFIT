@@ -18,8 +18,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 모든 요청마다 헤더의 Authorization: Bearer <token> 을 체크하여
@@ -30,7 +28,6 @@ import org.slf4j.LoggerFactory;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
-    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     /**
      * OAuth2 콜백이나 에러 페이지 등에서는 JWT 필터를 건너뛰도록.
@@ -52,7 +49,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
         if (header == null || !header.startsWith("Bearer ")) {
-            log.warn("Authorization 헤더 없음 또는 Bearer 누락");
             filterChain.doFilter(request, response);
             return;
         }
@@ -60,19 +56,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             if (jwtUtil.validateToken(token)) {
                 String subject = jwtUtil.getSubjectFromToken(token);
-                // 권한 정보만 USER로 고정 (필요 시 DB 조회하여 권한 추가)
-                User principal = new User(subject, "", List.of());
+                String role = jwtUtil.getRoleFromToken(token);
+                List<org.springframework.security.core.GrantedAuthority> authorities = List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role));
+                User principal = new User(subject, "", authorities);
                 UsernamePasswordAuthenticationToken auth = 
                     new UsernamePasswordAuthenticationToken(
                         principal,
                         null,
-                        principal.getAuthorities()
+                        authorities
                     );
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
             }
         } catch (Exception e) {
-            log.error("JWT 인증 실패: " + e.getMessage());
         }
         filterChain.doFilter(request, response);
     }

@@ -45,7 +45,6 @@ public class ProductController {
                 .build();
             return ResponseEntity.ok(productRepository.save(product));
         } catch (Exception e) {
-            e.printStackTrace(); // 콘솔에 실제 에러 메시지 출력
             throw new RuntimeException("상품 등록 실패: " + e.getMessage(), e);
         }
     }
@@ -103,7 +102,6 @@ public class ProductController {
 
             return ResponseEntity.ok(product);
         } catch (Exception e) {
-            e.printStackTrace();
             throw new RuntimeException("상품 수정 실패: " + e.getMessage(), e);
         }
     }

@@ -17,7 +17,7 @@ public interface PartnerApplicationRepository extends JpaRepository<PartnerAppli
     Optional<PartnerApplication> findByContactEmail(String contactEmail);
 
     // userIdx로 신청 조회
-    Optional<PartnerApplication> findByUserIdx(UUID userIdx);
+    List<PartnerApplication> findByUserIdx(UUID userIdx);
     
     // 어드민용 전체 신청 목록 조회
     List<PartnerApplication> findAllByOrderByCreatedAtDesc();

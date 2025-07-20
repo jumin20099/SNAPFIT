@@ -42,9 +42,7 @@ public class AuthController {
                                  .build());
         userRepo.save(user);
 
-        String token = jwtUtil.generateToken(email);
-
-        System.out.println("[ME] email=" + email + ", nickname=" + nickname);
+        String token = jwtUtil.generateToken(email, user.getRole().name());
 
         return ResponseEntity.ok(Map.of(
             "token",    token,

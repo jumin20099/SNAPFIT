@@ -24,19 +24,28 @@ public class JwtUtil {
     }
 
     /**
-     * JWT 토큰 생성
-     * @param subject 보통 이메일 또는 사용자 고유 식별자(예: userIdx.toString())를 넣음
+     * JWT 토큰 생성 (role 포함)
+     * @param subject 이메일 또는 userIdx
+     * @param role 권한
      */
-    public String generateToken(String subject) {
+    public String generateToken(String subject, String role) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
         return Jwts.builder()
                 .setSubject(subject)
+                .claim("role", role)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    /**
+     * 기존 generateToken(subject)도 role=USER로 기본값 지정
+     */
+    public String generateToken(String subject) {
+        return generateToken(subject, "USER");
     }
 
     /**
@@ -49,6 +58,18 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody();
         return claims.getSubject();
+    }
+
+    /**
+     * 토큰에서 Role 추출
+     */
+    public String getRoleFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.get("role", String.class);
     }
 
     /**
