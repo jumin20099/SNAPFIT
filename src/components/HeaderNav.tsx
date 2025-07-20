@@ -1,15 +1,16 @@
 "use client"
 
-import { User, Users, Grid3X3 } from "lucide-react"
+import { User, Users, Grid3X3, Store } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface HeaderNavProps {
   onMyPageClick: () => void
   onCommunityClick: () => void
   onCategoryClick: () => void
+  onPartnerClick: () => void
 }
 
-export const HeaderNav = ({ onMyPageClick, onCommunityClick, onCategoryClick }: HeaderNavProps) => {
+export const HeaderNav = ({ onMyPageClick, onCommunityClick, onCategoryClick, onPartnerClick }: HeaderNavProps) => {
   return (
     <>
       <div className="absolute top-4 left-4 flex gap-2">
@@ -28,6 +29,14 @@ export const HeaderNav = ({ onMyPageClick, onCommunityClick, onCategoryClick }: 
           className="bg-white/90 backdrop-blur-sm"
         >
           <Users className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onPartnerClick}
+          className="bg-white/90 backdrop-blur-sm"
+        >
+          <Store className="w-4 h-4" />
         </Button>
       </div>
 

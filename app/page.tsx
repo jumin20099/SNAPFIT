@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Heart, Grid3X3, User, X, Users, Settings } from "lucide-react"
+import { Search, Heart, Grid3X3, User, X, Users, Settings, Store } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
@@ -11,6 +11,7 @@ import MyPage from "@/components/my-page"
 import OutfitSharingPage from "@/components/outfit-sharing-page"
 import SocialLoginPage from "@/components/social-login"
 import AdminPage from "@/components/admin-page"
+import PartnerMainPage from "@/components/partner-main-page"
 
 const categories = ["전체", "남성복", "여성복", "유니섹스"]
 const majorCategories = ["좋아요", "상의", "하의", "아우터", "신발", "가방", "패션소품"]
@@ -211,6 +212,7 @@ export default function SnapFitMobile() {
   const [isSocialLoginOpen, setIsSocialLoginOpen] = useState(false)
   const [isOutfitSharingOpen, setIsOutfitSharingOpen] = useState(false)
   const [isAdminPageOpen, setIsAdminPageOpen] = useState(false)
+  const [isPartnerPageOpen, setIsPartnerPageOpen] = useState(false)
   const [codyItems, setCodyItems] = useState<{ [key: string]: any }>({})
 
   const addToCody = (product: any) => {
@@ -508,6 +510,14 @@ export default function SnapFitMobile() {
         >
           <Users className="w-4 h-4" />
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsPartnerPageOpen(true)}
+          className="bg-white/90 backdrop-blur-sm"
+        >
+          <Store className="w-4 h-4" />
+        </Button>
       </div>
 
       {/* Category Button */}
@@ -759,6 +769,9 @@ export default function SnapFitMobile() {
 
       {/* Admin Page */}
       <AdminPage isOpen={isAdminPageOpen} onClose={() => setIsAdminPageOpen(false)} />
+
+      {/* Partner Page */}
+      <PartnerMainPage isOpen={isPartnerPageOpen} onClose={() => setIsPartnerPageOpen(false)} />
     </div>
   )
 }
