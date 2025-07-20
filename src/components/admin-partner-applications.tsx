@@ -83,6 +83,9 @@ export default function AdminPartnerApplications() {
         ...(actionType === "reject" && { rejectionReason })
       }
 
+      console.log("Sending action data:", actionData)
+      console.log("URL:", `/api/admin/partner/applications/${selectedApplication.id}/status`)
+
       const res = await fetch(`/api/admin/partner/applications/${selectedApplication.id}/status`, {
         method: "PUT",
         headers: {
@@ -92,12 +95,18 @@ export default function AdminPartnerApplications() {
         body: JSON.stringify(actionData),
       })
 
+      console.log("Response status:", res.status)
+      console.log("Response headers:", Object.fromEntries(res.headers.entries()))
+
       if (res.ok) {
+        const data = await res.json()
+        console.log("Response data:", data)
         alert(actionType === "approve" ? "승인되었습니다!" : "거절되었습니다!")
         loadApplications()
         setIsActionDialogOpen(false)
       } else {
         const errorText = await res.text()
+        console.error("Error response:", errorText)
         alert("처리 실패: " + errorText)
       }
     } catch (error) {
