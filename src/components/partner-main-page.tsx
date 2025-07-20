@@ -18,7 +18,7 @@ export default function PartnerMainPage({ isOpen, onClose, userRole }: PartnerMa
   const [activeTab, setActiveTab] = useState("dashboard")
 
   if (!isOpen) return null
-  if (userRole !== "PARTNER") {
+  if (userRole == "USER") {
     return (
       <div className="fixed inset-0 bg-white z-50 flex flex-col h-screen items-center justify-center">
         <Card>

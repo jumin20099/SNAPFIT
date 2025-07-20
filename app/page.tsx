@@ -547,17 +547,15 @@ export default function SnapFitMobile() {
             <Store className="w-4 h-4" />
           </Button>
         )}
-        {/* 제휴 신청 버튼 - USER 권한만 표시 */}
-        {userInfo?.role === 'USER' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsPartnerApplicationOpen(true)}
-            className="bg-white/90 backdrop-blur-sm"
-          >
-            제휴신청
-          </Button>
-        )}
+        {/* 제휴 신청 버튼 - 모든 권한에 표시 */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsPartnerApplicationOpen(true)}
+          className="bg-white/90 backdrop-blur-sm"
+        >
+          제휴신청
+        </Button>
       </div>
 
       {/* Category Button */}
