@@ -107,8 +107,11 @@ public class PartnerService {
     public PartnerDashboardDto getDashboard(Long partnerApplicationId) {
         PartnerDashboardDto dashboard = new PartnerDashboardDto();
         
+        // partnerApplicationId가 null이면 기본값 사용
+        Long applicationId = partnerApplicationId != null ? partnerApplicationId : 1L;
+        
         // 신청 상태 조회
-        Optional<PartnerApplication> application = partnerApplicationRepository.findById(partnerApplicationId);
+        Optional<PartnerApplication> application = partnerApplicationRepository.findById(applicationId);
         if (application.isPresent()) {
             dashboard.setApplicationStatus(application.get().getStatus().name().toLowerCase());
         } else {
@@ -116,7 +119,7 @@ public class PartnerService {
         }
         
         // 상품 통계 조회
-        List<PartnerProduct> products = partnerProductRepository.findByPartnerApplicationIdOrderByCreatedAtDesc(partnerApplicationId);
+        List<PartnerProduct> products = partnerProductRepository.findByPartnerApplicationIdOrderByCreatedAtDesc(applicationId);
         dashboard.setTotalProducts(products.size());
         dashboard.setApprovedProducts((int) products.stream()
                 .filter(p -> p.getStatus() == PartnerProduct.ProductStatus.APPROVED)

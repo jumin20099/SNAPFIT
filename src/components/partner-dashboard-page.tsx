@@ -50,9 +50,31 @@ export default function PartnerDashboardPage({ isOpen, onClose }: PartnerDashboa
       if (res.ok) {
         const data = await res.json()
         setDashboard(data)
+      } else {
+        console.error("대시보드 로드 실패:", res.status)
+        // API 실패 시 기본 데이터 사용
+        setDashboard({
+          applicationStatus: "pending",
+          totalProducts: 0,
+          approvedProducts: 0,
+          pendingProducts: 0,
+          rejectedProducts: 0,
+          monthlyRevenue: 0,
+          recentActivities: []
+        })
       }
     } catch (error) {
       console.error("대시보드 로드 실패:", error)
+      // 에러 시 기본 데이터 사용
+      setDashboard({
+        applicationStatus: "pending",
+        totalProducts: 0,
+        approvedProducts: 0,
+        pendingProducts: 0,
+        rejectedProducts: 0,
+        monthlyRevenue: 0,
+        recentActivities: []
+      })
     }
   }
 
