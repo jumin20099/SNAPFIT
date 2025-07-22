@@ -1,6 +1,35 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# =============================================================================
+# 🔒 SECURITY & CREDENTIALS (CRITICAL - NEVER COMMIT THESE)
+# =============================================================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+.env.prod
+
+# Spring Boot environment files
+application-*.properties
+application-*.yml
+!application.properties.example
+!application.yml.example
+
+# AWS credentials
+.aws/
+aws-credentials.json
+
+# JWT & API keys
+jwt-secret.txt
+api-keys.json
+credentials/
+
+# =============================================================================
+# 📦 DEPENDENCIES & PACKAGE MANAGERS
+# =============================================================================
+# Node.js
 /node_modules
 /.pnp
 .pnp.*
@@ -9,33 +38,217 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+package-lock.json
+pnpm-lock.yaml
 
-# env files (can opt-in for committing if needed)
-.env*
+# =============================================================================
+# 🏗️ BUILD OUTPUTS
+# =============================================================================
+# Next.js
+/.next/
+/out/
+.next/
 
-# vercel
-.vercel
-
-# typescript
+# React/Node.js build
+/build
+/dist
 *.tsbuildinfo
 next-env.d.ts
+
+# Spring Boot build outputs
+**/target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Gradle build outputs
+.gradle
+**/build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# =============================================================================
+# 🧪 TESTING & COVERAGE
+# =============================================================================
+/coverage
+.nyc_output
+junit.xml
+test-results/
+
+# Spring Boot test results
+**/logs/
+spring.log
+
+# =============================================================================
+# 🔧 DEVELOPMENT TOOLS & EDITORS
+# =============================================================================
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# JetBrains IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# =============================================================================
+# 🖥️ OPERATING SYSTEM FILES
+# =============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# 📦 DEPLOYMENT & CLOUD
+# =============================================================================
+# Vercel
+.vercel
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Cloud deployment
+.gcloud/
+.firebase/
+
+# =============================================================================
+# 📊 LOGS & TEMPORARY FILES
+# =============================================================================
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+.grunt
+lib-cov
+.nyc_output
+.cache
+.parcel-cache
+.next
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# =============================================================================
+# 🔐 SSL CERTIFICATES (SECURITY)
+# =============================================================================
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+ssl/
+certificates/
+
+# =============================================================================
+# 📸 MEDIA & UPLOADS (Optional - uncomment if needed)
+# =============================================================================
+# uploads/
+# media/
+# static/media/
+# public/uploads/
+
+# =============================================================================
+# 🗃️ DATABASE & CACHE
+# =============================================================================
+# H2 Database files (Spring Boot default)
+*.db
+*.h2.db
+*.trace.db
+
+# SQLite
+*.sqlite
+*.sqlite3
+
+# Redis dumps
+dump.rdb
+
+# =============================================================================
+# ⚡ PERFORMANCE & OPTIMIZATION
+# =============================================================================
+# Bundle analysis
+.webpack-bundle-analyzer/
+stats.json
+
+# Lighthouse CI
+.lighthouseci/
+
+# =============================================================================
+# 🧹 CLEANUP & BACKUP
+# =============================================================================
+# Backup files
+*.bak
+*.backup
+*.old
+*backup*
+*~backup*
+
+# Auto-generated files
+generated/
