@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Upload, Package, Edit, Trash2, CheckCircle, XCircle, Clock } from "lucide-react"
+import { ArrowLeft, Upload, Package, Edit, Trash2, CheckCircle, XCircle, Clock, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -155,6 +155,27 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
       productPrice: product.productPrice.toString(),
     })
     setIsFormOpen(true)
+  }
+
+  const handleDeleteProduct = async (productId: number) => {
+    if (!confirm("정말로 이 상품을 삭제하시겠습니까?")) return
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`/api/partner/products/${productId}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (res.ok) {
+        alert("상품이 삭제되었습니다.")
+        loadProducts()
+      } else {
+        const errorText = await res.text()
+        alert("삭제 실패: " + errorText)
+      }
+    } catch (err) {
+      console.error(err)
+      alert("삭제 중 오류 발생")
+    }
   }
 
   const handleFormClose = () => {
@@ -402,6 +423,13 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
                         disabled={product.status === "approved"}
                       >
                         <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteProduct(product.id!)}
+                      >
+                        <Trash className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>

@@ -115,6 +115,17 @@ public class PartnerController {
         }
     }
     
+    // 상품 삭제
+    @DeleteMapping("/products/{id}")
+    public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
+        try {
+            boolean ok = partnerService.deleteProduct(id);
+            return ok ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    
     // 대시보드 정보 조회
     @GetMapping("/dashboard")
     public ResponseEntity<PartnerDashboardDto> getDashboard(@RequestParam(required = false) Long partnerApplicationId) {

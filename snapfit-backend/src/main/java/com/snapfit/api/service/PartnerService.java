@@ -139,6 +139,14 @@ public class PartnerService {
         return null;
     }
     
+    // 상품 삭제
+    public boolean deleteProduct(Long id) {
+        Optional<PartnerProduct> opt = partnerProductRepository.findById(id);
+        if (opt.isEmpty()) return false;
+        partnerProductRepository.deleteById(id);
+        return true;
+    }
+    
     // 대시보드 정보 조회
     public PartnerDashboardDto getDashboard(Long partnerApplicationId) {
         PartnerDashboardDto dashboard = new PartnerDashboardDto();
