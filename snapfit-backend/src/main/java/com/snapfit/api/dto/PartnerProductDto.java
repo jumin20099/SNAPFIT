@@ -19,6 +19,7 @@ public class PartnerProductDto {
     private Integer productPrice;
     private String status;
     private Long partnerApplicationId;
+    private String partnerCompanyName;
     private String rejectionReason;
     private LocalDateTime submittedDate;
     private LocalDateTime createdAt;

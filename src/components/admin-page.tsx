@@ -20,6 +20,7 @@ import StoreAnalyticsPage from "./store-analytics"
 import StoreApplicationsPage from "./store-applications"
 import ProductApprovalPage from "./product-approval"
 import AdminPartnerApplications from "./admin-partner-applications"
+import AdminProductApprovals from "./admin-product-approvals"
 
 interface Product {
   id?: number
@@ -87,6 +88,7 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
   const [isStoreAnalyticsOpen, setIsStoreAnalyticsOpen] = useState(false)
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false)
   const [isProductApprovalOpen, setIsProductApprovalOpen] = useState(false)
+  const [isPartnerProductApprovalOpen, setIsPartnerProductApprovalOpen] = useState(false)
 
   // 데이터 로드
   const loadData = async () => {
@@ -246,6 +248,10 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
 
   if (isProductApprovalOpen) {
     return <ProductApprovalPage isOpen={true} onClose={() => setIsProductApprovalOpen(false)} />
+  }
+
+  if (isPartnerProductApprovalOpen) {
+    return <AdminProductApprovals isOpen={true} onClose={() => setIsPartnerProductApprovalOpen(false)} />
   }
 
   // 상품 폼이 열려있으면 해당 컴포넌트 렌더링
@@ -412,12 +418,12 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
 
                   <Card
                     className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => setIsProductApprovalOpen(true)}
+                    onClick={() => setIsPartnerProductApprovalOpen(true)}
                   >
                     <CardContent className="p-4 text-center">
                       <Package className="w-8 h-8 mx-auto mb-2 text-orange-600" />
-                      <h3 className="font-medium">상품 승인</h3>
-                      <p className="text-sm text-gray-600">상품 검토 및 승인</p>
+                      <h3 className="font-medium">제휴사 상품 승인</h3>
+                      <p className="text-sm text-gray-600">제휴사 상품 검토 및 승인</p>
                     </CardContent>
                   </Card>
                 </div>

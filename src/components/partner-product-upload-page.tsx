@@ -49,7 +49,10 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
   useEffect(() => {
     // 사용자 정보 가져오기
     const fetchUserInfo = async () => {
-      const res = await fetch('/api/user/info')
+      const token = localStorage.getItem("token")
+      const res = await fetch('/api/user/info', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
       if (res.ok) {
         const data = await res.json()
         setUserInfo(data)

@@ -14,6 +14,7 @@ interface PartnerApplicationForm {
   businessRegistration: string
   businessRegistrationFile?: string
   logo?: string
+  storeLink?: string
 }
 
 interface PartnerApplicationStandaloneProps {
@@ -29,6 +30,7 @@ export default function PartnerApplicationStandalone({ isOpen, onClose }: Partne
     businessRegistration: '',
     businessRegistrationFile: '',
     logo: '',
+    storeLink: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -272,6 +274,19 @@ export default function PartnerApplicationStandalone({ isOpen, onClose }: Partne
                     placeholder="사업자등록번호를 입력하세요"
                     required
                   />
+                </div>
+
+                {/* 제휴사 링크 */}
+                <div className="space-y-2">
+                  <Label htmlFor="storeLink">제휴사 링크</Label>
+                  <Input
+                    id="storeLink"
+                    type="url"
+                    value={form.storeLink}
+                    onChange={(e) => setForm(prev => ({ ...prev, storeLink: e.target.value }))}
+                    placeholder="https://example.com"
+                  />
+                  <p className="text-sm text-gray-500">고객이 접속할 수 있는 제휴사 홈페이지나 쇼핑몰 링크를 입력하세요.</p>
                 </div>
 
                 {/* 사업자등록증 업로드 */}

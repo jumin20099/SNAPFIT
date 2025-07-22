@@ -74,8 +74,25 @@ public class PartnerController {
     @GetMapping("/products")
     public ResponseEntity<List<PartnerProductDto>> getProducts(@RequestParam(required = false) Long partnerApplicationId) {
         try {
-            // 현재는 단순화하여 partnerApplicationId가 1인 것으로 가정
-            Long applicationId = partnerApplicationId != null ? partnerApplicationId : 1L;
+            Long applicationId = partnerApplicationId;
+            
+            // partnerApplicationId가 제공되지 않은 경우, 인증된 사용자의 partnerApplicationId 찾기
+            if (applicationId == null) {
+                org.springframework.security.core.Authentication authentication = 
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                    
+                if (authentication != null && authentication.isAuthenticated() && 
+                    !"anonymousUser".equals(authentication.getName())) {
+                    String email = authentication.getName();
+                    applicationId = partnerService.getPartnerApplicationIdByEmail(email);
+                }
+                
+                // 임시: 인증이 안된 경우 partnerApplicationId=4 사용 (테스트용)
+                if (applicationId == null) {
+                    applicationId = 4L;
+                }
+            }
+            
             List<PartnerProductDto> result = partnerService.getProducts(applicationId);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -102,8 +119,25 @@ public class PartnerController {
     @GetMapping("/dashboard")
     public ResponseEntity<PartnerDashboardDto> getDashboard(@RequestParam(required = false) Long partnerApplicationId) {
         try {
-            // 현재는 단순화하여 partnerApplicationId가 1인 것으로 가정
-            Long applicationId = partnerApplicationId != null ? partnerApplicationId : 1L;
+            Long applicationId = partnerApplicationId;
+            
+            // partnerApplicationId가 제공되지 않은 경우, 인증된 사용자의 partnerApplicationId 찾기
+            if (applicationId == null) {
+                org.springframework.security.core.Authentication authentication = 
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                    
+                if (authentication != null && authentication.isAuthenticated() && 
+                    !"anonymousUser".equals(authentication.getName())) {
+                    String email = authentication.getName();
+                    applicationId = partnerService.getPartnerApplicationIdByEmail(email);
+                }
+            }
+            
+            // 여전히 찾지 못한 경우 기본값 사용
+            if (applicationId == null) {
+                applicationId = 1L;
+            }
+            
             PartnerDashboardDto result = partnerService.getDashboard(applicationId);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
@@ -156,11 +190,11 @@ public class PartnerController {
         }
     }
 
-    // 어드민용 상품 승인 대기 목록 조회
+    // 어드민용 상품 전체 목록 조회 (모든 상태)
     @GetMapping("/admin/products/approvals")
-    public ResponseEntity<List<PartnerProductDto>> getPendingProducts() {
+    public ResponseEntity<List<PartnerProductDto>> getAllProducts() {
         try {
-            List<PartnerProductDto> result = partnerService.getPendingProducts();
+            List<PartnerProductDto> result = partnerService.getAllProducts();
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
@@ -194,4 +228,5 @@ public class PartnerController {
             return ResponseEntity.badRequest().build();
         }
     }
+
 } 

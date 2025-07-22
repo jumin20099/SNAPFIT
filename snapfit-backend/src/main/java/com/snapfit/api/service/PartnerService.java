@@ -1,27 +1,30 @@
 package com.snapfit.api.service;
 
-import com.snapfit.api.dto.PartnerApplicationDto;
-import com.snapfit.api.dto.PartnerProductDto;
-import com.snapfit.api.dto.PartnerDashboardDto;
-import com.snapfit.api.dto.PartnerApplicationAdminDto;
-import com.snapfit.api.dto.PartnerApplicationActionDto;
-import com.snapfit.api.dto.ProductApprovalActionDto;
-import com.snapfit.api.dto.BulkProductApprovalActionDto;
-import com.snapfit.api.entity.PartnerApplication;
-import com.snapfit.api.entity.PartnerProduct;
-import com.snapfit.api.entity.User;
-import com.snapfit.api.entity.Store;
-import com.snapfit.api.repository.PartnerApplicationRepository;
-import com.snapfit.api.repository.PartnerProductRepository;
-import com.snapfit.api.repository.UserRepository;
-import com.snapfit.api.repository.StoreRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.snapfit.api.dto.BulkProductApprovalActionDto;
+import com.snapfit.api.dto.PartnerApplicationActionDto;
+import com.snapfit.api.dto.PartnerApplicationAdminDto;
+import com.snapfit.api.dto.PartnerApplicationDto;
+import com.snapfit.api.dto.PartnerDashboardDto;
+import com.snapfit.api.dto.PartnerProductDto;
+import com.snapfit.api.dto.ProductApprovalActionDto;
+import com.snapfit.api.entity.PartnerApplication;
+import com.snapfit.api.entity.PartnerProduct;
+import com.snapfit.api.entity.Product;
+import com.snapfit.api.entity.Store;
+import com.snapfit.api.entity.User;
+import com.snapfit.api.repository.PartnerApplicationRepository;
+import com.snapfit.api.repository.PartnerProductRepository;
+import com.snapfit.api.repository.ProductRepository;
+import com.snapfit.api.repository.StoreRepository;
+import com.snapfit.api.repository.UserRepository;
 
 @Service
 public class PartnerService {
@@ -37,6 +40,9 @@ public class PartnerService {
 
     @Autowired
     private StoreRepository storeRepository;
+    
+    @Autowired
+    private ProductRepository productRepository;
     
     // 제휴사 신청 제출
     public PartnerApplicationDto submitApplication(PartnerApplicationDto dto) {
@@ -203,21 +209,31 @@ public class PartnerService {
     
     // Entity를 Product DTO로 변환
     private PartnerProductDto convertToProductDto(PartnerProduct product) {
-        return new PartnerProductDto(
-            product.getId(),
-            product.getProductName(),
-            product.getProductContent(),
-            product.getProductImage(),
-            product.getProductLink(),
-            product.getProductCategory(),
-            product.getProductPrice(),
-            product.getStatus().name().toLowerCase(),
-            product.getPartnerApplicationId(),
-            product.getRejectionReason(),
-            product.getSubmittedDate(),
-            product.getCreatedAt(),
-            product.getUpdatedAt()
-        );
+        // 제휴사 정보 조회
+        String companyName = null;
+        if (product.getPartnerApplicationId() != null) {
+            Optional<PartnerApplication> partnerApp = partnerApplicationRepository.findById(product.getPartnerApplicationId());
+            if (partnerApp.isPresent()) {
+                companyName = partnerApp.get().getCompanyName();
+            }
+        }
+        
+        PartnerProductDto dto = new PartnerProductDto();
+        dto.setId(product.getId());
+        dto.setProductName(product.getProductName());
+        dto.setProductContent(product.getProductContent());
+        dto.setProductImage(product.getProductImage());
+        dto.setProductLink(product.getProductLink());
+        dto.setProductCategory(product.getProductCategory());
+        dto.setProductPrice(product.getProductPrice());
+        dto.setStatus(product.getStatus().name().toLowerCase());
+        dto.setPartnerApplicationId(product.getPartnerApplicationId());
+        dto.setPartnerCompanyName(companyName);
+        dto.setRejectionReason(product.getRejectionReason());
+        dto.setSubmittedDate(product.getSubmittedDate());
+        dto.setCreatedAt(product.getCreatedAt());
+        dto.setUpdatedAt(product.getUpdatedAt());
+        return dto;
     }
     
     // Entity를 Admin DTO로 변환
@@ -293,9 +309,9 @@ public class PartnerService {
         return null;
     }
 
-    // 어드민용 상품 승인 대기 목록 조회
-    public List<PartnerProductDto> getPendingProducts() {
-        List<PartnerProduct> products = partnerProductRepository.findByStatus(PartnerProduct.ProductStatus.PENDING);
+    // 어드민용 상품 전체 목록 조회 (모든 상태)
+    public List<PartnerProductDto> getAllProducts() {
+        List<PartnerProduct> products = partnerProductRepository.findAll();
         return products.stream()
             .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
             .map(this::convertToProductDto)
@@ -310,6 +326,10 @@ public class PartnerService {
             if ("approve".equals(actionDto.getAction())) {
                 product.setStatus(PartnerProduct.ProductStatus.APPROVED);
                 product.setRejectionReason(null);
+                
+                // ★ 승인된 상품을 products 테이블로 이관
+                transferApprovedProductToProductsTable(product);
+                
             } else if ("reject".equals(actionDto.getAction())) {
                 product.setStatus(PartnerProduct.ProductStatus.REJECTED);
                 product.setRejectionReason(actionDto.getRejectionReason());
@@ -332,4 +352,71 @@ public class PartnerService {
         }
         return result;
     }
+    
+        // 이메일로 사용자의 partnerApplicationId 찾기
+    public Long getPartnerApplicationIdByEmail(String email) {
+        try {
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                List<PartnerApplication> apps = partnerApplicationRepository.findByUserIdx(user.getUserIdx());
+                if (!apps.isEmpty()) {
+                    return apps.get(0).getId();
+                }
+                // userIdx 로는 못 찾았을 때, contactEmail 로 검색 (기존 데이터 호환)
+                var appByEmail = partnerApplicationRepository.findByContactEmail(email);
+                if (appByEmail.isPresent()) {
+                    return appByEmail.get().getId();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("사용자의 partnerApplicationId 조회 실패: " + e.getMessage());
+        }
+        return null;
+    }
+
+
+    // 승인된 상품을 products 테이블로 이관하는 메서드
+    private void transferApprovedProductToProductsTable(PartnerProduct partnerProduct) {
+        try {
+            // 제휴사 정보에서 storeIdx 찾기
+            Long storeIdx = null;
+            if (partnerProduct.getPartnerApplicationId() != null) {
+                Optional<PartnerApplication> partnerApp = partnerApplicationRepository.findById(partnerProduct.getPartnerApplicationId());
+                if (partnerApp.isPresent()) {
+                    String companyName = partnerApp.get().getCompanyName();
+                    
+                    // 제휴사 이름으로 stores 테이블에서 해당 store 찾기
+                    List<Store> stores = storeRepository.findByStoreName(companyName);
+                    if (!stores.isEmpty()) {
+                        storeIdx = stores.get(0).getStoreIdx();
+                    }
+                }
+            }
+            
+            // storeIdx를 찾지 못한 경우 기본값 사용
+            if (storeIdx == null) {
+                storeIdx = 1L; // 기본 store ID
+            }
+            
+            // Product 엔티티 생성
+            Product product = Product.builder()
+                .storeIdx(storeIdx)
+                .productName(partnerProduct.getProductName())
+                .productContent(partnerProduct.getProductContent())
+                .productPrice(partnerProduct.getProductPrice())
+                .productImage(partnerProduct.getProductImage())
+                .productCategory(partnerProduct.getProductCategory())
+                .productLink(partnerProduct.getProductLink())
+                .isActive(true)
+                .build();
+            
+            // products 테이블에 저장
+            productRepository.save(product);
+            
+        } catch (Exception e) {
+            System.err.println("제휴사 상품을 products 테이블로 이관 중 오류 발생: " + e.getMessage());
+        }
+    }
+
 } 

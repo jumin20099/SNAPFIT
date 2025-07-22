@@ -16,6 +16,7 @@ interface PartnerApplication {
   contactPhone: string
   businessRegistration: string
   businessRegistrationFile?: string
+  storeLink?: string
   applicationDate: string
   status: "pending" | "approved" | "rejected"
   rejectionReason?: string
@@ -191,6 +192,21 @@ export default function AdminPartnerApplications() {
                   <div>
                     <Label className="text-sm font-medium">사업자등록번호</Label>
                     <p className="text-sm">{application.businessRegistration}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">제휴사 링크</Label>
+                    {application.storeLink ? (
+                      <a 
+                        href={application.storeLink} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline break-all"
+                      >
+                        {application.storeLink}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-gray-500">링크 없음</p>
+                    )}
                   </div>
                   <div>
                     <Label className="text-sm font-medium">신청일</Label>
