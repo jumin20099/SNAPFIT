@@ -100,4 +100,26 @@ public class OutfitService {
     public List<Outfit> listPublicOutfits() {
         return outfitRepository.findByIsPublicTrueOrderByCreatedAtDesc();
     }
+
+    /**
+     * 코디 상세를 반환한다. 공개 코디이거나 소유자일 때만 접근 가능하다.
+     *
+     * @param outfitIdx 코디 PK
+     * @param user      (옵션) 현재 사용자, null 가능
+     * @return Outfit
+     * @throws IllegalArgumentException 권한 없을 때
+     */
+    @Transactional(readOnly = true)
+    public Outfit getOutfit(Long outfitIdx, User user) {
+        Outfit outfit = outfitRepository.findById(outfitIdx)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 코디입니다."));
+
+        // 공개 코디가 아니면 소유자만 볼 수 있음
+        if (!outfit.getIsPublic()) {
+            if (user == null || !outfit.getUser().getUserIdx().equals(user.getUserIdx())) {
+                throw new IllegalArgumentException("조회 권한이 없습니다.");
+            }
+        }
+        return outfit;
+    }
 } 
