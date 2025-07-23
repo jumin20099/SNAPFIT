@@ -38,4 +38,37 @@ public class OutfitService {
                 .build();
         return outfitRepository.save(outfit);
     }
+
+    /**
+     * 코디 내용을 수정한다.
+     *
+     * @param outfitIdx 수정할 코디 PK
+     * @param dto       수정 정보 DTO
+     * @param user      코디 소유 사용자(권한 확인용)
+     * @return 수정된 Outfit 엔티티
+     * @throws IllegalArgumentException 코디가 존재하지 않거나 권한이 없을 때
+     */
+    @Transactional
+    public Outfit updateOutfit(Long outfitIdx, OutfitDto dto, User user) {
+        Outfit outfit = outfitRepository.findById(outfitIdx)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 코디입니다."));
+
+        // 작성자 확인
+        if (!outfit.getUser().getUserIdx().equals(user.getUserIdx())) {
+            throw new IllegalArgumentException("수정 권한이 없습니다.");
+        }
+
+        // 필드 변경
+        if (dto.getOutfitItem() != null) {
+            outfit.setOutfitItem(dto.getOutfitItem());
+        }
+        if (dto.getOutfitThumbnail() != null) {
+            outfit.setOutfitThumbnail(dto.getOutfitThumbnail());
+        }
+        if (dto.getIsPublic() != null) {
+            outfit.setIsPublic(dto.getIsPublic());
+        }
+
+        return outfitRepository.save(outfit);
+    }
 } 
