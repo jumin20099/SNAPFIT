@@ -295,7 +295,7 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           {/* Tab Navigation */}
           <div className="border-b bg-white flex-shrink-0">
-            <TabsList className="w-full grid grid-cols-5 bg-transparent h-12 p-0">
+            <TabsList className="w-full grid grid-cols-4 bg-transparent h-12 p-0">
               <TabsTrigger
                 value="dashboard"
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
