@@ -163,32 +163,38 @@ public class PartnerService {
         }
         
         // 상품 통계 조회
-        List<PartnerProduct> products = partnerProductRepository.findByPartnerApplicationIdOrderByCreatedAtDesc(applicationId);
-        dashboard.setTotalProducts(products.size());
-        dashboard.setApprovedProducts((int) products.stream()
-                .filter(p -> p.getStatus() == PartnerProduct.ProductStatus.APPROVED)
-                .count());
-        dashboard.setPendingProducts((int) products.stream()
-                .filter(p -> p.getStatus() == PartnerProduct.ProductStatus.PENDING)
-                .count());
-        dashboard.setRejectedProducts((int) products.stream()
-                .filter(p -> p.getStatus() == PartnerProduct.ProductStatus.REJECTED)
-                .count());
-        
+        int totalProducts = partnerProductRepository.countByPartnerApplicationId(applicationId);
+        int approvedProducts = partnerProductRepository.countByPartnerApplicationIdAndStatus(
+                applicationId, PartnerProduct.ProductStatus.APPROVED);
+        int pendingProducts = partnerProductRepository.countByPartnerApplicationIdAndStatus(
+                applicationId, PartnerProduct.ProductStatus.PENDING);
+        int rejectedProducts = partnerProductRepository.countByPartnerApplicationIdAndStatus(
+                applicationId, PartnerProduct.ProductStatus.REJECTED);
+
+        dashboard.setTotalProducts(totalProducts);
+        dashboard.setApprovedProducts(approvedProducts);
+        dashboard.setPendingProducts(pendingProducts);
+        dashboard.setRejectedProducts(rejectedProducts);
+
         // 매출 (현재는 0으로 설정)
         dashboard.setMonthlyRevenue(0);
-        
-        // 최근 활동 - 실제 상품 등록 활동만 표시
-        List<PartnerDashboardDto.ActivityDto> activities = products.stream()
+
+        // 최근 활동 (최신 5개)
+        List<PartnerProduct> latest = partnerProductRepository
+                .findByPartnerApplicationIdOrderByCreatedAtDesc(applicationId)
+                .stream()
                 .limit(5)
+                .collect(Collectors.toList());
+
+        List<PartnerDashboardDto.ActivityDto> activities = latest.stream()
                 .map(product -> new PartnerDashboardDto.ActivityDto(
-                    product.getId(),
-                    "product",
-                    "상품 등록: " + product.getProductName(),
-                    product.getSubmittedDate().format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"))
+                        product.getId(),
+                        "product",
+                        "상품 등록: " + product.getProductName(),
+                        product.getSubmittedDate().format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm"))
                 ))
                 .collect(Collectors.toList());
-        
+
         dashboard.setRecentActivities(activities);
         
         return dashboard;

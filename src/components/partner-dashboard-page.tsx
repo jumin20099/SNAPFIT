@@ -43,38 +43,35 @@ export default function PartnerDashboardPage({ isOpen, onClose }: PartnerDashboa
 
   const loadDashboard = async () => {
     try {
-      const token = localStorage.getItem("token")
-      const res = await fetch("/api/partner/dashboard", {
+      const token = localStorage.getItem("token") || ""
+
+      // 1) 사용자 info에서 partner_application_id 조회
+      const infoRes = await fetch("/api/user/info", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      let partnerAppId: number | undefined = undefined
+      if (infoRes.ok) {
+        const info = await infoRes.json()
+        partnerAppId = info.partner_application_id
+      }
+
+      // 2) 대시보드 호출 (id 쿼리 파라미터 전달)
+      const dashUrl = partnerAppId
+        ? `/api/partner/dashboard?partnerApplicationId=${partnerAppId}`
+        : "/api/partner/dashboard"
+
+      const res = await fetch(dashUrl, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
+
       if (res.ok) {
         const data = await res.json()
         setDashboard(data)
       } else {
         console.error("대시보드 로드 실패:", res.status)
-        // API 실패 시 기본 데이터 사용
-        setDashboard({
-          applicationStatus: "pending",
-          totalProducts: 0,
-          approvedProducts: 0,
-          pendingProducts: 0,
-          rejectedProducts: 0,
-          monthlyRevenue: 0,
-          recentActivities: []
-        })
       }
     } catch (error) {
       console.error("대시보드 로드 실패:", error)
-      // 에러 시 기본 데이터 사용
-      setDashboard({
-        applicationStatus: "pending",
-        totalProducts: 0,
-        approvedProducts: 0,
-        pendingProducts: 0,
-        rejectedProducts: 0,
-        monthlyRevenue: 0,
-        recentActivities: []
-      })
     }
   }
 

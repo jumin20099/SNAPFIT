@@ -3,24 +3,22 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
-    const response = await fetch(`${backendUrl}/api/partner/dashboard`, {
+
+    // 쿼리스트링 그대로 전달
+    const query = request.nextUrl.search || ''
+
+    // Authorization 헤더 전달 (없으면 undefined)
+    const authHeader = request.headers.get('authorization') || undefined
+
+    const response = await fetch(`${backendUrl}/api/partner/dashboard${query}`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: authHeader ? { Authorization: authHeader } : undefined,
     })
 
-    if (!response.ok) {
-      throw new Error(`Backend responded with status: ${response.status}`)
-    }
-
     const data = await response.json()
-    return NextResponse.json(data)
+    return NextResponse.json(data, { status: response.status })
   } catch (error) {
     console.error('Dashboard API error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch dashboard data' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 })
   }
 } 

@@ -16,4 +16,10 @@ public interface PartnerProductRepository extends JpaRepository<PartnerProduct, 
     
     // 제휴사별 상태별 상품 목록 조회
     List<PartnerProduct> findByPartnerApplicationIdAndStatus(Long partnerApplicationId, PartnerProduct.ProductStatus status);
+
+    // 상품 총 갯수
+    int countByPartnerApplicationId(Long partnerApplicationId);
+
+    // 상태별 상품 갯수
+    int countByPartnerApplicationIdAndStatus(Long partnerApplicationId, PartnerProduct.ProductStatus status);
 } 
