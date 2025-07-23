@@ -9,6 +9,8 @@ import com.snapfit.api.entity.Outfit;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.OutfitRepository;
 
+import java.util.List;
+
 /**
  * Outfit(코디) 관련 비즈니스 로직 서비스.
  */
@@ -89,5 +91,13 @@ public class OutfitService {
         }
 
         outfitRepository.delete(outfit);
+    }
+
+    /**
+     * 공개 코디 최신순 목록을 반환한다.
+     */
+    @Transactional(readOnly = true)
+    public List<Outfit> listPublicOutfits() {
+        return outfitRepository.findByIsPublicTrueOrderByCreatedAtDesc();
     }
 } 
