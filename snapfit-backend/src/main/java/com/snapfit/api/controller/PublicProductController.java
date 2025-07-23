@@ -34,11 +34,9 @@ public class PublicProductController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Product>> listByCategory(@RequestParam(required = false) String category) {
-        if (category == null || category.isBlank()) {
-            // 카테고리 없으면 전체 활성 상품 반환(추후 페이징)
-            return ResponseEntity.ok(productService.getActiveProductsByCategory(""));
-        }
-        return ResponseEntity.ok(productService.getActiveProductsByCategory(category));
+    public ResponseEntity<List<Product>> list(
+            @RequestParam(required = false) String major,
+            @RequestParam(required = false) String sub) {
+        return ResponseEntity.ok(productService.getActiveProducts(major, sub));
     }
 } 

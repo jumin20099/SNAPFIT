@@ -8,6 +8,9 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByStoreIdx(Long storeIdx);
 
-    // 카테고리(대소문자 무관) + isActive = true
-    List<Product> findByProductCategoryIgnoreCaseAndIsActiveTrue(String productCategory);
+    List<Product> findByMajorCategoryIgnoreCaseAndIsActiveTrue(String majorCategory);
+
+    List<Product> findByMajorCategoryIgnoreCaseAndSubCategoryIgnoreCaseAndIsActiveTrue(String majorCategory, String subCategory);
+
+    List<Product> findByIsActiveTrue();
 }

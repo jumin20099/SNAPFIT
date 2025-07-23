@@ -30,8 +30,14 @@ public class ProductService {
         return productRepository.findByStoreIdx(storeIdx);
     }
 
-    public List<Product> getActiveProductsByCategory(String category) {
-        return productRepository.findByProductCategoryIgnoreCaseAndIsActiveTrue(category);
+    public List<Product> getActiveProducts(String major, String sub) {
+        if ((major == null || major.isBlank()) && (sub == null || sub.isBlank())) {
+            return productRepository.findByIsActiveTrue();
+        }
+        if (sub == null || sub.isBlank()) {
+            return productRepository.findByMajorCategoryIgnoreCaseAndIsActiveTrue(major);
+        }
+        return productRepository.findByMajorCategoryIgnoreCaseAndSubCategoryIgnoreCaseAndIsActiveTrue(major, sub);
     }
 
     public ProductDetailDto getProductDetail(Long productId, com.snapfit.api.entity.User user) {
