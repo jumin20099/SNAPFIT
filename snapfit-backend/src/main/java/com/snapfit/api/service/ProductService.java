@@ -30,6 +30,10 @@ public class ProductService {
         return productRepository.findByStoreIdx(storeIdx);
     }
 
+    public List<Product> getActiveProductsByCategory(String category) {
+        return productRepository.findByProductCategoryIgnoreCaseAndIsActiveTrue(category);
+    }
+
     public ProductDetailDto getProductDetail(Long productId, com.snapfit.api.entity.User user) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
