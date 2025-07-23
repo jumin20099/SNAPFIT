@@ -458,6 +458,17 @@ export default function SnapFitMobile() {
             <Store className="w-4 h-4" />
           </Button>
         )}
+        {/* Admin Button - ADMIN 권한만 표시, 제휴 신청 버튼 왼쪽에 배치 */}
+        {userInfo?.role === 'ADMIN' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAdminPageOpen(true)}
+            className="bg-white/90 backdrop-blur-sm"
+          >
+            <Settings className="w-4 h-4" />
+          </Button>
+        )}
         {/* 제휴 신청 버튼 - 모든 권한에 표시 */}
         <Button
           variant="outline"
@@ -481,20 +492,6 @@ export default function SnapFitMobile() {
           카테고리
         </Button>
       </div>
-
-      {/* Admin Button - ADMIN 권한만 표시 */}
-      {userInfo?.role === 'ADMIN' && (
-        <div className="absolute bottom-4 right-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsAdminPageOpen(true)}
-            className="bg-white/90 backdrop-blur-sm"
-          >
-            <Settings className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
 
       {/* Login Button (temporary for testing) */}
       <div className="absolute bottom-4 left-4">
