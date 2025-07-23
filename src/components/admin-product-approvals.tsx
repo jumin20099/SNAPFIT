@@ -40,6 +40,10 @@ export default function AdminProductApprovals({ isOpen, onClose }: AdminProductA
   const [rejectionReason, setRejectionReason] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null)
+  const [selectedPartnerName, setSelectedPartnerName] = useState<string>('전체')
+  const [isPartnerDialogOpen, setIsPartnerDialogOpen] = useState(false)
+  const [partners, setPartners] = useState<Array<{id:number, companyName:string}>>([])
 
   useEffect(() => {
     if (isOpen) {
@@ -64,6 +68,20 @@ export default function AdminProductApprovals({ isOpen, onClose }: AdminProductA
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadPartners = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch("/api/partner/admin/applications", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const approved = data.filter((p: any) => p.status === 'approved')
+        setPartners(approved.map((p: any) => ({ id: p.id, companyName: p.companyName })))
+      }
+    } catch (e) { console.error(e) }
   }
 
   const handleAction = async (product: PartnerProduct, type: "approve" | "reject") => {
@@ -159,8 +177,9 @@ export default function AdminProductApprovals({ isOpen, onClose }: AdminProductA
   }
 
   const filteredProducts = products.filter(product => {
-    if (filterStatus === 'all') return true
-    return product.status === filterStatus
+    if (filterStatus !== 'all' && product.status !== filterStatus) return false
+    if (selectedPartnerId && product.partnerApplicationId !== selectedPartnerId) return false
+    return true
   })
 
   if (!isOpen) return null
@@ -194,6 +213,9 @@ export default function AdminProductApprovals({ isOpen, onClose }: AdminProductA
           <h1 className="text-xl font-bold">상품 승인 관리</h1>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => { setIsPartnerDialogOpen(true); loadPartners() }}>
+            {selectedPartnerName} ▼
+          </Button>
           <Label className="text-sm">상태 필터:</Label>
           <select
             value={filterStatus}
@@ -366,6 +388,24 @@ export default function AdminProductApprovals({ isOpen, onClose }: AdminProductA
                 {isSubmitting ? "처리 중..." : (actionType === "approve" ? "승인" : "거절")}
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 파트너 선택 다이얼로그 */}
+      <Dialog open={isPartnerDialogOpen} onOpenChange={setIsPartnerDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>제휴사 선택</DialogTitle>
+            <DialogDescription>상품을 조회할 제휴사를 선택하세요.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            <Button variant="ghost" className="justify-start w-full" onClick={() => { setSelectedPartnerId(null); setSelectedPartnerName('전체'); setIsPartnerDialogOpen(false) }}>전체</Button>
+            {partners.map(p => (
+              <Button key={p.id} variant="ghost" className="justify-start w-full" onClick={() => { setSelectedPartnerId(p.id); setSelectedPartnerName(p.companyName); setIsPartnerDialogOpen(false) }}>
+                {p.companyName} (ID: {p.id})
+              </Button>
+            ))}
           </div>
         </DialogContent>
       </Dialog>

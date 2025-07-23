@@ -21,6 +21,7 @@ import StoreApplicationsPage from "./store-applications"
 import ProductApprovalPage from "./product-approval"
 import AdminPartnerApplications from "./admin-partner-applications"
 import AdminProductApprovals from "./admin-product-approvals"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface Product {
   id?: number
@@ -89,6 +90,11 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(false)
   const [isProductApprovalOpen, setIsProductApprovalOpen] = useState(false)
   const [isPartnerProductApprovalOpen, setIsPartnerProductApprovalOpen] = useState(false)
+  const [isPartnerDialogOpen, setIsPartnerDialogOpen] = useState(false)
+  const [partners, setPartners] = useState<Array<{id:number, companyName:string}>>([])
+  const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null)
+  const [selectedPartnerName, setSelectedPartnerName] = useState<string>('전체')
+  const [partnerProducts, setPartnerProducts] = useState<Product[]>([])
 
   // 데이터 로드
   const loadData = async () => {
@@ -130,6 +136,17 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
       ]
       setProducts(allProducts)
       setStoreMalls(mallsData.map((m: any) => toCamelMall(m)))
+
+      // 파트너 목록도 로드
+      try {
+        const token = localStorage.getItem("token")
+        const res = await fetch("/api/partner/admin/applications", { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+        if (res.ok) {
+          const apps = await res.json()
+          const approved = apps.filter((a: any) => a.status === 'approved')
+          setPartners(approved.map((a: any) => ({ id: a.id, companyName: a.companyName })))
+        }
+      } catch(e) { console.error(e) }
     } catch (error) {
       console.error("데이터 로드 실패:", error)
     } finally {
@@ -143,6 +160,40 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
       loadData()
     }
   }, [isOpen])
+
+  // 파트너 변경 시 상품 로드
+  useEffect(() => {
+    const fetchPartnerProducts = async () => {
+      if (selectedPartnerId) {
+        try {
+          const token = localStorage.getItem("token")
+          const res = await fetch(`/api/partner/products?partnerApplicationId=${selectedPartnerId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          })
+          if (res.ok) {
+            const data = await res.json()
+            const mapped = data.map((p: any) => ({
+              id: p.id,
+              product_name: p.productName,
+              product_content: p.productContent,
+              product_image: p.productImage,
+              product_link: p.productLink,
+              product_category: p.productCategory,
+              store_mall: p.partnerApplicationId,
+              price: p.productPrice,
+              created_at: p.createdAt,
+              status: p.status,
+              type: '제휴사'
+            }))
+            setPartnerProducts(mapped)
+          }
+        } catch (e) { console.error(e) }
+      } else {
+        setPartnerProducts([])
+      }
+    }
+    fetchPartnerProducts()
+  }, [selectedPartnerId])
 
   const handleDeleteProduct = async (productId: number) => {
     if (confirm("정말로 이 상품을 삭제하시겠습니까?")) {
@@ -433,7 +484,12 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
             <TabsContent value="products" className="h-full m-0 p-4">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold">상품 관리</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-bold">상품 관리</h2>
+                    <Button variant="outline" size="sm" onClick={() => { setIsPartnerDialogOpen(true) }}>
+                      {selectedPartnerName} ▼
+                    </Button>
+                  </div>
                   <Button onClick={() => setIsProductFormOpen(true)} className="flex items-center gap-2">
                     <Plus className="w-4 h-4" />
                     상품 추가
@@ -444,7 +500,7 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
                   <div className="text-center py-8">로딩 중...</div>
                 ) : (
                   <div className="grid gap-4">
-                    {products.map((product: Product) => {
+                    {(selectedPartnerId ? partnerProducts : products).map((product: Product) => {
                       const mall = storeMalls.find(m => m.id?.toString() === product.store_mall?.toString());
                       return (
                         <Card key={product.id}>
@@ -584,6 +640,25 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
           </div>
         </Tabs>
       </div>
+
+      {/* 파트너 선택 다이얼로그 */}
+      {isPartnerDialogOpen && (
+        <Dialog open={isPartnerDialogOpen} onOpenChange={setIsPartnerDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>제휴사 선택</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              <Button variant="ghost" className="justify-start w-full" onClick={() => { setSelectedPartnerId(null); setSelectedPartnerName('전체'); setIsPartnerDialogOpen(false) }}>전체</Button>
+              {partners.map(p => (
+                <Button key={p.id} variant="ghost" className="justify-start w-full" onClick={() => { setSelectedPartnerId(p.id); setSelectedPartnerName(p.companyName); setIsPartnerDialogOpen(false) }}>
+                  {p.companyName} (ID: {p.id})
+                </Button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
