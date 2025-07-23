@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import jakarta.annotation.PostConstruct;
 
@@ -19,14 +20,16 @@ import java.util.Collections;
 public class ViewCounterService {
 
     private final RedisTemplate<String, Long> redisTemplate;
+    private final SimpMessagingTemplate messagingTemplate;
     private RedisScript<Long> incrScript;
 
     // TTL 60초 (필요에 따라 변경)
     private static final long TTL_SECONDS = 60L;
 
     @Autowired
-    public ViewCounterService(RedisTemplate<String, Long> redisTemplate) {
+    public ViewCounterService(RedisTemplate<String, Long> redisTemplate, SimpMessagingTemplate messagingTemplate) {
         this.redisTemplate = redisTemplate;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @PostConstruct
@@ -46,7 +49,10 @@ public class ViewCounterService {
      */
     public long increment(String key) {
         Long result = redisTemplate.execute(incrScript, Collections.singletonList(key), TTL_SECONDS);
-        return result != null ? result : 0L;
+        long count = result != null ? result : 0L;
+        // WebSocket 브로드캐스트
+        messagingTemplate.convertAndSend("/topic/views/" + key, new com.snapfit.api.dto.ViewCountPayload(key, count));
+        return count;
     }
 
     /**
