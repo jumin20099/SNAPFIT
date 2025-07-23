@@ -47,6 +47,7 @@ dependencies {
 
 	implementation 'com.amazonaws:aws-java-sdk-s3:1.12.681'
 	implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
 }
 
 tasks.named('test') {
