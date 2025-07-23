@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { useMyLikes } from "@/hooks/useMyLikes";
 
 interface Product {
   id: number
@@ -19,10 +20,35 @@ interface LikedProductsPageProps {
 }
 
 export default function LikedProductsPage({ onBack }: LikedProductsPageProps) {
-  const [products, setProducts] = useState<Product[]>([])
+  const { likes } = useMyLikes();
+  const [products, setProducts] = useState<Product[]>([]);
+
+  // fetch products when likes loaded
+  useEffect(() => {
+    const load = async () => {
+      const productLikes = likes.filter((l) => l.targetType === 'PRODUCT');
+      const fetched: Product[] = [];
+      for (const like of productLikes) {
+        const res = await fetch(`/api/products/${like.targetIdx}`);
+        if (res.ok) {
+          const detail = await res.json();
+          fetched.push({
+            id: detail.product.productIdx,
+            name: detail.product.productName,
+            description: detail.product.productContent,
+            price: detail.product.productPrice,
+            image: detail.product.productImage,
+            liked: true,
+          });
+        }
+      }
+      setProducts(fetched);
+    };
+    load();
+  }, [likes]);
 
   const toggleProductLike = (productId: number) => {
-    setProducts(products.map((product) => (product.id === productId ? { ...product, liked: !product.liked } : product)))
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
   }
 
   return (
