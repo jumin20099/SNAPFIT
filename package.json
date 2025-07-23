@@ -31,7 +31,9 @@
     "@react-three/fiber": "^8.15.6",
     "@react-three/drei": "^9.87.0",
     "react-dnd": "^17.0.0",
-    "react-dnd-html5-backend": "^17.0.0"
+    "react-dnd-html5-backend": "^17.0.0",
+    "sockjs-client": "^1.6.2",
+    "@stomp/stompjs": "^6.1.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
