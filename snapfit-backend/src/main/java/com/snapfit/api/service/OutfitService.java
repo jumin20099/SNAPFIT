@@ -71,4 +71,23 @@ public class OutfitService {
 
         return outfitRepository.save(outfit);
     }
+
+    /**
+     * 코디를 삭제한다.
+     *
+     * @param outfitIdx 삭제할 코디 PK
+     * @param user      소유 사용자(권한 확인)
+     * @throws IllegalArgumentException 코디가 없거나 권한이 없을 때
+     */
+    @Transactional
+    public void deleteOutfit(Long outfitIdx, User user) {
+        Outfit outfit = outfitRepository.findById(outfitIdx)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 코디입니다."));
+
+        if (!outfit.getUser().getUserIdx().equals(user.getUserIdx())) {
+            throw new IllegalArgumentException("삭제 권한이 없습니다.");
+        }
+
+        outfitRepository.delete(outfit);
+    }
 } 
