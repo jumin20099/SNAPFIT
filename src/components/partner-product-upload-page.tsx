@@ -340,7 +340,7 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
   // 필터링된 상품 목록
   const filteredProducts = products.filter(product => {
     if (filterStatus === 'all') return true
-    return product.status === filterStatus
+    return product.status?.toLowerCase() === filterStatus.toLowerCase()
   })
 
   // 상품 목록 상단에 필터 UI 추가
