@@ -243,6 +243,7 @@ public class PartnerService {
         dto.setStatus(product.getStatus().name().toLowerCase());
         dto.setPartnerApplicationId(product.getPartnerApplicationId());
         dto.setPartnerCompanyName(companyName);
+        dto.setIsActive(product.getIsActive());
         dto.setRejectionReason(product.getRejectionReason());
         dto.setSubmittedDate(product.getSubmittedDate());
         dto.setCreatedAt(product.getCreatedAt());
@@ -433,4 +434,14 @@ public class PartnerService {
         }
     }
 
+    // 활성화 / 비활성화 토글
+    public boolean toggleActivePartnerProduct(Long id, Boolean isActive) {
+        Optional<PartnerProduct> opt = partnerProductRepository.findById(id);
+        if (opt.isEmpty()) return false;
+        PartnerProduct product = opt.get();
+        product.setIsActive(isActive);
+        product.setDeactivatedAt(isActive != null && !isActive ? java.time.LocalDateTime.now() : null);
+        partnerProductRepository.save(product);
+        return true;
+    }
 } 

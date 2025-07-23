@@ -97,4 +97,6 @@ export async function toggleStoreStatus(storeId: number, isActive: boolean) {
   if (!res.ok) throw new Error("제휴몰 상태 변경 실패");
   return res.json();
 }
+
+// 제휴사 상품도 동일 엔드포인트로 통합했으므로 별도 함수 제거
 // 필요시 addProduct, deleteProduct 등도 이 파일로 옮길 수 있음 

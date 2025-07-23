@@ -20,6 +20,7 @@ public class PartnerProductDto {
     private String status;
     private Long partnerApplicationId;
     private String partnerCompanyName;
+    private Boolean isActive;
     private String rejectionReason;
     private LocalDateTime submittedDate;
     private LocalDateTime createdAt;

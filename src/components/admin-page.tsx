@@ -35,6 +35,8 @@ interface Product {
   created_at?: string
   status?: "active" | "inactive"
   type?: "일반" | "제휴사" // 추가
+  isActive?: boolean
+  isPartner?: boolean
 }
 
 // isDeleted -> isActive로 일괄 변경
@@ -118,20 +120,24 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
           price: p.productPrice,
           created_at: p.createdAt,
           status: p.isActive ? "active" : "inactive",
-          type: "일반"
+          type: "일반",
+          isActive: p.isActive,
+          isPartner: false
         })),
         ...partnerProductsData.map((p: any) => ({
-          id: p.id,
+          id: p.productIdx ?? p.id,
           product_name: p.productName,
           product_content: p.productContent,
           product_image: p.productImage,
           product_link: p.productLink,
           product_category: p.productCategory,
-          store_mall: p.partnerApplicationId,
+          store_mall: p.storeIdx ?? p.partnerApplicationId,
           price: p.productPrice,
           created_at: p.createdAt,
-          status: p.status,
-          type: "제휴사"
+          status: p.isActive ? "active" : "inactive",
+          type: "제휴사",
+          isActive: p.isActive,
+          isPartner: true
         }))
       ]
       setProducts(allProducts)
@@ -161,49 +167,67 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
     }
   }, [isOpen])
 
-  // 파트너 변경 시 상품 로드
-  useEffect(() => {
-    const fetchPartnerProducts = async () => {
-      if (selectedPartnerId) {
-        try {
-          const token = localStorage.getItem("token")
-          const res = await fetch(`/api/partner/products?partnerApplicationId=${selectedPartnerId}`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          })
-          if (res.ok) {
-            const data = await res.json()
-            const mapped = data.map((p: any) => ({
-              id: p.id,
-              product_name: p.productName,
-              product_content: p.productContent,
-              product_image: p.productImage,
-              product_link: p.productLink,
-              product_category: p.productCategory,
-              store_mall: p.partnerApplicationId,
-              price: p.productPrice,
-              created_at: p.createdAt,
-              status: p.status,
-              type: '제휴사'
-            }))
-            setPartnerProducts(mapped)
-          }
-        } catch (e) { console.error(e) }
-      } else {
-        setPartnerProducts([])
-      }
+  // 파트너 상품 로드 함수
+  const fetchPartnerProducts = async (id:number) => {
+    if (id) {
+      try {
+        const token = localStorage.getItem("token")
+        const res = await fetch(`/api/admin/products/by-partner?partnerApplicationId=${id}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (res.ok) {
+          const data = await res.json()
+          const mapped = data.map((p: any) => ({
+            id: p.productIdx ?? p.id,
+            product_name: p.productName,
+            product_content: p.productContent,
+            product_image: p.productImage,
+            product_link: p.productLink,
+            product_category: p.productCategory,
+            store_mall: p.storeIdx ?? p.partnerApplicationId,
+            price: p.productPrice,
+            created_at: p.createdAt,
+            status: p.isActive ? "active" : "inactive",
+            type: '제휴사',
+            isActive: p.isActive,
+            isPartner: true
+          }))
+          setPartnerProducts(mapped)
+        }
+      } catch (e) { console.error(e) }
+    } else {
+      setPartnerProducts([])
     }
-    fetchPartnerProducts()
+  }
+
+  // 파트너 변경 시 상품 재로드
+  useEffect(() => {
+    if(selectedPartnerId){
+      fetchPartnerProducts(selectedPartnerId)
+    }
   }, [selectedPartnerId])
 
-  const handleDeleteProduct = async (productId: number) => {
+  const handleDeleteProduct = async (productId: number, isPartner: boolean = false) => {
     if (confirm("정말로 이 상품을 삭제하시겠습니까?")) {
-      const result = await deleteProduct(productId)
-      if (!result || result.success) {
-        alert("삭제 성공")
-        loadData()
+      if (isPartner) {
+        const token = localStorage.getItem("token")
+        const res = await fetch(`/api/partner/products/${productId}`, {
+          method: "DELETE",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!res.ok) {
+          alert("삭제 실패")
+          return
+        }
       } else {
-        alert(result.message || "삭제 실패")
+        const result = await deleteProduct(productId)
+        if (result && result.success === false) {
+          alert(result.message || "삭제 실패")
+          return
+        }
       }
+      alert("삭제 성공")
+      loadData()
     }
   }
 
@@ -237,13 +261,15 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
     loadData()
   }
 
-  const handleToggleProductStatus = async (productId: number, newStatus: boolean) => {
-    const result = await toggleProductStatus(productId, newStatus)
-    if (result.success) {
-      alert(result.message)
-      loadData()
-    } else {
-      alert(result.message)
+  const handleToggleProductStatus = async (productId: number, newStatus: boolean, isPartner:boolean) => {
+    try {
+      await toggleProductStatus(productId, newStatus)
+      await loadData()
+      if(selectedPartnerId){
+        await fetchPartnerProducts(selectedPartnerId)
+      }
+    } catch(e:any){
+      alert(e.message)
     }
   }
 
@@ -500,7 +526,7 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
                   <div className="text-center py-8">로딩 중...</div>
                 ) : (
                   <div className="grid gap-4">
-                    {(selectedPartnerId ? partnerProducts : products).map((product: Product) => {
+                    { (selectedPartnerId ? partnerProducts : products).filter(p=>true).map((product: Product) => {
                       const mall = storeMalls.find(m => m.id?.toString() === product.store_mall?.toString());
                       return (
                         <Card key={product.id}>
@@ -523,25 +549,25 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
                               </div>
                               {/* 상품 관리 탭에 활성화/비활성화 버튼 등 기존 코드 유지 */}
                               <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleToggleProductStatus(product.id!, product.status === "inactive")}
-                                  className={
-                                    product.status === "active"
-                                    ? "text-green-600 hover:text-green-700"
-                                    : "text-red-600 hover:text-red-700"
-                                  }
-                                >
-                                  {product.status === "active" ? "활성화됨" : "비활성화됨"}
-                                </Button>
+                                  <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={() => handleToggleProductStatus(product.id!, !(product.isActive ?? (product.status !== 'active')), !!product.isPartner)}
+                                       className={
+                                         (product.isActive ?? (product.status === 'active'))
+                                         ? "text-green-600 hover:text-green-700"
+                                         : "text-red-600 hover:text-red-700"
+                                       }
+                                     >
+                                       {(product.isActive ?? (product.status === 'active')) ? "활성화됨" : "비활성화됨"}
+                                     </Button>
                                 <Button variant="outline" size="sm" onClick={() => handleEditProduct(product)}>
                                   <Edit className="w-4 h-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleDeleteProduct(product.id!)}
+                                  onClick={() => handleDeleteProduct(product.id!, !!product.isPartner)}
                                   className="text-red-600 hover:text-red-700"
                                 >
                                   <Trash2 className="w-4 h-4" />

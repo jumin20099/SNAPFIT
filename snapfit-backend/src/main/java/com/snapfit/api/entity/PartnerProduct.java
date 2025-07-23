@@ -53,6 +53,12 @@ public class PartnerProduct {
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+
+    @Column(name = "deactivated_at")
+    private LocalDateTime deactivatedAt;
     
     @PrePersist
     protected void onCreate() {
