@@ -46,7 +46,28 @@ public class PartnerService {
     
     // 제휴사 신청 제출
     public PartnerApplicationDto submitApplication(PartnerApplicationDto dto) {
+        // 1) 인증 사용자 확인
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
+            throw new org.springframework.security.access.AccessDeniedException("로그인 필요");
+        }
+
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("사용자 정보 없음"));
+
+        // 2) 기존 신청 여부 확인 (PENDING 또는 APPROVED)
+        java.util.List<PartnerApplication> exists = partnerApplicationRepository.findByUserIdx(user.getUserIdx());
+        boolean hasActive = exists.stream()
+                .anyMatch(app -> app.getStatus() == PartnerApplication.ApplicationStatus.PENDING ||
+                               app.getStatus() == PartnerApplication.ApplicationStatus.APPROVED);
+        if (hasActive) {
+            throw new IllegalStateException("이미 제출된 제휴사 신청이 존재합니다.");
+        }
+
+        // 3) 새 신청 생성
         PartnerApplication application = new PartnerApplication();
+        application.setUserIdx(user.getUserIdx());
         application.setCompanyName(dto.getCompanyName());
         application.setContactEmail(dto.getContactEmail());
         application.setContactPhone(dto.getContactPhone());
@@ -55,21 +76,8 @@ public class PartnerService {
         application.setLogo(dto.getLogo());
         application.setStoreLink(dto.getStoreLink());
         application.setRoyaltyRate(dto.getRoyaltyRate());
-
-        // 인증 정보가 없으면 401 에러 발생
-        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getName())) {
-            throw new org.springframework.security.access.AccessDeniedException("로그인 후 신청 가능합니다.");
-        }
-        String email = authentication.getName();
-        java.util.Optional<User> userOpt = userRepository.findByEmail(email);
-        if (userOpt.isEmpty()) {
-            throw new RuntimeException("유저 정보를 찾을 수 없습니다.");
-        }
-        application.setUserIdx(userOpt.get().getUserIdx());
-
         application.setStatus(PartnerApplication.ApplicationStatus.PENDING);
-        
+
         PartnerApplication saved = partnerApplicationRepository.save(application);
         return convertToDto(saved);
     }

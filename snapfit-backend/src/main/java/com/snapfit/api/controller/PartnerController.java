@@ -24,12 +24,15 @@ public class PartnerController {
     
     // 제휴사 신청 제출
     @PostMapping("/application")
-    public ResponseEntity<PartnerApplicationDto> submitApplication(@RequestBody PartnerApplicationDto dto) {
+    public ResponseEntity<?> submitApplication(@RequestBody PartnerApplicationDto dto) {
         try {
             PartnerApplicationDto result = partnerService.submitApplication(dto);
             return ResponseEntity.ok(result);
+        } catch (IllegalStateException dup) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT)
+                                 .body(java.util.Map.of("error", dup.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
     
