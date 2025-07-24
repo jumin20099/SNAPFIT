@@ -115,7 +115,8 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
           productContent: formData.product_content,
           productPrice: Number(formData.price), // 반드시 number로 변환
           productImage: formData.product_image,
-          productCategory: formData.product_category,
+          majorCategory: formData.product_category, // TODO: UI 분리 후 변경
+          subCategory: "", // TODO: 세부 카테고리 선택 반영
           productLink: formData.product_link,
         }),
       });
