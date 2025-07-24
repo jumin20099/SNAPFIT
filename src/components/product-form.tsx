@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { addProduct, updateProduct } from "../actions/admin-actions"
+import { CATEGORY_MAP } from '@/constants/category-map';
 
 interface Product {
   id?: number
@@ -17,7 +18,8 @@ interface Product {
   product_content: string
   product_image: string
   product_link: string
-  product_category: string
+  majorCategory: string
+  subCategory: string
   store_mall: string
   price: string
   created_at?: string
@@ -51,7 +53,8 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
     product_content: editingProduct?.product_content || "",
     product_image: editingProduct?.product_image || "",
     product_link: editingProduct?.product_link || "",
-    product_category: editingProduct?.product_category || "",
+    major_category: editingProduct?.majorCategory || "상의",
+    sub_category: editingProduct?.subCategory || "",
     store_mall: editingProduct?.store_mall || "",
     price: editingProduct?.price || "",
   })
@@ -115,8 +118,8 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
           productContent: formData.product_content,
           productPrice: Number(formData.price), // 반드시 number로 변환
           productImage: formData.product_image,
-          majorCategory: formData.product_category, // TODO: UI 분리 후 변경
-          subCategory: "", // TODO: 세부 카테고리 선택 반영
+          majorCategory: formData.major_category,
+          subCategory: formData.sub_category,
           productLink: formData.product_link,
         }),
       });
@@ -284,20 +287,28 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
 
                 {/* 카테고리 */}
                 <div className="space-y-2">
-                  <Label htmlFor="product_category">카테고리 *</Label>
+                  {/* 대분류 */}
+                  <Label>대분류 *</Label>
                   <Select
-                    value={formData.product_category}
-                    onValueChange={(value) => handleInputChange("product_category", value)}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="카테고리를 선택하세요" />
-                    </SelectTrigger>
+                    value={formData.major_category}
+                    onValueChange={(val)=>{
+                       handleInputChange("major_category", val);
+                       handleInputChange("sub_category", "");
+                    }}>
+                    <SelectTrigger><SelectValue placeholder="대분류"/></SelectTrigger>
                     <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
+                      {Object.keys(CATEGORY_MAP).map(m=> (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {/* 세부 */}
+                  <Label>세부 분류</Label>
+                  <Select value={formData.sub_category} onValueChange={(val)=>handleInputChange("sub_category", val)}>
+                    <SelectTrigger><SelectValue placeholder="세부 분류"/></SelectTrigger>
+                    <SelectContent>
+                      {CATEGORY_MAP[formData.major_category]?.map(s=> (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
