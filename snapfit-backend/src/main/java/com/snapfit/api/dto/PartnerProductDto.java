@@ -16,6 +16,9 @@ public class PartnerProductDto {
     private String productImage;
     private String productLink;
     private String productCategory;
+
+    private String majorCategory;
+    private String subCategory;
     private Integer productPrice;
     private String status;
     private Long partnerApplicationId;
