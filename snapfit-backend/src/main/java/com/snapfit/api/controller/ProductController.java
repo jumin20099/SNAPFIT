@@ -137,7 +137,7 @@ public class ProductController {
             product.setSubCategory(dto.getSubCategory());
             product.setProductLink(dto.getProductLink());
             productRepository.save(product);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok().body(Map.of("success", true, "message", "상품 수정 완료"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("상품 수정 실패: " + e.getMessage());
         }
