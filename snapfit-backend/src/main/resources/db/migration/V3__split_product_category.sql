@@ -14,3 +14,6 @@ UPDATE products
  WHERE product_category IS NOT NULL;
 
 -- 추후 애플리케이션 코드 정비 후 product_category 컬럼 제거 예정 
+ALTER TABLE partner_products ADD COLUMN gender_category VARCHAR(20);
+ALTER TABLE partner_products ADD COLUMN major_category VARCHAR(50);
+ALTER TABLE partner_products ADD COLUMN sub_category VARCHAR(50); 

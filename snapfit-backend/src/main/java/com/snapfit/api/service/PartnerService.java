@@ -116,6 +116,9 @@ public class PartnerService {
         product.setProductPrice(dto.getProductPrice());
         product.setPartnerApplicationId(dto.getPartnerApplicationId());
         product.setStatus(PartnerProduct.ProductStatus.PENDING);
+        product.setGenderCategory(dto.getGenderCategory());
+        product.setMajorCategory(dto.getMajorCategory());
+        product.setSubCategory(dto.getSubCategory());
         
         PartnerProduct saved = partnerProductRepository.save(product);
         return convertToProductDto(saved);
@@ -140,6 +143,9 @@ public class PartnerService {
             product.setProductLink(dto.getProductLink());
             product.setProductCategory(dto.getProductCategory());
             product.setProductPrice(dto.getProductPrice());
+            product.setGenderCategory(dto.getGenderCategory());
+            product.setMajorCategory(dto.getMajorCategory());
+            product.setSubCategory(dto.getSubCategory());
             
             PartnerProduct saved = partnerProductRepository.save(product);
             return convertToProductDto(saved);
@@ -256,6 +262,9 @@ public class PartnerService {
         dto.setSubmittedDate(product.getSubmittedDate());
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
+        dto.setGenderCategory(product.getGenderCategory());
+        dto.setMajorCategory(product.getMajorCategory());
+        dto.setSubCategory(product.getSubCategory());
         return dto;
     }
     

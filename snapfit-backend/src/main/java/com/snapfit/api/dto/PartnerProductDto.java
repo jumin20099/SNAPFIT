@@ -17,6 +17,7 @@ public class PartnerProductDto {
     private String productLink;
     private String productCategory;
 
+    private String genderCategory;
     private String majorCategory;
     private String subCategory;
     private Integer productPrice;

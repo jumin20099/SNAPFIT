@@ -31,6 +31,15 @@ public class PartnerProduct {
     
     @Column(name = "product_category", nullable = false)
     private String productCategory;
+
+    @Column(name = "gender_category")
+    private String genderCategory;
+
+    @Column(name = "major_category")
+    private String majorCategory;
+
+    @Column(name = "sub_category")
+    private String subCategory;
     
     @Column(name = "product_price", nullable = false)
     private Integer productPrice;
