@@ -14,13 +14,12 @@ import AdminPage from "@/components/admin-page"
 import PartnerMainPage from "@/components/partner-main-page"
 import PartnerApplicationStandalone from "@/components/partner-application-standalone"
 
-const categories = ["전체", "남성복", "여성복", "유니섹스"]
+const categories = ["전체", "남성복", "여성복"]
 const majorCategories = ["좋아요", "상의", "하의", "아우터", "신발", "가방", "패션소품"]
 
 // 각 카테고리별 세부 카테고리 정의
 const subCategoryDetails = {
   상의: [
-    { name: "신상", image: "/placeholder.svg?height=100&width=100" },
     { name: "맨투맨/스웨트", image: "/placeholder.svg?height=100&width=100" },
     { name: "후드 티셔츠", image: "/placeholder.svg?height=100&width=100" },
     { name: "셔츠/블라우스", image: "/placeholder.svg?height=100&width=100" },
@@ -35,7 +34,6 @@ const subCategoryDetails = {
     { name: "기타 상의", image: "/placeholder.svg?height=100&width=100" },
   ],
   하의: [
-    { name: "신상", image: "/placeholder.svg?height=100&width=100" },
     { name: "데님 팬츠", image: "/placeholder.svg?height=100&width=100" },
     { name: "트레이닝/조거 팬츠", image: "/placeholder.svg?height=100&width=100" },
     { name: "코튼 팬츠", image: "/placeholder.svg?height=100&width=100" },
@@ -49,7 +47,6 @@ const subCategoryDetails = {
     { name: "기타 하의", image: "/placeholder.svg?height=100&width=100" },
   ],
   아우터: [
-    { name: "신상", image: "/placeholder.svg?height=100&width=100" },
     { name: "후드 집업", image: "/placeholder.svg?height=100&width=100" },
     { name: "블루종/MA-1", image: "/placeholder.svg?height=100&width=100" },
     { name: "레더/라이더스 재킷", image: "/placeholder.svg?height=100&width=100" },
@@ -74,16 +71,15 @@ const subCategoryDetails = {
     { name: "기타 아우터", image: "/placeholder.svg?height=100&width=100" },
   ],
   신발: [
-    { name: "신상", image: "/placeholder.svg?height=100&width=100" },
     { name: "스니커즈", image: "/placeholder.svg?height=100&width=100" },
     { name: "패딩/퍼 신발", image: "/placeholder.svg?height=100&width=100" },
     { name: "부츠/워커", image: "/placeholder.svg?height=100&width=100" },
     { name: "구두", image: "/placeholder.svg?height=100&width=100" },
     { name: "샌들/슬리퍼", image: "/placeholder.svg?height=100&width=100" },
     { name: "스포츠화", image: "/placeholder.svg?height=100&width=100" },
+    { name: "신발용품", image: "/placeholder.svg?height=100&width=100" },
   ],
   가방: [
-    { name: "신상", image: "/placeholder.svg?height=100&width=100" },
     { name: "메신저/크로스 백", image: "/placeholder.svg?height=100&width=100" },
     { name: "숄더백", image: "/placeholder.svg?height=100&width=100" },
     { name: "백팩", image: "/placeholder.svg?height=100&width=100" },
@@ -99,10 +95,10 @@ const subCategoryDetails = {
     { name: "클러치 백", image: "/placeholder.svg?height=100&width=100" },
   ],
   패션소품: [
-    { name: "신상", image: "/placeholder.svg?height=100&width=100" },
     { name: "모자", image: "/placeholder.svg?height=100&width=100" },
     { name: "머플러", image: "/placeholder.svg?height=100&width=100" },
     { name: "주얼리", image: "/placeholder.svg?height=100&width=100" },
+    { name: "양말/레그웨어", image: "/placeholder.svg?height=100&width=100" },
     { name: "선글라스/안경테", image: "/placeholder.svg?height=100&width=100" },
     { name: "액세서리", image: "/placeholder.svg?height=100&width=100" },
     { name: "시계", image: "/placeholder.svg?height=100&width=100" },

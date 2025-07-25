@@ -37,6 +37,9 @@ public class PublicProductController {
     public ResponseEntity<List<Product>> list(
             @RequestParam(required = false) String major,
             @RequestParam(required = false) String sub) {
-        return ResponseEntity.ok(productService.getActiveProducts(major, sub));
+        List<Product> products = productService.getActiveProducts(major, sub);
+        // 신상 카테고리 자동 처리
+        products = productService.processNewProductCategory(products);
+        return ResponseEntity.ok(products);
     }
 } 

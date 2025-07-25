@@ -53,4 +53,27 @@ public class Product {
     public void setDeactivatedAt(LocalDateTime deactivatedAt) {
         this.deactivatedAt = deactivatedAt;
     }
+
+    /**
+     * 상품이 신상인지 판단 (등록한지 2주 이내)
+     * @return 신상 여부
+     */
+    public boolean isNewProduct() {
+        if (createdAt == null) {
+            return false;
+        }
+        LocalDateTime twoWeeksAgo = LocalDateTime.now().minusWeeks(2);
+        return createdAt.isAfter(twoWeeksAgo);
+    }
+
+    /**
+     * 신상 카테고리가 포함된 세부 카테고리 반환
+     * @return 신상이면 "신상" + 원래 카테고리, 아니면 원래 카테고리
+     */
+    public String getSubCategoryWithNew() {
+        if (isNewProduct()) {
+            return "신상";
+        }
+        return subCategory;
+    }
 }
