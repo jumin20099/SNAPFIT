@@ -46,7 +46,8 @@ public class ProductController {
                 .productContent(dto.getProductContent())
                 .productPrice(dto.getProductPrice())
                 .productImage(dto.getProductImage())
-                .productCategory(dto.getProductCategory())
+                .majorCategory(dto.getMajorCategory())
+                .subCategory(dto.getSubCategory())
                 .productLink(dto.getProductLink())
                 .isActive(true)
                 .build();
@@ -133,7 +134,8 @@ public class ProductController {
             product.setProductContent(dto.getProductContent());
             product.setProductPrice(dto.getProductPrice());
             product.setProductImage(dto.getProductImage());
-            product.setProductCategory(dto.getProductCategory());
+            product.setMajorCategory(dto.getMajorCategory());
+            product.setSubCategory(dto.getSubCategory());
             product.setProductLink(dto.getProductLink());
             // 필요하다면 isActive 등도 업데이트
 

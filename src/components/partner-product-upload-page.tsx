@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { CATEGORY_MAP, GenderCategory, MajorCategory, SubCategory } from "@/constants/category-map"
 
 interface PartnerProduct {
   id?: number
@@ -15,19 +16,19 @@ interface PartnerProduct {
   productContent: string
   productImage: string
   productLink: string
-  productCategory: string
+  genderCategory: string
+  majorCategory: string
+  subCategory: string
   productPrice: number
   status: "pending" | "approved" | "rejected"
   submittedDate?: string
-  rejectionReason?: string // 추가
+  rejectionReason?: string
 }
 
 interface PartnerProductUploadPageProps {
   isOpen: boolean
   onClose: () => void
 }
-
-const categories = ["상의", "하의", "아우터", "신발", "가방", "패션소품"]
 
 export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerProductUploadPageProps) {
   const [products, setProducts] = useState<PartnerProduct[]>([])
@@ -38,7 +39,9 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
     productContent: "",
     productImage: "",
     productLink: "",
-    productCategory: "",
+    genderCategory: "전체",
+    majorCategory: "",
+    subCategory: "",
     productPrice: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -151,7 +154,9 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
       productContent: product.productContent,
       productImage: product.productImage,
       productLink: product.productLink,
-      productCategory: product.productCategory,
+      genderCategory: product.genderCategory,
+      majorCategory: product.majorCategory,
+      subCategory: product.subCategory,
       productPrice: product.productPrice.toString(),
     })
     setIsFormOpen(true)
@@ -186,7 +191,9 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
       productContent: "",
       productImage: "",
       productLink: "",
-      productCategory: "",
+      genderCategory: "전체",
+      majorCategory: "",
+      subCategory: "",
       productPrice: "",
     })
   }
@@ -291,20 +298,57 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
 
                   {/* 카테고리 */}
                   <div className="space-y-2">
-                    <Label htmlFor="productCategory">카테고리 *</Label>
+                    {/* 성별 */}
+                    <Label>성별 *</Label>
                     <Select
-                      value={form.productCategory}
-                      onValueChange={(value) => setForm(prev => ({ ...prev, productCategory: value }))}
-                      required
+                      value={form.genderCategory}
+                      onValueChange={(val) => {
+                        setForm(prev => ({ 
+                          ...prev, 
+                          genderCategory: val,
+                          majorCategory: "",
+                          subCategory: ""
+                        }))
+                      }}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="카테고리를 선택하세요" />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="성별"/></SelectTrigger>
                       <SelectContent>
-                        {categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
+                        <SelectItem value="전체">전체</SelectItem>
+                        <SelectItem value="남성">남성</SelectItem>
+                        <SelectItem value="여성">여성</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* 대분류 */}
+                    <Label>대분류 *</Label>
+                    <Select
+                      value={form.majorCategory}
+                      onValueChange={(val) => {
+                        setForm(prev => ({ 
+                          ...prev, 
+                          majorCategory: val,
+                          subCategory: ""
+                        }))
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="대분류"/></SelectTrigger>
+                      <SelectContent>
+                        {Object.keys(CATEGORY_MAP[form.genderCategory as GenderCategory] || {}).map(major => (
+                          <SelectItem key={major} value={major}>{major}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {/* 세분류 */}
+                    <Label>세분류 *</Label>
+                    <Select
+                      value={form.subCategory}
+                      onValueChange={(val) => setForm(prev => ({ ...prev, subCategory: val }))}
+                    >
+                      <SelectTrigger><SelectValue placeholder="세분류"/></SelectTrigger>
+                      <SelectContent className="max-h-60 overflow-y-auto">
+                        {form.majorCategory && CATEGORY_MAP[form.genderCategory as GenderCategory]?.[form.majorCategory as MajorCategory]?.map((sub: SubCategory) => (
+                          <SelectItem key={sub} value={sub}>{sub}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -369,7 +413,9 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
                 productContent: "",
                 productImage: "",
                 productLink: "",
-                productCategory: "",
+                genderCategory: "전체",
+                majorCategory: "",
+                subCategory: "",
                 productPrice: "",
               });
               setIsFormOpen(true);
@@ -404,7 +450,7 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
                       <h3 className="font-medium">{product.productName}</h3>
                       <p className="text-sm text-gray-600 mb-1">{product.productContent}</p>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline">{product.productCategory}</Badge>
+                        <Badge variant="outline">{product.genderCategory} / {product.majorCategory} / {product.subCategory}</Badge>
                         <span className="text-sm font-medium">₩{product.productPrice?.toLocaleString()}</span>
                         {getStatusBadge(product.status)}
                       </div>

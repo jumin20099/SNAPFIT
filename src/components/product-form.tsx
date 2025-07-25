@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { addProduct, updateProduct } from "../actions/admin-actions"
-import { CATEGORY_MAP } from '@/constants/category-map';
+import { CATEGORY_MAP, GenderCategory, MajorCategory, SubCategory } from "@/constants/category-map";
 
 interface Product {
   id?: number
@@ -20,6 +20,7 @@ interface Product {
   product_link: string
   majorCategory: string
   subCategory: string
+  genderCategory: string
   store_mall: string
   price: string
   created_at?: string
@@ -41,7 +42,7 @@ interface StoreMall {
 interface ProductFormProps {
   isOpen: boolean
   onClose: () => void
-  editingProduct?: Product | null
+  editingProduct?: Product | null | undefined
   storeMalls: StoreMall[]
 }
 
@@ -55,6 +56,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
     product_link: editingProduct?.product_link || "",
     major_category: editingProduct?.majorCategory || "상의",
     sub_category: editingProduct?.subCategory || "",
+    gender_category: editingProduct?.genderCategory || "전체",
     store_mall: editingProduct?.store_mall || "",
     price: editingProduct?.price || "",
   })
@@ -120,6 +122,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
           productImage: formData.product_image,
           majorCategory: formData.major_category,
           subCategory: formData.sub_category,
+          genderCategory: formData.gender_category,
           productLink: formData.product_link,
         }),
       });
@@ -168,6 +171,9 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
   };
 
   if (!isOpen) return null
+
+  const gender = (formData.gender_category as GenderCategory) || '전체';
+  const major = formData.major_category as MajorCategory;
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col h-screen">
@@ -287,6 +293,22 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
 
                 {/* 카테고리 */}
                 <div className="space-y-2">
+                  {/* 성별 */}
+                  <Label>성별 *</Label>
+                  <Select
+                    value={formData.gender_category}
+                    onValueChange={(val) => {
+                      handleInputChange("gender_category", val);
+                      handleInputChange("sub_category", "");
+                    }}>
+                    <SelectTrigger><SelectValue placeholder="성별"/></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="전체">전체</SelectItem>
+                      <SelectItem value="남성">남성</SelectItem>
+                      <SelectItem value="여성">여성</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
                   {/* 대분류 */}
                   <Label>대분류 *</Label>
                   <Select
@@ -297,7 +319,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
                     }}>
                     <SelectTrigger><SelectValue placeholder="대분류"/></SelectTrigger>
                     <SelectContent>
-                      {Object.keys(CATEGORY_MAP).map(m=> (
+                      {Object.keys(CATEGORY_MAP[formData.gender_category as GenderCategory] || {}).map(m=> (
                         <SelectItem key={m} value={m}>{m}</SelectItem>
                       ))}
                     </SelectContent>
@@ -306,8 +328,8 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
                   <Label>세부 분류</Label>
                   <Select value={formData.sub_category} onValueChange={(val)=>handleInputChange("sub_category", val)}>
                     <SelectTrigger><SelectValue placeholder="세부 분류"/></SelectTrigger>
-                    <SelectContent>
-                      {CATEGORY_MAP[formData.major_category]?.map(s=> (
+                    <SelectContent className="max-h-60 overflow-y-auto">
+                      {CATEGORY_MAP[gender][major]?.map((s: SubCategory) => (
                         <SelectItem key={s} value={s}>{s}</SelectItem>
                       ))}
                     </SelectContent>
