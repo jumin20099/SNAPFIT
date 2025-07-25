@@ -17,3 +17,6 @@ UPDATE products
 ALTER TABLE partner_products ADD COLUMN gender_category VARCHAR(20);
 ALTER TABLE partner_products ADD COLUMN major_category VARCHAR(50);
 ALTER TABLE partner_products ADD COLUMN sub_category VARCHAR(50); 
+ALTER TABLE products ADD COLUMN gender_category VARCHAR(20);
+ALTER TABLE products ADD COLUMN major_category VARCHAR(50);
+ALTER TABLE products ADD COLUMN sub_category VARCHAR(50); 

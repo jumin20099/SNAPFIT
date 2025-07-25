@@ -46,6 +46,8 @@ public class ProductController {
                 .productContent(dto.getProductContent())
                 .productPrice(dto.getProductPrice())
                 .productImage(dto.getProductImage())
+                .productCategory(dto.getProductCategory())
+                .genderCategory(dto.getGenderCategory())
                 .majorCategory(dto.getMajorCategory())
                 .subCategory(dto.getSubCategory())
                 .productLink(dto.getProductLink())
@@ -124,27 +126,20 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProduct(@PathVariable Long id, @RequestBody ProductDto dto) {
         try {
-            // 1. 기존 상품 조회
-            Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
-
-            // 2. 전달받은 값으로 필드만 업데이트
-            product.setStoreIdx(dto.getStoreIdx());
+            Product product = productRepository.findById(id).orElseThrow();
             product.setProductName(dto.getProductName());
             product.setProductContent(dto.getProductContent());
             product.setProductPrice(dto.getProductPrice());
             product.setProductImage(dto.getProductImage());
+            product.setProductCategory(dto.getProductCategory());
+            product.setGenderCategory(dto.getGenderCategory());
             product.setMajorCategory(dto.getMajorCategory());
             product.setSubCategory(dto.getSubCategory());
             product.setProductLink(dto.getProductLink());
-            // 필요하다면 isActive 등도 업데이트
-
-            // 3. 저장
             productRepository.save(product);
-
-            return ResponseEntity.ok(product);
+            return ResponseEntity.ok().build();
         } catch (Exception e) {
-            throw new RuntimeException("상품 수정 실패: " + e.getMessage(), e);
+            return ResponseEntity.badRequest().body("상품 수정 실패: " + e.getMessage());
         }
     }
 }

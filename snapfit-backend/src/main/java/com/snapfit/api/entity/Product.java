@@ -32,10 +32,8 @@ public class Product {
     private String productImage;      // S3 URL (media 테이블의 url)
     private String productCategory;
 
-    /** 대분류 카테고리 (예: 상의, 하의) */
+    private String genderCategory;
     private String majorCategory;
-
-    /** 세부 카테고리 (예: 맨투맨/스웨트) */
     private String subCategory;
     private String productLink;
     private Boolean isActive = true;
