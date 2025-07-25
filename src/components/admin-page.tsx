@@ -23,7 +23,7 @@ import AdminPartnerApplications from "./admin-partner-applications"
 import AdminProductApprovals from "./admin-product-approvals"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-interface Product {
+export interface Product {
   id?: number
   product_name: string
   product_content: string
@@ -37,6 +37,9 @@ interface Product {
   type?: "일반" | "제휴사" // 추가
   isActive?: boolean
   isPartner?: boolean
+  majorCategory: string;
+  subCategory: string;
+  genderCategory: string;
 }
 
 // isDeleted -> isActive로 일괄 변경
@@ -122,7 +125,9 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
           status: p.isActive ? "active" : "inactive",
           type: "일반",
           isActive: p.isActive,
-          isPartner: false
+          isPartner: false,
+          majorCategory: p.majorCategory,
+          subCategory: p.subCategory,
         })),
         ...partnerProductsData.map((p: any) => ({
           id: p.productIdx ?? p.id,
@@ -137,7 +142,9 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
           status: p.isActive ? "active" : "inactive",
           type: "제휴사",
           isActive: p.isActive,
-          isPartner: true
+          isPartner: true,
+          majorCategory: p.majorCategory,
+          subCategory: p.subCategory,
         }))
       ]
       setProducts(allProducts)
@@ -190,7 +197,9 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
             status: p.isActive ? "active" : "inactive",
             type: '제휴사',
             isActive: p.isActive,
-            isPartner: true
+            isPartner: true,
+            majorCategory: p.majorCategory,
+            subCategory: p.subCategory,
           }))
           setPartnerProducts(mapped)
         }

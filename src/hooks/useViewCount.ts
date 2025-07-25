@@ -17,7 +17,9 @@ export function useViewCount(key: string) {
       },
     });
     client.activate();
-    return () => client.deactivate();
+    return () => {
+      client.deactivate();
+    };
   }, [key]);
 
   return count;

@@ -42,7 +42,7 @@ export default function CategoryTab({ onSelect, className }: CategoryTabProps) {
       </div>
       {/* Sub */}
       <div className="flex gap-2 overflow-x-auto">
-        {CATEGORY_MAP[activeMajor].map((sub) => (
+        {(CATEGORY_MAP as any)[activeMajor]?.map((sub: string) => (
           <button
             key={sub}
             className={cn(
