@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/partner")
@@ -240,6 +241,52 @@ public class PartnerController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // ========== 수정 요청 관련 API ==========
+    
+    // 어드민용 수정 요청 목록 조회
+    @GetMapping("/admin/products/update-requests")
+    public ResponseEntity<List<PartnerProductDto>> getUpdateRequests() {
+        try {
+            List<PartnerProductDto> result = partnerService.getUpdateRequests();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // 어드민용 수정 요청 승인
+    @PutMapping("/admin/products/{id}/update-request/approve")
+    public ResponseEntity<PartnerProductDto> approveUpdateRequest(@PathVariable Long id) {
+        try {
+            PartnerProductDto result = partnerService.approveUpdateRequest(id);
+            if (result != null) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    // 어드민용 수정 요청 거절
+    @PutMapping("/admin/products/{id}/update-request/reject")
+    public ResponseEntity<PartnerProductDto> rejectUpdateRequest(
+            @PathVariable Long id, 
+            @RequestBody Map<String, String> request) {
+        try {
+            String rejectionReason = request.get("rejectionReason");
+            PartnerProductDto result = partnerService.rejectUpdateRequest(id, rejectionReason);
+            if (result != null) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(null);
         }
     }
 

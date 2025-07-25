@@ -40,6 +40,25 @@ export interface Product {
   majorCategory: string;
   subCategory: string;
   genderCategory: string;
+  // 수정 요청 관련 필드들
+  updateRequestStatus?: string;
+  originalProductName?: string;
+  originalProductContent?: string;
+  originalProductImage?: string;
+  originalProductLink?: string;
+  originalGenderCategory?: string;
+  originalMajorCategory?: string;
+  originalSubCategory?: string;
+  originalProductPrice?: string;
+  // 수정 요청 데이터 필드들
+  requestedProductName?: string;
+  requestedProductContent?: string;
+  requestedProductImage?: string;
+  requestedProductLink?: string;
+  requestedGenderCategory?: string;
+  requestedMajorCategory?: string;
+  requestedSubCategory?: string;
+  requestedProductPrice?: string;
 }
 
 // isDeleted -> isActive로 일괄 변경
@@ -100,6 +119,8 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
   const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null)
   const [selectedPartnerName, setSelectedPartnerName] = useState<string>('전체')
   const [partnerProducts, setPartnerProducts] = useState<Product[]>([])
+  const [updateRequests, setUpdateRequests] = useState<Product[]>([])
+  const [showOriginal, setShowOriginal] = useState<{ [key: number]: boolean }>({})
 
   // 데이터 로드
   const loadData = async () => {
@@ -158,6 +179,53 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
           const apps = await res.json()
           const approved = apps.filter((a: any) => a.status === 'approved')
           setPartners(approved.map((a: any) => ({ id: a.id, companyName: a.companyName })))
+        }
+      } catch(e) { console.error(e) }
+      
+      // 수정 요청 목록 로드
+      try {
+        const token = localStorage.getItem("token")
+        const res = await fetch("/api/partner/admin/products/update-requests", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (res.ok) {
+          const data = await res.json()
+          const mapped = data.map((p: any) => ({
+            id: p.id,
+            product_name: p.productName,
+            product_content: p.productContent,
+            product_image: p.productImage,
+            product_link: p.productLink,
+            product_category: p.productCategory,
+            store_mall: p.partnerApplicationId,
+            price: p.productPrice,
+            created_at: p.createdAt,
+            status: p.status,
+            type: '제휴사',
+            isActive: p.isActive,
+            isPartner: true,
+            majorCategory: p.majorCategory,
+            subCategory: p.subCategory,
+            genderCategory: p.genderCategory,
+            updateRequestStatus: p.updateRequestStatus,
+            originalProductName: p.originalProductName,
+            originalProductContent: p.originalProductContent,
+            originalProductImage: p.originalProductImage,
+            originalProductLink: p.originalProductLink,
+            originalGenderCategory: p.originalGenderCategory,
+            originalMajorCategory: p.originalMajorCategory,
+            originalSubCategory: p.originalSubCategory,
+            originalProductPrice: p.originalProductPrice,
+            requestedProductName: p.requestedProductName,
+            requestedProductContent: p.requestedProductContent,
+            requestedProductImage: p.requestedProductImage,
+            requestedProductLink: p.requestedProductLink,
+            requestedGenderCategory: p.requestedGenderCategory,
+            requestedMajorCategory: p.requestedMajorCategory,
+            requestedSubCategory: p.requestedSubCategory,
+            requestedProductPrice: p.requestedProductPrice,
+          }))
+          setUpdateRequests(mapped)
         }
       } catch(e) { console.error(e) }
     } catch (error) {
@@ -304,6 +372,60 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
     }
   };
 
+  const handleApproveUpdateRequest = async (productId: number) => {
+    if (confirm("이 수정 요청을 승인하시겠습니까?")) {
+      try {
+        const token = localStorage.getItem("token")
+        const res = await fetch(`/api/partner/admin/products/${productId}/update-request/approve`, {
+          method: "PUT",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (res.ok) {
+          alert("수정 요청이 승인되었습니다.")
+          loadData()
+        } else {
+          alert("승인 실패")
+        }
+      } catch (error) {
+        console.error("승인 중 오류:", error)
+        alert("승인 중 오류가 발생했습니다.")
+      }
+    }
+  }
+
+  const handleRejectUpdateRequest = async (productId: number) => {
+    const rejectionReason = prompt("거절 사유를 입력해주세요:")
+    if (rejectionReason) {
+      try {
+        const token = localStorage.getItem("token")
+        const res = await fetch(`/api/partner/admin/products/${productId}/update-request/reject`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+          body: JSON.stringify({ rejectionReason }),
+        })
+        if (res.ok) {
+          alert("수정 요청이 거절되었습니다.")
+          loadData()
+        } else {
+          alert("거절 실패")
+        }
+      } catch (error) {
+        console.error("거절 중 오류:", error)
+        alert("거절 중 오류가 발생했습니다.")
+      }
+    }
+  }
+
+  const toggleOriginalView = (productId: number) => {
+    setShowOriginal(prev => ({
+      ...prev,
+      [productId]: !prev[productId]
+    }))
+  }
+
   if (!isOpen) return null
   if (userRole !== "ADMIN") {
     return (
@@ -381,7 +503,7 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           {/* Tab Navigation */}
           <div className="border-b bg-white flex-shrink-0">
-            <TabsList className="w-full grid grid-cols-4 bg-transparent h-12 p-0">
+            <TabsList className="w-full grid grid-cols-5 bg-transparent h-12 p-0">
               <TabsTrigger
                 value="dashboard"
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
@@ -409,6 +531,13 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
               >
                 <FileText className="w-4 h-4" />
                 <span className="hidden sm:inline">제휴 신청</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="update-requests"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                <span className="hidden sm:inline">수정 요청</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -668,6 +797,103 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
                 ) : (
                   <div className="grid gap-4">
                     <AdminPartnerApplications />
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="update-requests" className="h-full m-0 p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">수정 요청 관리</h2>
+                </div>
+                {loading ? (
+                  <div className="text-center py-8">로딩 중...</div>
+                ) : (
+                  <div className="grid gap-4">
+                    {updateRequests.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600">수정 요청이 없습니다.</p>
+                      </div>
+                    ) : (
+                      updateRequests.map((product: Product) => (
+                        <Card key={product.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <img
+                                src={product.product_image || "/placeholder.svg"}
+                                alt={product.product_name}
+                                className="w-16 h-16 object-cover rounded"
+                              />
+                              <div className="flex-1">
+                                <h3 className="font-medium">{product.product_name}</h3>
+                                <p className="text-sm text-gray-600 mb-1">{product.product_content}</p>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline">{product.genderCategory ? product.genderCategory : "전체"} / {product.majorCategory} / {product.subCategory}</Badge>
+                                  <span className="text-sm font-medium">{product.price}</span>
+                                  <Badge variant="secondary">{product.type}</Badge>
+                                </div>
+                                
+                                {showOriginal[product.id!] ? (
+                                  <div className="text-sm space-y-1">
+                                    <div className="p-2 bg-gray-50 rounded border">
+                                      <p className="font-medium text-gray-800 mb-2">원본 데이터</p>
+                                      <p><strong>상품명:</strong> <span className="bg-yellow-100 px-1 rounded">{product.originalProductName}</span></p>
+                                      <p><strong>설명:</strong> <span className="bg-yellow-100 px-1 rounded">{product.originalProductContent}</span></p>
+                                      <p><strong>카테고리:</strong> <span className="bg-yellow-100 px-1 rounded">{product.originalGenderCategory} / {product.originalMajorCategory} / {product.originalSubCategory}</span></p>
+                                      <p><strong>가격:</strong> <span className="bg-yellow-100 px-1 rounded">₩{product.originalProductPrice}</span></p>
+                                      <p><strong>링크:</strong> <span className="bg-yellow-100 px-1 rounded">{product.originalProductLink}</span></p>
+                                    </div>
+                                    <div className="p-2 bg-blue-50 rounded border">
+                                      <p className="font-medium text-blue-800 mb-2">수정 요청 데이터</p>
+                                      <p><strong>상품명:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductName}</span></p>
+                                      <p><strong>설명:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductContent}</span></p>
+                                      <p><strong>카테고리:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedGenderCategory} / {product.requestedMajorCategory} / {product.requestedSubCategory}</span></p>
+                                      <p><strong>가격:</strong> <span className="bg-green-100 px-1 rounded">₩{product.requestedProductPrice}</span></p>
+                                      <p><strong>링크:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductLink}</span></p>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-gray-500">
+                                    <p><strong>원본:</strong> {product.originalProductName}</p>
+                                    <p><strong>수정 요청:</strong> {product.requestedProductName}</p>
+                                    <p><strong>원본 가격:</strong> ₩{product.originalProductPrice}</p>
+                                    <p><strong>요청 가격:</strong> ₩{product.requestedProductPrice}</p>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => toggleOriginalView(product.id!)}
+                                  className="text-blue-600 hover:text-blue-700"
+                                >
+                                  {showOriginal[product.id!] ? "간단 보기" : "원본 보기"}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleApproveUpdateRequest(product.id!)}
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  승인
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRejectUpdateRequest(product.id!)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  거절
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
                   </div>
                 )}
               </div>

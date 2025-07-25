@@ -23,6 +23,26 @@ interface PartnerProduct {
   status: "pending" | "approved" | "rejected"
   submittedDate?: string
   rejectionReason?: string
+  updateRequestStatus?: string
+  updateRequestReason?: string
+  updateRequestDate?: string
+  originalProductName?: string
+  originalProductContent?: string
+  originalProductImage?: string
+  originalProductLink?: string
+  originalGenderCategory?: string
+  originalMajorCategory?: string
+  originalSubCategory?: string
+  originalProductPrice?: number
+  // 수정 요청 데이터 필드들
+  requestedProductName?: string
+  requestedProductContent?: string
+  requestedProductImage?: string
+  requestedProductLink?: string
+  requestedGenderCategory?: string
+  requestedMajorCategory?: string
+  requestedSubCategory?: string
+  requestedProductPrice?: number
 }
 
 interface PartnerProductUploadPageProps {
@@ -48,6 +68,7 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
   const [uploading, setUploading] = useState(false)
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [userInfo, setUserInfo] = useState<any>(null)
+  const [showOriginal, setShowOriginal] = useState<{ [key: number]: boolean }>({})
 
   useEffect(() => {
     // 사용자 정보 가져오기
@@ -224,6 +245,41 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
+  }
+
+  const getUpdateRequestStatusBadge = (updateRequestStatus: string) => {
+    switch (updateRequestStatus) {
+      case "PENDING_UPDATE":
+        return (
+          <Badge className="bg-blue-100 text-blue-800">
+            <Edit className="w-3 h-3 mr-1" />
+            수정 요청 대기
+          </Badge>
+        )
+      case "APPROVED_UPDATE":
+        return (
+          <Badge className="bg-green-100 text-green-800">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            수정 승인됨
+          </Badge>
+        )
+      case "REJECTED_UPDATE":
+        return (
+          <Badge className="bg-red-100 text-red-800">
+            <XCircle className="w-3 h-3 mr-1" />
+            수정 거절됨
+          </Badge>
+        )
+      default:
+        return null
+    }
+  }
+
+  const toggleOriginalView = (productId: number) => {
+    setShowOriginal(prev => ({
+      ...prev,
+      [productId]: !prev[productId]
+    }))
   }
 
   if (!isOpen) return null
@@ -449,15 +505,71 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
                     <div className="flex-1">
                       <h3 className="font-medium">{product.productName}</h3>
                       <p className="text-sm text-gray-600 mb-1">{product.productContent}</p>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{product.genderCategory} / {product.majorCategory} / {product.subCategory}</Badge>
-                        <span className="text-sm font-medium">₩{product.productPrice?.toLocaleString()}</span>
-                        {getStatusBadge(product.status)}
-                      </div>
+                                                      <div className="flex items-center gap-2">
+                                  <Badge variant="outline">{product.genderCategory} / {product.majorCategory} / {product.subCategory}</Badge>
+                                  <span className="text-sm font-medium">₩{product.productPrice?.toLocaleString()}</span>
+                                  {getStatusBadge(product.status)}
+                                  {product.updateRequestStatus && getUpdateRequestStatusBadge(product.updateRequestStatus)}
+                                </div>
                       {product.status === "rejected" && product.rejectionReason && (
                         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
                           <Label className="text-sm font-medium text-red-800">거절 사유</Label>
                           <p className="text-sm text-red-700 mt-1">{product.rejectionReason}</p>
+                        </div>
+                      )}
+                      {product.updateRequestStatus === "PENDING_UPDATE" && (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-sm font-medium text-blue-800">수정 요청 대기 중</Label>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleOriginalView(product.id!)}
+                              className="text-blue-600 hover:text-blue-700 text-xs"
+                            >
+                              {showOriginal[product.id!] ? "간단 보기" : "상세 보기"}
+                            </Button>
+                          </div>
+                          {showOriginal[product.id!] ? (
+                            <div className="text-sm text-blue-700 space-y-2">
+                              <div className="p-2 bg-white rounded border">
+                                <p className="font-medium text-gray-800 mb-1">현재 데이터</p>
+                                <p><strong>상품명:</strong> <span className="bg-yellow-100 px-1 rounded">{product.productName}</span></p>
+                                <p><strong>설명:</strong> <span className="bg-yellow-100 px-1 rounded">{product.productContent}</span></p>
+                                <p><strong>카테고리:</strong> <span className="bg-yellow-100 px-1 rounded">{product.genderCategory} / {product.majorCategory} / {product.subCategory}</span></p>
+                                <p><strong>가격:</strong> <span className="bg-yellow-100 px-1 rounded">₩{product.productPrice?.toLocaleString()}</span></p>
+                                <p><strong>링크:</strong> <span className="bg-yellow-100 px-1 rounded">{product.productLink}</span></p>
+                              </div>
+                              <div className="p-2 bg-white rounded border">
+                                <p className="font-medium text-blue-800 mb-1">수정 요청 데이터</p>
+                                <p><strong>상품명:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductName}</span></p>
+                                <p><strong>설명:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductContent}</span></p>
+                                <p><strong>카테고리:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedGenderCategory} / {product.requestedMajorCategory} / {product.requestedSubCategory}</span></p>
+                                <p><strong>가격:</strong> <span className="bg-green-100 px-1 rounded">₩{product.requestedProductPrice?.toLocaleString()}</span></p>
+                                <p><strong>링크:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductLink}</span></p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-blue-700 space-y-1">
+                              <p><strong>상품명:</strong> {product.productName} → {product.requestedProductName}</p>
+                              <p><strong>설명:</strong> {product.productContent} → {product.requestedProductContent}</p>
+                              <p><strong>카테고리:</strong> {product.genderCategory} / {product.majorCategory} / {product.subCategory} → {product.requestedGenderCategory} / {product.requestedMajorCategory} / {product.requestedSubCategory}</p>
+                              <p><strong>가격:</strong> ₩{product.productPrice?.toLocaleString()} → ₩{product.requestedProductPrice?.toLocaleString()}</p>
+                              <p><strong>링크:</strong> {product.productLink} → {product.requestedProductLink}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {product.updateRequestStatus === "APPROVED_UPDATE" && (
+                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                          <Label className="text-sm font-medium text-green-800">수정 승인됨</Label>
+                          <p className="text-sm text-green-700 mt-1">수정 요청이 승인되었습니다.</p>
+                        </div>
+                      )}
+                      {product.updateRequestStatus === "REJECTED_UPDATE" && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                          <Label className="text-sm font-medium text-red-800">수정 거절됨</Label>
+                          <p className="text-sm text-red-700 mt-1">{product.rejectionReason || "수정 요청이 거절되었습니다."}</p>
                         </div>
                       )}
                     </div>
@@ -466,7 +578,7 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditProduct(product)}
-                        disabled={product.status === "approved"}
+                        disabled={product.updateRequestStatus === "PENDING_UPDATE"}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
