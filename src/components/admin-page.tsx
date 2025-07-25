@@ -551,7 +551,7 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
                                 {/* 제휴몰 이름 표시 */}
                                 <p className="text-sm text-gray-600 mb-1">{mall ? mall.storeName : '-'}</p>
                                 <div className="flex items-center gap-2">
-                                  <Badge variant="outline">{product.product_category}</Badge>
+                                  <Badge variant="outline">{product.genderCategory ? product.genderCategory : "전체"} / {product.majorCategory} / {product.subCategory}</Badge>
                                   <span className="text-sm font-medium">{product.price}</span>
                                   <Badge variant="secondary">{product.type}</Badge>
                                 </div>
