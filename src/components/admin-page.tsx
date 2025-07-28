@@ -827,51 +827,34 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
                                 className="w-16 h-16 object-cover rounded"
                               />
                               <div className="flex-1">
-                                <h3 className="font-medium">{product.product_name}</h3>
-                                <p className="text-sm text-gray-600 mb-1">{product.product_content}</p>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="outline">{product.genderCategory ? product.genderCategory : "전체"} / {product.majorCategory} / {product.subCategory}</Badge>
-                                  <span className="text-sm font-medium">{product.price}</span>
-                                  <Badge variant="secondary">{product.type}</Badge>
-                                </div>
-                                
-                                {showOriginal[product.id!] ? (
-                                  <div className="text-sm space-y-1">
-                                    <div className="p-2 bg-gray-50 rounded border">
-                                      <p className="font-medium text-gray-800 mb-2">원본 데이터</p>
-                                      <p><strong>상품명:</strong> <span className="bg-yellow-100 px-1 rounded">{product.originalProductName}</span></p>
-                                      <p><strong>설명:</strong> <span className="bg-yellow-100 px-1 rounded">{product.originalProductContent}</span></p>
-                                      <p><strong>카테고리:</strong> <span className="bg-yellow-100 px-1 rounded">{product.originalGenderCategory} / {product.originalMajorCategory} / {product.originalSubCategory}</span></p>
-                                      <p><strong>가격:</strong> <span className="bg-yellow-100 px-1 rounded">₩{product.originalProductPrice}</span></p>
-                                      <p><strong>링크:</strong> <span className="bg-yellow-100 px-1 rounded">{product.originalProductLink}</span></p>
-                                    </div>
-                                    <div className="p-2 bg-blue-50 rounded border">
-                                      <p className="font-medium text-blue-800 mb-2">수정 요청 데이터</p>
-                                      <p><strong>상품명:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductName}</span></p>
-                                      <p><strong>설명:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductContent}</span></p>
-                                      <p><strong>카테고리:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedGenderCategory} / {product.requestedMajorCategory} / {product.requestedSubCategory}</span></p>
-                                      <p><strong>가격:</strong> <span className="bg-green-100 px-1 rounded">₩{product.requestedProductPrice}</span></p>
-                                      <p><strong>링크:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductLink}</span></p>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="text-sm text-gray-500">
-                                    <p><strong>원본:</strong> {product.originalProductName}</p>
-                                    <p><strong>수정 요청:</strong> {product.requestedProductName}</p>
-                                    <p><strong>원본 가격:</strong> ₩{product.originalProductPrice}</p>
-                                    <p><strong>요청 가격:</strong> ₩{product.requestedProductPrice}</p>
-                                  </div>
-                                )}
+                                <h3 className="font-medium mb-1">{product.requestedProductName || product.product_name}</h3>
+                                <p className="text-sm text-gray-600 mb-2">{product.requestedProductContent || product.product_content}</p>
+                                <table className="w-full border text-sm mb-2">
+                                  <thead>
+                                    <tr>
+                                      <th className="w-24 bg-gray-50">항목</th>
+                                      <th className="bg-gray-50">수정 전</th>
+                                      <th className="bg-gray-50">수정 후</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {[
+                                      { label: "상품명", before: product.originalProductName, after: product.requestedProductName },
+                                      { label: "설명", before: product.originalProductContent, after: product.requestedProductContent },
+                                      { label: "카테고리", before: [product.originalGenderCategory, product.originalMajorCategory, product.originalSubCategory].filter(Boolean).join(" / "), after: [product.requestedGenderCategory, product.requestedMajorCategory, product.requestedSubCategory].filter(Boolean).join(" / ") },
+                                      { label: "가격", before: product.originalProductPrice, after: product.requestedProductPrice },
+                                      { label: "링크", before: product.originalProductLink, after: product.requestedProductLink },
+                                    ].map(({ label, before, after }) => (
+                                      <tr key={label}>
+                                        <td className="font-medium text-gray-700 bg-gray-50">{label}</td>
+                                        <td className="px-2 py-1 border-r">{before}</td>
+                                        <td className={`px-2 py-1 ${before !== after ? "bg-green-100 font-semibold" : ""}`}>{after}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => toggleOriginalView(product.id!)}
-                                  className="text-blue-600 hover:text-blue-700"
-                                >
-                                  {showOriginal[product.id!] ? "간단 보기" : "원본 보기"}
-                                </Button>
+                              <div className="flex flex-col gap-2 min-w-[80px]">
                                 <Button
                                   variant="outline"
                                   size="sm"

@@ -203,6 +203,27 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
       alert("삭제 중 오류 발생")
     }
   }
+  
+  const handleCancelUpdateRequest = async (productId: number) => {
+    if (!confirm("수정 요청을 취소하시겠습니까?")) return
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`/api/partner/products/${productId}/update-request/cancel`, {
+        method: "PUT",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (res.ok) {
+        alert("수정 요청이 취소되었습니다.")
+        loadProducts()
+      } else {
+        const errorText = await res.text()
+        alert("취소 실패: " + errorText)
+      }
+    } catch (err) {
+      console.error(err)
+      alert("취소 중 오류 발생")
+    }
+  }
 
   const handleFormClose = () => {
     setIsFormOpen(false)
@@ -521,43 +542,31 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
                         <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
                           <div className="flex items-center justify-between mb-2">
                             <Label className="text-sm font-medium text-blue-800">수정 요청 대기 중</Label>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleOriginalView(product.id!)}
-                              className="text-blue-600 hover:text-blue-700 text-xs"
-                            >
-                              {showOriginal[product.id!] ? "간단 보기" : "상세 보기"}
-                            </Button>
                           </div>
-                          {showOriginal[product.id!] ? (
-                            <div className="text-sm text-blue-700 space-y-2">
-                              <div className="p-2 bg-white rounded border">
-                                <p className="font-medium text-gray-800 mb-1">현재 데이터</p>
-                                <p><strong>상품명:</strong> <span className="bg-yellow-100 px-1 rounded">{product.productName}</span></p>
-                                <p><strong>설명:</strong> <span className="bg-yellow-100 px-1 rounded">{product.productContent}</span></p>
-                                <p><strong>카테고리:</strong> <span className="bg-yellow-100 px-1 rounded">{product.genderCategory} / {product.majorCategory} / {product.subCategory}</span></p>
-                                <p><strong>가격:</strong> <span className="bg-yellow-100 px-1 rounded">₩{product.productPrice?.toLocaleString()}</span></p>
-                                <p><strong>링크:</strong> <span className="bg-yellow-100 px-1 rounded">{product.productLink}</span></p>
-                              </div>
-                              <div className="p-2 bg-white rounded border">
-                                <p className="font-medium text-blue-800 mb-1">수정 요청 데이터</p>
-                                <p><strong>상품명:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductName}</span></p>
-                                <p><strong>설명:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductContent}</span></p>
-                                <p><strong>카테고리:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedGenderCategory} / {product.requestedMajorCategory} / {product.requestedSubCategory}</span></p>
-                                <p><strong>가격:</strong> <span className="bg-green-100 px-1 rounded">₩{product.requestedProductPrice?.toLocaleString()}</span></p>
-                                <p><strong>링크:</strong> <span className="bg-green-100 px-1 rounded">{product.requestedProductLink}</span></p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-sm text-blue-700 space-y-1">
-                              <p><strong>상품명:</strong> {product.productName} → {product.requestedProductName}</p>
-                              <p><strong>설명:</strong> {product.productContent} → {product.requestedProductContent}</p>
-                              <p><strong>카테고리:</strong> {product.genderCategory} / {product.majorCategory} / {product.subCategory} → {product.requestedGenderCategory} / {product.requestedMajorCategory} / {product.requestedSubCategory}</p>
-                              <p><strong>가격:</strong> ₩{product.productPrice?.toLocaleString()} → ₩{product.requestedProductPrice?.toLocaleString()}</p>
-                              <p><strong>링크:</strong> {product.productLink} → {product.requestedProductLink}</p>
-                            </div>
-                          )}
+                          <table className="w-full border text-sm">
+                            <thead>
+                              <tr>
+                                <th className="w-20 bg-gray-50">항목</th>
+                                <th className="bg-gray-50">현재</th>
+                                <th className="bg-gray-50">요청</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {[
+                                { label: "상품명", before: product.productName, after: product.requestedProductName },
+                                { label: "설명", before: product.productContent, after: product.requestedProductContent },
+                                { label: "카테고리", before: [product.genderCategory, product.majorCategory, product.subCategory].filter(Boolean).join(" / "), after: [product.requestedGenderCategory, product.requestedMajorCategory, product.requestedSubCategory].filter(Boolean).join(" / ") },
+                                { label: "가격", before: product.productPrice?.toLocaleString(), after: product.requestedProductPrice?.toLocaleString() },
+                                { label: "링크", before: product.productLink, after: product.requestedProductLink },
+                              ].map(({ label, before, after }) => (
+                                <tr key={label}>
+                                  <td className="font-medium text-gray-700 bg-gray-50">{label}</td>
+                                  <td className="px-2 py-1 border-r">{before}</td>
+                                  <td className={`px-2 py-1 ${before !== after ? "bg-green-100 font-semibold" : ""}`}>{after}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       )}
                       {product.updateRequestStatus === "APPROVED_UPDATE" && (
@@ -582,6 +591,16 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
+                      {product.updateRequestStatus === "PENDING_UPDATE" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCancelUpdateRequest(product.id!)}
+                          className="text-orange-600 hover:text-orange-700"
+                        >
+                          수정 요청 취소
+                        </Button>
+                      )}
                       <Button
                         variant="destructive"
                         size="sm"
