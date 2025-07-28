@@ -21,7 +21,23 @@ export function useToggleLike({ initialLiked, initialCount, targetIdx, targetTyp
     setLoading(true);
     try {
       const params = new URLSearchParams({ targetIdx: String(targetIdx), targetType });
-      const res = await fetch(`/api/likes/toggle?${params.toString()}`, { method: 'POST' });
+      
+      // Authorization 헤더 가져오기
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const res = await fetch(`/api/likes/toggle`, { 
+        method: 'POST',
+        headers,
+        body: params
+      });
+      
       if (!res.ok) throw new Error('like failed');
       const data = await res.json();
       setLiked(data.liked);

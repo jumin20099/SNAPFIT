@@ -19,6 +19,7 @@ import java.util.List;
 import com.snapfit.api.service.CustomOAuth2UserService;
 import com.snapfit.api.security.JwtAuthenticationFilter;
 import com.snapfit.api.security.JwtUtil;
+import com.snapfit.api.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -30,6 +31,7 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final UserRepository userRepository;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -70,7 +72,7 @@ public class SecurityConfig {
                     response.sendRedirect("http://localhost:3000");
                 })
             )
-            .addFilterBefore(new JwtAuthenticationFilter(jwtUtil),
+            .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userRepository),
                     UsernamePasswordAuthenticationFilter.class)
             .exceptionHandling(ex -> ex
                 .defaultAuthenticationEntryPointFor(

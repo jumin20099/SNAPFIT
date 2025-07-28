@@ -3,11 +3,11 @@ package com.snapfit.api.security;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -19,6 +19,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
+import com.snapfit.api.entity.User;
+import com.snapfit.api.repository.UserRepository;
+
 /**
  * 모든 요청마다 헤더의 Authorization: Bearer <token> 을 체크하여
  * JWT가 유효한 경우 SecurityContext에 인증 정보를 설정
@@ -28,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     /**
      * OAuth2 콜백이나 에러 페이지 등에서는 JWT 필터를 건너뛰도록.
@@ -48,27 +52,49 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
+        System.out.println("[JwtAuthenticationFilter] Authorization 헤더: " + header);
+        
         if (header == null || !header.startsWith("Bearer ")) {
+            System.out.println("[JwtAuthenticationFilter] Authorization 헤더가 없거나 Bearer로 시작하지 않음");
             filterChain.doFilter(request, response);
             return;
         }
+        
         String token = header.substring(7);
+        System.out.println("[JwtAuthenticationFilter] 토큰 추출: " + token.substring(0, Math.min(50, token.length())) + "...");
+        
         try {
             if (jwtUtil.validateToken(token)) {
+                System.out.println("[JwtAuthenticationFilter] 토큰 검증 성공");
                 String subject = jwtUtil.getSubjectFromToken(token);
                 String role = jwtUtil.getRoleFromToken(token);
-                List<org.springframework.security.core.GrantedAuthority> authorities = List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role));
-                User principal = new User(subject, "", authorities);
+                System.out.println("[JwtAuthenticationFilter] Subject: " + subject + ", Role: " + role);
+                
+                // User 엔티티 조회
+                User user = userRepository.findByEmail(subject)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + subject));
+                System.out.println("[JwtAuthenticationFilter] User 조회 성공: " + user.getEmail());
+                
+                // CustomOAuth2User 생성
+                CustomOAuth2User customOAuth2User = new CustomOAuth2User(user, Map.of());
+                System.out.println("[JwtAuthenticationFilter] CustomOAuth2User 생성 성공");
+                
+                // SecurityContext에 설정
                 UsernamePasswordAuthenticationToken auth = 
                     new UsernamePasswordAuthenticationToken(
-                        principal,
+                        customOAuth2User,
                         null,
-                        authorities
+                        customOAuth2User.getAuthorities()
                     );
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                System.out.println("[JwtAuthenticationFilter] SecurityContext 설정 완료");
+            } else {
+                System.out.println("[JwtAuthenticationFilter] 토큰 검증 실패");
             }
         } catch (Exception e) {
+            System.out.println("[JwtAuthenticationFilter] 예외 발생: " + e.getMessage());
+            e.printStackTrace();
         }
         filterChain.doFilter(request, response);
     }
