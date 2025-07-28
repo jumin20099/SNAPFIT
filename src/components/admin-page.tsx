@@ -851,6 +851,32 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
                                         <td className={`px-2 py-1 ${before !== after ? "bg-green-100 font-semibold" : ""}`}>{after}</td>
                                       </tr>
                                     ))}
+                                    {/* 이미지 비교 */}
+                                    <tr>
+                                      <td className="font-medium text-gray-700 bg-gray-50">이미지</td>
+                                      <td className="px-2 py-1 border-r">
+                                        {product.originalProductImage ? (
+                                          <img 
+                                            src={product.originalProductImage} 
+                                            alt="원본 이미지" 
+                                            className="w-12 h-12 object-cover rounded"
+                                          />
+                                        ) : (
+                                          <span className="text-gray-400">없음</span>
+                                        )}
+                                      </td>
+                                      <td className={`px-2 py-1 ${product.originalProductImage !== product.requestedProductImage ? "bg-green-100 font-semibold" : ""}`}>
+                                        {product.requestedProductImage ? (
+                                          <img 
+                                            src={product.requestedProductImage} 
+                                            alt="요청 이미지" 
+                                            className="w-12 h-12 object-cover rounded"
+                                          />
+                                        ) : (
+                                          <span className="text-gray-400">없음</span>
+                                        )}
+                                      </td>
+                                    </tr>
                                   </tbody>
                                 </table>
                               </div>

@@ -69,6 +69,7 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [userInfo, setUserInfo] = useState<any>(null)
   const [showOriginal, setShowOriginal] = useState<{ [key: number]: boolean }>({})
+  const [activeTab, setActiveTab] = useState<'all' | 'modified'>('all')
 
   useEffect(() => {
     // 사용자 정보 가져오기
@@ -302,6 +303,23 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
       [productId]: !prev[productId]
     }))
   }
+  
+  // 수정된 상품만 필터링하는 함수
+  const getModifiedProducts = () => {
+    return products.filter(product => 
+      product.updateRequestStatus === "APPROVED_UPDATE" || 
+      product.updateRequestStatus === "REJECTED_UPDATE" ||
+      product.updateRequestStatus === "PENDING_UPDATE"
+    )
+  }
+  
+  // 현재 탭에 따른 상품 목록
+  const getCurrentProducts = () => {
+    if (activeTab === 'modified') {
+      return getModifiedProducts()
+    }
+    return products
+  }
 
   if (!isOpen) return null
 
@@ -459,12 +477,12 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
   }
 
   // 필터링된 상품 목록
-  const filteredProducts = products.filter(product => {
+  const filteredProducts = getCurrentProducts().filter(product => {
     if (filterStatus === 'all') return true
     return product.status?.toLowerCase() === filterStatus.toLowerCase()
   })
 
-  // 상품 목록 상단에 필터 UI 추가
+  // 상품 목록 상단에 탭과 필터 UI 추가
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
@@ -501,6 +519,30 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
             상품 추가
           </Button>
         </div>
+      </div>
+      
+      {/* 탭 UI */}
+      <div className="flex border-b mb-4">
+        <button
+          onClick={() => setActiveTab('all')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'all'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          전체 상품 ({products.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('modified')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'modified'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          수정된 상품 ({getModifiedProducts().length})
+        </button>
       </div>
       {/* 상품 목록 렌더링 시 filteredProducts 사용 */}
       <div className="flex-1 overflow-y-auto p-4">
@@ -565,20 +607,59 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
                                   <td className={`px-2 py-1 ${before !== after ? "bg-green-100 font-semibold" : ""}`}>{after}</td>
                                 </tr>
                               ))}
+                              {/* 이미지 비교 */}
+                              <tr>
+                                <td className="font-medium text-gray-700 bg-gray-50">이미지</td>
+                                <td className="px-2 py-1 border-r">
+                                  {product.productImage ? (
+                                    <img 
+                                      src={product.productImage} 
+                                      alt="현재 이미지" 
+                                      className="w-12 h-12 object-cover rounded"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-400">없음</span>
+                                  )}
+                                </td>
+                                <td className={`px-2 py-1 ${product.productImage !== product.requestedProductImage ? "bg-green-100 font-semibold" : ""}`}>
+                                  {product.requestedProductImage ? (
+                                    <img 
+                                      src={product.requestedProductImage} 
+                                      alt="요청 이미지" 
+                                      className="w-12 h-12 object-cover rounded"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-400">없음</span>
+                                  )}
+                                </td>
+                              </tr>
                             </tbody>
                           </table>
                         </div>
                       )}
-                      {product.updateRequestStatus === "APPROVED_UPDATE" && (
+                      {product.updateRequestStatus === "APPROVED_UPDATE" && activeTab === 'all' && (
                         <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
                           <Label className="text-sm font-medium text-green-800">수정 승인됨</Label>
                           <p className="text-sm text-green-700 mt-1">수정 요청이 승인되었습니다.</p>
                         </div>
                       )}
-                      {product.updateRequestStatus === "REJECTED_UPDATE" && (
+                      {product.updateRequestStatus === "REJECTED_UPDATE" && activeTab === 'all' && (
                         <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
                           <Label className="text-sm font-medium text-red-800">수정 거절됨</Label>
                           <p className="text-sm text-red-700 mt-1">{product.rejectionReason || "수정 요청이 거절되었습니다."}</p>
+                        </div>
+                      )}
+                      {activeTab === 'modified' && product.updateRequestStatus === "APPROVED_UPDATE" && (
+                        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                          <Label className="text-sm font-medium text-green-800">✓ 수정 완료</Label>
+                        </div>
+                      )}
+                      {activeTab === 'modified' && product.updateRequestStatus === "REJECTED_UPDATE" && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                          <Label className="text-sm font-medium text-red-800">✗ 수정 거절</Label>
+                          {product.rejectionReason && (
+                            <p className="text-sm text-red-700 mt-1">사유: {product.rejectionReason}</p>
+                          )}
                         </div>
                       )}
                     </div>
