@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Heart, Grid3X3, User, X, Users, Settings, Store } from "lucide-react"
+import { Search, Heart, Grid3X3, User, X, Users, Settings, Store, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
@@ -116,6 +116,8 @@ export default function SnapFitMobile() {
   const [selectedSubCategory, setSelectedSubCategory] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [products, setProducts] = useState(mockProducts)
+  const [categoryProducts, setCategoryProducts] = useState<any[]>([])
+  const [isLoadingCategory, setIsLoadingCategory] = useState(false)
   const [isMyPageOpen, setIsMyPageOpen] = useState(false)
   const [isSocialLoginOpen, setIsSocialLoginOpen] = useState(false)
   const [isOutfitSharingOpen, setIsOutfitSharingOpen] = useState(false)
@@ -145,6 +147,84 @@ export default function SnapFitMobile() {
   useEffect(() => {
     fetchUserInfo()
   }, [])
+
+  // categoryProducts 상태 변화 추적
+  useEffect(() => {
+    console.log('categoryProducts 상태 변화:', categoryProducts.length, '상품들:', categoryProducts.map(p => p.productName))
+  }, [categoryProducts])
+
+  useEffect(() => {
+    console.log('isLoadingCategory 상태 변화:', isLoadingCategory)
+  }, [isLoadingCategory])
+
+  useEffect(() => {
+    console.log('selectedMajorCategory 상태 변화:', selectedMajorCategory)
+  }, [selectedMajorCategory])
+
+  useEffect(() => {
+    console.log('selectedSubCategory 상태 변화:', selectedSubCategory)
+  }, [selectedSubCategory])
+
+  // 카테고리 상품이 변경될 때마다 강제로 리렌더링
+  useEffect(() => {
+    console.log('=== 카테고리 상품 변경 감지 ===')
+    console.log('- categoryProducts 길이:', categoryProducts.length)
+    console.log('- isLoadingCategory:', isLoadingCategory)
+    console.log('- 상품들:', categoryProducts.map(p => p.productName))
+  }, [categoryProducts, isLoadingCategory])
+
+  // 카테고리별 상품 가져오기
+  const fetchCategoryProducts = async (major: string, sub?: string) => {
+    setIsLoadingCategory(true)
+    setSelectedMajorCategory(major)
+    setSelectedSubCategory(sub || "")
+    try {
+      // 임시로 모든 상품을 가져와서 프론트엔드에서 필터링
+      const response = await fetch('/api/products')
+      if (response.ok) {
+        const allProducts = await response.json()
+        
+        // 프론트엔드에서 필터링
+        console.log('필터링 시작 - major:', major, 'sub:', sub)
+        console.log('전체 상품:', allProducts)
+        
+        let filteredProducts = allProducts.filter((product: any) => {
+          console.log('상품 체크:', product.productName, 'majorCategory:', product.majorCategory, 'subCategory:', product.subCategory)
+          
+          if (major && product.majorCategory !== major) {
+            console.log('majorCategory 불일치:', product.majorCategory, '!==', major)
+            return false
+          }
+          if (sub && sub !== "신상" && product.subCategory !== sub) {
+            console.log('subCategory 불일치:', product.subCategory, '!==', sub)
+            return false
+          }
+          if (sub === "신상" && !product.newProduct) {
+            console.log('신상 상품이 아님:', product.newProduct)
+            return false
+          }
+          console.log('필터 통과:', product.productName)
+          return true
+        })
+        
+        console.log('필터링 결과:', filteredProducts)
+        console.log('categoryProducts 설정 전 길이:', categoryProducts.length)
+        
+        setCategoryProducts(filteredProducts)
+        
+        console.log('categoryProducts 설정 후 길이:', filteredProducts.length)
+        console.log('isLoadingCategory를 false로 설정')
+        
+        setIsLoadingCategory(false)
+      } else {
+        console.error('상품 가져오기 실패:', response.status, response.statusText)
+        setIsLoadingCategory(false)
+      }
+    } catch (error) {
+      console.error('카테고리 상품 가져오기 실패:', error)
+      setIsLoadingCategory(false)
+    }
+  }
 
   const addToCody = (product: any) => {
     const position = getCodyPosition(product.category, product.name)
@@ -583,6 +663,9 @@ export default function SnapFitMobile() {
                         onClick={() => {
                           setSelectedMajorCategory(category)
                           setSelectedSubCategory("")
+                          if (category !== "좋아요") {
+                            fetchCategoryProducts(category)
+                          }
                         }}
                       >
                         {category}
@@ -629,7 +712,8 @@ export default function SnapFitMobile() {
                       </div>
                     </div>
                   ) : selectedMajorCategory &&
-                    subCategoryDetails[selectedMajorCategory as keyof typeof subCategoryDetails] ? (
+                    subCategoryDetails[selectedMajorCategory as keyof typeof subCategoryDetails] &&
+                    !selectedSubCategory ? (
                     <div className="p-4">
                       {/* 선택된 카테고리 제목 */}
                       <div className="flex items-center justify-between mb-4">
@@ -643,7 +727,19 @@ export default function SnapFitMobile() {
                       <div className="grid grid-cols-3 gap-4">
                         {subCategoryDetails[selectedMajorCategory as keyof typeof subCategoryDetails].map(
                           (subCategory, index) => (
-                            <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow">
+                            <Card 
+                              key={index} 
+                              className="cursor-pointer hover:shadow-md transition-shadow"
+                              onClick={() => {
+                                console.log('세부 카테고리 클릭:', subCategory.name)
+                                console.log('선택된 대분류:', selectedMajorCategory)
+                                setSelectedSubCategory(subCategory.name)
+                                // 현재 선택된 대분류를 직접 사용
+                                const currentMajorCategory = selectedMajorCategory || '상의'
+                                console.log('사용할 대분류:', currentMajorCategory)
+                                fetchCategoryProducts(currentMajorCategory, subCategory.name)
+                              }}
+                            >
                               <CardContent className="p-3 text-center">
                                 <div className="w-full h-20 bg-gray-100 rounded mb-2 flex items-center justify-center overflow-hidden">
                                   <img
@@ -661,34 +757,79 @@ export default function SnapFitMobile() {
                     </div>
                   ) : (
                     <div className="p-4">
-                      <div className="grid grid-cols-4 gap-3">
-                        {filteredProducts.map((product) => (
-                          <Card key={product.id} className="relative">
-                            <CardContent className="p-2" onClick={() => addToCody(product)}>
-                              <img
-                                src={product.image || "/placeholder.svg"}
-                                alt={product.name}
-                                className="w-full h-24 object-cover rounded mb-2"
-                              />
-                              <h3 className="text-xs font-medium truncate">{product.name}</h3>
-                              <p className="text-xs text-gray-600">{product.price}</p>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="absolute top-1 right-1 p-1 h-6 w-6"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toggleLike(product.id)
-                                }}
-                              >
-                                <Heart
-                                  className={`w-3 h-3 ${product.liked ? "fill-red-500 text-red-500" : "text-gray-400"}`}
+                      {isLoadingCategory ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                          <p className="text-sm text-gray-600 mt-2">상품을 불러오는 중...</p>
+                        </div>
+                      ) : categoryProducts.length > 0 ? (
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-bold">
+                              {selectedMajorCategory}
+                              {selectedSubCategory && ` > ${selectedSubCategory}`}
+                            </h2>
+                            <span className="text-sm text-gray-600">{categoryProducts.length}개 상품</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-3">
+                            {categoryProducts.map((product) => (
+                              <Card key={product.productIdx} className="relative">
+                                <CardContent className="p-2" onClick={() => addToCody(product)}>
+                                  <img
+                                    src={product.productImage || "/placeholder.svg"}
+                                    alt={product.productName}
+                                    className="w-full h-24 object-cover rounded mb-2"
+                                  />
+                                  <h3 className="text-xs font-medium truncate">{product.productName}</h3>
+                                  <p className="text-xs text-gray-600">₩{product.productPrice?.toLocaleString()}</p>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute top-1 right-1 p-1 h-6 w-6"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      toggleLike(product.productIdx)
+                                    }}
+                                  >
+                                    <Heart
+                                      className={`w-3 h-3 ${product.liked ? "fill-red-500 text-red-500" : "text-gray-400"}`}
+                                    />
+                                  </Button>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-4 gap-3">
+                          {filteredProducts.map((product) => (
+                            <Card key={product.id} className="relative">
+                              <CardContent className="p-2" onClick={() => addToCody(product)}>
+                                <img
+                                  src={product.image || "/placeholder.svg"}
+                                  alt={product.name}
+                                  className="w-full h-24 object-cover rounded mb-2"
                                 />
-                              </Button>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
+                                <h3 className="text-xs font-medium truncate">{product.name}</h3>
+                                <p className="text-xs text-gray-600">{product.price}</p>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute top-1 right-1 p-1 h-6 w-6"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleLike(product.id)
+                                  }}
+                                >
+                                  <Heart
+                                    className={`w-3 h-3 ${product.liked ? "fill-red-500 text-red-500" : "text-gray-400"}`}
+                                  />
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

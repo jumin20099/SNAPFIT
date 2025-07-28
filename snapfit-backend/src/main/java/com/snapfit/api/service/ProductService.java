@@ -31,23 +31,34 @@ public class ProductService {
         return productRepository.findByStoreIdx(storeIdx);
     }
 
-    public List<Product> getActiveProducts(String major, String sub) {
-        List<Product> products;
-        if ((major == null || major.isBlank()) && (sub == null || sub.isBlank())) {
-            products = productRepository.findByIsActiveTrue();
-        } else if (sub == null || sub.isBlank()) {
-            products = productRepository.findByMajorCategoryIgnoreCaseAndIsActiveTrue(major);
-        } else {
-            // 신상 카테고리 요청인 경우
-            if ("신상".equals(sub)) {
-                products = productRepository.findByIsActiveTrue();
-                return products.stream()
-                    .filter(Product::isNewProduct)
+        public List<Product> getActiveProducts(String major, String sub) {
+        try {
+            List<Product> products = productRepository.findByIsActiveTrue();
+            
+            if (major != null && !major.isBlank()) {
+                products = products.stream()
+                    .filter(p -> major.equals(p.getMajorCategory()))
                     .collect(Collectors.toList());
             }
-            products = productRepository.findByMajorCategoryIgnoreCaseAndSubCategoryIgnoreCaseAndIsActiveTrue(major, sub);
+            
+            if (sub != null && !sub.isBlank()) {
+                if ("신상".equals(sub)) {
+                    return products.stream()
+                        .filter(Product::isNewProduct)
+                        .collect(Collectors.toList());
+                } else {
+                    products = products.stream()
+                        .filter(p -> sub.equals(p.getSubCategory()))
+                        .collect(Collectors.toList());
+                }
+            }
+            
+            return products;
+        } catch (Exception e) {
+            System.err.println("Error in getActiveProducts - major: " + major + ", sub: " + sub);
+            e.printStackTrace();
+            throw e;
         }
-        return products;
     }
 
     /**
@@ -58,8 +69,8 @@ public class ProductService {
     public List<Product> processNewProductCategory(List<Product> products) {
         return products.stream()
             .map(product -> {
-                // 신상인 경우 subCategory를 "신상"으로 설정
-                if (product.isNewProduct()) {
+                // 신상인 경우에만 subCategory를 "신상"으로 설정 (이미 설정된 경우는 유지)
+                if (product.isNewProduct() && (product.getSubCategory() == null || product.getSubCategory().equals("신상"))) {
                     product.setSubCategory("신상");
                 }
                 return product;

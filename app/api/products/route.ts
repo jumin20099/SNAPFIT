@@ -1,0 +1,46 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const major = searchParams.get('major')
+    const sub = searchParams.get('sub')
+
+    // 백엔드 API URL 구성
+    let backendUrl = 'http://localhost:8080/api/products'
+    const params = new URLSearchParams()
+    
+    if (major) params.append('major', major)
+    if (sub) params.append('sub', sub)
+    
+    if (params.toString()) {
+      backendUrl += `?${params.toString()}`
+    }
+
+    console.log('Backend URL:', backendUrl)
+
+    const response = await fetch(backendUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    console.log('Backend response status:', response.status)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Backend error response:', errorText)
+      throw new Error(`Backend API error: ${response.status} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error('Products API error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch products' },
+      { status: 500 }
+    )
+  }
+} 
