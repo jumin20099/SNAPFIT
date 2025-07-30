@@ -132,6 +132,7 @@ export default function SnapFitMobile() {
 
     setIsSearching(true);
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const params = new URLSearchParams({
         keyword: query.trim(),
         type: 'all',
@@ -139,7 +140,11 @@ export default function SnapFitMobile() {
 
       console.log('검색 API 호출:', `/api/products/search?${params.toString()}`);
       
-      const response = await fetch(`/api/products/search?${params.toString()}`);
+      const response = await fetch(`/api/products/search?${params.toString()}`, {
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      });
       
       if (!response.ok) {
         throw new Error('검색에 실패했습니다.');
@@ -170,13 +175,18 @@ export default function SnapFitMobile() {
   // 사용자 정보 가져오기
   const fetchUserInfo = async () => {
     try {
-      const response = await fetch('/api/user/info')
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const response = await fetch('/api/user/info', {
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      });
       if (response.ok) {
-        const data = await response.json()
-        setUserInfo(data)
+        const data = await response.json();
+        setUserInfo(data);
       }
     } catch (error) {
-      console.error('사용자 정보 가져오기 실패:', error)
+      console.error('사용자 정보 가져오기 실패:', error);
     }
   }
 
@@ -193,7 +203,11 @@ export default function SnapFitMobile() {
     setIsLoadingLikedProducts(true)
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const response = await fetch('/api/likes/my')
+      const response = await fetch('/api/likes/my', {
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      });
       if (response.ok) {
         const likedProductIds = await response.json()
         const products = []
@@ -234,8 +248,13 @@ export default function SnapFitMobile() {
     setSelectedMajorCategory(major)
     setSelectedSubCategory(sub || "")
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       // 임시로 모든 상품을 가져와서 프론트엔드에서 필터링
-      const response = await fetch('/api/products')
+      const response = await fetch('/api/products', {
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      });
       if (response.ok) {
         const allProducts = await response.json()
         
@@ -325,10 +344,12 @@ export default function SnapFitMobile() {
 
   const toggleLike = async (productId: number) => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
         body: JSON.stringify({ productId }),
       })
@@ -347,10 +368,12 @@ export default function SnapFitMobile() {
 
   const toggleCategoryProductLike = async (productId: number) => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
         body: JSON.stringify({ productId }),
       })
