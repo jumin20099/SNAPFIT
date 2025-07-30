@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       backendUrl += `?${params.toString()}`
     }
 
-    console.log('Backend URL:', backendUrl)
+
 
     const response = await fetch(backendUrl, {
       method: 'GET',
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    console.log('Backend response status:', response.status)
+
 
     if (!response.ok) {
       const errorText = await response.text()

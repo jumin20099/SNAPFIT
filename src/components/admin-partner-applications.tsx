@@ -74,9 +74,9 @@ export default function AdminPartnerApplications() {
         ? { action: 'approve' }
         : { action: 'reject', rejectionReason };
       
-      console.log('Sending action data:', actionData);
+  
       const url = `/api/admin/partner-status?id=${applicationId}`;
-      console.log('URL:', url);
+      
       
       const response = await fetch(url, {
         method: 'PUT',
@@ -86,8 +86,7 @@ export default function AdminPartnerApplications() {
         body: JSON.stringify(actionData),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -96,7 +95,7 @@ export default function AdminPartnerApplications() {
       }
 
       const result = await response.json();
-      console.log('Success response:', result);
+      
       
       // 성공 후 팝업창 닫기
       setIsActionDialogOpen(false);

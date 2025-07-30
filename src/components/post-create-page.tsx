@@ -142,7 +142,7 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
     }
 
     // 여기서 실제 게시글 저장 로직 구현
-    console.log("게시글 발행:", { title, content, tags, uploadedImages })
+
     alert("게시글이 발행되었습니다!")
     onClose()
   }

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     
     backendUrl += `?${params.toString()}`
 
-    console.log('Backend search URL:', backendUrl)
+    
 
     const response = await fetch(backendUrl, {
       method: 'GET',
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    console.log('Backend search response status:', response.status)
+    
 
     if (!response.ok) {
       const errorText = await response.text()

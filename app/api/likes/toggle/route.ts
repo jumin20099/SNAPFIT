@@ -12,10 +12,10 @@ export async function POST(request: NextRequest) {
 
     // Authorization 헤더 가져오기
     const authorization = request.headers.get('authorization')
-    console.log('프론트에서 받은 Authorization:', authorization)
+  
 
     // 백엔드 API 호출
-    console.log('백엔드로 전달하는 Authorization:', authorization)
+  
     const response = await fetch('http://localhost:8080/api/likes/toggle', {
       method: 'POST',
       headers: {

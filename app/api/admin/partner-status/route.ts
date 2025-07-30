@@ -6,12 +6,10 @@ export async function PUT(request: NextRequest) {
     const id = searchParams.get('id')
     const body = await request.json()
     
-    console.log('=== Admin Partner Status API called ===')
-    console.log('ID:', id)
-    console.log('Body:', body)
+    
     
     const url = `http://localhost:8080/api/partner/admin/applications/${id}/status`
-    console.log('Calling backend URL:', url)
+    
     
     const response = await fetch(url, {
       method: 'PUT',
@@ -21,7 +19,7 @@ export async function PUT(request: NextRequest) {
       body: JSON.stringify(body),
     })
 
-    console.log('Backend response status:', response.status)
+    
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -33,7 +31,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const data = await response.json()
-    console.log('Success response:', data)
+    
     return NextResponse.json(data)
     
   } catch (error) {

@@ -47,7 +47,7 @@ export default function CodySystem({ isOpen, onClose }: CodySystemProps) {
   })
 
   const saveCody = () => {
-    console.log("코디 저장:", selectedItems)
+
     alert("코디가 저장되었습니다!")
   }
 

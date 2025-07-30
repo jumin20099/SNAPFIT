@@ -46,7 +46,7 @@ export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }
         const data = await response.json();
         
         if (data.token) {
-          console.log('토큰 저장:', data.token);
+  
           localStorage.setItem('token', data.token);
           setUser(data);
           setIsLoggedIn(true);
@@ -65,7 +65,7 @@ export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }
     const token = getCookie('auth_token');
 
     if (token) {
-      console.log('쿠키에서 토큰 발견:', token);
+      
       localStorage.setItem('token', token);
       // 쿠키 삭제 (보안상 한 번만 사용)
       deleteCookie('auth_token');

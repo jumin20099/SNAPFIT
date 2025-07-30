@@ -99,7 +99,7 @@ export default function ProductForm({ isOpen, onClose, editingProduct, storeMall
       return;
     }
     const token = localStorage.getItem("token");
-    console.log("상품 등록 데이터:", formData);
+
     setIsSubmitting(true);
     try {
       const isEditing = editingProduct?.id;

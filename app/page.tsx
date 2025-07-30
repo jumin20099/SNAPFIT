@@ -138,7 +138,7 @@ export default function SnapFitMobile() {
         type: 'all',
       });
 
-      console.log('검색 API 호출:', `/api/products/search?${params.toString()}`);
+
       
       const response = await fetch(`/api/products/search?${params.toString()}`, {
         headers: {
@@ -151,7 +151,6 @@ export default function SnapFitMobile() {
       }
 
       const data = await response.json();
-      console.log('검색 결과:', data);
       setSearchResults(data);
     } catch (error) {
       console.error('검색 오류:', error);
@@ -259,30 +258,19 @@ export default function SnapFitMobile() {
         const allProducts = await response.json()
         
         // 프론트엔드에서 필터링
-        console.log('필터링 시작 - major:', major, 'sub:', sub)
-        console.log('전체 상품:', allProducts)
         
-        let filteredProducts = allProducts.filter((product: any) => {
-          console.log('상품 체크:', product.productName, 'majorCategory:', product.majorCategory, 'subCategory:', product.subCategory)
-          
-          if (major && product.majorCategory !== major) {
-            console.log('majorCategory 불일치:', product.majorCategory, '!==', major)
-            return false
-          }
-          if (sub && sub !== "신상" && product.subCategory !== sub) {
-            console.log('subCategory 불일치:', product.subCategory, '!==', sub)
-            return false
-          }
-          if (sub === "신상" && !product.newProduct) {
-            console.log('신상 상품이 아님:', product.newProduct)
-            return false
-          }
-          console.log('필터 통과:', product.productName)
-          return true
-        })
-        
-        console.log('필터링 결과:', filteredProducts)
-        console.log('categoryProducts 설정 전 길이:', categoryProducts.length)
+                  let filteredProducts = allProducts.filter((product: any) => {
+            if (major && product.majorCategory !== major) {
+              return false
+            }
+            if (sub && sub !== "신상" && product.subCategory !== sub) {
+              return false
+            }
+            if (sub === "신상" && !product.newProduct) {
+              return false
+            }
+            return true
+          })
         
         // 좋아요 상태 추가
         const productsWithLikes = filteredProducts.map((product: any) => ({
@@ -291,9 +279,6 @@ export default function SnapFitMobile() {
         }))
         
         setCategoryProducts(productsWithLikes)
-        
-        console.log('categoryProducts 설정 후 길이:', productsWithLikes.length)
-        console.log('isLoadingCategory를 false로 설정')
         
         setIsLoadingCategory(false)
       } else {
@@ -523,7 +508,7 @@ export default function SnapFitMobile() {
     </div>
   )
 
-  console.log(userInfo?.role)
+
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col relative overflow-hidden">
@@ -827,12 +812,9 @@ export default function SnapFitMobile() {
                               key={index} 
                               className="cursor-pointer hover:shadow-md transition-shadow"
                               onClick={() => {
-                                console.log('세부 카테고리 클릭:', subCategory.name)
-                                console.log('선택된 대분류:', selectedMajorCategory)
                                 setSelectedSubCategory(subCategory.name)
                                 // 현재 선택된 대분류를 직접 사용
                                 const currentMajorCategory = selectedMajorCategory || '상의'
-                                console.log('사용할 대분류:', currentMajorCategory)
                                 fetchCategoryProducts(currentMajorCategory, subCategory.name)
                               }}
                             >

@@ -16,22 +16,22 @@ export function useMyLikes() {
     
     // Authorization 헤더 가져오기
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    console.log('useMyLikes - 토큰 확인:', token ? '토큰 있음' : '토큰 없음');
+
     
     const headers: HeadersInit = {};
     
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      console.log('useMyLikes - Authorization 헤더 설정:', `Bearer ${token.substring(0, 50)}...`);
+      
     } else {
-      console.log('useMyLikes - 토큰이 없어서 Authorization 헤더를 설정하지 않음');
+      
     }
     
     fetch('/api/likes/my', {
       headers
     })
       .then((res) => {
-        console.log('useMyLikes - 응답 상태:', res.status);
+  
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }

@@ -4,7 +4,7 @@ export async function getStoreMalls() {
   if (typeof window === "undefined") {
     return [];
   }
-  console.log("fetching store malls");
+  
   const token = localStorage.getItem("token");
   const res = await fetch("/api/admin/stores/list", {
     headers: token ? { Authorization: `Bearer ${token}` } : {},

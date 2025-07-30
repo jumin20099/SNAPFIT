@@ -236,7 +236,7 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
   }
 
   useEffect(() => {
-    console.log("useEffect isOpen:", isOpen);
+
     if (isOpen) {
       loadData()
     }
