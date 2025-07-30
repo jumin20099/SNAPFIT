@@ -28,9 +28,6 @@ const subCategoryDetails = {
     { name: "피케/카라 티셔츠", image: "/placeholder.svg?height=100&width=100" },
     { name: "니트/스웨터", image: "/placeholder.svg?height=100&width=100" },
     { name: "민소매 티셔츠", image: "/placeholder.svg?height=100&width=100" },
-    { name: "미니원피스", image: "/placeholder.svg?height=100&width=100" },
-    { name: "미디원피스", image: "/placeholder.svg?height=100&width=100" },
-    { name: "맥시원피스", image: "/placeholder.svg?height=100&width=100" },
     { name: "기타 상의", image: "/placeholder.svg?height=100&width=100" },
   ],
   하의: [
@@ -41,9 +38,6 @@ const subCategoryDetails = {
     { name: "숏 팬츠", image: "/placeholder.svg?height=100&width=100" },
     { name: "레깅스", image: "/placeholder.svg?height=100&width=100" },
     { name: "점프 슈트/오버올", image: "/placeholder.svg?height=100&width=100" },
-    { name: "미니스커트", image: "/placeholder.svg?height=100&width=100" },
-    { name: "미디스커트", image: "/placeholder.svg?height=100&width=100" },
-    { name: "롱스커트", image: "/placeholder.svg?height=100&width=100" },
     { name: "기타 하의", image: "/placeholder.svg?height=100&width=100" },
   ],
   아우터: [
@@ -115,6 +109,8 @@ export default function SnapFitMobile() {
   const [selectedMajorCategory, setSelectedMajorCategory] = useState("")
   const [selectedSubCategory, setSelectedSubCategory] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   const [products, setProducts] = useState(mockProducts)
   const [categoryProducts, setCategoryProducts] = useState<any[]>([])
   const [isLoadingCategory, setIsLoadingCategory] = useState(false)
@@ -127,13 +123,54 @@ export default function SnapFitMobile() {
   const [userInfo, setUserInfo] = useState<{ role?: string; email?: string } | null>(null)
   const [codyItems, setCodyItems] = useState<{ [key: string]: any }>({})
 
+  // 검색 기능
+  const performSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const params = new URLSearchParams({
+        keyword: query.trim(),
+        type: 'all',
+      });
+
+      console.log('검색 API 호출:', `/api/products/search?${params.toString()}`);
+      
+      const response = await fetch(`/api/products/search?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('검색에 실패했습니다.');
+      }
+
+      const data = await response.json();
+      console.log('검색 결과:', data);
+      setSearchResults(data);
+    } catch (error) {
+      console.error('검색 오류:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // 검색어 변경 시 디바운스 적용
+  useEffect(() => {
+    if (!isSearchMode) return;
+
+    const timer = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, isSearchMode]);
+
   // 사용자 정보 가져오기
   const fetchUserInfo = async () => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      const response = await fetch('/api/user/info', {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      })
+      const response = await fetch('/api/user/info')
       if (response.ok) {
         const data = await response.json()
         setUserInfo(data)
@@ -143,59 +180,26 @@ export default function SnapFitMobile() {
     }
   }
 
-  // 컴포넌트 마운트 시 사용자 정보 가져오기
   useEffect(() => {
     fetchUserInfo()
   }, [])
 
-  // categoryProducts 상태 변화 추적
-  useEffect(() => {
-    console.log('categoryProducts 상태 변화:', categoryProducts.length, '상품들:', categoryProducts.map(p => p.productName))
-  }, [categoryProducts])
-
-  useEffect(() => {
-    console.log('isLoadingCategory 상태 변화:', isLoadingCategory)
-  }, [isLoadingCategory])
-
-  useEffect(() => {
-    console.log('selectedMajorCategory 상태 변화:', selectedMajorCategory)
-  }, [selectedMajorCategory])
-
-  useEffect(() => {
-    console.log('selectedSubCategory 상태 변화:', selectedSubCategory)
-  }, [selectedSubCategory])
-
-  // 카테고리 상품이 변경될 때마다 강제로 리렌더링
-  useEffect(() => {
-    console.log('=== 카테고리 상품 변경 감지 ===')
-    console.log('- categoryProducts 길이:', categoryProducts.length)
-    console.log('- isLoadingCategory:', isLoadingCategory)
-    console.log('- 상품들:', categoryProducts.map(p => p.productName))
-  }, [categoryProducts, isLoadingCategory])
-
-  // 좋아요한 상품들 가져오기
+  // 좋아요한 상품들 상태
   const [likedProducts, setLikedProducts] = useState<any[]>([])
   const [isLoadingLikedProducts, setIsLoadingLikedProducts] = useState(false)
 
+  // 좋아요한 상품들 가져오기
   const fetchLikedProducts = async () => {
     setIsLoadingLikedProducts(true)
     try {
-      // 인증 토큰 가져오기
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-      
-      const response = await fetch('/api/likes/my', {
-        headers: {
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        }
-      })
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const response = await fetch('/api/likes/my')
       if (response.ok) {
-        const likes = await response.json()
-        const productLikes = likes.filter((like: any) => like.targetType === 'PRODUCT')
-        
-        // 좋아요한 상품들의 상세 정보 가져오기
+        const likedProductIds = await response.json()
         const products = []
-        for (const like of productLikes) {
-          const productResponse = await fetch(`/api/products/${like.targetIdx}`, {
+        
+        for (const productId of likedProductIds) {
+          const productResponse = await fetch(`/api/products/${productId}`, {
             headers: {
               ...(token && { 'Authorization': `Bearer ${token}` })
             }
@@ -304,17 +308,10 @@ export default function SnapFitMobile() {
       case "가방":
         return "bag"
       case "패션소품":
-        if (name.includes("모자") || name.includes("캡") || name.includes("햇")) {
-          return "hat"
-        } else if (name.includes("반지")) {
-          return "ring"
-        } else if (name.includes("팔찌")) {
-          return "bracelet"
-        } else {
-          return "accessory"
-        }
-      default:
+        if (name.includes("모자")) return "hat"
         return "accessory"
+      default:
+        return "top"
     }
   }
 
@@ -328,75 +325,48 @@ export default function SnapFitMobile() {
 
   const toggleLike = async (productId: number) => {
     try {
-      // 낙관적 업데이트
-      setProducts(products.map((product) => (product.id === productId ? { ...product, liked: !product.liked } : product)))
-      
-      // 인증 토큰 가져오기
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-      
-      // 백엔드 API 호출
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          ...(token && { 'Authorization': `Bearer ${token}` })
+          'Content-Type': 'application/json',
         },
-        body: `targetIdx=${productId}&targetType=product`
+        body: JSON.stringify({ productId }),
       })
-      
-      if (!response.ok) {
-        // 실패 시 롤백
-        setProducts(products.map((product) => (product.id === productId ? { ...product, liked: !product.liked } : product)))
-        console.error('좋아요 토글 실패')
+      if (response.ok) {
+        // 좋아요 상태 업데이트
+        setProducts((prev) =>
+          prev.map((product) =>
+            product.id === productId ? { ...product, liked: !product.liked } : product
+          )
+        )
       }
     } catch (error) {
-      // 에러 시 롤백
-      setProducts(products.map((product) => (product.id === productId ? { ...product, liked: !product.liked } : product)))
-      console.error('좋아요 토글 에러:', error)
+      console.error('좋아요 토글 실패:', error)
     }
   }
 
   const toggleCategoryProductLike = async (productId: number) => {
     try {
-      // 낙관적 업데이트
-      setCategoryProducts(categoryProducts.map((product: any) => 
-        product.productIdx === productId ? { ...product, liked: !product.liked } : product
-      ))
-      
-      // 좋아요 탭에서 상품을 좋아요 취소한 경우 목록에서 제거
-      if (selectedMajorCategory === "좋아요") {
-        setLikedProducts(likedProducts.filter((product: any) => product.productIdx !== productId))
-      }
-      
-      // 인증 토큰 가져오기
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-      
-      // 백엔드 API 호출
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          ...(token && { 'Authorization': `Bearer ${token}` })
+          'Content-Type': 'application/json',
         },
-        body: `targetIdx=${productId}&targetType=product`
+        body: JSON.stringify({ productId }),
       })
-      
-      if (!response.ok) {
-        // 실패 시 롤백
-        setCategoryProducts(categoryProducts.map((product: any) => 
-          product.productIdx === productId ? { ...product, liked: !product.liked } : product
-        ))
+      if (response.ok) {
+        // 카테고리 상품 목록에서 좋아요 상태 업데이트
+        setCategoryProducts((prev) =>
+          prev.map((product) =>
+            product.productIdx === productId ? { ...product, liked: !product.liked } : product
+          )
+        )
+        // 좋아요 탭에서 롤백
         if (selectedMajorCategory === "좋아요") {
-          // 좋아요 탭에서 롤백
           fetchLikedProducts()
         }
-        console.error('카테고리 상품 좋아요 토글 실패')
       }
     } catch (error) {
-      // 에러 시 롤백
-      setCategoryProducts(categoryProducts.map((product: any) => 
-        product.productIdx === productId ? { ...product, liked: !product.liked } : product
-      ))
       if (selectedMajorCategory === "좋아요") {
         // 좋아요 탭에서 롤백
         fetchLikedProducts()
@@ -499,106 +469,6 @@ export default function SnapFitMobile() {
             </div>
           ) : (
             <div className={`${isCompact ? "w-10 h-12" : "w-16 h-20"}`}></div>
-          )}
-        </div>
-
-        {/* Ring Position */}
-        <div className={`absolute ${isCompact ? "top-18" : "top-32"} right-1/3 transform translate-x-1/2`}>
-          {codyItems.ring ? (
-            <div className="relative group">
-              <img
-                src={codyItems.ring.image || "/placeholder.svg"}
-                alt={codyItems.ring.name}
-                className={`${isCompact ? "w-6 h-6" : "w-10 h-10"} object-contain`}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`absolute -top-1 -right-1 ${
-                  isCompact ? "w-3 h-3" : "w-4 h-4"
-                } p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity`}
-                onClick={() => removeCodyItem("ring")}
-              >
-                <X className={`${isCompact ? "w-1.5 h-1.5" : "w-2 h-2"}`} />
-              </Button>
-            </div>
-          ) : (
-            <div className={`${isCompact ? "w-6 h-6" : "w-10 h-10"}`}></div>
-          )}
-        </div>
-
-        {/* Bracelet Position */}
-        <div className={`absolute ${isCompact ? "top-18" : "top-32"} left-1/3 transform -translate-x-1/2`}>
-          {codyItems.bracelet ? (
-            <div className="relative group">
-              <img
-                src={codyItems.bracelet.image || "/placeholder.svg"}
-                alt={codyItems.bracelet.name}
-                className={`${isCompact ? "w-6 h-6" : "w-10 h-10"} object-contain`}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`absolute -top-1 -right-1 ${
-                  isCompact ? "w-3 h-3" : "w-4 h-4"
-                } p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity`}
-                onClick={() => removeCodyItem("bracelet")}
-              >
-                <X className={`${isCompact ? "w-1.5 h-1.5" : "w-2 h-2"}`} />
-              </Button>
-            </div>
-          ) : (
-            <div className={`${isCompact ? "w-6 h-6" : "w-10 h-10"}`}></div>
-          )}
-        </div>
-
-        {/* Outer Position */}
-        <div className={`absolute ${isCompact ? "top-6" : "top-12"} left-1/2 transform -translate-x-1/2 z-10`}>
-          {codyItems.outer ? (
-            <div className="relative group">
-              <img
-                src={codyItems.outer.image || "/placeholder.svg"}
-                alt={codyItems.outer.name}
-                className={`${isCompact ? "w-14 h-18" : "w-22 h-26"} object-contain`}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`absolute -top-1 -right-1 ${
-                  isCompact ? "w-4 h-4" : "w-5 h-5"
-                } p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity`}
-                onClick={() => removeCodyItem("outer")}
-              >
-                <X className={`${isCompact ? "w-2 h-2" : "w-3 h-3"}`} />
-              </Button>
-            </div>
-          ) : (
-            <div className={`${isCompact ? "w-14 h-18" : "w-22 h-26"}`}></div>
-          )}
-        </div>
-
-        {/* Bottom Position */}
-        <div className={`absolute ${isCompact ? "bottom-8" : "bottom-16"} left-1/2 transform -translate-x-1/2`}>
-          {codyItems.bottom ? (
-            <div className="relative group">
-              <img
-                src={codyItems.bottom.image || "/placeholder.svg"}
-                alt={codyItems.bottom.name}
-                className={`${isCompact ? "w-12 h-16" : "w-20 h-24"} object-contain`}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`absolute -top-1 -right-1 ${
-                  isCompact ? "w-4 h-4" : "w-5 h-5"
-                } p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity`}
-                onClick={() => removeCodyItem("bottom")}
-              >
-                <X className={`${isCompact ? "w-2 h-2" : "w-3 h-3"}`} />
-              </Button>
-            </div>
-          ) : (
-            <div className={`${isCompact ? "w-12 h-16" : "w-20 h-24"}`}></div>
           )}
         </div>
 
@@ -775,7 +645,11 @@ export default function SnapFitMobile() {
                       autoFocus
                       className="flex-1"
                     />
-                    <Button variant="ghost" size="sm" onClick={() => setIsSearchMode(false)}>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setIsSearchMode(false);
+                      setSearchQuery('');
+                      setSearchResults([]);
+                    }}>
                       취소
                     </Button>
                   </div>
@@ -808,7 +682,58 @@ export default function SnapFitMobile() {
 
                 {/* Main Content */}
                 <div className="flex-1 overflow-y-auto">
-                  {selectedMajorCategory === "좋아요" ? (
+                  {isSearchMode && searchQuery.trim() ? (
+                    <div className="p-4">
+                      {isSearching ? (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                          <p className="text-sm text-gray-600 mt-2">검색 중...</p>
+                        </div>
+                      ) : searchResults.length > 0 ? (
+                        <div>
+                          <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-bold">검색 결과</h2>
+                            <span className="text-sm text-gray-600">{searchResults.length}개 상품</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-3">
+                            {searchResults.map((product) => (
+                              <Card key={product.productIdx} className="relative">
+                                <CardContent className="p-2" onClick={() => addToCody(product)}>
+                                  <img
+                                    src={product.productImage || "/placeholder.svg"}
+                                    alt={product.productName}
+                                    className="w-full h-24 object-cover rounded mb-2"
+                                  />
+                                  <h3 className="text-xs font-medium truncate">{product.productName}</h3>
+                                  <p className="text-xs text-gray-600">₩{product.productPrice?.toLocaleString()}</p>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute top-1 right-1 p-1 h-6 w-6"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      toggleCategoryProductLike(product.productIdx)
+                                    }}
+                                  >
+                                    <Heart
+                                      className={`w-3 h-3 ${
+                                        product.liked ? "fill-red-500 text-red-500" : "text-gray-400"
+                                      }`}
+                                    />
+                                  </Button>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-600">검색 결과가 없습니다.</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : selectedMajorCategory === "좋아요" ? (
                     <div className="p-4">
                       {isLoadingLikedProducts ? (
                         <div className="text-center py-8">
@@ -1008,6 +933,7 @@ export default function SnapFitMobile() {
 
       {/* Partner Application Page */}
       <PartnerApplicationStandalone isOpen={isPartnerApplicationOpen} onClose={() => setIsPartnerApplicationOpen(false)} />
+
     </div>
   )
 }

@@ -31,7 +31,7 @@ public class ProductService {
         return productRepository.findByStoreIdx(storeIdx);
     }
 
-        public List<Product> getActiveProducts(String major, String sub) {
+    public List<Product> getActiveProducts(String major, String sub) {
         try {
             List<Product> products = productRepository.findByIsActiveTrue();
             
@@ -59,6 +59,78 @@ public class ProductService {
             e.printStackTrace();
             throw e;
         }
+    }
+
+    /**
+     * 키워드로 상품 검색 (모든 필드에서 검색)
+     * @param keyword 검색 키워드
+     * @return 검색된 상품 목록
+     */
+    public List<Product> searchProductsByKeyword(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return productRepository.findByIsActiveTrue();
+        }
+        return productRepository.searchProductsByKeyword(keyword.trim());
+    }
+
+    /**
+     * 상품명으로 검색
+     * @param productName 상품명
+     * @return 검색된 상품 목록
+     */
+    public List<Product> searchProductsByName(String productName) {
+        if (productName == null || productName.trim().isEmpty()) {
+            return productRepository.findByIsActiveTrue();
+        }
+        return productRepository.findByProductNameContainingIgnoreCaseAndIsActiveTrue(productName.trim());
+    }
+
+    /**
+     * 상품 설명으로 검색
+     * @param productContent 상품 설명
+     * @return 검색된 상품 목록
+     */
+    public List<Product> searchProductsByContent(String productContent) {
+        if (productContent == null || productContent.trim().isEmpty()) {
+            return productRepository.findByIsActiveTrue();
+        }
+        return productRepository.findByProductContentContainingIgnoreCaseAndIsActiveTrue(productContent.trim());
+    }
+
+    /**
+     * 메이저 카테고리로 검색
+     * @param majorCategory 메이저 카테고리
+     * @return 검색된 상품 목록
+     */
+    public List<Product> searchProductsByMajorCategory(String majorCategory) {
+        if (majorCategory == null || majorCategory.trim().isEmpty()) {
+            return productRepository.findByIsActiveTrue();
+        }
+        return productRepository.findByMajorCategoryContainingIgnoreCaseAndIsActiveTrue(majorCategory.trim());
+    }
+
+    /**
+     * 서브 카테고리로 검색
+     * @param subCategory 서브 카테고리
+     * @return 검색된 상품 목록
+     */
+    public List<Product> searchProductsBySubCategory(String subCategory) {
+        if (subCategory == null || subCategory.trim().isEmpty()) {
+            return productRepository.findByIsActiveTrue();
+        }
+        return productRepository.findBySubCategoryContainingIgnoreCaseAndIsActiveTrue(subCategory.trim());
+    }
+
+    /**
+     * 제휴사 이름으로 검색
+     * @param storeName 제휴사 이름
+     * @return 검색된 상품 목록
+     */
+    public List<Product> searchProductsByStoreName(String storeName) {
+        if (storeName == null || storeName.trim().isEmpty()) {
+            return productRepository.findByIsActiveTrue();
+        }
+        return productRepository.findByStoreNameContainingIgnoreCaseAndIsActiveTrue(storeName.trim());
     }
 
     /**

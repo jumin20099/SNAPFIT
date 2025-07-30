@@ -86,6 +86,72 @@ public class ProductController {
         }
     }
 
+    // 키워드로 상품 검색 (모든 필드에서 검색)
+    @GetMapping("/search")
+    public ResponseEntity<List<Product>> searchProducts(@RequestParam String keyword) {
+        try {
+            List<Product> products = productService.searchProductsByKeyword(keyword);
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // 상품명으로 검색
+    @GetMapping("/search/name")
+    public ResponseEntity<List<Product>> searchProductsByName(@RequestParam String productName) {
+        try {
+            List<Product> products = productService.searchProductsByName(productName);
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // 상품 설명으로 검색
+    @GetMapping("/search/content")
+    public ResponseEntity<List<Product>> searchProductsByContent(@RequestParam String productContent) {
+        try {
+            List<Product> products = productService.searchProductsByContent(productContent);
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // 메이저 카테고리로 검색
+    @GetMapping("/search/major-category")
+    public ResponseEntity<List<Product>> searchProductsByMajorCategory(@RequestParam String majorCategory) {
+        try {
+            List<Product> products = productService.searchProductsByMajorCategory(majorCategory);
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // 서브 카테고리로 검색
+    @GetMapping("/search/sub-category")
+    public ResponseEntity<List<Product>> searchProductsBySubCategory(@RequestParam String subCategory) {
+        try {
+            List<Product> products = productService.searchProductsBySubCategory(subCategory);
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // 제휴사 이름으로 검색
+    @GetMapping("/search/store-name")
+    public ResponseEntity<List<Product>> searchProductsByStoreName(@RequestParam String storeName) {
+        try {
+            List<Product> products = productService.searchProductsByStoreName(storeName);
+            return ResponseEntity.ok(products);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
         productRepository.deleteById(id);
