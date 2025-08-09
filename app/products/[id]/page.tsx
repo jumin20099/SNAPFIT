@@ -188,6 +188,9 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
         images,
         url: `/products/${params.id}`,
       },
+      alternates: {
+        canonical: `/products/${params.id}`,
+      },
     }
   } catch {
     return {

@@ -11,6 +11,7 @@ import { useCody } from "@/hooks/useCody"
 import { useState } from "react";
 import { useCategoryProducts } from "@/hooks/useCategoryProducts";
 import ProductCard from "./product-card"
+import Image from 'next/image'
 
 interface ProductSheetContainerProps {
   open: boolean
@@ -68,23 +69,33 @@ export const ProductSheetContainer = ({ open, onOpenChange }: ProductSheetContai
             <div className="flex-1 overflow-y-auto p-4">
               <div className="grid grid-cols-1 gap-4">
                 {products.map((product) => (
-                  <ProductCard
-                    key={product.productIdx}
-                    product={{
-                      productIdx: product.productIdx,
-                      productName: product.productName,
-                      productContent: '',
-                      productPrice: product.productPrice,
-                      productImage: product.productImage,
-                      majorCategory: selectedCategory,
-                      subCategory: '',
-                      liked: false
-                    }}
-                    onViewDetail={() => {}} // ProductSheetContainer에서는 상세보기 기능 없음
-                    onAddToCody={addToCody}
-                    onToggleLike={() => {}} // ProductSheetContainer에서는 좋아요 기능 없음
-                    compact={true}
-                  />
+                  <a key={product.productIdx} href={`/products/${product.productIdx}`} className="block">
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-16 h-16">
+                        <Image
+                          src={product.productImage || '/placeholder.svg'}
+                          alt={product.productName}
+                          fill
+                          sizes="64px"
+                          className="object-cover rounded"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium line-clamp-1">{product.productName}</p>
+                        <p className="text-xs text-gray-600">₩{product.productPrice?.toLocaleString?.()}</p>
+                      </div>
+                      <Button size="sm" onClick={(e) => { e.preventDefault(); addToCody({
+                        productIdx: product.productIdx,
+                        productName: product.productName,
+                        productContent: '',
+                        productPrice: product.productPrice,
+                        productImage: product.productImage,
+                        majorCategory: selectedCategory,
+                        subCategory: '',
+                        liked: false
+                      }) }}>코디 추가</Button>
+                    </div>
+                  </a>
                 ))}
               </div>
             </div>
