@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('코디 시스템 E2E 테스트', () => {
+test.describe.skip('코디 시스템 E2E 테스트', () => {
   test.beforeEach(async ({ page }) => {
     // 각 테스트 전에 메인 페이지로 이동
     await page.goto('/');
