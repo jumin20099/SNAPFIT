@@ -3,6 +3,7 @@ import AddToCartButton from '@/components/add-to-cart-button'
 import LikeButton from '@/components/like-button'
 import { formatCurrencyKRW } from '@/lib/utils'
 import ViewCountDisplay from '@/components/ViewCountDisplay'
+import { headers } from 'next/headers'
 
 type Product = {
   productIdx: number
@@ -22,8 +23,17 @@ type ProductDetailDto = {
   likedByUser: boolean
 }
 
+function getBaseUrl() {
+  const h = headers()
+  const proto = h.get('x-forwarded-proto') ?? 'http'
+  const host = h.get('x-forwarded-host') ?? h.get('host')
+  if (host) return `${proto}://${host}`
+  return process.env.NEXT_PUBLIC_APP_ORIGIN || 'http://localhost:3000'
+}
+
 async function getProductDetail(productId: string): Promise<ProductDetailDto> {
-  const res = await fetch(`/api/products/${productId}`, {
+  const base = getBaseUrl()
+  const res = await fetch(`${base}/api/products/${productId}`, {
     // 상세는 신선도 우선. 이후 필요한 경우 revalidate로 변경 가능
     cache: 'no-store',
   })
@@ -37,7 +47,8 @@ async function getRelatedProducts(major?: string | null, sub?: string | null) {
   const usp = new URLSearchParams()
   if (major) usp.append('major', major)
   if (sub) usp.append('sub', sub as string)
-  const res = await fetch(`/api/products${usp.toString() ? `?${usp.toString()}` : ''}`, {
+  const base = getBaseUrl()
+  const res = await fetch(`${base}/api/products${usp.toString() ? `?${usp.toString()}` : ''}`, {
     cache: 'no-store',
   })
   if (!res.ok) return []
