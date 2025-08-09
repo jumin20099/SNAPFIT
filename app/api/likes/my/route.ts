@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     // 백엔드 API 호출
-    const response = await fetch('http://localhost:8080/api/likes/my', {
+    const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080'
+    const response = await fetch(`${API_BASE_URL}/api/likes/my`, {
       method: 'GET',
       headers: {
         'Authorization': request.headers.get('Authorization') || '',
