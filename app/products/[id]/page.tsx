@@ -22,7 +22,7 @@ type ProductDetailDto = {
 }
 
 async function getProductDetail(productId: string): Promise<ProductDetailDto> {
-  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || ''
+  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'http://localhost:3000'
   const url = `${origin}/api/products/${productId}`
   const res = await fetch(url, {
     // 상세는 신선도 우선. 이후 필요한 경우 revalidate로 변경 가능
