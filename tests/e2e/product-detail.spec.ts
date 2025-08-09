@@ -1,13 +1,28 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, APIRequestContext } from '@playwright/test'
+
+async function waitForOk(request: APIRequestContext, path: string, timeoutMs = 60000) {
+  const start = Date.now()
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const res = await request.get(path)
+    if (res.ok()) return true
+    if (Date.now() - start > timeoutMs) return false
+    await new Promise(r => setTimeout(r, 1000))
+  }
+}
 
 test.describe('상품 상세 페이지', () => {
   test('상세 진입/주요 요소 렌더/CTA 동작', async ({ page }) => {
-    // 헬스체크로 백엔드 준비 확인
-    await page.goto('/api/health')
+    // 헬스체크 및 제품 API가 준비될 때까지 대기
+    const healthOk = await waitForOk(page.request, '/api/health', 120000)
+    expect(healthOk).toBeTruthy()
+    const listOk = await waitForOk(page.request, '/api/products', 120000)
+    expect(listOk).toBeTruthy()
+
     // 상품 목록 API를 통해 첫 상품 id 획득
     const res = await page.request.get('/api/products')
     expect(res.ok()).toBeTruthy()
-    const products = await res.json()
+    const products: any = await res.json()
     const productId = (Array.isArray(products) && products[0]?.productIdx) || 1
 
     await page.goto(`/products/${productId}`)
