@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { CartProvider } from '@/contexts/CartContext'
 import { ModalProvider } from '@/contexts/ModalContext'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -18,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={inter.className}>
-        <ModalProvider>{children}</ModalProvider>
+        <CartProvider>
+          <ModalProvider>{children}</ModalProvider>
+        </CartProvider>
       </body>
     </html>
   )
