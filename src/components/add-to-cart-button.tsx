@@ -22,6 +22,7 @@ export default function AddToCartButton({ product }: Props) {
         })
       }
       className="px-3 py-1 bg-green-600 text-white rounded text-sm"
+      data-testid="add-to-cart"
     >
       장바구니 담기
     </button>

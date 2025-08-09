@@ -2,6 +2,7 @@ import Image from 'next/image'
 import AddToCartButton from '@/components/add-to-cart-button'
 import LikeButton from '@/components/like-button'
 import { formatCurrencyKRW } from '@/lib/utils'
+import ViewCountDisplay from '@/components/ViewCountDisplay'
 
 type Product = {
   productIdx: number
@@ -90,7 +91,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
         {/* 정보 및 CTA */}
         <div className="space-y-4">
           <h1 className="text-2xl font-semibold">{p.productName}</h1>
-          <p className="text-xl font-bold">{priceFormatted}</p>
+          <p className="text-xl font-bold" data-testid="product-price">{priceFormatted}</p>
 
           <div className="flex gap-3 items-center">
             <AddToCartButton
@@ -122,6 +123,11 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
               </li>
             )}
           </ul>
+
+          {/* 실시간 조회수 표시 */}
+          <div data-testid="view-count">
+            <ViewCountDisplay productId={p.productIdx} />
+          </div>
         </div>
       </section>
 
