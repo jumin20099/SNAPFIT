@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "concurrently \"npm:backend\" \"npm:frontend\"",
+    "start:e2e": "bash ./scripts/start-e2e.sh",
     "backend": "cd snapfit-backend && ./gradlew bootRun",
     "frontend": "npm run dev",
     "lint": "next lint",
