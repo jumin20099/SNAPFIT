@@ -22,8 +22,9 @@ type ProductDetailDto = {
 }
 
 async function getProductDetail(productId: string): Promise<ProductDetailDto> {
-  const apiBase = process.env.API_BASE_URL || 'http://localhost:8080'
-  const res = await fetch(`${apiBase}/api/products/${productId}`, {
+  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || ''
+  const url = `${origin}/api/products/${productId}`
+  const res = await fetch(url, {
     // 상세는 신선도 우선. 이후 필요한 경우 revalidate로 변경 가능
     cache: 'no-store',
   })
