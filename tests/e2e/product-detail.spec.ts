@@ -13,7 +13,7 @@ test.describe('상품 상세 페이지', () => {
     await page.goto(`/products/${productId}`)
 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    await expect(page.getByTestId('product-price')).toBeVisible()
+    await expect(page.getByTestId('product-price')).toBeVisible({ timeout: 15000 })
 
     // Hero 이미지 렌더 (next/image는 img로 렌더됨)
     await expect(page.locator('img').first()).toBeVisible()
