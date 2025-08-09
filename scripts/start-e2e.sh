@@ -37,6 +37,7 @@ fi
 
 # 환경변수 기본값 주입
 export API_BASE_URL=${API_BASE_URL:-http://localhost:8080}
+export NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-$API_BASE_URL}
 export NEXT_PUBLIC_APP_ORIGIN=${NEXT_PUBLIC_APP_ORIGIN:-http://localhost:3000}
 
 # 프론트/백 동시 기동

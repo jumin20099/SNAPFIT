@@ -150,13 +150,15 @@ public class ProductService {
             .collect(Collectors.toList());
     }
 
-    public ProductDetailDto getProductDetail(Long productIdx, User user) {
+    public ProductDetailDto getProductDetail(Long productIdx, User user, boolean skipIncrement) {
         Product product = productRepository.findById(productIdx)
             .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
 
-        // 조회수 증가
+        // 조회수 처리
         String key = "product:" + productIdx + ":views";
-        long viewCount = viewCounterService.increment(key);
+        long viewCount = skipIncrement
+            ? viewCounterService.getCount(key)
+            : viewCounterService.increment(key);
 
         // 좋아요 개수 및 사용자 좋아요 여부 확인
         long likesCount = likeService.countLikes(productIdx, TargetType.PRODUCT);

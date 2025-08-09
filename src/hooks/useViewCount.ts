@@ -8,8 +8,13 @@ export function useViewCount(key: string) {
 
   useEffect(() => {
     if (!key) return;
+    const wsBase =
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      process.env.API_BASE_URL ||
+      'http://localhost:8080';
+
     const client = new Client({
-      webSocketFactory: () => new SockJS('/ws'),
+      webSocketFactory: () => new SockJS(`${wsBase}/ws`),
       onConnect: () => {
         client.subscribe(`/topic/views/${key}`, (msg) => {
           const payload = JSON.parse(msg.body);
@@ -24,4 +29,4 @@ export function useViewCount(key: string) {
   }, [key]);
 
   return count;
-} 
+}
