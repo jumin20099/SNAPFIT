@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { ArrowLeft, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import Image from 'next/image'
+import { formatCurrencyKRW } from '@/lib/utils'
 import { useMyLikes } from "@/hooks/useMyLikes";
 
 interface Product {
@@ -71,12 +73,16 @@ export default function LikedProductsPage({ onBack }: LikedProductsPageProps) {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     {/* 상품 사진 */}
-                    <a href={`/products/${product.id}`} aria-label={`${product.name} 상세로 이동`}>
-                      <img
-                        src={product.image || "/placeholder.svg"}
-                        alt={product.name}
-                        className="w-16 h-16 rounded object-cover"
-                      />
+                    <a href={`/products/${product.id}`} aria-label={`${product.name} 상세로 이동`} className="block">
+                      <div className="relative w-16 h-16">
+                        <Image
+                          src={product.image || "/placeholder.svg"}
+                          alt={product.name}
+                          fill
+                          sizes="64px"
+                          className="object-cover rounded"
+                        />
+                      </div>
                     </a>
 
                     {/* 상품 설명 */}
@@ -85,7 +91,7 @@ export default function LikedProductsPage({ onBack }: LikedProductsPageProps) {
                         <h3 className="text-lg font-medium">{product.name}</h3>
                       </a>
                       <p className="text-sm text-gray-600 mb-1">{product.description}</p>
-                      <p className="text-sm font-medium text-blue-600">{product.price}</p>
+                      <p className="text-sm font-medium text-blue-600">{typeof product.price === 'number' ? formatCurrencyKRW(product.price as any) : product.price}</p>
                     </div>
 
                     {/* 좋아요 버튼 */}

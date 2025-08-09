@@ -3,6 +3,8 @@
 import { Heart, Eye, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import Image from 'next/image'
+import { formatCurrencyKRW } from '@/lib/utils'
 
 interface Product {
   productIdx: number
@@ -35,12 +37,16 @@ export default function ProductCard({
     <Card className="relative group hover:shadow-md transition-shadow">
       <CardContent className={`p-3 ${compact ? '' : 'pb-4'}`}>
         {/* 상품 이미지 */}
-        <a href={`/products/${product.productIdx}`} className="block relative mb-3" aria-label={`${product.productName} 상세로 이동`}>
-          <img
-            src={product.productImage || "/placeholder.svg"}
-            alt={product.productName}
-            className="w-full h-48 object-cover rounded"
-          />
+        <a href={`/products/${product.productIdx}`} className="block mb-3" aria-label={`${product.productName} 상세로 이동`}>
+          <div className="relative w-full h-48">
+            <Image
+              src={product.productImage || "/placeholder.svg"}
+              alt={product.productName}
+              fill
+              sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 320px"
+              className="object-cover rounded"
+            />
+          </div>
         </a>
           
           {/* 좋아요 버튼 */}
@@ -68,7 +74,7 @@ export default function ProductCard({
             </h3>
           </a>
           <p className="text-lg font-bold text-blue-600">
-            ₩{product.productPrice?.toLocaleString()}
+            {formatCurrencyKRW(product.productPrice)}
           </p>
           
                   {/* 액션 버튼들 */}
