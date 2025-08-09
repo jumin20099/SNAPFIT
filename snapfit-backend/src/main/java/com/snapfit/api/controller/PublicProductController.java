@@ -38,11 +38,11 @@ public class PublicProductController {
             @RequestParam(required = false) String major,
             @RequestParam(required = false) String sub) {
         try {
-            System.out.println("Received request - major: " + major + ", sub: " + sub);
+    
             List<Product> products = productService.getActiveProducts(major, sub);
             // 신상 카테고리 자동 처리
             products = productService.processNewProductCategory(products);
-            System.out.println("Returning " + products.size() + " products");
+
             return ResponseEntity.ok(products);
         } catch (Exception e) {
             System.err.println("Error in list endpoint: " + e.getMessage());

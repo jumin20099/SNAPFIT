@@ -52,32 +52,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         String header = request.getHeader("Authorization");
-        System.out.println("[JwtAuthenticationFilter] Authorization 헤더: " + header);
+
         
         if (header == null || !header.startsWith("Bearer ")) {
-            System.out.println("[JwtAuthenticationFilter] Authorization 헤더가 없거나 Bearer로 시작하지 않음");
+
             filterChain.doFilter(request, response);
             return;
         }
         
         String token = header.substring(7);
-        System.out.println("[JwtAuthenticationFilter] 토큰 추출: " + token.substring(0, Math.min(50, token.length())) + "...");
+        
         
         try {
             if (jwtUtil.validateToken(token)) {
-                System.out.println("[JwtAuthenticationFilter] 토큰 검증 성공");
+    
                 String subject = jwtUtil.getSubjectFromToken(token);
                 String role = jwtUtil.getRoleFromToken(token);
-                System.out.println("[JwtAuthenticationFilter] Subject: " + subject + ", Role: " + role);
+
                 
                 // User 엔티티 조회
                 User user = userRepository.findByEmail(subject)
                     .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + subject));
-                System.out.println("[JwtAuthenticationFilter] User 조회 성공: " + user.getEmail());
+
                 
                 // CustomOAuth2User 생성
                 CustomOAuth2User customOAuth2User = new CustomOAuth2User(user, Map.of());
-                System.out.println("[JwtAuthenticationFilter] CustomOAuth2User 생성 성공");
+
                 
                 // SecurityContext에 설정
                 UsernamePasswordAuthenticationToken auth = 
@@ -88,12 +88,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
-                System.out.println("[JwtAuthenticationFilter] SecurityContext 설정 완료");
+
             } else {
-                System.out.println("[JwtAuthenticationFilter] 토큰 검증 실패");
+
             }
         } catch (Exception e) {
-            System.out.println("[JwtAuthenticationFilter] 예외 발생: " + e.getMessage());
+
             e.printStackTrace();
         }
         filterChain.doFilter(request, response);

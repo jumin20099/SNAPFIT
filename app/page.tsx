@@ -13,6 +13,8 @@ import SocialLoginPage from "@/components/social-login"
 import AdminPage from "@/components/admin-page"
 import PartnerMainPage from "@/components/partner-main-page"
 import PartnerApplicationStandalone from "@/components/partner-application-standalone"
+import ProductCard from "@/components/product-card"
+import ProductDetailPage from "@/components/product-detail-page"
 
 const categories = ["전체", "남성복", "여성복"]
 const majorCategories = ["좋아요", "상의", "하의", "아우터", "신발", "가방", "패션소품"]
@@ -121,7 +123,11 @@ export default function SnapFitMobile() {
   const [isPartnerPageOpen, setIsPartnerPageOpen] = useState(false)
   const [isPartnerApplicationOpen, setIsPartnerApplicationOpen] = useState(false)
   const [userInfo, setUserInfo] = useState<{ role?: string; email?: string } | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<any>(null)
+  const [isProductDetailOpen, setIsProductDetailOpen] = useState(false)
   const [codyItems, setCodyItems] = useState<{ [key: string]: any }>({})
+  // 좋아요된 상품 ID 집합 (카테고리/검색 목록 하트 표시용)
+  const [likedProductIds, setLikedProductIds] = useState<Set<number>>(new Set())
 
   // 검색 기능
   const performSearch = async (query: string) => {
@@ -151,7 +157,10 @@ export default function SnapFitMobile() {
       }
 
       const data = await response.json();
-      setSearchResults(data);
+      const withLikes = Array.isArray(data)
+        ? data.map((p: any) => ({ ...p, liked: likedProductIds.has(p.productIdx) }))
+        : []
+      setSearchResults(withLikes);
     } catch (error) {
       console.error('검색 오류:', error);
       setSearchResults([]);
@@ -189,8 +198,28 @@ export default function SnapFitMobile() {
     }
   }
 
+  // 좋아요된 상품 ID만 빠르게 조회 (카테고리/검색 목록 하트 표시용)
+  const fetchLikedIds = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const res = await fetch('/api/likes/my', {
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      })
+      if (res.ok) {
+        const ids: number[] = await res.json()
+        setLikedProductIds(new Set(ids))
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
   useEffect(() => {
     fetchUserInfo()
+    // 초기 좋아요 ID 동기화
+    fetchLikedIds()
   }, [])
 
   // 좋아요한 상품들 상태
@@ -208,10 +237,11 @@ export default function SnapFitMobile() {
         }
       });
       if (response.ok) {
-        const likedProductIds = await response.json()
+        const likedIds = await response.json()
+        setLikedProductIds(new Set(likedIds))
         const products = []
         
-        for (const productId of likedProductIds) {
+        for (const productId of likedIds) {
           const productResponse = await fetch(`/api/products/${productId}`, {
             headers: {
               ...(token && { 'Authorization': `Bearer ${token}` })
@@ -272,10 +302,10 @@ export default function SnapFitMobile() {
             return true
           })
         
-        // 좋아요 상태 추가
+        // 좋아요 상태 반영
         const productsWithLikes = filteredProducts.map((product: any) => ({
           ...product,
-          liked: false // 기본값, 실제로는 백엔드에서 사용자별 좋아요 상태를 가져와야 함
+          liked: likedProductIds.has(product.productIdx)
         }))
         
         setCategoryProducts(productsWithLikes)
@@ -297,6 +327,16 @@ export default function SnapFitMobile() {
       ...prev,
       [position]: product,
     }))
+  }
+
+  const handleViewProductDetail = (product: any) => {
+    setSelectedProduct(product)
+    setIsProductDetailOpen(true)
+  }
+
+  const handleCloseProductDetail = () => {
+    setIsProductDetailOpen(false)
+    setSelectedProduct(null)
   }
 
   const getCodyPosition = (category: string, name: string) => {
@@ -330,19 +370,27 @@ export default function SnapFitMobile() {
   const toggleLike = async (productId: number) => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const params = new URLSearchParams({ targetIdx: String(productId), targetType: 'PRODUCT' })
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
           ...(token && { 'Authorization': `Bearer ${token}` })
         },
-        body: JSON.stringify({ productId }),
+        body: params.toString(),
       })
       if (response.ok) {
-        // 좋아요 상태 업데이트
+        const data = await response.json() // { liked, count }
+        // liked ID 집합 업데이트
+        setLikedProductIds((prev: Set<number>) => {
+          const next = new Set(prev)
+          if (data?.liked) next.add(productId); else next.delete(productId)
+          return next
+        })
+        // 좋아요 상태 업데이트 (mockProducts 영역)
         setProducts((prev) =>
           prev.map((product) =>
-            product.id === productId ? { ...product, liked: !product.liked } : product
+            product.id === productId ? { ...product, liked: !!data?.liked } : product
           )
         )
       }
@@ -354,21 +402,32 @@ export default function SnapFitMobile() {
   const toggleCategoryProductLike = async (productId: number) => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const params = new URLSearchParams({ targetIdx: String(productId), targetType: 'PRODUCT' })
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
           ...(token && { 'Authorization': `Bearer ${token}` })
         },
-        body: JSON.stringify({ productId }),
+        body: params.toString(),
       })
       if (response.ok) {
+        const data = await response.json() // { liked, count }
+        const likedNow = !!data?.liked
         // 카테고리 상품 목록에서 좋아요 상태 업데이트
         setCategoryProducts((prev) =>
           prev.map((product) =>
-            product.productIdx === productId ? { ...product, liked: !product.liked } : product
+            product.productIdx === productId ? { ...product, liked: likedNow } : product
           )
         )
+        // 상세페이지 열려있고 같은 상품이면 동기화
+        setSelectedProduct((prev: any) => prev && prev.productIdx === productId ? { ...prev, liked: likedNow } : prev)
+        // liked ID 집합 업데이트
+        setLikedProductIds((prev: Set<number>) => {
+          const next = new Set(prev)
+          if (likedNow) next.add(productId); else next.delete(productId)
+          return next
+        })
         // 좋아요 탭에서 롤백
         if (selectedMajorCategory === "좋아요") {
           fetchLikedProducts()
@@ -703,34 +762,15 @@ export default function SnapFitMobile() {
                             <h2 className="text-lg font-bold">검색 결과</h2>
                             <span className="text-sm text-gray-600">{searchResults.length}개 상품</span>
                           </div>
-                          <div className="grid grid-cols-4 gap-3">
+                          <div className="grid grid-cols-1 gap-4">
                             {searchResults.map((product) => (
-                              <Card key={product.productIdx} className="relative">
-                                <CardContent className="p-2" onClick={() => addToCody(product)}>
-                                  <img
-                                    src={product.productImage || "/placeholder.svg"}
-                                    alt={product.productName}
-                                    className="w-full h-24 object-cover rounded mb-2"
-                                  />
-                                  <h3 className="text-xs font-medium truncate">{product.productName}</h3>
-                                  <p className="text-xs text-gray-600">₩{product.productPrice?.toLocaleString()}</p>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="absolute top-1 right-1 p-1 h-6 w-6"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      toggleCategoryProductLike(product.productIdx)
-                                    }}
-                                  >
-                                    <Heart
-                                      className={`w-3 h-3 ${
-                                        product.liked ? "fill-red-500 text-red-500" : "text-gray-400"
-                                      }`}
-                                    />
-                                  </Button>
-                                </CardContent>
-                              </Card>
+                              <ProductCard
+                                key={product.productIdx}
+                                product={product}
+                                onViewDetail={handleViewProductDetail}
+                                onAddToCody={addToCody}
+                                onToggleLike={toggleCategoryProductLike}
+                              />
                             ))}
                           </div>
                         </div>
@@ -754,34 +794,15 @@ export default function SnapFitMobile() {
                             <h2 className="text-lg font-bold">좋아요한 상품</h2>
                             <span className="text-sm text-gray-600">{likedProducts.length}개 상품</span>
                           </div>
-                          <div className="grid grid-cols-4 gap-3">
+                          <div className="grid grid-cols-1 gap-4">
                             {likedProducts.map((product) => (
-                              <Card key={product.productIdx} className="relative">
-                                <CardContent className="p-2" onClick={() => addToCody(product)}>
-                                  <img
-                                    src={product.productImage || "/placeholder.svg"}
-                                    alt={product.productName}
-                                    className="w-full h-24 object-cover rounded mb-2"
-                                  />
-                                  <h3 className="text-xs font-medium truncate">{product.productName}</h3>
-                                  <p className="text-xs text-gray-600">₩{product.productPrice?.toLocaleString()}</p>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="absolute top-1 right-1 p-1 h-6 w-6"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      toggleCategoryProductLike(product.productIdx)
-                                    }}
-                                  >
-                                    <Heart
-                                      className={`w-3 h-3 ${
-                                        product.liked ? "fill-red-500 text-red-500" : "text-gray-400"
-                                      }`}
-                                    />
-                                  </Button>
-                                </CardContent>
-                              </Card>
+                              <ProductCard
+                                key={product.productIdx}
+                                product={product}
+                                onViewDetail={handleViewProductDetail}
+                                onAddToCody={addToCody}
+                                onToggleLike={toggleCategoryProductLike}
+                              />
                             ))}
                           </div>
                         </div>
@@ -849,62 +870,37 @@ export default function SnapFitMobile() {
                             </h2>
                             <span className="text-sm text-gray-600">{categoryProducts.length}개 상품</span>
                           </div>
-                          <div className="grid grid-cols-4 gap-3">
+                          <div className="grid grid-cols-1 gap-4">
                             {categoryProducts.map((product) => (
-                              <Card key={product.productIdx} className="relative">
-                                <CardContent className="p-2" onClick={() => addToCody(product)}>
-                                  <img
-                                    src={product.productImage || "/placeholder.svg"}
-                                    alt={product.productName}
-                                    className="w-full h-24 object-cover rounded mb-2"
-                                  />
-                                  <h3 className="text-xs font-medium truncate">{product.productName}</h3>
-                                  <p className="text-xs text-gray-600">₩{product.productPrice?.toLocaleString()}</p>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="absolute top-1 right-1 p-1 h-6 w-6"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      toggleCategoryProductLike(product.productIdx)
-                                    }}
-                                  >
-                                    <Heart
-                                      className={`w-3 h-3 ${product.liked ? "fill-red-500 text-red-500" : "text-gray-400"}`}
-                                    />
-                                  </Button>
-                                </CardContent>
-                              </Card>
+                              <ProductCard
+                                key={product.productIdx}
+                                product={product}
+                                onViewDetail={handleViewProductDetail}
+                                onAddToCody={addToCody}
+                                onToggleLike={toggleCategoryProductLike}
+                              />
                             ))}
                           </div>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-1 gap-4">
                           {filteredProducts.map((product) => (
-                            <Card key={product.id} className="relative">
-                              <CardContent className="p-2" onClick={() => addToCody(product)}>
-                                <img
-                                  src={product.image || "/placeholder.svg"}
-                                  alt={product.name}
-                                  className="w-full h-24 object-cover rounded mb-2"
-                                />
-                                <h3 className="text-xs font-medium truncate">{product.name}</h3>
-                                <p className="text-xs text-gray-600">{product.price}</p>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="absolute top-1 right-1 p-1 h-6 w-6"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    toggleLike(product.id)
-                                  }}
-                                >
-                                  <Heart
-                                    className={`w-3 h-3 ${product.liked ? "fill-red-500 text-red-500" : "text-gray-400"}`}
-                                  />
-                                </Button>
-                              </CardContent>
-                            </Card>
+                            <ProductCard
+                              key={product.id}
+                              product={{
+                                productIdx: product.id,
+                                productName: product.name,
+                                productContent: product.description || '',
+                                productPrice: parseInt(product.price.replace(/[^\d]/g, '')) || 0,
+                                productImage: product.image,
+                                majorCategory: product.category || '상의',
+                                subCategory: '',
+                                liked: product.liked
+                              }}
+                              onViewDetail={handleViewProductDetail}
+                              onAddToCody={addToCody}
+                              onToggleLike={toggleLike}
+                            />
                           ))}
                         </div>
                       )}
@@ -938,6 +934,16 @@ export default function SnapFitMobile() {
 
       {/* Partner Application Page */}
       <PartnerApplicationStandalone isOpen={isPartnerApplicationOpen} onClose={() => setIsPartnerApplicationOpen(false)} />
+
+      {/* Product Detail Page */}
+      {isProductDetailOpen && selectedProduct && (
+        <ProductDetailPage
+          product={selectedProduct}
+          onBack={handleCloseProductDetail}
+          onAddToCody={addToCody}
+          onToggleLike={toggleCategoryProductLike}
+        />
+      )}
 
     </div>
   )
