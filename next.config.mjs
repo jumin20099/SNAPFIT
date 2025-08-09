@@ -4,6 +4,9 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'via.placeholder.com' },
+      { protocol: 'https', hostname: '*.s3.amazonaws.com' },
+      { protocol: 'https', hostname: '*.s3.ap-northeast-2.amazonaws.com' },
+      { protocol: 'https', hostname: 'cdn.snapfit.app' },
       // 필요 시 S3/CloudFront 도메인 추가
       // { protocol: 'https', hostname: 'your-s3-bucket.s3.ap-northeast-2.amazonaws.com' },
       // { protocol: 'https', hostname: 'cdn.snapfit.app' },

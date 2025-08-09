@@ -35,12 +35,13 @@ export default function ProductCard({
     <Card className="relative group hover:shadow-md transition-shadow">
       <CardContent className={`p-3 ${compact ? '' : 'pb-4'}`}>
         {/* 상품 이미지 */}
-        <div className="relative mb-3">
+        <a href={`/products/${product.productIdx}`} className="block relative mb-3" aria-label={`${product.productName} 상세로 이동`}>
           <img
             src={product.productImage || "/placeholder.svg"}
             alt={product.productName}
             className="w-full h-48 object-cover rounded"
           />
+        </a>
           
           {/* 좋아요 버튼 */}
           <Button
@@ -57,13 +58,15 @@ export default function ProductCard({
               fill={product.liked ? 'currentColor' : 'none'}
             />
           </Button>
-        </div>
+        
 
         {/* 상품 정보 */}
         <div className="space-y-3">
-          <h3 className="font-medium text-base line-clamp-2 leading-tight">
-            {product.productName}
-          </h3>
+          <a href={`/products/${product.productIdx}`} className="block">
+            <h3 className="font-medium text-base line-clamp-2 leading-tight">
+              {product.productName}
+            </h3>
+          </a>
           <p className="text-lg font-bold text-blue-600">
             ₩{product.productPrice?.toLocaleString()}
           </p>

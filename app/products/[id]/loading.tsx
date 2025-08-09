@@ -21,10 +21,18 @@ export default function Loading() {
           <div className="h-5 bg-gray-200 rounded w-32" />
           <div className="h-24 bg-gray-200 rounded" />
         </div>
-        <div className="space-y-2">
-          <div className="h-5 bg-gray-200 rounded w-32" />
-          <div className="h-24 bg-gray-200 rounded" />
-        </div>
+    <div className="space-y-3">
+      <div className="h-5 bg-gray-200 rounded w-32" />
+      <div className="grid grid-cols-2 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <div className="w-full aspect-square bg-gray-200 rounded" />
+            <div className="h-4 bg-gray-200 rounded w-3/4" />
+            <div className="h-3 bg-gray-200 rounded w-1/2" />
+          </div>
+        ))}
+      </div>
+    </div>
       </section>
     </main>
   )

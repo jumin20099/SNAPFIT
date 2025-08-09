@@ -71,15 +71,19 @@ export default function LikedProductsPage({ onBack }: LikedProductsPageProps) {
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     {/* 상품 사진 */}
-                    <img
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.name}
-                      className="w-16 h-16 rounded object-cover"
-                    />
+                    <a href={`/products/${product.id}`} aria-label={`${product.name} 상세로 이동`}>
+                      <img
+                        src={product.image || "/placeholder.svg"}
+                        alt={product.name}
+                        className="w-16 h-16 rounded object-cover"
+                      />
+                    </a>
 
                     {/* 상품 설명 */}
                     <div className="flex-1">
-                      <h3 className="text-lg font-medium">{product.name}</h3>
+                      <a href={`/products/${product.id}`} className="block">
+                        <h3 className="text-lg font-medium">{product.name}</h3>
+                      </a>
                       <p className="text-sm text-gray-600 mb-1">{product.description}</p>
                       <p className="text-sm font-medium text-blue-600">{product.price}</p>
                     </div>
