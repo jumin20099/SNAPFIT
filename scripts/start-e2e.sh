@@ -24,6 +24,21 @@ else
 fi
 cd ..
 
+# 포트 충돌 방지: 3000(Next), 8080(Spring)
+if command -v lsof >/dev/null 2>&1; then
+  for port in 3000 8080; do
+    PID=$(lsof -ti :$port || true)
+    if [[ -n "$PID" ]]; then
+      echo "[INFO] kill port $port -> $PID"
+      kill -9 $PID || true
+    fi
+  done
+fi
+
+# 환경변수 기본값 주입
+export API_BASE_URL=${API_BASE_URL:-http://localhost:8080}
+export NEXT_PUBLIC_APP_ORIGIN=${NEXT_PUBLIC_APP_ORIGIN:-http://localhost:3000}
+
 # 프론트/백 동시 기동
 npx concurrently "npm:backend" "npm:frontend"
 
