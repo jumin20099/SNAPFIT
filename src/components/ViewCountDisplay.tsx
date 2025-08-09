@@ -1,3 +1,4 @@
+"use client"
 import { useViewCount } from '@/hooks/useViewCount';
 
 interface Props {
