@@ -23,9 +23,7 @@ type ProductDetailDto = {
 }
 
 async function getProductDetail(productId: string): Promise<ProductDetailDto> {
-  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'http://localhost:3000'
-  const url = `${origin}/api/products/${productId}`
-  const res = await fetch(url, {
+  const res = await fetch(`/api/products/${productId}`, {
     // 상세는 신선도 우선. 이후 필요한 경우 revalidate로 변경 가능
     cache: 'no-store',
   })
@@ -36,11 +34,10 @@ async function getProductDetail(productId: string): Promise<ProductDetailDto> {
 }
 
 async function getRelatedProducts(major?: string | null, sub?: string | null) {
-  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'http://localhost:3000'
   const usp = new URLSearchParams()
   if (major) usp.append('major', major)
   if (sub) usp.append('sub', sub as string)
-  const res = await fetch(`${origin}/api/products${usp.toString() ? `?${usp.toString()}` : ''}`, {
+  const res = await fetch(`/api/products${usp.toString() ? `?${usp.toString()}` : ''}`, {
     cache: 'no-store',
   })
   if (!res.ok) return []
