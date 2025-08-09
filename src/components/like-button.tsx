@@ -21,6 +21,8 @@ export default function LikeButton({ targetIdx, targetType, initialLiked, initia
       onClick={toggle}
       disabled={loading}
       className="flex items-center gap-1 text-sm"
+      aria-pressed={liked}
+      aria-label={liked ? '좋아요 취소' : '좋아요'}
     >
       {liked ? <Heart className="fill-red-500 text-red-500 w-4 h-4" /> : <HeartOff className="w-4 h-4" />}
       <span>{count}</span>

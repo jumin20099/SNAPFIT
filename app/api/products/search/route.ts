@@ -11,24 +11,25 @@ export async function GET(request: NextRequest) {
     }
 
     // 백엔드 API URL 구성
-    let backendUrl = 'http://localhost:8080/api/admin/products/search'
+    const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080'
+    let backendUrl = `${API_BASE_URL}/api/admin/products/search`
     
     // 검색 타입에 따라 다른 엔드포인트 사용
     switch (searchType) {
       case 'name':
-        backendUrl = 'http://localhost:8080/api/admin/products/search/name'
+        backendUrl = `${API_BASE_URL}/api/admin/products/search/name`
         break
       case 'content':
-        backendUrl = 'http://localhost:8080/api/admin/products/search/content'
+        backendUrl = `${API_BASE_URL}/api/admin/products/search/content`
         break
       case 'major-category':
-        backendUrl = 'http://localhost:8080/api/admin/products/search/major-category'
+        backendUrl = `${API_BASE_URL}/api/admin/products/search/major-category`
         break
       case 'sub-category':
-        backendUrl = 'http://localhost:8080/api/admin/products/search/sub-category'
+        backendUrl = `${API_BASE_URL}/api/admin/products/search/sub-category`
         break
       case 'store-name':
-        backendUrl = 'http://localhost:8080/api/admin/products/search/store-name'
+        backendUrl = `${API_BASE_URL}/api/admin/products/search/store-name`
         break
       default:
         // all 타입은 기본 search 엔드포인트 사용

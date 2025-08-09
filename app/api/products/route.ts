@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
     const sub = searchParams.get('sub')
 
     // 백엔드 API URL 구성
-    let backendUrl = 'http://localhost:8080/api/products'
+    const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080'
+    let backendUrl = `${API_BASE_URL}/api/products`
     const params = new URLSearchParams()
     
     if (major) params.append('major', major)

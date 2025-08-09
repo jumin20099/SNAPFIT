@@ -34,12 +34,46 @@ async function getProductDetail(productId: string): Promise<ProductDetailDto> {
   return res.json()
 }
 
+async function getRelatedProducts(major?: string | null, sub?: string | null) {
+  const origin = process.env.NEXT_PUBLIC_APP_ORIGIN || 'http://localhost:3000'
+  const usp = new URLSearchParams()
+  if (major) usp.append('major', major)
+  if (sub) usp.append('sub', sub as string)
+  const res = await fetch(`${origin}/api/products${usp.toString() ? `?${usp.toString()}` : ''}`, {
+    cache: 'no-store',
+  })
+  if (!res.ok) return []
+  return res.json()
+}
+
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
   const detail = await getProductDetail(params.id)
   const p = detail.product
+  const related = await getRelatedProducts(p.majorCategory, p.subCategory)
+
+  const priceFormatted = formatCurrencyKRW(p.productPrice)
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: p.productName,
+    description: p.productContent,
+    image: p.productImage ? [p.productImage] : [],
+    brand: p.storeName || 'Snapfit',
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'KRW',
+      price: p.productPrice,
+      availability: 'https://schema.org/InStock',
+    },
+  }
 
   return (
     <main className="mx-auto max-w-screen-lg p-4">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Hero 영역 */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="relative w-full aspect-square">
@@ -56,7 +90,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
         {/* 정보 및 CTA */}
         <div className="space-y-4">
           <h1 className="text-2xl font-semibold">{p.productName}</h1>
-          <p className="text-xl font-bold">{formatCurrencyKRW(p.productPrice)}</p>
+          <p className="text-xl font-bold">{priceFormatted}</p>
 
           <div className="flex gap-3 items-center">
             <AddToCartButton
@@ -101,7 +135,17 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
         </article>
         <aside className="space-y-4">
           <h3 className="font-semibold">연관 상품</h3>
-          <p className="text-sm text-gray-500">동일 카테고리의 연관 상품을 준비 중입니다.</p>
+          <div className="grid grid-cols-2 gap-3">
+            {Array.isArray(related) && related.slice(0, 8).map((rp: any) => (
+              <a key={rp.productIdx} href={`/products/${rp.productIdx}`} className="block">
+                <div className="relative w-full aspect-square mb-2">
+                  <Image src={rp.productImage || '/placeholder.svg'} alt={rp.productName} fill sizes="(max-width:768px) 50vw, 25vw" className="object-cover rounded" />
+                </div>
+                <div className="text-sm font-medium line-clamp-2">{rp.productName}</div>
+                <div className="text-xs text-blue-600 font-semibold">{formatCurrencyKRW(rp.productPrice)}</div>
+              </a>
+            ))}
+          </div>
         </aside>
       </section>
     </main>
