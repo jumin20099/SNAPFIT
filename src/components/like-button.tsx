@@ -1,3 +1,4 @@
+"use client"
 import { Heart, HeartOff } from 'lucide-react';
 import { useToggleLike } from '@/hooks/useToggleLike';
 
