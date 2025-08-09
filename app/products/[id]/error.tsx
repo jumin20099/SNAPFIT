@@ -1,6 +1,9 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
+
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const pathname = usePathname()
   return (
     <main className="mx-auto max-w-screen-lg p-4">
       <div className="p-6 border rounded-xl bg-red-50">
@@ -8,6 +11,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         <p className="text-sm text-red-600 mb-4">일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.</p>
         <div className="flex gap-3">
           <button onClick={reset} className="px-3 py-2 rounded bg-blue-600 text-white text-sm">다시 시도</button>
+          <button onClick={() => (window.location.href = pathname)} className="px-3 py-2 rounded border text-sm">페이지 새로고침</button>
           <a href="/" className="px-3 py-2 rounded border text-sm">홈으로 이동</a>
         </div>
       </div>
