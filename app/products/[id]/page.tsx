@@ -50,7 +50,12 @@ async function getRelatedProducts(major?: string | null, sub?: string | null) {
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
   const detail = await getProductDetail(params.id)
   const p = detail.product
-  const related = await getRelatedProducts(p.majorCategory, p.subCategory)
+  const relatedRaw = await getRelatedProducts(p.majorCategory, p.subCategory)
+  const related = Array.isArray(relatedRaw)
+    ? relatedRaw
+        .filter((rp: any) => rp?.productIdx !== p.productIdx)
+        .filter((rp: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.productIdx === rp.productIdx) === idx)
+    : []
 
   const priceFormatted = formatCurrencyKRW(p.productPrice)
   const jsonLd = {
@@ -82,7 +87,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             src={p.productImage || '/placeholder.svg'}
             alt={p.productName}
             fill
-            sizes="(max-width:768px) 100vw, 50vw"
+            sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 640px"
             className="object-cover rounded-2xl"
             priority
           />
@@ -145,7 +150,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
             {Array.isArray(related) && related.slice(0, 8).map((rp: any) => (
               <a key={rp.productIdx} href={`/products/${rp.productIdx}`} className="block">
                 <div className="relative w-full aspect-square mb-2">
-                  <Image src={rp.productImage || '/placeholder.svg'} alt={rp.productName} fill sizes="(max-width:768px) 50vw, 25vw" className="object-cover rounded" />
+                  <Image src={rp.productImage || '/placeholder.svg'} alt={rp.productName} fill sizes="(max-width:640px) 50vw, (max-width:1024px) 25vw, 320px" className="object-cover rounded" />
                 </div>
                 <div className="text-sm font-medium line-clamp-2">{rp.productName}</div>
                 <div className="text-xs text-blue-600 font-semibold">{formatCurrencyKRW(rp.productPrice)}</div>
