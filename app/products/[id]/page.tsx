@@ -52,6 +52,14 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     ? relatedRaw
         .filter((rp: any) => rp?.productIdx !== p.productIdx)
         .filter((rp: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.productIdx === rp.productIdx) === idx)
+        .sort((a: any, b: any) => {
+          const subEqA = p.subCategory && a.subCategory === p.subCategory ? 1 : 0
+          const subEqB = p.subCategory && b.subCategory === p.subCategory ? 1 : 0
+          if (subEqA !== subEqB) return subEqB - subEqA
+          const priceA = Math.abs((a.productPrice ?? 0) - (p.productPrice ?? 0))
+          const priceB = Math.abs((b.productPrice ?? 0) - (p.productPrice ?? 0))
+          return priceA - priceB
+        })
     : []
 
   const priceFormatted = formatCurrencyKRW(p.productPrice)
@@ -127,7 +135,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
           </ul>
 
           {/* 실시간 조회수 표시 */}
-          <div data-testid="view-count">
+          <div data-testid="view-count" aria-live="polite">
             <ViewCountDisplay productId={p.productIdx} />
           </div>
         </div>
@@ -143,17 +151,21 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
         </article>
         <aside className="space-y-4">
           <h3 className="font-semibold">연관 상품</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {Array.isArray(related) && related.slice(0, 8).map((rp: any) => (
-              <a key={rp.productIdx} href={`/products/${rp.productIdx}`} className="block">
-                <div className="relative w-full aspect-square mb-2">
-                  <Image src={rp.productImage || '/placeholder.svg'} alt={rp.productName} fill sizes="(max-width:640px) 50vw, (max-width:1024px) 25vw, 320px" className="object-cover rounded" />
-                </div>
-                <div className="text-sm font-medium line-clamp-2">{rp.productName}</div>
-                <div className="text-xs text-blue-600 font-semibold">{formatCurrencyKRW(rp.productPrice)}</div>
-              </a>
-            ))}
-          </div>
+          {related.length === 0 ? (
+            <p className="text-sm text-gray-500">연관 상품이 없습니다.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {related.slice(0, 8).map((rp: any) => (
+                <a key={rp.productIdx} href={`/products/${rp.productIdx}`} className="block">
+                  <div className="relative w-full aspect-square mb-2">
+                    <Image src={rp.productImage || '/placeholder.svg'} alt={rp.productName} fill sizes="(max-width:640px) 50vw, (max-width:1024px) 25vw, 320px" className="object-cover rounded" />
+                  </div>
+                  <div className="text-sm font-medium line-clamp-2">{rp.productName}</div>
+                  <div className="text-xs text-blue-600 font-semibold">{formatCurrencyKRW(rp.productPrice)}</div>
+                </a>
+              ))}
+            </div>
+          )}
         </aside>
       </section>
     </main>
