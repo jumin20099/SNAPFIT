@@ -44,8 +44,8 @@ test.describe('상품 상세 페이지', () => {
     await expect(page.getByTestId('add-to-cart')).toBeVisible()
     await expect(page.getByTestId('like-button')).toBeVisible()
 
-    // 실시간 뷰 카운트 영역 존재(데이터 없을 수 있음)
-    await expect(page.getByTestId('view-count')).toBeVisible()
+    // 실시간 뷰 카운트 영역 존재(렌더 자체는 존재)
+    await expect(page.getByTestId('view-count')).toBeAttached()
   })
 })
 

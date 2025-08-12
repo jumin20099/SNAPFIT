@@ -32,7 +32,7 @@ public class ViewCountFlushScheduler {
             try {
                 Long productId = Long.parseLong(key.split(":")[1]);
                 int updated = jdbcTemplate.update(
-                        "UPDATE products SET view_count = view_count + ? WHERE product_idx = ?",
+                        "UPDATE products SET view_count = COALESCE(view_count, 0) + ? WHERE product_idx = ?",
                         count, productId);
                 if (updated > 0) {
                     redisTemplate.delete(key);

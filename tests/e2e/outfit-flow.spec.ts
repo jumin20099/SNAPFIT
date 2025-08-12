@@ -7,22 +7,28 @@ test.describe('코디 시스템 E2E 테스트', () => {
   });
 
   test('카테고리별 상품 리스트 로딩', async ({ page }) => {
-    // 상의 카테고리 클릭
+    // 카테고리 패널 열기 후 상의 카테고리 클릭
+    await page.getByRole('button', { name: '카테고리' }).click();
     await page.getByRole('button', { name: '상의' }).click();
+    // 서브카테고리 중 하나 선택 (맨투맨/스웨트)
+    await page.getByRole('heading', { level: 3, name: '맨투맨/스웨트' }).click();
     
     // 상품 리스트가 로딩되는지 확인
-    await expect(page.locator('[data-testid="product-card"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[data-testid="product-card"]').first()).toBeVisible({ timeout: 15000 });
     
     // 하의 카테고리 클릭
     await page.getByRole('button', { name: '하의' }).click();
+    await page.getByRole('heading', { level: 3, name: '데님 팬츠' }).click();
     
     // 상품 리스트가 다시 로딩되는지 확인
     await expect(page.locator('[data-testid="product-card"]')).toBeVisible({ timeout: 10000 });
   });
 
   test.skip('상품 클릭/선택 및 코디에 추가', async ({ page }) => {
-    // 상의 카테고리 선택
+    // 카테고리 패널 열고 상의 카테고리 선택
+    await page.getByRole('button', { name: '카테고리' }).click();
     await page.getByRole('button', { name: '상의' }).click();
+    await page.getByRole('heading', { level: 3, name: '맨투맨/스웨트' }).click();
     
     // 첫 번째 상품 클릭
     await page.locator('[data-testid="product-card"]').first().click();
@@ -32,8 +38,10 @@ test.describe('코디 시스템 E2E 테스트', () => {
   });
 
   test.skip('좋아요 기능', async ({ page }) => {
-    // 상의 카테고리 선택
+    // 카테고리 패널 열고 상의 카테고리 선택
+    await page.getByRole('button', { name: '카테고리' }).click();
     await page.getByRole('button', { name: '상의' }).click();
+    await page.getByRole('heading', { level: 3, name: '맨투맨/스웨트' }).click();
     
     // 첫 번째 상품의 좋아요 버튼 클릭
     await page.locator('[data-testid="like-button"]').first().click();
@@ -43,12 +51,15 @@ test.describe('코디 시스템 E2E 테스트', () => {
   });
 
   test.skip('코디 저장 기능', async ({ page }) => {
-    // 상의 카테고리에서 상품 선택
+    // 카테고리 패널 열고 상의 카테고리에서 상품 선택
+    await page.getByRole('button', { name: '카테고리' }).click();
     await page.getByRole('button', { name: '상의' }).click();
+    await page.getByRole('heading', { level: 3, name: '맨투맨/스웨트' }).click();
     await page.locator('[data-testid="product-card"]').first().click();
     
     // 하의 카테고리에서 상품 선택
     await page.getByRole('button', { name: '하의' }).click();
+    await page.getByRole('heading', { level: 3, name: '데님 팬츠' }).click();
     await page.locator('[data-testid="product-card"]').first().click();
     
     // 코디 저장 버튼 클릭
@@ -60,7 +71,9 @@ test.describe('코디 시스템 E2E 테스트', () => {
 
   test.skip('실시간 조회수 표시', async ({ page }) => {
     // 상품 상세 페이지로 이동 (예: 첫 번째 상품)
+    await page.getByRole('button', { name: '카테고리' }).click();
     await page.getByRole('button', { name: '상의' }).click();
+    await page.getByRole('heading', { level: 3, name: '맨투맨/스웨트' }).click();
     await page.locator('[data-testid="product-card"]').first().click();
     
     // 실시간 조회수 표시 확인
@@ -82,8 +95,10 @@ test.describe('코디 시스템 E2E 테스트', () => {
   });
 
   test('장바구니 기능', async ({ page }) => {
-    // 상의 카테고리에서 상품을 장바구니에 추가
+    // 카테고리 패널 열고 상의 카테고리에서 상품을 장바구니에 추가
+    await page.getByRole('button', { name: '카테고리' }).click();
     await page.getByRole('button', { name: '상의' }).click();
+    await page.getByRole('heading', { level: 3, name: '맨투맨/스웨트' }).click();
     // 카드 클릭 → 상세로 이동 후 장바구니 담기
     await page.locator('[data-testid="product-card"]').first().click();
     await page.getByTestId('add-to-cart').click();

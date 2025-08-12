@@ -21,6 +21,7 @@ type ProductDetailDto = {
   viewCount: number
   likesCount: number
   likedByUser: boolean
+  liveViewers: number
 }
 
 function getBaseUrl() {
@@ -133,7 +134,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
 
           <ul className="text-sm text-gray-500 space-y-1">
             <li>
-              조회수 {detail.viewCount?.toLocaleString?.() ?? detail.viewCount} · 좋아요{' '}
+              누적 조회수 {Number(detail.viewCount || 0).toLocaleString()} · 좋아요{' '}
               {detail.likesCount?.toLocaleString?.() ?? detail.likesCount}
             </li>
             {p.storeName && <li>브랜드/스토어: {p.storeName}</li>}
@@ -147,7 +148,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
 
           {/* 실시간 조회수 표시 */}
           <div data-testid="view-count" aria-live="polite">
-            <ViewCountDisplay productId={p.productIdx} />
+            <ViewCountDisplay productId={p.productIdx} initialViewers={Number(detail.liveViewers || 0)} />
           </div>
         </div>
       </section>

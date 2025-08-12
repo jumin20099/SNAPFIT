@@ -36,7 +36,11 @@ public class Product {
     private String majorCategory;
     private String subCategory;
     private String productLink;
-    private Boolean isActive = true;
+  @Builder.Default
+  private Boolean isActive = true;
+
+  @Column(name = "view_count")
+  private Long viewCount; // 누적 조회수
 
     @Column(updatable = false)
     @CreationTimestamp

@@ -1,6 +1,7 @@
 "use client"
 
 import { Heart, Eye, Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import Image from 'next/image'
@@ -33,8 +34,13 @@ export default function ProductCard({
   onToggleLike,
   compact = false 
 }: ProductCardProps) {
+  const router = useRouter()
   return (
-    <Card className="relative group hover:shadow-md transition-shadow">
+    <Card
+      className="relative group hover:shadow-md transition-shadow cursor-pointer"
+      data-testid="product-card"
+      onClick={() => router.push(`/products/${product.productIdx}`)}
+    >
       <CardContent className={`p-3 ${compact ? '' : 'pb-4'}`}>
         {/* 상품 이미지 */}
         <a href={`/products/${product.productIdx}`} className="block mb-3" aria-label={`${product.productName} 상세로 이동`}>

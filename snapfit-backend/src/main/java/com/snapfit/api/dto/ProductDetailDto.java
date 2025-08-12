@@ -8,7 +8,10 @@ import lombok.Data;
 @AllArgsConstructor
 public class ProductDetailDto {
     private Product product;
+    // 누적 조회수 (DB)
     private long viewCount;
     private long likesCount;
     private boolean likedByUser;
-} 
+    // 실시간 시청자 수 (Redis)
+    private long liveViewers;
+}

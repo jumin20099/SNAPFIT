@@ -15,6 +15,11 @@ const nextConfig = {
   async rewrites() {
     return [
       // 백엔드로 프록시할 특정 API 경로들만 지정
+      // WebSocket(SockJS) 엔드포인트 프록시
+      {
+        source: '/ws/:path*',
+        destination: 'http://localhost:8080/ws/:path*'
+      },
       {
         source: '/api/auth/:path*',
         destination: 'http://localhost:8080/api/auth/:path*'

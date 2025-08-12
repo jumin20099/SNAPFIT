@@ -154,11 +154,14 @@ public class ProductService {
         Product product = productRepository.findById(productIdx)
             .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
 
-        // 조회수 처리
+        // 실시간 시청자 수 처리 (Redis)
         String key = "product:" + productIdx + ":views";
-        long viewCount = skipIncrement
+        long liveViewers = skipIncrement
             ? viewCounterService.getCount(key)
             : viewCounterService.increment(key);
+
+        // 누적 조회수 (DB)
+        long cumulativeViews = product.getViewCount() != null ? product.getViewCount() : 0L;
 
         // 좋아요 개수 및 사용자 좋아요 여부 확인
         long likesCount = likeService.countLikes(productIdx, TargetType.PRODUCT);
@@ -173,6 +176,6 @@ public class ProductService {
             product.setSubCategory("신상");
         }
 
-        return new ProductDetailDto(product, viewCount, likesCount, likedByUser);
+        return new ProductDetailDto(product, cumulativeViews, likesCount, likedByUser, liveViewers);
     }
 }
