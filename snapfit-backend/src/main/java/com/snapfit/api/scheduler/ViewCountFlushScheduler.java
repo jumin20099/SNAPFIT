@@ -22,6 +22,7 @@ public class ViewCountFlushScheduler {
 
     @Scheduled(fixedRate = 60_000)
     public void flushViewCounts() {
+        // live 키는 누적 반영 대상이 아님 (실시간 세션 용도)
         Set<String> keys = redisTemplate.keys("product:*:views");
         if (keys == null || keys.isEmpty()) return;
 
