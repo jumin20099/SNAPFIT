@@ -13,12 +13,15 @@ interface PartnerDashboard {
   pendingProducts: number
   rejectedProducts: number
   monthlyRevenue: number
+  totalViewCount?: number
+  totalActualViewCount?: number
   recentActivities: Array<{
     id: number
     type: string
     description: string
     date: string
   }>
+  productViews?: Array<{ productId: number; productName: string; viewCount: number; actualViewCount: number }>
 }
 
 interface PartnerDashboardPageProps {
@@ -118,7 +121,7 @@ export default function PartnerDashboardPage({ isOpen, onClose }: PartnerDashboa
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-6">
           {/* 통계 카드들 */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">총 상품</CardTitle>
@@ -162,6 +165,26 @@ export default function PartnerDashboardPage({ isOpen, onClose }: PartnerDashboa
                 <p className="text-xs text-muted-foreground">월간 총 매출</p>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">누적 조회수</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{(dashboard.totalViewCount || 0).toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">승인 상품 기준 합계</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">실제 조회수(12h)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{(dashboard.totalActualViewCount || 0).toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">동일 사용자 12시간 1회</p>
+              </CardContent>
+            </Card>
           </div>
 
           {/* 상품 상태 분포 */}
@@ -193,6 +216,30 @@ export default function PartnerDashboardPage({ isOpen, onClose }: PartnerDashboa
                   <span className="text-sm font-medium">{dashboard.rejectedProducts}개</span>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* 상품별 조회수 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>상품별 조회수</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!(dashboard.productViews && dashboard.productViews.length) ? (
+                <div className="text-center py-4 text-sm text-gray-500">표시할 데이터가 없습니다.</div>
+              ) : (
+                <div className="space-y-2">
+                  {dashboard.productViews!.map((pv) => (
+                    <div key={pv.productId} className="flex items-center justify-between text-sm">
+                      <div className="truncate pr-4">{pv.productName}</div>
+                      <div className="flex items-center gap-4 whitespace-nowrap">
+                        <span>누적 조회수 {pv.viewCount.toLocaleString()}회</span>
+                        <span>실제 조회수(24h) {pv.actualViewCount.toLocaleString()}회</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

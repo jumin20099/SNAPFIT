@@ -11,6 +11,7 @@ interface ProductAnalytics {
   product_id: number
   product_name: string
   view_count: number
+  actual_view_count?: number
   purchase_count: number
   total_sales: number
   conversion_rate: number
@@ -87,7 +88,7 @@ export default function ProductAnalyticsPage({ isOpen, onClose }: ProductAnalyti
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-6">
           {/* 요약 통계 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -97,6 +98,18 @@ export default function ProductAnalyticsPage({ isOpen, onClose }: ProductAnalyti
               <CardContent>
                 <div className="text-2xl font-bold">
                   {analytics.reduce((sum, item) => sum + item.view_count, 0).toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                  <Eye className="w-4 h-4" />실제 조회수(12h)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {analytics.reduce((sum, item) => sum + (item.actual_view_count || 0), 0).toLocaleString()}
                 </div>
               </CardContent>
             </Card>
@@ -180,11 +193,16 @@ export default function ProductAnalyticsPage({ isOpen, onClose }: ProductAnalyti
                         </Badge>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                         <div className="flex items-center gap-2">
                           <Eye className="w-4 h-4 text-gray-500" />
                           <span className="text-gray-600">조회수:</span>
                           <span className="font-medium">{item.view_count.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Eye className="w-4 h-4 text-gray-500" />
+                          <span className="text-gray-600">실제(12h):</span>
+                          <span className="font-medium">{(item.actual_view_count || 0).toLocaleString()}</span>
                         </div>
 
                         <div className="flex items-center gap-2">

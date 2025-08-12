@@ -162,6 +162,7 @@ public class ProductService {
 
         // 누적 조회수 (DB) 즉시 증가
         long cumulativeViews = product.getViewCount() != null ? product.getViewCount() : 0L;
+        long actualViews = product.getActualViewCount() != null ? product.getActualViewCount() : 0L;
         if (!skipIncrement) {
             product.setViewCount(cumulativeViews + 1);
             productRepository.save(product);
@@ -181,6 +182,10 @@ public class ProductService {
             product.setSubCategory("신상");
         }
 
-        return new ProductDetailDto(product, cumulativeViews, likesCount, likedByUser, liveViewers);
+        return new ProductDetailDto(product, cumulativeViews, actualViews, likesCount, likedByUser, liveViewers);
+    }
+
+    public Product saveProduct(Product product) {
+        return productRepository.save(product);
     }
 }

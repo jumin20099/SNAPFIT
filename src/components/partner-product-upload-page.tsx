@@ -43,6 +43,9 @@ interface PartnerProduct {
   requestedMajorCategory?: string
   requestedSubCategory?: string
   requestedProductPrice?: number
+  // 뷰 지표(제휴사용 노출)
+  viewCount?: number
+  actualViewCount?: number
 }
 
 interface PartnerProductUploadPageProps {
@@ -568,9 +571,15 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
                     <div className="flex-1">
                       <h3 className="font-medium">{product.productName}</h3>
                       <p className="text-sm text-gray-600 mb-1">{product.productContent}</p>
-                                                      <div className="flex items-center gap-2">
+                                                      <div className="flex items-center gap-2 flex-wrap">
                                   <Badge variant="outline">{product.genderCategory} / {product.majorCategory} / {product.subCategory}</Badge>
                                   <span className="text-sm font-medium">₩{product.productPrice?.toLocaleString()}</span>
+                                  {typeof product.viewCount === 'number' && (
+                                    <span className="text-xs text-gray-600">누적 {product.viewCount.toLocaleString()}</span>
+                                  )}
+                                  {typeof product.actualViewCount === 'number' && (
+                                    <span className="text-xs text-gray-600">실제(12h) {product.actualViewCount.toLocaleString()}</span>
+                                  )}
                                   {getStatusBadge(product.status)}
                                   {product.updateRequestStatus && getUpdateRequestStatusBadge(product.updateRequestStatus)}
                                 </div>

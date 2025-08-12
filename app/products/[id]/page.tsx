@@ -58,6 +58,8 @@ async function getRelatedProducts(major?: string | null, sub?: string | null) {
 
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
   const detail = await getProductDetail(params.id)
+  // 중복 방지 조회수 증가 트리거 (비차단)
+  fetch(`${getBaseUrl()}/api/products/${params.id}`, { method: 'POST' }).catch(() => {})
   const p = detail.product
   const relatedRaw = await getRelatedProducts(p.majorCategory, p.subCategory)
   const related = Array.isArray(relatedRaw)

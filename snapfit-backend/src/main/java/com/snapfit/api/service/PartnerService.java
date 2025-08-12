@@ -209,6 +209,32 @@ public class PartnerService {
         // 매출 (현재는 0으로 설정)
         dashboard.setMonthlyRevenue(0);
 
+        // 조회수 합계 집계: 승인된 상품만 대상으로 products 테이블에서 합산
+        try {
+            List<PartnerProduct> approved = partnerProductRepository
+                    .findByPartnerApplicationIdAndStatus(applicationId, PartnerProduct.ProductStatus.APPROVED);
+            long sumView = 0L;
+            long sumActual = 0L;
+            java.util.List<com.snapfit.api.dto.PartnerDashboardDto.ProductView> pv = new java.util.ArrayList<>();
+            for (PartnerProduct pp : approved) {
+                Optional<Product> live = productRepository.findByProductNameAndProductLink(
+                        pp.getProductName(), pp.getProductLink());
+                if (live.isPresent()) {
+                    Product p = live.get();
+                    sumView += p.getViewCount() == null ? 0L : p.getViewCount();
+                    sumActual += p.getActualViewCount() == null ? 0L : p.getActualViewCount();
+                    pv.add(new com.snapfit.api.dto.PartnerDashboardDto.ProductView(
+                        p.getProductIdx(), p.getProductName(),
+                        p.getViewCount() == null ? 0L : p.getViewCount(),
+                        p.getActualViewCount() == null ? 0L : p.getActualViewCount()
+                    ));
+                }
+            }
+            dashboard.setTotalViewCount(sumView);
+            dashboard.setTotalActualViewCount(sumActual);
+            dashboard.setProductViews(pv);
+        } catch (Exception ignore) {}
+
         // 최근 활동 (최신 5개)
         List<PartnerProduct> latest = partnerProductRepository
                 .findByPartnerApplicationIdOrderByCreatedAtDesc(applicationId)
@@ -307,6 +333,17 @@ public class PartnerService {
         dto.setRequestedSubCategory(product.getRequestedSubCategory());
         dto.setRequestedProductPrice(product.getRequestedProductPrice());
         
+        // products 테이블의 뷰 카운트 조회(승인되어 products에 존재할 때만)
+        try {
+            Optional<Product> live = productRepository.findByProductNameAndProductLink(
+                    product.getProductName(), product.getProductLink());
+            if (live.isPresent()) {
+                Product p = live.get();
+                dto.setViewCount(p.getViewCount() == null ? 0L : p.getViewCount());
+                dto.setActualViewCount(p.getActualViewCount() == null ? 0L : p.getActualViewCount());
+            }
+        } catch (Exception ignore) {}
+
         return dto;
     }
     

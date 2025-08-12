@@ -10,6 +10,8 @@ public class ProductDetailDto {
     private Product product;
     // 누적 조회수 (DB)
     private long viewCount;
+    // 실제 조회수 (12시간 중복 방지)
+    private long actualViewCount;
     private long likesCount;
     private boolean likedByUser;
     // 실시간 시청자 수 (Redis)

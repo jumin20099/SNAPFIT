@@ -41,4 +41,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
            "OR LOWER(s.storeName) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND p.isActive = true")
     List<Product> searchProductsByKeyword(@Param("keyword") String keyword);
+    java.util.Optional<Product> findByProductNameAndProductLink(String productName, String productLink);
 }

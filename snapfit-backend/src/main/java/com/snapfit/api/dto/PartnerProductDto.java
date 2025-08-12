@@ -54,4 +54,8 @@ public class PartnerProductDto {
     private String requestedMajorCategory;
     private String requestedSubCategory;
     private Integer requestedProductPrice;
+
+    // 조회수 지표 (제휴사 노출)
+    private Long viewCount;          // 누적 조회수
+    private Long actualViewCount;    // 실제 조회수(12h 중복 방지)
 } 

@@ -42,6 +42,9 @@ public class Product {
   @Column(name = "view_count")
   private Long viewCount; // 누적 조회수
 
+  @Column(name = "actual_view_count")
+  private Long actualViewCount; // 실제 조회수(12시간 중복 방지)
+
     @Column(updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

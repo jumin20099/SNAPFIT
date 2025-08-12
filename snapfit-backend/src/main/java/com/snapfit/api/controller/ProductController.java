@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import com.snapfit.api.dto.ProductDto;
 import com.snapfit.api.entity.Product;
+import com.snapfit.api.dto.ProductAnalyticsDto;
 import com.snapfit.api.repository.ProductRepository;
 import com.snapfit.api.repository.PartnerProductRepository;
 import com.snapfit.api.service.ProductService;
@@ -156,6 +157,22 @@ public class ProductController {
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
         productRepository.deleteById(id);
         return ResponseEntity.ok().build();
+    }
+
+    // 관리자용 상품 분석: 뷰 지표 포함(누적/실제)
+    @GetMapping("/analytics")
+    public ResponseEntity<List<ProductAnalyticsDto>> getProductAnalytics() {
+        List<Product> products = productRepository.findAll();
+        List<ProductAnalyticsDto> result = products.stream()
+            .map(p -> new ProductAnalyticsDto(
+                p.getProductIdx(),
+                p.getProductName(),
+                p.getViewCount() == null ? 0L : p.getViewCount(),
+                p.getActualViewCount() == null ? 0L : p.getActualViewCount(),
+                0L, 0L, 0.0
+            ))
+            .toList();
+        return ResponseEntity.ok(result);
     }
 
     @PatchMapping("/{id}/status")

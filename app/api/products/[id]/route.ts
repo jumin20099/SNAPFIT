@@ -45,3 +45,26 @@ export async function GET(
     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
   }
 }
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const productId = params.id
+    const API = process.env.API_BASE_URL || 'http://localhost:8080'
+    const anon = request.cookies.get('anon')?.value
+    const res = await fetch(`${API}/api/products/${productId}/view`, {
+      method: 'POST',
+      headers: {
+        ...(anon ? { 'X-Anon-Id': anon } : {}),
+      },
+      cache: 'no-store',
+    })
+    const body = await res.text()
+    return new NextResponse(body, { status: res.status })
+  } catch (error) {
+    console.error('상품 조회수 증가 에러:', error)
+    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+  }
+}
