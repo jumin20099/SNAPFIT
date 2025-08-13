@@ -83,6 +83,8 @@ public class PublicProductController {
             p.setViewCount((p.getViewCount() == null ? 0L : p.getViewCount()) + 1);
             p.setActualViewCount((p.getActualViewCount() == null ? 0L : p.getActualViewCount()) + 1);
             productService.saveProduct(p);
+            // 실시간 방송도 함께 갱신
+            viewCounterService.increment("product:" + id + ":live");
         }
 
         return ResponseEntity.ok(java.util.Map.of(

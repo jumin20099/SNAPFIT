@@ -4,6 +4,7 @@ import LikeButton from '@/components/like-button'
 import { formatCurrencyKRW } from '@/lib/utils'
 import ViewCountDisplay from '@/components/ViewCountDisplay'
 import { headers } from 'next/headers'
+import ActualViewIncrementer from '@/components/ActualViewIncrementer'
 
 type Product = {
   productIdx: number
@@ -58,8 +59,7 @@ async function getRelatedProducts(major?: string | null, sub?: string | null) {
 
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
   const detail = await getProductDetail(params.id)
-  // 중복 방지 조회수 증가 트리거 (비차단)
-  fetch(`${getBaseUrl()}/api/products/${params.id}`, { method: 'POST' }).catch(() => {})
+  // 조회수 증가 트리거는 클라이언트에서 실행 (서버에서 실행 시 식별자 쿠키 부재로 false 가능)
   const p = detail.product
   const relatedRaw = await getRelatedProducts(p.majorCategory, p.subCategory)
   const related = Array.isArray(relatedRaw)
@@ -101,6 +101,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
       />
       {/* Hero 영역 */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ActualViewIncrementer productId={Number(params.id)} />
         <div className="relative w-full aspect-square">
           <Image
             src={p.productImage || '/placeholder.svg'}

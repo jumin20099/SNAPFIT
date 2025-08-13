@@ -53,7 +53,11 @@ export async function POST(
   try {
     const productId = params.id
     const API = process.env.API_BASE_URL || 'http://localhost:8080'
-    const anon = request.cookies.get('anon')?.value
+    let anon = request.cookies.get('anon')?.value || ''
+    if (!anon) {
+      // 익명 ID 발급 (서명 없이 UUID, httpOnly 쿠키로 저장)
+      anon = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string
+    }
     const res = await fetch(`${API}/api/products/${productId}/view`, {
       method: 'POST',
       headers: {
@@ -62,7 +66,18 @@ export async function POST(
       cache: 'no-store',
     })
     const body = await res.text()
-    return new NextResponse(body, { status: res.status })
+    const nextRes = new NextResponse(body, { status: res.status })
+    // anon 쿠키가 없었다면 발급한 값 저장
+    if (!request.cookies.get('anon')?.value && anon) {
+      nextRes.cookies.set('anon', anon, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 365, // 1년
+      })
+    }
+    return nextRes
   } catch (error) {
     console.error('상품 조회수 증가 에러:', error)
     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
