@@ -156,6 +156,7 @@ export default function PartnerProductUploadPage({ isOpen, onClose }: PartnerPro
           ...form,
           productPrice: Number(form.productPrice),
           partnerApplicationId: userInfo?.partner_application_id ? Number(userInfo.partner_application_id) : undefined,
+          storeIdx: userInfo?.store_idx || 4,  // store_idx 추가 (기본값: 주민컴퍼니)
         }),
       })
 

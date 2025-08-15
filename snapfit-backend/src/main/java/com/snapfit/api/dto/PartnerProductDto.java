@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class PartnerProductDto {
     
     private Long id;
+    private Long storeIdx;  // store_idx 필드 추가
     private String productName;
     private String productContent;
     private String productImage;

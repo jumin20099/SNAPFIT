@@ -17,6 +17,9 @@ public class PartnerProduct {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @Column(name = "store_idx", nullable = false)
+    private Long storeIdx;  // store_idx 필드 추가
+    
     @Column(name = "product_name", nullable = false)
     private String productName;
     
@@ -69,23 +72,6 @@ public class PartnerProduct {
     @Column(name = "deactivated_at")
     private LocalDateTime deactivatedAt;
     
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-        if (submittedDate == null) {
-            submittedDate = LocalDateTime.now();
-        }
-        if (status == null) {
-            status = ProductStatus.PENDING;
-        }
-    }
-    
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-    
     // 수정 요청 관련 필드들
     @Column(name = "original_product_name")
     private String originalProductName;
@@ -121,7 +107,7 @@ public class PartnerProduct {
     @Column(name = "update_request_date")
     private LocalDateTime updateRequestDate;
     
-    // 수정 요청 데이터 필드들
+    // 요청된 데이터 필드들
     @Column(name = "requested_product_name")
     private String requestedProductName;
     
@@ -146,10 +132,27 @@ public class PartnerProduct {
     @Column(name = "requested_product_price")
     private Integer requestedProductPrice;
     
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
+        if (submittedDate == null) {
+            submittedDate = LocalDateTime.now();
+        }
+        if (status == null) {
+            status = ProductStatus.PENDING;
+        }
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+    
     public enum ProductStatus {
-        PENDING,    // 대기중
-        APPROVED,   // 승인
-        REJECTED    // 거절
+        PENDING,    // 승인 대기
+        APPROVED,   // 승인됨
+        REJECTED    // 거절됨
     }
     
     public enum UpdateRequestStatus {
