@@ -1,23 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
-  try {
-    // 프론트에서 받은 Authorization 헤더를 백엔드로 전달
-    const authHeader = request.headers.get('authorization') || '';
-    const response = await fetch('http://localhost:8080/api/user/info', {
-      headers: {
-        'Authorization': authHeader,
-      },
-    });
+const API_BASE = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
 
-    if (response.ok) {
-      const userData = await response.json();
-      return NextResponse.json(userData);
-    } else {
-      return NextResponse.json({ role: 'USER' }, { status: 200 });
-    }
+export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get('authorization') || ''
+  try {
+    const response = await fetch(`${API_BASE}/api/user/info`, {
+      headers: {
+        Authorization: authHeader,
+      },
+    })
+
+    // 백엔드의 응답을 그대로 반환
+    const data = await response.json()
+    return NextResponse.json(data, { status: response.status })
+
   } catch (error) {
-    console.error('사용자 정보 가져오기 실패:', error);
-    return NextResponse.json({ role: 'USER' }, { status: 200 });
+    console.error('Failed to get user info:', error)
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    )
   }
-} 
+}

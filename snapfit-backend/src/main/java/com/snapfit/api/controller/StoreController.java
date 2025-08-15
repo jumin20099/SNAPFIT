@@ -21,6 +21,32 @@ public class StoreController {
         return storeRepository.findAll();
     }
 
+    @GetMapping("/{id}/dependencies")
+    public ResponseEntity<?> checkStoreDependencies(@PathVariable Long id) {
+        try {
+            if (!storeRepository.existsById(id)) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "제휴몰을 찾을 수 없습니다."));
+            }
+            
+            // 관련 상품 수 확인 (임시로 0으로 설정, 실제 구현 시 Repository 메서드 추가 필요)
+            long productCount = 0; // productRepository.countByStoreIdx(id);
+            long partnerProductCount = 0; // partnerProductRepository.countByStoreIdx(id);
+            
+            Map<String, Object> dependencies = Map.of(
+                "storeId", id,
+                "productCount", productCount,
+                "partnerProductCount", partnerProductCount,
+                "hasDependencies", (productCount > 0 || partnerProductCount > 0)
+            );
+            
+            return ResponseEntity.ok().body(Map.of("success", true, "data", dependencies));
+        } catch (Exception e) {
+            System.err.println("제휴몰 의존성 확인 중 오류 발생: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "의존성 확인 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/add")
     public ResponseEntity<Store> addStore(@RequestBody StoreDto dto) {
         Store store = Store.builder()
@@ -36,8 +62,20 @@ public class StoreController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteStore(@PathVariable Long id) {
-        storeRepository.deleteById(id);
-        return ResponseEntity.ok().body("제휴몰 삭제 완료");
+        try {
+            // 제휴몰이 존재하는지 먼저 확인
+            if (!storeRepository.existsById(id)) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "제휴몰을 찾을 수 없습니다."));
+            }
+            
+            storeRepository.deleteById(id);
+            return ResponseEntity.ok().body(Map.of("success", true, "message", "제휴몰 삭제 완료"));
+        } catch (Exception e) {
+            // 로깅 추가
+            System.err.println("제휴몰 삭제 중 오류 발생: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "제휴몰 삭제 중 오류가 발생했습니다: " + e.getMessage()));
+        }
     }
 
     @PatchMapping("/{id}/status")

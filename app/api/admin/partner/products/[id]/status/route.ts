@@ -1,47 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+const API_BASE = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
 
-  return NextResponse.json({ 
-    message: 'API Route is working', 
-    productId: params.id,
-    timestamp: new Date().toISOString()
-  })
+export async function GET() {
+  return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405 })
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const authHeader = request.headers.get('authorization') || ''
-    
-    const body = await request.json()
-    
-    const backendUrl = `http://localhost:8080/api/partner/admin/products/${params.id}/status`
-    
-    const response = await fetch(backendUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': authHeader,
-      },
-      body: JSON.stringify(body),
-    })
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  const { id } = params
+  const body = await request.json()
+  const auth = request.headers.get('authorization')
 
-    if (response.ok) {
-      const data = await response.json()
-      return NextResponse.json(data)
-    } else {
-      const errorText = await response.text()
-      return NextResponse.json({ error: errorText }, { status: response.status })
-    }
-  } catch (error) {
-    return NextResponse.json({ 
-      error: `서버 오류: ${error instanceof Error ? error.message : String(error)}` 
-    }, { status: 500 })
-  }
+  const res = await fetch(`${API_BASE}/api/admin/products/${id}/status`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(auth && { Authorization: auth }),
+    },
+    body: JSON.stringify(body),
+  })
+
+  const data = await res.json()
+  return NextResponse.json(data, { status: res.status })
 }

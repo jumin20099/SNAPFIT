@@ -11,7 +11,7 @@ import StoreMallForm from "./store-mall-form"
 import {
   // deleteStoreMall,
 } from "../actions/admin-actions"
-import { getProducts, getStoreMalls, toggleProductStatus, deleteProduct, deleteStoreMall, toggleStoreStatus } from "../actions/admin-client-fetch"
+import { getProducts, getStoreMalls, toggleProductStatus, deleteProduct, deleteStoreMall, toggleStoreStatus, checkStoreDependencies } from "../actions/admin-client-fetch"
 import { getPartnerProducts } from "../actions/admin-actions" // 추가
 
 // 새로운 import 추가
@@ -361,14 +361,49 @@ export default function AdminPage({ isOpen, onClose, userRole }: AdminPageProps)
   }
 
   const handleDeleteMall = async (mallId: number) => {
-    if (confirm('정말로 이 제휴몰을 삭제하시겠습니까?')) {
+    try {
+      // 먼저 의존성 확인
+      let dependencies = null;
       try {
-        const result = await deleteStoreMall(mallId);
-        alert('삭제 성공');
-        loadData();
-      } catch (e: any) {
-        alert(e?.message || '삭제 실패');
+        dependencies = await checkStoreDependencies(mallId);
+      } catch (depError) {
+        console.warn('의존성 확인 실패, 기본 삭제 확인으로 진행:', depError);
+        // 의존성 확인이 실패해도 삭제는 진행할 수 있도록 함
       }
+      
+      if (dependencies && dependencies.success && dependencies.data.hasDependencies) {
+        const confirmMessage = `⚠️ 주의: 이 제휴몰과 관련된 데이터가 있습니다.\n\n` +
+          `- 일반 상품: ${dependencies.data.productCount}개\n` +
+          `- 제휴사 상품: ${dependencies.data.partnerProductCount}개\n\n` +
+          `이 모든 데이터가 함께 삭제됩니다. 정말로 삭제하시겠습니까?`;
+        
+        if (!confirm(confirmMessage)) {
+          return;
+        }
+      } else {
+        if (!confirm('정말로 이 제휴몰을 삭제하시겠습니까?\n\n⚠️ 주의: 이 제휴몰과 관련된 모든 상품과 데이터가 함께 삭제됩니다.')) {
+          return;
+        }
+      }
+      
+      // 삭제 실행
+      const result = await deleteStoreMall(mallId);
+      alert('삭제 성공');
+      loadData();
+    } catch (e: any) {
+      console.error('제휴몰 삭제 에러:', e);
+      let errorMessage = e?.message || '삭제 실패';
+      
+      // 에러 메시지에 따라 사용자 친화적인 메시지 제공
+      if (errorMessage.includes('500') || errorMessage.includes('Internal Server Error')) {
+        errorMessage = '서버 오류가 발생했습니다. 이 제휴몰과 관련된 상품이나 데이터가 있어서 삭제할 수 없을 수 있습니다.';
+      } else if (errorMessage.includes('404')) {
+        errorMessage = '제휴몰을 찾을 수 없습니다.';
+      } else if (errorMessage.includes('403')) {
+        errorMessage = '삭제 권한이 없습니다.';
+      }
+      
+      alert(`삭제 실패: ${errorMessage}`);
     }
   };
 

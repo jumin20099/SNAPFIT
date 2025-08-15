@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+const API_BASE = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
+
 export async function GET(request: NextRequest) {
   try {
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080'
     const authorization = request.headers.get('authorization')
     
-    const response = await fetch(`${backendUrl}/api/partner/application`, {
+    const response = await fetch(`${API_BASE}/api/partner/application`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -14,7 +15,6 @@ export async function GET(request: NextRequest) {
     })
 
     if (response.status === 404) {
-      // 신청이 없는 경우 null 반환
       return NextResponse.json(null)
     }
 
@@ -22,7 +22,6 @@ export async function GET(request: NextRequest) {
       throw new Error(`Backend responded with status: ${response.status}`)
     }
 
-    // 빈 응답인 경우 null 반환
     const contentLength = response.headers.get('content-length')
     if (contentLength === '0') {
       return NextResponse.json(null)
@@ -40,18 +39,18 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get('authorization') || '';
-  const body = await req.text();
+  const authHeader = req.headers.get('authorization') || ''
+  const body = await req.text()
 
-  const response = await fetch('http://localhost:8080/api/partner/application', {
+  const response = await fetch(`${API_BASE}/api/partner/application`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': authHeader,
     },
     body,
-  });
+  })
 
-  const data = await response.json();
-  return NextResponse.json(data, { status: response.status });
-} 
+  const data = await response.json()
+  return NextResponse.json(data, { status: response.status })
+}

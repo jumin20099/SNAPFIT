@@ -62,6 +62,22 @@ export async function toggleProductStatus(productId: number, isActive: boolean) 
   return res.json();
 }
 
+export async function checkStoreDependencies(storeId: number) {
+  if (typeof window === "undefined") {
+    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
+  }
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/admin/stores/${storeId}/dependencies`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  
+  if (!res.ok) {
+    throw new Error("의존성 확인 실패");
+  }
+  
+  return res.json();
+}
+
 export async function deleteStoreMall(mallId: number) {
   if (typeof window === "undefined") {
     throw new Error("클라이언트 환경에서만 사용 가능합니다.");
@@ -71,7 +87,27 @@ export async function deleteStoreMall(mallId: number) {
     method: "DELETE",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-  if (!res.ok) throw new Error("제휴몰 삭제 실패");
+  
+  if (!res.ok) {
+    // 에러 응답의 본문을 읽어서 더 자세한 에러 정보 제공
+    let errorMessage = "제휴몰 삭제 실패";
+    try {
+      const errorBody = await res.text();
+      if (errorBody) {
+        try {
+          const errorJson = JSON.parse(errorBody);
+          errorMessage = errorJson.message || errorMessage;
+        } catch {
+          errorMessage = errorBody || errorMessage;
+        }
+      }
+    } catch {
+      // 에러 본문을 읽을 수 없는 경우 기본 메시지 사용
+    }
+    
+    throw new Error(`${errorMessage} (HTTP ${res.status})`);
+  }
+  
   const text = await res.text();
   if (!text) return;
   try {
