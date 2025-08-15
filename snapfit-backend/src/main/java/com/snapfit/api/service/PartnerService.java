@@ -78,6 +78,15 @@ public class PartnerService {
         application.setStoreLink(dto.getStoreLink());
         application.setRoyaltyRate(dto.getRoyaltyRate());
         application.setStatus(PartnerApplication.ApplicationStatus.PENDING);
+        
+        // 4) Store 생성 및 store_idx 설정
+        Store store = new Store();
+        store.setStoreName(dto.getCompanyName());
+        store.setStoreLink(dto.getStoreLink());
+        store.setRoyaltyRate(dto.getRoyaltyRate());
+        store.setContact(dto.getContactEmail());
+        Store savedStore = storeRepository.save(store);
+        application.setStoreIdx(savedStore.getStoreIdx());
 
         PartnerApplication saved = partnerApplicationRepository.save(application);
         return convertToDto(saved);
@@ -108,14 +117,46 @@ public class PartnerService {
     
     // 상품 등록
     public PartnerProductDto submitProduct(PartnerProductDto dto) {
+        // 1) 인증 사용자 확인
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
+            throw new org.springframework.security.access.AccessDeniedException("로그인 필요");
+        }
+
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException("사용자 정보 없음"));
+
+        // 2) 사용자의 PartnerApplication 조회
+        List<PartnerApplication> applications = partnerApplicationRepository.findByUserIdx(user.getUserIdx());
+        PartnerApplication application = applications.stream()
+                .filter(app -> app.getStatus() == PartnerApplication.ApplicationStatus.APPROVED)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("승인된 제휴사 신청이 없습니다."));
+
+        // 3) PartnerApplication에서 store_idx 가져오기
+        if (application.getStoreIdx() == null) {
+            throw new IllegalStateException("제휴사 신청에 스토어 정보가 없습니다.");
+        }
+
         PartnerProduct product = new PartnerProduct();
+        product.setStoreIdx(application.getStoreIdx());  // store_idx 설정
         product.setProductName(dto.getProductName());
         product.setProductContent(dto.getProductContent());
         product.setProductImage(dto.getProductImage());
         product.setProductLink(dto.getProductLink());
-        product.setProductCategory(dto.getProductCategory());
+        
+        // product_category를 major_category로 설정 (null이 아닌 경우)
+        if (dto.getProductCategory() != null && !dto.getProductCategory().trim().isEmpty()) {
+            product.setProductCategory(dto.getProductCategory());
+        } else if (dto.getMajorCategory() != null && !dto.getMajorCategory().trim().isEmpty()) {
+            product.setProductCategory(dto.getMajorCategory());
+        } else {
+            product.setProductCategory("기타"); // 기본값 설정
+        }
+        
         product.setProductPrice(dto.getProductPrice());
-        product.setPartnerApplicationId(dto.getPartnerApplicationId());
+        product.setPartnerApplicationId(application.getId());
         product.setStatus(PartnerProduct.ProductStatus.PENDING);
         product.setGenderCategory(dto.getGenderCategory());
         product.setMajorCategory(dto.getMajorCategory());
@@ -133,35 +174,22 @@ public class PartnerService {
                 .collect(Collectors.toList());
     }
     
-    // 상품 수정 요청
+    // 상품 수정 (단순 업데이트)
     public PartnerProductDto updateProduct(Long id, PartnerProductDto dto) {
         Optional<PartnerProduct> existing = partnerProductRepository.findById(id);
         if (existing.isPresent()) {
             PartnerProduct product = existing.get();
             
-            // 현재 데이터를 원본 데이터로 백업 (항상 현재 상태를 원본으로 저장)
-            product.setOriginalProductName(product.getProductName());
-            product.setOriginalProductContent(product.getProductContent());
-            product.setOriginalProductImage(product.getProductImage());
-            product.setOriginalProductLink(product.getProductLink());
-            product.setOriginalGenderCategory(product.getGenderCategory());
-            product.setOriginalMajorCategory(product.getMajorCategory());
-            product.setOriginalSubCategory(product.getSubCategory());
-            product.setOriginalProductPrice(product.getProductPrice());
-            
-            // 수정 요청 데이터를 별도 필드에 저장
-            product.setRequestedProductName(dto.getProductName());
-            product.setRequestedProductContent(dto.getProductContent());
-            product.setRequestedProductImage(dto.getProductImage());
-            product.setRequestedProductLink(dto.getProductLink());
-            product.setRequestedGenderCategory(dto.getGenderCategory());
-            product.setRequestedMajorCategory(dto.getMajorCategory());
-            product.setRequestedSubCategory(dto.getSubCategory());
-            product.setRequestedProductPrice(dto.getProductPrice());
-            
-            // 수정 요청 상태로 변경
-            product.setUpdateRequestStatus(PartnerProduct.UpdateRequestStatus.PENDING_UPDATE);
-            product.setUpdateRequestDate(LocalDateTime.now());
+            // 상품 정보 직접 업데이트
+            product.setProductName(dto.getProductName());
+            product.setProductContent(dto.getProductContent());
+            product.setProductImage(dto.getProductImage());
+            product.setProductLink(dto.getProductLink());
+            product.setGenderCategory(dto.getGenderCategory());
+            product.setMajorCategory(dto.getMajorCategory());
+            product.setSubCategory(dto.getSubCategory());
+            product.setProductPrice(dto.getProductPrice());
+            product.setProductCategory(dto.getProductCategory());
             
             PartnerProduct saved = partnerProductRepository.save(product);
             return convertToProductDto(saved);
@@ -308,30 +336,7 @@ public class PartnerService {
         dto.setMajorCategory(product.getMajorCategory());
         dto.setSubCategory(product.getSubCategory());
         
-        // 수정 요청 관련 필드들 매핑
-        dto.setUpdateRequestStatus(product.getUpdateRequestStatus() != null ? product.getUpdateRequestStatus().name() : null);
-        dto.setUpdateRequestReason(product.getUpdateRequestReason());
-        dto.setUpdateRequestDate(product.getUpdateRequestDate());
-        
-        // 원본 데이터 필드들 매핑
-        dto.setOriginalProductName(product.getOriginalProductName());
-        dto.setOriginalProductContent(product.getOriginalProductContent());
-        dto.setOriginalProductImage(product.getOriginalProductImage());
-        dto.setOriginalProductLink(product.getOriginalProductLink());
-        dto.setOriginalGenderCategory(product.getOriginalGenderCategory());
-        dto.setOriginalMajorCategory(product.getOriginalMajorCategory());
-        dto.setOriginalSubCategory(product.getOriginalSubCategory());
-        dto.setOriginalProductPrice(product.getOriginalProductPrice());
-        
-        // 수정 요청 데이터 필드들 매핑
-        dto.setRequestedProductName(product.getRequestedProductName());
-        dto.setRequestedProductContent(product.getRequestedProductContent());
-        dto.setRequestedProductImage(product.getRequestedProductImage());
-        dto.setRequestedProductLink(product.getRequestedProductLink());
-        dto.setRequestedGenderCategory(product.getRequestedGenderCategory());
-        dto.setRequestedMajorCategory(product.getRequestedMajorCategory());
-        dto.setRequestedSubCategory(product.getRequestedSubCategory());
-        dto.setRequestedProductPrice(product.getRequestedProductPrice());
+
         
         // products 테이블의 뷰 카운트 조회(승인되어 products에 존재할 때만)
         try {
@@ -541,111 +546,49 @@ public class PartnerService {
         return true;
     }
     
-    // 수정 요청 승인
-    public PartnerProductDto approveUpdateRequest(Long id) {
+
+    
+    // 상품 승인
+    public void approveProduct(Long id) {
         Optional<PartnerProduct> existing = partnerProductRepository.findById(id);
         if (existing.isPresent()) {
-            PartnerProduct product = existing.get();
+            PartnerProduct partnerProduct = existing.get();
+            partnerProduct.setStatus(PartnerProduct.ProductStatus.APPROVED);
+            partnerProductRepository.save(partnerProduct);
             
-            if (product.getUpdateRequestStatus() != PartnerProduct.UpdateRequestStatus.PENDING_UPDATE) {
-                throw new IllegalStateException("승인 대기 중인 수정 요청이 아닙니다.");
-            }
+            // 승인된 상품을 products 테이블로 이동
+            Product product = Product.builder()
+                    .storeIdx(partnerProduct.getStoreIdx())
+                    .productName(partnerProduct.getProductName())
+                    .productContent(partnerProduct.getProductContent())
+                    .productPrice(partnerProduct.getProductPrice())
+                    .productImage(partnerProduct.getProductImage())
+                    .productCategory(partnerProduct.getProductCategory())
+                    .genderCategory(partnerProduct.getGenderCategory())
+                    .majorCategory(partnerProduct.getMajorCategory())
+                    .subCategory(partnerProduct.getSubCategory())
+                    .productLink(partnerProduct.getProductLink())
+                    .isActive(true)
+                    .viewCount(0L)
+                    .actualViewCount(0L)
+                    .build();
             
-            // 수정 요청 데이터를 실제 상품 데이터로 적용
-            product.setProductName(product.getRequestedProductName());
-            product.setProductContent(product.getRequestedProductContent());
-            product.setProductImage(product.getRequestedProductImage());
-            product.setProductLink(product.getRequestedProductLink());
-            product.setGenderCategory(product.getRequestedGenderCategory());
-            product.setMajorCategory(product.getRequestedMajorCategory());
-            product.setSubCategory(product.getRequestedSubCategory());
-            product.setProductPrice(product.getRequestedProductPrice());
-            
-            // 수정 요청 승인 상태로 변경
-            product.setUpdateRequestStatus(PartnerProduct.UpdateRequestStatus.APPROVED_UPDATE);
-            
-            PartnerProduct saved = partnerProductRepository.save(product);
-            return convertToProductDto(saved);
+            productRepository.save(product);
+        } else {
+            throw new IllegalStateException("상품을 찾을 수 없습니다.");
         }
-        return null;
     }
     
-    // 수정 요청 거절
-    public PartnerProductDto rejectUpdateRequest(Long id, String rejectionReason) {
+    // 상품 거절
+    public void rejectProduct(Long id, String rejectionReason) {
         Optional<PartnerProduct> existing = partnerProductRepository.findById(id);
         if (existing.isPresent()) {
             PartnerProduct product = existing.get();
-            
-            if (product.getUpdateRequestStatus() != PartnerProduct.UpdateRequestStatus.PENDING_UPDATE) {
-                throw new IllegalStateException("승인 대기 중인 수정 요청이 아닙니다.");
-            }
-            
-            // 원본 데이터로 복원
-            product.setProductName(product.getOriginalProductName());
-            product.setProductContent(product.getOriginalProductContent());
-            product.setProductImage(product.getOriginalProductImage());
-            product.setProductLink(product.getOriginalProductLink());
-            product.setGenderCategory(product.getOriginalGenderCategory());
-            product.setMajorCategory(product.getOriginalMajorCategory());
-            product.setSubCategory(product.getOriginalSubCategory());
-            product.setProductPrice(product.getOriginalProductPrice());
-            
-            // 수정 요청 거절 상태로 변경
-            product.setUpdateRequestStatus(PartnerProduct.UpdateRequestStatus.REJECTED_UPDATE);
+            product.setStatus(PartnerProduct.ProductStatus.REJECTED);
             product.setRejectionReason(rejectionReason);
-            
-            PartnerProduct saved = partnerProductRepository.save(product);
-            return convertToProductDto(saved);
+            partnerProductRepository.save(product);
+        } else {
+            throw new IllegalStateException("상품을 찾을 수 없습니다.");
         }
-        return null;
-    }
-    
-    // 수정 요청 취소
-    public PartnerProductDto cancelUpdateRequest(Long id) {
-        Optional<PartnerProduct> existing = partnerProductRepository.findById(id);
-        if (existing.isPresent()) {
-            PartnerProduct product = existing.get();
-            
-            if (product.getUpdateRequestStatus() != PartnerProduct.UpdateRequestStatus.PENDING_UPDATE) {
-                throw new IllegalStateException("취소할 수정 요청이 없습니다.");
-            }
-            
-            // 수정 요청 데이터 초기화
-            product.setRequestedProductName(null);
-            product.setRequestedProductContent(null);
-            product.setRequestedProductImage(null);
-            product.setRequestedProductLink(null);
-            product.setRequestedGenderCategory(null);
-            product.setRequestedMajorCategory(null);
-            product.setRequestedSubCategory(null);
-            product.setRequestedProductPrice(null);
-            
-            // 원본 데이터도 초기화 (다음 수정 요청을 위해)
-            product.setOriginalProductName(null);
-            product.setOriginalProductContent(null);
-            product.setOriginalProductImage(null);
-            product.setOriginalProductLink(null);
-            product.setOriginalGenderCategory(null);
-            product.setOriginalMajorCategory(null);
-            product.setOriginalSubCategory(null);
-            product.setOriginalProductPrice(null);
-            
-            // 수정 요청 상태 초기화
-            product.setUpdateRequestStatus(PartnerProduct.UpdateRequestStatus.NO_UPDATE);
-            product.setUpdateRequestReason(null);
-            product.setUpdateRequestDate(null);
-            
-            PartnerProduct saved = partnerProductRepository.save(product);
-            return convertToProductDto(saved);
-        }
-        return null;
-    }
-    
-    // 수정 요청 목록 조회
-    public List<PartnerProductDto> getUpdateRequests() {
-        List<PartnerProduct> products = partnerProductRepository.findByUpdateRequestStatus(PartnerProduct.UpdateRequestStatus.PENDING_UPDATE);
-        return products.stream()
-                .map(this::convertToProductDto)
-                .collect(Collectors.toList());
     }
 } 

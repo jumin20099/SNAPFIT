@@ -45,6 +45,9 @@ public class PartnerApplication {
     @Column(name = "user_idx")
     private UUID userIdx;
     
+    @Column(name = "store_idx")
+    private Long storeIdx;
+    
     @Column(name = "application_date")
     private LocalDateTime applicationDate;
     
