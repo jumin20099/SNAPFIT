@@ -5,8 +5,8 @@
 ### 데이터베이스 & 백엔드 기반
 - [x] V20__community_core.sql 마이그레이션 파일 생성
 - [x] Post.java 엔티티 클래스 생성 (posts 테이블)
-- [ ] Scrap.java 엔티티 클래스 생성 (scraps 테이블)
-- [ ] Follow.java 엔티티 클래스 생성 (follows 테이블)
+- [x] Scrap.java 엔티티 클래스 생성 (scraps 테이블)
+- [x] Follow.java 엔티티 클래스 생성 (follows 테이블)
 - [x] Tag.java 엔티티 클래스 생성 (tags 테이블)
 - [x] Comment.java 엔티티 클래스 생성 (comments 테이블)
 - [ ] Notification.java 엔티티 클래스 생성 (notifications 테이블)
