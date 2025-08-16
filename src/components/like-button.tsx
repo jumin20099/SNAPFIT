@@ -1,6 +1,5 @@
 "use client"
 import { Heart, HeartOff } from 'lucide-react';
-import { useToggleLike } from '@/hooks/useToggleLike';
 import { useEffect, useState } from 'react';
 
 interface LikeButtonProps {
@@ -11,20 +10,16 @@ interface LikeButtonProps {
 }
 
 export default function LikeButton({ targetIdx, targetType, initialLiked, initialCount }: LikeButtonProps) {
-  const [actualLiked, setActualLiked] = useState(initialLiked);
-  const [actualCount, setActualCount] = useState(initialCount);
+  const [liked, setLiked] = useState(initialLiked);
+  const [count, setCount] = useState(initialCount);
+  const [loading, setLoading] = useState(false);
   
-  // 컴포넌트 마운트 시 실제 좋아요 상태 확인
+  // 컴포넌트 마운트 시에만 실제 좋아요 상태 확인
   useEffect(() => {
     const checkActualLikeStatus = async () => {
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        if (!token) return;
-        
         const response = await fetch('/api/likes/my', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          credentials: 'include',
         });
         
         if (response.ok) {
@@ -33,8 +28,9 @@ export default function LikeButton({ targetIdx, targetType, initialLiked, initia
             like.targetIdx === targetIdx && like.targetType === targetType.toUpperCase()
           );
           
-          if (isLiked !== actualLiked) {
-            setActualLiked(isLiked);
+          // 초기 상태와 다를 때만 업데이트
+          if (isLiked !== initialLiked) {
+            setLiked(isLiked);
           }
         }
       } catch (error) {
@@ -43,24 +39,47 @@ export default function LikeButton({ targetIdx, targetType, initialLiked, initia
     };
     
     checkActualLikeStatus();
-  }, [targetIdx, targetType, actualLiked]);
+  }, [targetIdx, targetType, initialLiked]);
 
-  const { liked, count, loading, toggle } = useToggleLike({
-    initialLiked: actualLiked,
-    initialCount: actualCount,
-    targetIdx,
-    targetType,
-  });
-
-  // 좋아요 상태가 변경되면 로컬 상태도 업데이트
-  useEffect(() => {
-    if (liked !== actualLiked) {
-      setActualLiked(liked);
+  const toggle = async () => {
+    if (loading) return;
+    
+    // optimistic update
+    const newLiked = !liked;
+    setLiked(newLiked);
+    setCount(newLiked ? count + 1 : count - 1);
+    setLoading(true);
+    
+    try {
+      const params = new URLSearchParams({ 
+        targetIdx: String(targetIdx), 
+        targetType: targetType 
+      });
+      
+      const response = await fetch('/api/likes/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        credentials: 'include',
+        body: params
+      });
+      
+      if (!response.ok) throw new Error('좋아요 토글 실패');
+      
+      const data = await response.json();
+      // 서버 응답으로 상태 동기화
+      setLiked(data.liked);
+      setCount(data.count);
+    } catch (error) {
+      console.error('좋아요 토글 실패:', error);
+      // rollback
+      setLiked(!newLiked);
+      setCount(newLiked ? count - 1 : count + 1);
+    } finally {
+      setLoading(false);
     }
-    if (count !== actualCount) {
-      setActualCount(count);
-    }
-  }, [liked, count, actualLiked, actualCount]);
+  };
 
   return (
     <button

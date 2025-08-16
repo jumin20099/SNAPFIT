@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface ToggleLikeOptions {
   initialLiked: boolean;
@@ -13,8 +13,17 @@ export function useToggleLike({ initialLiked, initialCount, targetIdx, targetTyp
   const [count, setCount] = useState(initialCount);
   const [loading, setLoading] = useState(false);
 
+  // initialLiked와 initialCount가 변경될 때 상태 업데이트
+  useEffect(() => {
+    setLiked(initialLiked);
+    setCount(initialCount);
+  }, [initialLiked, initialCount]);
+
   const toggle = async () => {
     if (loading) return;
+    
+    console.log('useToggleLike: 토글 시작', { liked, count, targetIdx, targetType });
+    
     // optimistic
     setLiked((prev) => !prev);
     setCount((prev) => (liked ? prev - 1 : prev + 1));
@@ -23,27 +32,25 @@ export function useToggleLike({ initialLiked, initialCount, targetIdx, targetTyp
     try {
       const params = new URLSearchParams({ targetIdx: String(targetIdx), targetType });
       
-      // Authorization 헤더 가져오기
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      };
-      
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      console.log('useToggleLike: API 호출', { targetIdx, targetType });
       
       const res = await fetch(`/api/likes/toggle`, { 
         method: 'POST',
-        headers,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        credentials: 'include', // 쿠키 자동 전달
         body: params
       });
       
       if (!res.ok) throw new Error('like failed');
       const data = await res.json();
+      console.log('useToggleLike: API 응답', data);
+      
       setLiked(data.liked);
       setCount(data.count);
     } catch (e) {
+      console.error('useToggleLike: 에러 발생', e);
       // rollback
       setLiked((prev) => !prev);
       setCount((prev) => (liked ? prev + 1 : prev - 1));

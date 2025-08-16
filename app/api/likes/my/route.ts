@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   try {
+    // 쿠키에서 토큰 읽기 (SSR에서 사용)
+    const cookieStore = cookies()
+    const cookieToken = cookieStore.get('auth_token')?.value
+    
+    // 헤더에서 토큰 읽기 (클라이언트에서 사용)
+    const headerToken = request.headers.get('authorization') || request.headers.get('Authorization') || ''
+    
+    // 쿠키 토큰이 있으면 사용, 없으면 헤더 토큰 사용
+    const authToken = cookieToken || headerToken.replace('Bearer ', '')
+
     // 백엔드 API 호출
     const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080'
     const response = await fetch(`${API_BASE_URL}/api/likes/my`, {
       method: 'GET',
       headers: {
-        'Authorization': request.headers.get('Authorization') || '',
-      }
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+      credentials: 'include', // 쿠키 전달을 위해 필요
     })
 
     if (!response.ok) {
@@ -16,14 +28,8 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
-    // 백엔드에서 Like 엔티티 리스트를 내려주므로 PRODUCT 타입만 골라 productId 배열로 변환해서 반환
-    const productIds: number[] = Array.isArray(data)
-      ? data
-          .filter((like: any) => like?.targetType === 'PRODUCT')
-          .map((like: any) => like?.targetIdx)
-          .filter((id: any) => typeof id === 'number')
-      : []
-    return NextResponse.json(productIds)
+    // Like 엔티티 전체를 그대로 반환 (백엔드와 일관성 유지)
+    return NextResponse.json(data)
   } catch (error) {
     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
   }
