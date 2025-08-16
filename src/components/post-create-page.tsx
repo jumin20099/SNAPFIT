@@ -129,7 +129,8 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
   }
 
   const handleEditorInput = (e: React.FormEvent<HTMLDivElement>) => {
-    setIsEmpty(e.currentTarget.textContent === "");
+    const textContent = e.currentTarget.textContent;
+    setIsEmpty(!textContent || textContent.trim() === "");
     handleEditorChange(); // 기존 함수도 호출
   };
 
@@ -321,12 +322,11 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
             <div
               ref={editorRef}
               contentEditable
-              className="min-h-[300px] p-4 focus:outline-none"
+              className="min-h-[300px] p-4 focus:outline-none [&:empty:before]:content-[attr(data-placeholder)] [&:empty:before]:text-gray-400 [&:empty:before]:pointer-events-none"
               onInput={handleEditorInput}
               suppressContentEditableWarning
-            >
-              {isEmpty && <span className="placeholder">{placeholder}</span>}
-            </div>
+              data-placeholder={placeholder}
+            />
           </div>
 
           {/* 드래그 앤 드롭 영역 */}
