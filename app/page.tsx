@@ -127,7 +127,56 @@ export default function SnapFitMobile() {
   const [isProductDetailOpen, setIsProductDetailOpen] = useState(false)
   const [codyItems, setCodyItems] = useState<{ [key: string]: any }>({})
   // 좋아요된 상품 ID 집합 (카테고리/검색 목록 하트 표시용)
-  const [likedProductIds, setLikedProductIds] = useState<Set<number>>(new Set())
+  const [likedProductIds, setLikedProductIds] = useState<Set<number>>(() => {
+    // 로컬 스토리지에서 좋아요 상태 복원
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('likedProductIds')
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved)
+          return new Set(parsed)
+        } catch (e) {
+          console.error('좋아요 상태 복원 실패:', e)
+        }
+      }
+    }
+    return new Set()
+  })
+
+  // 좋아요 상태를 로컬 스토리지에 저장하는 함수
+  const saveLikedProductIds = (newLikedIds: Set<number>) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('likedProductIds', JSON.stringify(Array.from(newLikedIds)))
+    }
+  }
+
+  // 페이지 로드 시 좋아요 상태 복원
+  useEffect(() => {
+    const fetchLikedStatus = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (token) {
+          const response = await fetch('/api/likes/my', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          if (response.ok) {
+            const data = await response.json()
+            console.log('좋아요 상태 복원 데이터:', data) // 디버깅용
+            const likedIds: Set<number> = new Set(data)
+            console.log('좋아요 상태 복원된 ID들:', Array.from(likedIds)) // 디버깅용
+            setLikedProductIds(likedIds)
+            saveLikedProductIds(likedIds)
+          }
+        }
+      } catch (error) {
+        console.error('좋아요 상태 복원 실패:', error)
+      }
+    }
+
+    fetchLikedStatus()
+  }, [])
 
   // 검색 기능
   const performSearch = async (query: string) => {
@@ -330,7 +379,15 @@ export default function SnapFitMobile() {
   }
 
   const handleViewProductDetail = (product: any) => {
-    setSelectedProduct(product)
+    // 현재 좋아요 상태를 확인하여 상품 정보에 포함
+    const productId = product.productIdx || product.id
+    const isLiked = productId ? likedProductIds.has(productId) : false
+    console.log('상품 상세 열기 - 상품ID:', productId, '좋아요 상태:', isLiked, '전체 좋아요 ID들:', Array.from(likedProductIds)) // 디버깅용
+    const productWithLikeStatus = {
+      ...product,
+      liked: isLiked
+    }
+    setSelectedProduct(productWithLikeStatus)
     setIsProductDetailOpen(true)
   }
 
@@ -385,6 +442,8 @@ export default function SnapFitMobile() {
         setLikedProductIds((prev: Set<number>) => {
           const next = new Set(prev)
           if (data?.liked) next.add(productId); else next.delete(productId)
+          // 로컬 스토리지에 저장
+          saveLikedProductIds(next)
           return next
         })
         // 좋아요 상태 업데이트 (mockProducts 영역)
@@ -393,6 +452,13 @@ export default function SnapFitMobile() {
             product.id === productId ? { ...product, liked: !!data?.liked } : product
           )
         )
+        // 상세페이지 열려있고 같은 상품이면 동기화
+        setSelectedProduct((prev: any) => {
+          if (prev && (prev.productIdx === productId || prev.id === productId)) {
+            return { ...prev, liked: !!data?.liked }
+          }
+          return prev
+        })
       }
     } catch (error) {
       console.error('좋아요 토글 실패:', error)
@@ -421,11 +487,19 @@ export default function SnapFitMobile() {
           )
         )
         // 상세페이지 열려있고 같은 상품이면 동기화
-        setSelectedProduct((prev: any) => prev && prev.productIdx === productId ? { ...prev, liked: likedNow } : prev)
+        setSelectedProduct((prev: any) => {
+          if (prev && (prev.productIdx === productId || prev.id === productId)) {
+            return { ...prev, liked: likedNow }
+          }
+          return prev
+        })
         // liked ID 집합 업데이트
         setLikedProductIds((prev: Set<number>) => {
           const next = new Set(prev)
           if (likedNow) next.add(productId); else next.delete(productId)
+          console.log('좋아요 상태 업데이트 - 상품ID:', productId, '새로운 상태:', likedNow, '전체 좋아요 ID들:', Array.from(next)) // 디버깅용
+          // 로컬 스토리지에 저장
+          saveLikedProductIds(next)
           return next
         })
         // 좋아요 탭에서 롤백

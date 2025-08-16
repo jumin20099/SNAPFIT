@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +37,15 @@ export async function POST(request: NextRequest) {
       targetType = 'PRODUCT'
     }
 
-    const authorization = request.headers.get('authorization')
+    // 쿠키에서 토큰 읽기 (SSR에서 사용)
+    const cookieStore = cookies()
+    const cookieToken = cookieStore.get('auth_token')?.value
+    
+    // 헤더에서 토큰 읽기 (클라이언트에서 사용)
+    const headerToken = request.headers.get('authorization') || request.headers.get('Authorization') || ''
+    
+    // 쿠키 토큰이 있으면 사용, 없으면 헤더 토큰 사용
+    const authToken = cookieToken || headerToken.replace('Bearer ', '')
 
     // 백엔드가 @RequestParam을 기대하므로 x-www-form-urlencoded로 전달
     const body = new URLSearchParams({
@@ -49,8 +58,9 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        ...(authorization && { Authorization: authorization }),
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       },
+      credentials: 'include', // 쿠키 전달을 위해 필요
       body: body.toString(),
     })
 
