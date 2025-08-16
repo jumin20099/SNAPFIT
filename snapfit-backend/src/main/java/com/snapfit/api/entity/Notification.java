@@ -22,9 +22,9 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "notifications", indexes = {
-    @Index(name = "idx_notifications_user_id", columnList = "user_id, created_at DESC"),
-    @Index(name = "idx_notifications_unread", columnList = "user_id, is_read") WHERE is_read = false,
-    @Index(name = "idx_notifications_type", columnList = "type, created_at DESC")
+    @Index(name = "idx_notifications_user_id", columnList = "user_id, created_at"),
+    @Index(name = "idx_notifications_unread", columnList = "user_id, is_read"),
+    @Index(name = "idx_notifications_type", columnList = "type, created_at")
 })
 @EntityListeners(AuditingEntityListener.class)
 @Getter
@@ -79,7 +79,6 @@ public class Notification {
      * 알림 페이로드 (JSON 형태)
      * 보안: 페이로드 크기 제한 및 검증
      */
-    @Type(org.hibernate.type.JsonType.class)
     @Column(name = "payload_json", columnDefinition = "jsonb")
     private String payloadJson;
 

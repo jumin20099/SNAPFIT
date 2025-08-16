@@ -30,7 +30,7 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 @ToString(exclude = {"follower", "followee"})
-@EqualsAndHashCode(of = {"followerId", "followeeId"})
+@EqualsAndHashCode(of = "id")
 public class Follow {
 
     /**

@@ -30,7 +30,7 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 @ToString(exclude = {"user", "post"})
-@EqualsAndHashCode(of = {"userId", "postId"})
+@EqualsAndHashCode(of = "id")
 public class Scrap {
 
     /**

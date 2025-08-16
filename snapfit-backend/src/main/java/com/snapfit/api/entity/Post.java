@@ -113,6 +113,7 @@ public class Post {
     )
     @Column(name = "media_url", length = 500)
     @Size(max = 10, message = "미디어는 최대 10개까지 업로드 가능합니다")
+    @Builder.Default
     private Set<String> mediaUrls = new HashSet<>();
 
     /**
@@ -190,6 +191,7 @@ public class Post {
         }
     )
     @JsonIgnore
+    @Builder.Default
     private Set<Tag> tags = new HashSet<>();
 
     /**
@@ -211,6 +213,7 @@ public class Post {
     @OneToMany(mappedBy = "post", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt ASC")
     @JsonIgnore
+    @Builder.Default
     private List<Comment> comments = new ArrayList<>();
 
     /**

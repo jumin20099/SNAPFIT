@@ -72,6 +72,7 @@ public class Tag {
      */
     @ManyToMany(mappedBy = "tags", fetch = FetchType.LAZY)
     @JsonIgnore
+    @Builder.Default
     private Set<Post> posts = new HashSet<>();
 
     /**

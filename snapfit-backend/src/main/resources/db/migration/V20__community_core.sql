@@ -97,12 +97,8 @@ CREATE TABLE IF NOT EXISTS comments (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     
-    -- 보안: 댓글 내용 길이 제한 및 부모 댓글 참조 무결성
-    CONSTRAINT comments_content_length_check CHECK (length(trim(content)) > 0),
-    CONSTRAINT comments_parent_author_check CHECK (
-        parent_id IS NULL OR 
-        EXISTS (SELECT 1 FROM comments c WHERE c.comment_id = parent_id AND c.post_id = post_id)
-    )
+          -- 보안: 댓글 내용 길이 제한
+      CONSTRAINT comments_content_length_check CHECK (length(trim(content)) > 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id, created_at ASC);

@@ -147,6 +147,7 @@ public class Comment {
     @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt ASC")
     @JsonIgnore
+    @Builder.Default
     private List<Comment> replies = new ArrayList<>();
 
     /**

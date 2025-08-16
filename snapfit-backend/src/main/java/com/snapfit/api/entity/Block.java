@@ -31,7 +31,7 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
 @ToString(exclude = {"blocker", "blockedUser"})
-@EqualsAndHashCode(of = {"blockerId", "blockedUserId"})
+@EqualsAndHashCode(of = "id")
 public class Block {
 
     /**
@@ -250,7 +250,7 @@ public class Block {
     @JsonProperty("impact_level")
     @Transient
     public String getImpactLevel() {
-        long duration = getBlockDurationDays();
+        Long duration = getBlockDurationDays();
         
         if (duration == null) return "UNKNOWN";
         
