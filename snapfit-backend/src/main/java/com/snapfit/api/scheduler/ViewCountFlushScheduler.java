@@ -2,6 +2,8 @@ package com.snapfit.api.scheduler;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,13 +17,21 @@ import java.util.Set;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnBean(RedisTemplate.class)
 public class ViewCountFlushScheduler {
 
-    private final RedisTemplate<String, Long> redisTemplate;
     private final JdbcTemplate jdbcTemplate;
+    
+    // RedisTemplate을 조건부로 주입
+    @Autowired(required = false)
+    private RedisTemplate<String, Long> redisTemplate;
 
     @Scheduled(fixedRate = 60_000)
     public void flushViewCounts() {
+        if (redisTemplate == null) {
+            return; // Redis가 없으면 스케줄링 생략
+        }
+        
         // live 키는 누적 반영 대상이 아님 (실시간 세션 용도)
         Set<String> keys = redisTemplate.keys("product:*:views");
         if (keys == null || keys.isEmpty()) return;
