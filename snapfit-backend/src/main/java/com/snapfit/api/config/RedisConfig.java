@@ -7,8 +7,10 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericToStringSerializer;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Configuration
+@ConditionalOnProperty(name = "spring.data.redis.host")
 public class RedisConfig {
 
     @Value("${spring.data.redis.host}")
