@@ -164,7 +164,15 @@ export default function SnapFitMobile() {
           if (response.ok) {
             const data = await response.json()
             console.log('좋아요 상태 복원 데이터:', data) // 디버깅용
-            const likedIds: Set<number> = new Set(data)
+            // Like 엔티티에서 PRODUCT 타입의 targetIdx만 추출
+            const likedIds: Set<number> = new Set(
+              Array.isArray(data) 
+                ? data
+                    .filter((like: any) => like?.targetType === 'PRODUCT')
+                    .map((like: any) => Number(like?.targetIdx))
+                    .filter((id: any) => !isNaN(id))
+                : []
+            )
             console.log('좋아요 상태 복원된 ID들:', Array.from(likedIds)) // 디버깅용
             setLikedProductIds(likedIds)
             saveLikedProductIds(likedIds)
@@ -257,7 +265,14 @@ export default function SnapFitMobile() {
         }
       })
       if (res.ok) {
-        const ids: number[] = await res.json()
+        const data = await res.json()
+        // Like 엔티티에서 PRODUCT 타입의 targetIdx만 추출
+        const ids: number[] = Array.isArray(data) 
+          ? data
+              .filter((like: any) => like?.targetType === 'PRODUCT')
+              .map((like: any) => Number(like?.targetIdx))
+              .filter((id: any) => !isNaN(id))
+          : []
         setLikedProductIds(new Set(ids))
       }
     } catch (_) {
@@ -286,7 +301,14 @@ export default function SnapFitMobile() {
         }
       });
       if (response.ok) {
-        const likedIds = await response.json()
+        const data = await response.json()
+        // Like 엔티티에서 PRODUCT 타입의 targetIdx만 추출
+        const likedIds: number[] = Array.isArray(data) 
+          ? data
+              .filter((like: any) => like?.targetType === 'PRODUCT')
+              .map((like: any) => Number(like?.targetIdx))
+              .filter((id: any) => !isNaN(id))
+          : []
         setLikedProductIds(new Set(likedIds))
         const products = []
         
