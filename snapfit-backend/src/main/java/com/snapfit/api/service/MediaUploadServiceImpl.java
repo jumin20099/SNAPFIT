@@ -5,7 +5,9 @@ import com.amazonaws.services.s3.model.*;
 import com.snapfit.api.entity.Media;
 import com.snapfit.api.repository.MediaRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,17 +18,25 @@ import java.util.UUID;
 
 @RequiredArgsConstructor
 @Service
+@ConditionalOnBean(AmazonS3.class)
 public class MediaUploadServiceImpl implements MediaUploadService {
-    @Value("${cloud.aws.s3.user-bucket}")
+    @Value("${cloud.aws.s3.user-bucket:default-bucket}")
     private String userBucket;
-    @Value("${cloud.aws.s3.static-bucket}")
+    @Value("${cloud.aws.s3.static-bucket:default-bucket}")
     private String staticBucket;
 
-    private final AmazonS3 amazonS3;
     private final MediaRepository mediaRepository;
+    
+    // AmazonS3를 조건부로 주입
+    @Autowired(required = false)
+    private AmazonS3 amazonS3;
 
     @Override
     public Media uploadMedia(MultipartFile file, String purpose, Long refId) {
+        if (amazonS3 == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "S3 서비스가 설정되지 않았습니다.");
+        }
+        
         String bucket = null;
         String key = null;
         String ext = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.'));
@@ -84,6 +94,10 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
     @Override
     public void deleteMedia(String uidName) {
+        if (amazonS3 == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "S3 서비스가 설정되지 않았습니다.");
+        }
+        
         String bucket = (uidName.startsWith("profile/") || uidName.startsWith("posts/")) ? userBucket : staticBucket;
         // S3에서 삭제
         amazonS3.deleteObject(new DeleteObjectRequest(bucket, uidName));
