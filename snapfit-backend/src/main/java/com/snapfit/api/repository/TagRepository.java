@@ -101,6 +101,11 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
     Page<Object[]> getTagStatisticsByMinPostCount(@Param("minPostCount") Long minPostCount, Pageable pageable);
 
     /**
+     * 인기 태그 조회 (인기도 순)
+     */
+    Page<Tag> findByOrderByPopularityDesc(Pageable pageable);
+
+    /**
      * 태그별 게시글 수 통계 조회 (최대 게시글 수 기준)
      * 성능: WHERE 절 최적화
      */
