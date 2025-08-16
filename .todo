@@ -3,36 +3,36 @@
 ## 🚀 P0: 기반 구축
 
 ### 데이터베이스 & 백엔드 기반
-- [ ] V20__community_core.sql 마이그레이션 파일 생성
-- [ ] Post.java 엔티티 클래스 생성 (posts 테이블)
-- [ ] Scrap.java 엔티티 클래스 생성 (scraps 테이블)
-- [ ] Follow.java 엔티티 클래스 생성 (follows 테이블)
-- [ ] Tag.java 엔티티 클래스 생성 (tags 테이블)
-- [ ] Comment.java 엔티티 클래스 생성 (comments 테이블)
-- [ ] Notification.java 엔티티 클래스 생성 (notifications 테이블)
-- [ ] Report.java 엔티티 클래스 생성 (reports 테이블)
-- [ ] Block.java 엔티티 클래스 생성 (blocks 테이블)
+- [x] V20__community_core.sql 마이그레이션 파일 생성
+- [x] Post.java 엔티티 클래스 생성 (posts 테이블)
+- [x] Scrap.java 엔티티 클래스 생성 (scraps 테이블)
+- [x] Follow.java 엔티티 클래스 생성 (follows 테이블)
+- [x] Tag.java 엔티티 클래스 생성 (tags 테이블)
+- [x] Comment.java 엔티티 클래스 생성 (comments 테이블)
+- [x] Notification.java 엔티티 클래스 생성 (notifications 테이블)
+- [x] Report.java 엔티티 클래스 생성 (reports 테이블)
+- [x] Block.java 엔티티 클래스 생성 (blocks 테이블)
 
 ### 리포지토리 인터페이스
-- [ ] PostRepository.java 생성 (JPA CRUD + 커스텀 쿼리)
-- [ ] ScrapRepository.java 생성
-- [ ] FollowRepository.java 생성
-- [ ] TagRepository.java 생성
-- [ ] CommentRepository.java 생성
-- [ ] NotificationRepository.java 생성
-- [ ] ReportRepository.java 생성
-- [ ] BlockRepository.java 생성
+- [x] PostRepository.java 생성 (JPA CRUD + 커스텀 쿼리)
+- [x] ScrapRepository.java 생성
+- [x] FollowRepository.java 생성
+- [x] TagRepository.java 생성
+- [x] CommentRepository.java 생성
+- [x] NotificationRepository.java 생성
+- [x] ReportRepository.java 생성
+- [x] BlockRepository.java 생성
 
 ## 🔧 P1: 핵심 기능 구현
 
 ### 서비스 레이어
-- [ ] CommunityService.java 생성 (통합 커뮤니티 비즈니스 로직)
-- [ ] PostService.java 생성 (게시글 CRUD, 태그 파싱)
-- [ ] ScrapService.java 생성 (스크랩 토글, 조회)
-- [ ] FollowService.java 생성 (팔로우/팔로잉 관리)
-- [ ] TagService.java 생성 (태그 정규화, 트렌딩)
-- [ ] CommentService.java 생성 (댓글 CRUD)
-- [ ] SearchService.java 생성 (PostgreSQL 기반 통합 검색)
+- [x] CommunityService.java 생성 (통합 커뮤니티 비즈니스 로직)
+- [x] PostService.java 생성 (게시글 CRUD, 태그 파싱)
+- [x] ScrapService.java 생성 (스크랩 토글, 조회)
+- [x] FollowService.java 생성 (팔로우/팔로잉 관리)
+- [x] TagService.java 생성 (태그 정규화, 트렌딩)
+- [x] CommentService.java 생성 (댓글 CRUD)
+- [x] SearchService.java 생성 (PostgreSQL 기반 통합 검색)
 
 ### 컨트롤러 레이어
 - [ ] CommunityController.java 생성 (통합 커뮤니티 API)
@@ -106,27 +106,3 @@
 - [ ] 스폰서드 포스트 시스템 구현
 - [ ] 명시적 라벨링 및 공정 노출
 - [ ] 게시글 → 상품 상세 전환율 최적화
-- [ ] 제휴 링크 추적 시스템
-
-## 🧪 테스트 및 품질 관리
-- [ ] 각 단계별 단위 테스트 작성
-- [ ] E2E 테스트 시나리오 작성 (Playwright)
-- [ ] 성능 테스트 (로딩 시간, 무한 스크롤)
-- [ ] 보안 테스트 (XSS, CSRF, 권한 검사)
-- [ ] 사용자 경험 테스트 (모바일, 데스크톱)
-
-## 🚀 배포 및 모니터링
-- [ ] 환경별 설정 파일 정리
-- [ ] 로깅 및 모니터링 설정
-- [ ] 에러 추적 시스템 연동
-- [ ] 성능 메트릭 수집 및 대시보드
-
-## 🎯 목표
-**100억 매출을 목표로 하는 강력한 코디 공유 커뮤니티 시스템 구축**
-
-## 🔥 우선순위
-1. **P0**: 데이터베이스 스키마 및 백엔드 기반
-2. **P1**: 핵심 기능 구현 및 API 연동
-3. **P2**: 소셜 기능으로 사용자 참여 증폭
-4. **P3**: 안전 시스템으로 신뢰성 확보
-5. **P4**: 최적화 및 수익화로 비즈니스 가치 창출
