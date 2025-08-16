@@ -4,6 +4,8 @@ import com.snapfit.api.dto.post.*;
 import com.snapfit.api.dto.tag.TagResponseDto;
 import com.snapfit.api.entity.Post;
 import com.snapfit.api.entity.Tag;
+import com.snapfit.api.entity.User;
+import com.snapfit.api.repository.PostRepository;
 import com.snapfit.api.service.PostService;
 import com.snapfit.api.service.TagService;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +19,10 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
+import java.time.LocalDateTime;
 
 /**
  * 게시글 API 컨트롤러
@@ -32,6 +36,7 @@ public class PostController {
 
     private final PostService postService;
     private final TagService tagService;
+    private final PostRepository postRepository;
 
     /**
      * 게시글 생성
@@ -42,20 +47,54 @@ public class PostController {
     public ResponseEntity<PostResponseDto> createPost(@Valid @RequestBody CreatePostRequestDto request) {
         log.info("게시글 생성 요청: {}", request.getTitle());
         
-        // TODO: 실제 사용자 정보를 받아서 처리
-        // Post post = new Post();
-        // post.setContent(request.getContent());
-        // Post savedPost = postService.createPost(post, user, String.join(",", request.getTags()));
-        
-        // 임시 응답
-        PostResponseDto response = new PostResponseDto();
-        response.setPostId(1L);
-        response.setTitle(request.getTitle());
-        response.setContent(request.getContent());
-        response.setTags(request.getTags());
-        response.setMediaUrls(request.getMediaUrls());
-        
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        try {
+            // Post 엔티티 생성 (태그 없이)
+            Post post = Post.builder()
+                .content(request.getContent())
+                .mediaUrls(request.getMediaUrls().stream().collect(Collectors.toSet()))
+                .build();
+            
+            // 임시 사용자 정보
+            User tempUser = User.builder()
+                .userIdx(UUID.randomUUID())
+                .nickname("임시사용자")
+                .email("temp@test.com")
+                .provider("test")
+                .providerId("test-id")
+                .build();
+            
+            // Post 엔티티에 작성자 설정
+            post.setAuthor(tempUser);
+            
+            // Post 엔티티 저장 (태그 없이)
+            Post savedPost = postRepository.save(post);
+            
+            // 응답 DTO 생성
+            PostResponseDto response = new PostResponseDto();
+            response.setPostId(savedPost.getPostId());
+            response.setTitle(""); // Post 엔티티에는 title 필드가 없음
+            response.setContent(savedPost.getContent());
+            response.setTags(request.getTags());
+            response.setMediaUrls(new ArrayList<>(savedPost.getMediaUrls()));
+            response.setAuthorId(savedPost.getAuthor().getUserIdx().toString());
+            response.setAuthorName(savedPost.getAuthor().getNickname());
+            response.setAuthorProfileImage("");
+            response.setLikeCount(savedPost.getLikeCount());
+            response.setScrapCount(savedPost.getScrapCount());
+            response.setCommentCount(savedPost.getCommentCount());
+            response.setViewCount(savedPost.getViewCount());
+            response.setCreatedAt(savedPost.getCreatedAt());
+            response.setUpdatedAt(savedPost.getUpdatedAt());
+            response.setIsLiked(false);
+            response.setIsScrapped(false);
+            
+            log.info("게시글 생성 성공 (DB 저장): postId={}", savedPost.getPostId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            
+        } catch (Exception e) {
+            log.error("게시글 생성 실패", e);
+            throw new RuntimeException("게시글 생성 중 오류가 발생했습니다: " + e.getMessage());
+        }
     }
 
     /**
