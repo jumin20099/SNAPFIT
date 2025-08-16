@@ -1,6 +1,7 @@
 package com.snapfit.api.util;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -15,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.snapfit.api.dto.KakaoDTO;
 
 @Component
+@ConditionalOnProperty(name = "spring.security.oauth2.client.registration.kakao.client-id")
 public class KakaoUtil {
 
     @Value("${spring.security.oauth2.client.registration.kakao.client-id}")
