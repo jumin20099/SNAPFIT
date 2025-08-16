@@ -73,7 +73,7 @@ export function useComments({ postId, pageSize = 20 }: UseCommentsOptions): UseC
         size: pageSize.toString(),
       });
 
-      const response = await fetch(`/api/posts/${postId}/comments?${params}`, {
+      const response = await fetch(`http://localhost:8080/api/posts/${postId}/comments?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ export function useComments({ postId, pageSize = 20 }: UseCommentsOptions): UseC
 
   const createComment = useCallback(async (data: CreateCommentData): Promise<Comment | null> => {
     try {
-      const response = await fetch(`/api/posts/${postId}/comments`, {
+      const response = await fetch(`http://localhost:8080/api/posts/${postId}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +139,7 @@ export function useComments({ postId, pageSize = 20 }: UseCommentsOptions): UseC
 
   const updateComment = useCallback(async (data: UpdateCommentData): Promise<Comment | null> => {
     try {
-      const response = await fetch(`/api/comments/${data.commentId}`, {
+      const response = await fetch(`http://localhost:8080/api/comments/${data.commentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -172,7 +172,7 @@ export function useComments({ postId, pageSize = 20 }: UseCommentsOptions): UseC
 
   const deleteComment = useCallback(async (commentId: number): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/comments/${commentId}`, {
+      const response = await fetch(`http://localhost:8080/api/comments/${commentId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -198,7 +198,7 @@ export function useComments({ postId, pageSize = 20 }: UseCommentsOptions): UseC
 
   const toggleLike = useCallback(async (commentId: number): Promise<boolean> => {
     try {
-      const response = await fetch(`/api/comments/${commentId}/like`, {
+      const response = await fetch(`http://localhost:8080/api/comments/${commentId}/like`, {
         method: 'POST',
         credentials: 'include',
       });

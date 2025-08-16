@@ -36,7 +36,7 @@ export function useToggleFollow({ initialFollowing, initialFollowerCount, target
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/follows/${targetUserId}`, {
+      const response = await fetch(`http://localhost:8080/api/follows/${targetUserId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

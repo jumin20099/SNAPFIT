@@ -45,7 +45,7 @@ export function useCreatePost(): UseCreatePostReturn {
     try {
       console.log('useCreatePost: 게시글 생성 시작', data);
 
-      const response = await fetch('/api/posts', {
+      const response = await fetch('http://localhost:8080/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -64,15 +64,15 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       size: pageSize.toString(),
     });
 
-    if (sortBy === 'trending') {
-      return `/api/posts/trending?${params}`;
-    } else if (userId) {
-      return `/api/posts/user/${userId}?${params}`;
-    } else if (tag) {
-      return `/api/posts/tag/${tag}?${params}`;
-    } else {
-      return `/api/posts?${params}`;
-    }
+          if (sortBy === 'trending') {
+        return `http://localhost:8080/api/posts/trending?${params}`;
+      } else if (userId) {
+        return `http://localhost:8080/api/posts/user/${userId}?${params}`;
+      } else if (tag) {
+        return `http://localhost:8080/api/posts/tag/${tag}?${params}`;
+      } else {
+        return `http://localhost:8080/api/posts?${params}`;
+      }
   }, [pageSize, sortBy, userId, tag]);
 
   const fetchPosts = useCallback(async (page: number, append: boolean = false) => {

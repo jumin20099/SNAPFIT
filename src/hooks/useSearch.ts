@@ -79,7 +79,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
         type: 'all', // post, user, tag 모두 검색
       });
 
-      const response = await fetch(`/api/search?${params}`, {
+      const response = await fetch(`http://localhost:8080/api/search?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -140,7 +140,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
         type: 'suggestions',
       });
 
-      const response = await fetch(`/api/search/suggestions?${params}`, {
+      const response = await fetch(`http://localhost:8080/api/search/suggestions?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
 
   const getTrendingSearches = useCallback(async (): Promise<TrendingSearch[]> => {
     try {
-      const response = await fetch('/api/search/trending', {
+      const response = await fetch('http://localhost:8080/api/search/trending', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

@@ -35,7 +35,7 @@ export function useToggleScrap({ initialScrapped, initialCount, postId }: Toggle
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/posts/${postId}/scrap`, {
+      const response = await fetch(`http://localhost:8080/api/posts/${postId}/scrap`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
