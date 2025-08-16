@@ -18,13 +18,15 @@ import com.snapfit.api.entity.User;
 public class ProductService {
     private final ProductRepository productRepository;
     private final LikeService likeService;
-    private final ViewCounterService viewCounterService;
+    
+    // ViewCounterService를 조건부로 주입
+    @Autowired(required = false)
+    private ViewCounterService viewCounterService;
 
     @Autowired
-    public ProductService(ProductRepository productRepository, LikeService likeService, ViewCounterService viewCounterService) {
+    public ProductService(ProductRepository productRepository, LikeService likeService) {
         this.productRepository = productRepository;
         this.likeService = likeService;
-        this.viewCounterService = viewCounterService;
     }
 
     public List<Product> getProductsByStoreIdx(Long storeIdx) {
@@ -154,9 +156,13 @@ public class ProductService {
 
         // 실시간 시청자 수 처리 (Redis) - live 키 사용
         String liveKey = "product:" + productIdx + ":live";
-        long liveViewers = skipIncrement
-            ? viewCounterService.getCount(liveKey)
-            : viewCounterService.increment(liveKey);
+        long liveViewers = 0L;
+        
+        if (viewCounterService != null) {
+            liveViewers = skipIncrement
+                ? viewCounterService.getCount(liveKey)
+                : viewCounterService.increment(liveKey);
+        }
 
         // 누적 조회수 (DB) 즉시 증가
         long cumulativeViews = product.getViewCount() != null ? product.getViewCount() : 0L;
