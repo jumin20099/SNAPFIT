@@ -17,7 +17,7 @@
 - [x] PostRepository.java 생성 (JPA CRUD + 커스텀 쿼리)
 - [x] ScrapRepository.java 생성
 - [x] FollowRepository.java 생성
-- [ ] TagRepository.java 생성
+- [x] TagRepository.java 생성
 - [ ] CommentRepository.java 생성
 - [ ] NotificationRepository.java 생성
 - [ ] ReportRepository.java 생성
