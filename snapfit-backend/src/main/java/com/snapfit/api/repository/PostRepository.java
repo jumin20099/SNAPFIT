@@ -99,7 +99,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      * 성능: outfit_id 인덱스 활용
      */
     @Query("SELECT p FROM Post p " +
-           "WHERE p.outfitId = :outfitId AND p.isDeleted = false " +
+           "WHERE p.outfit.outfitIdx = :outfitId AND p.isDeleted = false " +
            "ORDER BY p.createdAt DESC")
     Page<Post> findByOutfitIdOrderByCreatedAtDesc(@Param("outfitId") Long outfitId, Pageable pageable);
 
