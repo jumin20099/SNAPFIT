@@ -289,6 +289,25 @@ public class TagService {
         }
     }
 
+    /**
+     * 인기 태그 목록 조회
+     */
+    public List<Tag> getTrendingTags() {
+        log.info("인기 태그 목록 조회");
+        
+        try {
+            // 인기도 순으로 상위 20개 태그 조회
+            Pageable pageable = Pageable.ofSize(20);
+            Page<Tag> trendingTags = tagRepository.findByOrderByPopularityDesc(pageable);
+            
+            log.info("인기 태그 목록 조회 완료: {}개", trendingTags.getContent().size());
+            return trendingTags.getContent();
+            
+        } catch (Exception e) {
+            log.error("인기 태그 목록 조회 실패", e);
+            throw new RuntimeException("인기 태그 목록 조회 중 오류가 발생했습니다", e);
+        }
+    }
 
 
     /**

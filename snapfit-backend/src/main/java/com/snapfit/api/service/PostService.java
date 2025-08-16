@@ -384,4 +384,69 @@ public class PostService {
             throw new RuntimeException("게시글 통계 조회 중 오류가 발생했습니다", e);
         }
     }
+
+    /**
+     * 게시글 목록 조회 (페이지네이션)
+     */
+    public Page<Post> getPosts(Pageable pageable) {
+        log.info("게시글 목록 조회: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
+        return postRepository.findAll(pageable);
+    }
+
+    /**
+     * 인기 게시글 조회
+     */
+    public Page<Post> getTrendingPosts(Pageable pageable) {
+        log.info("인기 게시글 조회");
+        return postRepository.findByOrderByLikeCountDesc(pageable);
+    }
+
+    /**
+     * 사용자별 게시글 조회
+     */
+    public Page<Post> getPostsByUser(Long userId, Pageable pageable) {
+        log.info("사용자별 게시글 조회: userId={}", userId);
+        return postRepository.findByAuthor_UserIdxOrderByCreatedAtDesc(userId, pageable);
+    }
+
+    /**
+     * 게시글 좋아요 토글
+     */
+    @Transactional
+    public Map<String, Object> toggleLike(Long postId) {
+        log.info("게시글 좋아요 토글: postId={}", postId);
+        
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
+        
+        // TODO: 실제 사용자 정보를 받아서 좋아요 처리
+        // 현재는 임시로 좋아요 수만 증가
+        post.setLikeCount(post.getLikeCount() + 1);
+        postRepository.save(post);
+        
+        return Map.of(
+            "postId", postId,
+            "isLiked", true,
+            "likeCount", post.getLikeCount()
+        );
+    }
+
+    /**
+     * 게시글 조회수 증가
+     */
+    @Transactional
+    public Map<String, Object> incrementViewCount(Long postId) {
+        log.info("게시글 조회수 증가: postId={}", postId);
+        
+        Post post = postRepository.findById(postId)
+            .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
+        
+        post.setViewCount(post.getViewCount() + 1);
+        postRepository.save(post);
+        
+        return Map.of(
+            "postId", postId,
+            "viewCount", post.getViewCount()
+        );
+    }
 }
