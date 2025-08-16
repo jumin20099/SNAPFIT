@@ -252,3 +252,8 @@ stats.json
 
 # Auto-generated files
 generated/
+
+# 환경 변수 및 설정 파일
+*.properties
+.env*
+config/*.json
