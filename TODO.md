@@ -9,9 +9,9 @@
 - [x] Follow.java 엔티티 클래스 생성 (follows 테이블)
 - [x] Tag.java 엔티티 클래스 생성 (tags 테이블)
 - [x] Comment.java 엔티티 클래스 생성 (comments 테이블)
-- [ ] Notification.java 엔티티 클래스 생성 (notifications 테이블)
-- [ ] Report.java 엔티티 클래스 생성 (reports 테이블)
-- [ ] Block.java 엔티티 클래스 생성 (blocks 테이블)
+- [x] Notification.java 엔티티 클래스 생성 (notifications 테이블)
+- [x] Report.java 엔티티 클래스 생성 (reports 테이블)
+- [x] Block.java 엔티티 클래스 생성 (blocks 테이블)
 
 ### 리포지토리 인터페이스
 - [ ] PostRepository.java 생성 (JPA CRUD + 커스텀 쿼리)
