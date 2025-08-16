@@ -68,6 +68,10 @@ const nextConfig = {
       {
         source: '/oauth2/:path*',
         destination: 'http://localhost:8080/oauth2/:path*'
+      },
+      {
+        source: '/api/auth/logout',
+        destination: 'http://localhost:8080/api/auth/logout'
       }
     ]
   }

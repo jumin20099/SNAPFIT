@@ -46,7 +46,7 @@ export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }
         const data = await response.json();
         
         if (data.token) {
-  
+          // localStorage에 토큰 저장
           localStorage.setItem('token', data.token);
           setUser(data);
           setIsLoggedIn(true);
@@ -57,18 +57,23 @@ export default function SocialLoginPage({ open, onOpenChange, onSwitchToSignup }
         console.error('에러 데이터:', errorData);
       }
     } catch (error) {
+      console.error('로그인 상태 확인 실패:', error);
     }
   };
 
   useEffect(() => {
-    // 쿠키에서 토큰 확인
+    // auth_token 쿠키에서 토큰 확인
     const token = getCookie('auth_token');
+    console.log('쿠키에서 읽은 토큰:', token ? '존재함' : '없음');
+    
+    // 모든 쿠키 확인
+    console.log('모든 쿠키:', document.cookie);
 
     if (token) {
-      
+      // localStorage에 토큰 저장
       localStorage.setItem('token', token);
-      // 쿠키 삭제 (보안상 한 번만 사용)
-      deleteCookie('auth_token');
+      console.log('localStorage에 토큰 저장됨');
+      // 쿠키는 백엔드에서 관리하므로 삭제하지 않음
       checkLoginStatus();
     } else {
       // 토큰이 없으면 주기적으로 로그인 상태 확인
