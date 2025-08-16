@@ -1,7 +1,10 @@
 package com.snapfit.api.controller;
 
 import java.util.Map;
+import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -23,12 +26,19 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final KakaoUtil kakaoUtil;
     private final UserRepository userRepo;
     private final JwtUtil jwtUtil;
+    
+    // KakaoUtil을 조건부로 주입
+    @Autowired(required = false)
+    private KakaoUtil kakaoUtil;
 
     @GetMapping("/login/kakao")
     public ResponseEntity<?> kakaoLogin(@RequestParam String code) {
+        if (kakaoUtil == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Kakao 로그인이 설정되지 않았습니다."));
+        }
+        
         var oauthToken = kakaoUtil.requestToken(code);
         var profile    = kakaoUtil.requestProfile(oauthToken);
 
@@ -98,7 +108,7 @@ public class AuthController {
             .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
             .sameSite("Lax")
             .path("/")
-            .maxAge(0) // 즉시 만료
+            .maxAge(0)
             .build();
 
         return ResponseEntity.ok()
