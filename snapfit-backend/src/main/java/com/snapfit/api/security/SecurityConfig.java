@@ -1,5 +1,6 @@
 package com.snapfit.api.security;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import java.util.List;
 
 import com.snapfit.api.service.CustomOAuth2UserService;
@@ -34,7 +36,12 @@ public class SecurityConfig {
     private final UserRepository userRepository;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            ObjectProvider<ClientRegistrationRepository> clients // 빈이 없으면 null 반환
+    ) throws Exception {
+        boolean hasOauth = clients.getIfAvailable() != null;
+
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
@@ -49,8 +56,11 @@ public class SecurityConfig {
                 ).permitAll()
                 .anyRequest().authenticated()
             )
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .oauth2Login(oauth2 -> oauth2
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        // OAuth2가 설정되어 있을 때만 oauth2Login 활성화
+        if (hasOauth) {
+            http.oauth2Login(oauth2 -> oauth2
                 .authorizationEndpoint(auth -> auth
                     .baseUri("/oauth2/authorization"))
                 .redirectionEndpoint(redirection -> redirection
@@ -72,9 +82,11 @@ public class SecurityConfig {
                     
                     response.sendRedirect("http://localhost:3000");
                 })
-            )
-            .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userRepository),
-                    UsernamePasswordAuthenticationFilter.class)
+            );
+        }
+
+        http.addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userRepository),
+                UsernamePasswordAuthenticationFilter.class)
             .exceptionHandling(ex -> ex
                 .defaultAuthenticationEntryPointFor(
                     new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),

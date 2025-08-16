@@ -18,6 +18,10 @@ configurations {
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
+	// commons-logging 제거
+	all {
+		exclude group: 'commons-logging', module: 'commons-logging'
+	}
 }
 
 repositories {

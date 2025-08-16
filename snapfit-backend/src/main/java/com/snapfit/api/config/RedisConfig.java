@@ -8,9 +8,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericToStringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-
-@Configuration
-@ConditionalOnProperty(name = "spring.data.redis.host")
+// Redis 리포지토리 스캔 비활성화 (현재 Redis 리포지토리를 사용하지 않음)
 public class RedisConfig {
 
     @Value("${spring.data.redis.host}")
