@@ -12,10 +12,10 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret}")
+    @Value("${jwt.secret:defaultSecretKeyForDevelopmentOnly}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration-ms}")
+    @Value("${jwt.expiration-ms:86400000}")
     private long jwtExpirationMs;
 
     // 서명 키 생성 (HS256용)
