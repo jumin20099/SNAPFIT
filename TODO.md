@@ -14,9 +14,9 @@
 - [x] Block.java 엔티티 클래스 생성 (blocks 테이블)
 
 ### 리포지토리 인터페이스
-- [ ] PostRepository.java 생성 (JPA CRUD + 커스텀 쿼리)
-- [ ] ScrapRepository.java 생성
-- [ ] FollowRepository.java 생성
+- [x] PostRepository.java 생성 (JPA CRUD + 커스텀 쿼리)
+- [x] ScrapRepository.java 생성
+- [x] FollowRepository.java 생성
 - [ ] TagRepository.java 생성
 - [ ] CommentRepository.java 생성
 - [ ] NotificationRepository.java 생성
