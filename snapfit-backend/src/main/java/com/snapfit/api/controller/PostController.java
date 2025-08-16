@@ -6,6 +6,7 @@ import com.snapfit.api.entity.Post;
 import com.snapfit.api.entity.Tag;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.PostRepository;
+import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.service.PostService;
 import com.snapfit.api.service.TagService;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class PostController {
     private final PostService postService;
     private final TagService tagService;
     private final PostRepository postRepository;
+    private final UserRepository userRepository;
 
     /**
      * 게시글 생성
@@ -48,28 +50,37 @@ public class PostController {
         log.info("게시글 생성 요청: {}", request.getTitle());
         
         try {
-            // Post 엔티티 생성 (태그 없이)
+            // 단계별 DB 저장 테스트 - User 엔티티만 저장
+            
+            // 1. 기존 사용자 찾기 또는 새로 생성
+            User savedUser = userRepository.findByEmail("temp@test.com")
+                .orElseGet(() -> {
+                    // 사용자가 없으면 새로 생성
+                    User tempUser = new User();
+                    tempUser.setNickname("임시사용자");
+                    tempUser.setEmail("temp@test.com");
+                    tempUser.setProvider("test");
+                    tempUser.setProviderId("test-id");
+                    return userRepository.save(tempUser);
+                });
+            
+            log.info("User 엔티티 저장 성공: userId={}", savedUser.getUserIdx());
+            
+            // 2. Post 엔티티 생성 및 저장
             Post post = Post.builder()
                 .content(request.getContent())
                 .mediaUrls(request.getMediaUrls().stream().collect(Collectors.toSet()))
                 .build();
             
-            // 임시 사용자 정보
-            User tempUser = User.builder()
-                .userIdx(UUID.randomUUID())
-                .nickname("임시사용자")
-                .email("temp@test.com")
-                .provider("test")
-                .providerId("test-id")
-                .build();
+            // 3. 작성자 설정
+            post.setAuthor(savedUser);
             
-            // Post 엔티티에 작성자 설정
-            post.setAuthor(tempUser);
-            
-            // Post 엔티티 저장 (태그 없이)
+            // 4. Post 엔티티 저장
             Post savedPost = postRepository.save(post);
             
-            // 응답 DTO 생성
+            log.info("Post 엔티티 저장 성공: postId={}", savedPost.getPostId());
+            
+            // 5. 응답 DTO 생성 (실제 저장된 데이터 사용)
             PostResponseDto response = new PostResponseDto();
             response.setPostId(savedPost.getPostId());
             response.setTitle(""); // Post 엔티티에는 title 필드가 없음
@@ -88,7 +99,7 @@ public class PostController {
             response.setIsLiked(false);
             response.setIsScrapped(false);
             
-            log.info("게시글 생성 성공 (DB 저장): postId={}", savedPost.getPostId());
+            log.info("게시글 생성 성공 (User + Post 모두 저장): postId={}, userId={}", savedPost.getPostId(), savedUser.getUserIdx());
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             
         } catch (Exception e) {
