@@ -106,6 +106,7 @@ public class Post {
      * 보안: URL 검증 및 크기 제한
      */
     @Column(name = "media_urls", columnDefinition = "jsonb")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     @Size(max = 10, message = "미디어는 최대 10개까지 업로드 가능합니다")
     @Builder.Default
     private Set<String> mediaUrls = new HashSet<>();

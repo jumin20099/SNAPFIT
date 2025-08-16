@@ -75,8 +75,8 @@ public class PostController {
             // 3. 작성자 설정
             post.setAuthor(savedUser);
             
-            // 4. Post 엔티티 저장
-            Post savedPost = postRepository.save(post);
+            // 4. Post 엔티티 저장 (saveAndFlush로 조기 실패 유도)
+            Post savedPost = postRepository.saveAndFlush(post);
             
             log.info("Post 엔티티 저장 성공: postId={}", savedPost.getPostId());
             
