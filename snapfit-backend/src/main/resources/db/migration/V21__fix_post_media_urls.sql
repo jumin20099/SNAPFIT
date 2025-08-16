@@ -2,6 +2,9 @@
 -- Post 엔티티의 mediaUrls 필드 구조 수정
 -- TEXT[] 배열을 JSONB로 변경
 
+-- 먼저 기본값 제거
+ALTER TABLE posts ALTER COLUMN media_urls DROP DEFAULT;
+
 -- 기존 media_urls 컬럼을 JSONB로 변경
 ALTER TABLE posts 
 ALTER COLUMN media_urls TYPE JSONB USING 
@@ -11,7 +14,7 @@ ALTER COLUMN media_urls TYPE JSONB USING
     ELSE array_to_json(media_urls)::jsonb
   END;
 
--- 기본값 설정
+-- 새로운 기본값 설정
 ALTER TABLE posts ALTER COLUMN media_urls SET DEFAULT '[]'::jsonb;
 
 -- JSONB 인덱스 추가 (성능 최적화)

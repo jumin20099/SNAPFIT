@@ -440,34 +440,7 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
                                                                            @Param("endDate") LocalDateTime endDate, 
                                                                            Pageable pageable);
 
-    /**
-     * 태그별 게시글 수 통계 조회 (인기도별, 게시글 수 + 날짜 범위, 최대 게시글 수 기준, 검색어)
-     * 성능: 복합 조건 최적화
-     */
-    @Query("SELECT " +
-           "CASE " +
-           "  WHEN t.postCount > 100 THEN 'HIGH' " +
-           "  WHEN t.postCount > 50 THEN 'MEDIUM' " +
-           "  ELSE 'LOW' " +
-           "END as popularity, " +
-           "COUNT(t) as tagCount, " +
-           "AVG(t.postCount) as avgPostCount " +
-           "FROM Tag t " +
-           "WHERE t.postCount BETWEEN :minPostCount AND :maxPostCount " +
-           "AND t.createdAt BETWEEN :startDate AND :endDate " +
-           "AND t.name ILIKE %:searchTerm% " +
-           "GROUP BY " +
-           "  CASE " +
-           "    WHEN t.postCount > 100 THEN 'HIGH' " +
-           "    WHEN t.postCount > 50 THEN 'MEDIUM' " +
-           "    ELSE 'LOW' " +
-           "  END " +
-           "ORDER BY popularity")
-    List<Object[]> getTagStatisticsByPopularityAndPostCountRangeAndDateRangeAndSearchTerm(@Param("minPostCount") Long minPostCount, 
-                                                                                         @Param("maxPostCount") Long maxPostCount, 
-                                                                                         @Param("startDate") LocalDateTime startDate, 
-                                                                                         @Param("endDate") LocalDateTime endDate, 
-                                                                                         @Param("searchTerm") String searchTerm);
+
 
     /**
      * 태그별 게시글 수 통계 조회 (인기도별, 게시글 수 + 날짜 범위, 최대 게시글 수 기준, 검색어, 페이징)
@@ -499,88 +472,6 @@ public interface TagRepository extends JpaRepository<Tag, Long> {
                                                                                          @Param("searchTerm") String searchTerm, 
                                                                                          Pageable pageable);
 
-    /**
-     * 태그별 게시글 수 통계 조회 (인기도별, 게시글 수 + 날짜 범위, 최대 게시글 수 기준, 검색어, 정렬)
-     * 성능: 복합 조건 최적화
-     */
-    @Query("SELECT " +
-           "CASE " +
-           "  WHEN t.postCount > 100 THEN 'HIGH' " +
-           "  WHEN t.postCount > 50 THEN 'MEDIUM' " +
-           "  ELSE 'LOW' " +
-           "END as popularity, " +
-           "COUNT(t) as tagCount, " +
-           "AVG(t.postCount) as avgPostCount " +
-           "FROM Tag t " +
-           "WHERE t.postCount BETWEEN :minPostCount AND :maxPostCount " +
-           "AND t.createdAt BETWEEN :startDate AND :endDate " +
-           "AND t.name ILIKE %:searchTerm% " +
-           "GROUP BY " +
-           "  CASE " +
-           "    WHEN t.postCount > 100 THEN 'HIGH' " +
-           "    WHEN t.postCount > 50 THEN 'MEDIUM' " +
-           "    ELSE 'LOW' " +
-           "  END " +
-           "ORDER BY " +
-           "  CASE :sortBy " +
-           "    WHEN 'popularity' THEN popularity " +
-           "    WHEN 'tagCount' THEN tagCount " +
-           "    WHEN 'avgPostCount' THEN avgPostCount " +
-           "    ELSE popularity " +
-           "  END " +
-           "  CASE :sortOrder " +
-           "    WHEN 'ASC' THEN ASC " +
-           "    WHEN 'DESC' THEN DESC " +
-           "    ELSE DESC " +
-           "  END")
-    List<Object[]> getTagStatisticsByPopularityAndPostCountRangeAndDateRangeAndSearchTermAndSort(@Param("minPostCount") Long minPostCount, 
-                                                                                               @Param("maxPostCount") Long maxPostCount, 
-                                                                                               @Param("startDate") LocalDateTime startDate, 
-                                                                                               @Param("endDate") LocalDateTime endDate, 
-                                                                                               @Param("searchTerm") String searchTerm, 
-                                                                                               @Param("sortBy") String sortBy, 
-                                                                                               @Param("sortOrder") String sortOrder);
 
-    /**
-     * 태그별 게시글 수 통계 조회 (인기도별, 게시글 수 + 날짜 범위, 최대 게시글 수 기준, 검색어, 정렬, 페이징)
-     * 성능: 복합 조건 최적화
-     */
-    @Query("SELECT " +
-           "CASE " +
-           "  WHEN t.postCount > 100 THEN 'HIGH' " +
-           "  WHEN t.postCount > 50 THEN 'MEDIUM' " +
-           "  ELSE 'LOW' " +
-           "END as popularity, " +
-           "COUNT(t) as tagCount, " +
-           "AVG(t.postCount) as avgPostCount " +
-           "FROM Tag t " +
-           "WHERE t.postCount BETWEEN :minPostCount AND :maxPostCount " +
-           "AND t.createdAt BETWEEN :startDate AND :endDate " +
-           "AND t.name ILIKE %:searchTerm% " +
-           "GROUP BY " +
-           "  CASE " +
-           "    WHEN t.postCount > 100 THEN 'HIGH' " +
-           "    WHEN t.postCount > 50 THEN 'MEDIUM' " +
-           "    ELSE 'LOW' " +
-           "  END " +
-           "ORDER BY " +
-           "  CASE :sortBy " +
-           "    WHEN 'popularity' THEN popularity " +
-           "    WHEN 'tagCount' THEN tagCount " +
-           "    WHEN 'avgPostCount' THEN avgPostCount " +
-           "    ELSE popularity " +
-           "  END " +
-           "  CASE :sortOrder " +
-           "    WHEN 'ASC' THEN ASC " +
-           "    WHEN 'DESC' THEN DESC " +
-           "    ELSE DESC " +
-           "  END")
-    Page<Object[]> getTagStatisticsByPopularityAndPostCountRangeAndDateRangeAndSearchTermAndSort(@Param("minPostCount") Long minPostCount, 
-                                                                                               @Param("maxPostCount") Long maxPostCount, 
-                                                                                               @Param("startDate") LocalDateTime startDate, 
-                                                                                               @Param("endDate") LocalDateTime endDate, 
-                                                                                               @Param("searchTerm") String searchTerm, 
-                                                                                               @Param("sortBy") String sortBy, 
-                                                                                               @Param("sortOrder") String sortOrder, 
-                                                                                               Pageable pageable);
+
 }

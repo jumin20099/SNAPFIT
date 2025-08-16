@@ -92,21 +92,11 @@ public interface BlockRepository extends JpaRepository<Block, Block.BlockId> {
      * 성능: 차단 기간 계산 최적화
      */
     @Query("SELECT " +
-           "CASE " +
-           "  WHEN EXTRACT(EPOCH FROM (NOW() - b.createdAt))/86400 < 1 THEN 'LOW' " +
-           "  WHEN EXTRACT(EPOCH FROM (NOW() - b.createdAt))/86400 < 7 THEN 'MEDIUM' " +
-           "  WHEN EXTRACT(EPOCH FROM (NOW() - b.createdAt))/86400 < 30 THEN 'HIGH' " +
-           "  ELSE 'CRITICAL' " +
-           "END as impactLevel, " +
+           "b.reason as blockReason, " +
            "COUNT(b) as blockCount " +
            "FROM Block b " +
-           "GROUP BY " +
-           "  CASE " +
-           "    WHEN EXTRACT(EPOCH FROM (NOW() - b.createdAt))/86400 < 1 THEN 'LOW' " +
-           "    WHEN EXTRACT(EPOCH FROM (NOW() - b.createdAt))/86400 < 7 THEN 'MEDIUM' " +
-           "    WHEN EXTRACT(EPOCH FROM (NOW() - b.createdAt))/86400 < 30 THEN 'HIGH' " +
-           "    ELSE 'CRITICAL' " +
-           "  END " +
+           "WHERE b.reason IS NOT NULL " +
+           "GROUP BY b.reason " +
            "ORDER BY blockCount DESC")
     List<Object[]> getBlockImpactStatistics();
 

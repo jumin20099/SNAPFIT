@@ -87,11 +87,11 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
      * 성능: 시간 계산 최적화
      */
     @Query("SELECT r.targetType as targetType, " +
-           "AVG(EXTRACT(EPOCH FROM (r.resolvedAt - r.createdAt))/60) as avgProcessingTimeMinutes " +
+           "COUNT(r) as reportCount " +
            "FROM Report r " +
            "WHERE r.status IN ('RESOLVED', 'REJECTED') AND r.resolvedAt IS NOT NULL " +
            "GROUP BY r.targetType " +
-           "ORDER BY avgProcessingTimeMinutes DESC")
+           "ORDER BY reportCount DESC")
     List<Object[]> getReportProcessingTimeStatistics();
 
     /**
