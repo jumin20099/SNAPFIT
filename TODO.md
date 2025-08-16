@@ -19,9 +19,9 @@
 - [x] FollowRepository.java 생성
 - [x] TagRepository.java 생성
 - [x] CommentRepository.java 생성
-- [ ] NotificationRepository.java 생성
-- [ ] ReportRepository.java 생성
-- [ ] BlockRepository.java 생성
+- [x] NotificationRepository.java 생성
+- [x] ReportRepository.java 생성
+- [x] BlockRepository.java 생성
 
 ## 🔧 P1: 핵심 기능 구현
 
