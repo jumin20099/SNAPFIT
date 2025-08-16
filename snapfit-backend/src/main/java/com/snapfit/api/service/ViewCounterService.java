@@ -1,6 +1,7 @@
 package com.snapfit.api.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -18,10 +19,15 @@ import java.util.Collections;
  * 실시간 조회수 카운터 서비스 (Redis Lua 기반).
  */
 @Service
+@ConditionalOnBean(RedisTemplate.class)
 public class ViewCounterService {
 
-    private final RedisTemplate<String, Long> redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
+    
+    // RedisTemplate을 조건부로 주입
+    @Autowired(required = false)
+    private RedisTemplate<String, Long> redisTemplate;
+    
     private RedisScript<Long> incrScript;
     private RedisScript<Long> seenScript;
 
@@ -29,13 +35,16 @@ public class ViewCounterService {
     private static final long TTL_SECONDS = 60L;
 
     @Autowired
-    public ViewCounterService(RedisTemplate<String, Long> redisTemplate, SimpMessagingTemplate messagingTemplate) {
-        this.redisTemplate = redisTemplate;
+    public ViewCounterService(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
 
     @PostConstruct
     private void loadScript() {
+        if (redisTemplate == null) {
+            return; // Redis가 없으면 스크립트 로드 생략
+        }
+        
         try {
             ClassPathResource scriptResource = new ClassPathResource("redis/incr_with_ttl.lua");
             String scriptText = new String(scriptResource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
@@ -53,6 +62,10 @@ public class ViewCounterService {
      * @param key Redis 키 (예: "product:123:views")
      */
     public long increment(String key) {
+        if (redisTemplate == null) {
+            return 0L; // Redis가 없으면 0 반환
+        }
+        
         Long result = redisTemplate.execute(incrScript, Collections.singletonList(key), TTL_SECONDS);
         long count = result != null ? result : 0L;
         // WebSocket 브로드캐스트
@@ -67,6 +80,10 @@ public class ViewCounterService {
      * @param ttlSeconds set의 TTL
      */
     public long addSeenIfNew(String seenKey, String userKey, long ttlSeconds) {
+        if (redisTemplate == null) {
+            return 0L; // Redis가 없으면 0 반환
+        }
+        
         Long result = redisTemplate.execute(seenScript, Collections.singletonList(seenKey), userKey, String.valueOf(ttlSeconds));
         return result != null ? result : 0L;
     }
@@ -76,6 +93,10 @@ public class ViewCounterService {
      * 키는 "view:seen24:{productId}:{userKey}" 형태 권장.
      */
     public long addSeenRollingIfNew(String key, long ttlSeconds) {
+        if (redisTemplate == null) {
+            return 0L; // Redis가 없으면 0 반환
+        }
+        
         Boolean ok = redisTemplate.opsForValue().setIfAbsent(key, 1L, Duration.ofSeconds(ttlSeconds));
         return Boolean.TRUE.equals(ok) ? 1L : 0L;
     }
@@ -84,6 +105,10 @@ public class ViewCounterService {
      * 현재 조회수 반환 (없으면 0).
      */
     public long getCount(String key) {
+        if (redisTemplate == null) {
+            return 0L; // Redis가 없으면 0 반환
+        }
+        
         Long val = redisTemplate.opsForValue().get(key);
         return val != null ? val : 0L;
     }
