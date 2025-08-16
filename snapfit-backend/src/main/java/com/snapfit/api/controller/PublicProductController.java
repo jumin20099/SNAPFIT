@@ -6,19 +6,27 @@ import com.snapfit.api.entity.User;
 import com.snapfit.api.service.ProductService;
 import com.snapfit.api.service.ViewCounterService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
+@ConditionalOnBean(ViewCounterService.class)
 public class PublicProductController {
 
     private final ProductService productService;
-    private final ViewCounterService viewCounterService;
+    
+    // ViewCounterService를 조건부로 주입
+    @Autowired(required = false)
+    private ViewCounterService viewCounterService;
 
     /**
      * 상품 상세 조회 (증가는 Service에서 일괄 수행).
@@ -61,6 +69,10 @@ public class PublicProductController {
             @AuthenticationPrincipal User user,
             @RequestHeader(value = "X-Anon-Id", required = false) String anonId
     ) {
+        if (viewCounterService == null) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "조회수 서비스가 설정되지 않았습니다.");
+        }
+        
         String userKey;
         if (user != null && user.getUserIdx() != null) {
             userKey = "u:" + user.getUserIdx();
