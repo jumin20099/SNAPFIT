@@ -51,17 +51,40 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        String header = request.getHeader("Authorization");
-
+        String requestPath = request.getRequestURI();
+        System.out.println("=== JWT 필터 요청 경로: " + requestPath + " ===");
         
-        if (header == null || !header.startsWith("Bearer ")) {
-
+        // 헤더에서 토큰 확인
+        String header = request.getHeader("Authorization");
+        String token = null;
+        
+        if (header != null && header.startsWith("Bearer ")) {
+            token = header.substring(7);
+            System.out.println("헤더에서 토큰 읽기 성공");
+        } else {
+            // 헤더에 토큰이 없으면 쿠키에서 확인
+            jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+            System.out.println("쿠키 배열: " + (cookies != null ? cookies.length : "null"));
+            if (cookies != null) {
+                for (jakarta.servlet.http.Cookie cookie : cookies) {
+                    System.out.println("쿠키 이름: " + cookie.getName() + ", 값: " + cookie.getValue().substring(0, Math.min(20, cookie.getValue().length())) + "...");
+                    if ("auth_token".equals(cookie.getName())) {
+                        token = cookie.getValue();
+                        System.out.println("쿠키에서 토큰 읽기 성공: " + token.substring(0, Math.min(20, token.length())) + "...");
+                        break;
+                    }
+                }
+            }
+            if (token == null) {
+                System.out.println("쿠키에서 토큰을 찾을 수 없음");
+            }
+        }
+        
+        if (token == null) {
+            System.out.println("=== 토큰 없음, 인증 없이 진행 ===");
             filterChain.doFilter(request, response);
             return;
         }
-        
-        String token = header.substring(7);
-        
         
         try {
             if (jwtUtil.validateToken(token)) {
