@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useContext } from "react"
 import { Search, Heart, Grid3X3, User, X, Users, Settings, Store, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,8 @@ import PartnerMainPage from "@/components/partner-main-page"
 import PartnerApplicationStandalone from "@/components/partner-application-standalone"
 import ProductCard from "@/components/product-card"
 import ProductDetailPage from "@/components/product-detail-page"
+import CommunityPage from "@/components/community-page"
+import { useModals } from "@/contexts/ModalContext"
 
 const categories = ["전체", "남성복", "여성복"]
 const majorCategories = ["좋아요", "상의", "하의", "아우터", "신발", "가방", "패션소품"]
@@ -105,6 +107,7 @@ const subCategoryDetails = {
 const mockProducts: any[] = []
 
 export default function SnapFitMobile() {
+  const { isCommunityOpen, openCommunity, closeCommunity } = useModals()
   const [isProductPanelOpen, setIsProductPanelOpen] = useState(false)
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState("전체")
@@ -752,10 +755,11 @@ export default function SnapFitMobile() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsOutfitSharingOpen(true)}
+          onClick={openCommunity}
           className="bg-white/90 backdrop-blur-sm"
         >
-          <Users className="w-4 h-4" />
+          <Users className="w-4 h-4 mr-1" />
+          커뮤니티
         </Button>
         {/* 제휴사 대시보드 버튼 - PARTNER 또는 ADMIN 권한 */}
         {(userInfo?.role === 'PARTNER' || userInfo?.role === 'ADMIN') && (
@@ -1087,6 +1091,9 @@ export default function SnapFitMobile() {
         onOpenChange={setIsSocialLoginOpen} 
         onSwitchToSignup={() => {}}
       />
+
+      {/* Community Page */}
+      <CommunityPage isOpen={isCommunityOpen} onClose={closeCommunity} />
 
       {/* Outfit Sharing Page */}
       <OutfitSharingPage isOpen={isOutfitSharingOpen} onClose={() => setIsOutfitSharingOpen(false)} />
