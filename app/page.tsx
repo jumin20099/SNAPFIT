@@ -127,30 +127,20 @@ export default function SnapFitMobile() {
   const [isProductDetailOpen, setIsProductDetailOpen] = useState(false)
   const [codyItems, setCodyItems] = useState<{ [key: string]: any }>({})
   // 좋아요된 상품 ID 집합 (카테고리/검색 목록 하트 표시용)
-  const [likedProductIds, setLikedProductIds] = useState<Set<number>>(() => {
-    // 로컬 스토리지에서 좋아요 상태 복원
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('likedProductIds')
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved)
-          return new Set(parsed)
-        } catch (e) {
-          console.error('좋아요 상태 복원 실패:', e)
-        }
-      }
-    }
-    return new Set()
-  })
+  const [likedProductIds, setLikedProductIds] = useState<Set<number>>(new Set())
 
-  // 좋아요 상태를 로컬 스토리지에 저장하는 함수
+  // 좋아요 상태를 로컬 스토리지에 저장하는 함수 (보조 저장소)
   const saveLikedProductIds = (newLikedIds: Set<number>) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('likedProductIds', JSON.stringify(Array.from(newLikedIds)))
+      try {
+        localStorage.setItem('likedProductIds', JSON.stringify(Array.from(newLikedIds)))
+      } catch (error) {
+        console.warn('로컬 스토리지 저장 실패:', error)
+      }
     }
   }
 
-  // 페이지 로드 시 좋아요 상태 복원
+  // 페이지 로드 시 좋아요 상태 복원 (서버 우선, 로컬 스토리지는 보조)
   useEffect(() => {
     const fetchLikedStatus = async () => {
       try {
@@ -163,7 +153,7 @@ export default function SnapFitMobile() {
           })
           if (response.ok) {
             const data = await response.json()
-            console.log('좋아요 상태 복원 데이터:', data) // 디버깅용
+            console.log('서버에서 좋아요 상태 복원:', data)
             // Like 엔티티에서 PRODUCT 타입의 targetIdx만 추출
             const likedIds: Set<number> = new Set(
               Array.isArray(data) 
@@ -173,13 +163,38 @@ export default function SnapFitMobile() {
                     .filter((id: any) => !isNaN(id))
                 : []
             )
-            console.log('좋아요 상태 복원된 ID들:', Array.from(likedIds)) // 디버깅용
+            console.log('서버에서 복원된 좋아요 ID들:', Array.from(likedIds))
             setLikedProductIds(likedIds)
+            // 로컬 스토리지에 백업 (보조 저장소)
             saveLikedProductIds(likedIds)
+          }
+        } else {
+          // 토큰이 없으면 로컬 스토리지에서 임시 복원 (오프라인 지원)
+          console.log('토큰이 없어 로컬 스토리지에서 임시 복원 시도')
+          const saved = localStorage.getItem('likedProductIds')
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved)
+              setLikedProductIds(new Set(parsed))
+              console.log('로컬 스토리지에서 임시 복원됨:', parsed)
+            } catch (e) {
+              console.warn('로컬 스토리지 복원 실패:', e)
+            }
           }
         }
       } catch (error) {
-        console.error('좋아요 상태 복원 실패:', error)
+        console.error('서버에서 좋아요 상태 복원 실패, 로컬 스토리지 시도:', error)
+        // 서버 연결 실패 시 로컬 스토리지에서 복원 시도
+        const saved = localStorage.getItem('likedProductIds')
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved)
+            setLikedProductIds(new Set(parsed))
+            console.log('서버 연결 실패로 로컬 스토리지에서 복원됨:', parsed)
+          } catch (e) {
+            console.warn('로컬 스토리지 복원 실패:', e)
+          }
+        }
       }
     }
 
@@ -459,11 +474,11 @@ export default function SnapFitMobile() {
       })
       if (response.ok) {
         const data = await response.json() // { liked, count }
-        // liked ID 집합 업데이트
+        // 서버 응답을 우선으로 상태 업데이트
         setLikedProductIds((prev: Set<number>) => {
           const next = new Set(prev)
           if (data?.liked) next.add(productId); else next.delete(productId)
-          // 로컬 스토리지에 저장
+          // 로컬 스토리지에 백업 저장 (보조 저장소)
           saveLikedProductIds(next)
           return next
         })
@@ -480,9 +495,35 @@ export default function SnapFitMobile() {
           }
           return prev
         })
+      } else {
+        console.error('서버 응답 오류:', response.status)
       }
     } catch (error) {
       console.error('좋아요 토글 실패:', error)
+      // 에러 발생 시 서버에서 최신 상태를 다시 가져오기
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          const response = await fetch('/api/likes/my', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          })
+          if (response.ok) {
+            const data = await response.json()
+            const likedIds: Set<number> = new Set(
+              Array.isArray(data) 
+                ? data
+                    .filter((like: any) => like?.targetType === 'PRODUCT')
+                    .map((like: any) => Number(like?.targetIdx))
+                    .filter((id: any) => !isNaN(id))
+                : []
+            )
+            setLikedProductIds(likedIds)
+            saveLikedProductIds(likedIds)
+          }
+        } catch (syncError) {
+          console.error('상태 동기화 실패:', syncError)
+        }
+      }
     }
   }
 
@@ -514,12 +555,12 @@ export default function SnapFitMobile() {
           }
           return prev
         })
-        // liked ID 집합 업데이트
+        // 서버 응답을 우선으로 liked ID 집합 업데이트
         setLikedProductIds((prev: Set<number>) => {
           const next = new Set(prev)
           if (likedNow) next.add(productId); else next.delete(productId)
-          console.log('좋아요 상태 업데이트 - 상품ID:', productId, '새로운 상태:', likedNow, '전체 좋아요 ID들:', Array.from(next)) // 디버깅용
-          // 로컬 스토리지에 저장
+          console.log('좋아요 상태 업데이트 - 상품ID:', productId, '새로운 상태:', likedNow, '전체 좋아요 ID들:', Array.from(next))
+          // 로컬 스토리지에 백업 저장 (보조 저장소)
           saveLikedProductIds(next)
           return next
         })
@@ -527,13 +568,42 @@ export default function SnapFitMobile() {
         if (selectedMajorCategory === "좋아요") {
           fetchLikedProducts()
         }
+      } else {
+        console.error('서버 응답 오류:', response.status)
+        if (selectedMajorCategory === "좋아요") {
+          fetchLikedProducts()
+        }
       }
     } catch (error) {
-      if (selectedMajorCategory === "좋아요") {
-        // 좋아요 탭에서 롤백
-        fetchLikedProducts()
-      }
       console.error('카테고리 상품 좋아요 토글 에러:', error)
+      // 에러 발생 시 서버에서 최신 상태를 다시 가져오기
+      if (selectedMajorCategory === "좋아요") {
+        fetchLikedProducts()
+      } else {
+        const token = localStorage.getItem('token')
+        if (token) {
+          try {
+            const response = await fetch('/api/likes/my', {
+              headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (response.ok) {
+              const data = await response.json()
+              const likedIds: Set<number> = new Set(
+                Array.isArray(data) 
+                  ? data
+                      .filter((like: any) => like?.targetType === 'PRODUCT')
+                      .map((like: any) => Number(like?.targetIdx))
+                      .filter((id: any) => !isNaN(id))
+                  : []
+              )
+              setLikedProductIds(likedIds)
+              saveLikedProductIds(likedIds)
+            }
+          } catch (syncError) {
+            console.error('상태 동기화 실패:', syncError)
+          }
+        }
+      }
     }
   }
 
