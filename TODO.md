@@ -18,7 +18,7 @@
 - [x] ScrapRepository.java 생성
 - [x] FollowRepository.java 생성
 - [x] TagRepository.java 생성
-- [ ] CommentRepository.java 생성
+- [x] CommentRepository.java 생성
 - [ ] NotificationRepository.java 생성
 - [ ] ReportRepository.java 생성
 - [ ] BlockRepository.java 생성
