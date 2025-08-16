@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useCreatePost } from "@/hooks/useCreatePost"
 
 interface PostCreatePageProps {
   isOpen: boolean
@@ -30,6 +31,9 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
   const editorRef = useRef<HTMLDivElement>(null)
   const [isEmpty, setIsEmpty] = useState(true);
   const placeholder = "내용을 입력하세요...";
+  
+  // 게시글 생성 훅 사용
+  const { createPost, loading, error, resetError } = useCreatePost();
 
   // 에디터 초기화
   useEffect(() => {
@@ -130,7 +134,7 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
   };
 
   // 게시글 발행
-  const handlePublish = () => {
+  const handlePublish = async () => {
     if (!title.trim()) {
       alert("제목을 입력해주세요.")
       return
@@ -141,10 +145,31 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
       return
     }
 
-    // 여기서 실제 게시글 저장 로직 구현
+    try {
+      // 이미지 URL 추출 (현재는 base64, 실제로는 S3 등에 업로드 후 URL 사용)
+      const mediaUrls = uploadedImages.map(img => img.url);
+      
+      const postData = {
+        title: title.trim(),
+        content: content.trim(),
+        tags: tags,
+        mediaUrls: mediaUrls
+      };
 
-    alert("게시글이 발행되었습니다!")
-    onClose()
+      console.log('게시글 발행 시작:', postData);
+      
+      const result = await createPost(postData);
+      
+      if (result) {
+        alert("게시글이 발행되었습니다!")
+        onClose();
+      } else {
+        alert("게시글 발행에 실패했습니다. 다시 시도해주세요.");
+      }
+    } catch (err) {
+      console.error('게시글 발행 에러:', err);
+      alert("게시글 발행 중 오류가 발생했습니다.");
+    }
   }
 
   if (!isOpen) return null
@@ -159,14 +184,33 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
           </Button>
           <h1 className="text-xl font-bold">글 작성</h1>
         </div>
-        <Button onClick={handlePublish} className="bg-blue-600 hover:bg-blue-700">
-          발행
+        <Button 
+          onClick={handlePublish} 
+          disabled={loading}
+          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+        >
+          {loading ? "발행 중..." : "발행"}
         </Button>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto p-4 space-y-6">
+          {/* 에러 메시지 표시 */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-red-600 text-sm">{error}</p>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={resetError}
+                className="text-red-600 hover:text-red-700 mt-2"
+              >
+                닫기
+              </Button>
+            </div>
+          )}
+
           {/* 제목 입력 */}
           <div>
             <Input
