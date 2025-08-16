@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS posts (
     author_id UUID NOT NULL REFERENCES users(user_idx) ON DELETE CASCADE,
     outfit_id BIGINT NULL REFERENCES outfits(outfit_idx) ON DELETE SET NULL,
     content TEXT NOT NULL CHECK (length(content) >= 1 AND length(content) <= 10000),
-    media_urls TEXT[] DEFAULT '{}',
+    media_urls JSONB DEFAULT '[]'::jsonb,
     is_sponsored BOOLEAN DEFAULT FALSE,
     is_deleted BOOLEAN DEFAULT FALSE,
     like_count BIGINT DEFAULT 0 CHECK (like_count >= 0),

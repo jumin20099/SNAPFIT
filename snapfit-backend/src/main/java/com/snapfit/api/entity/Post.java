@@ -105,13 +105,7 @@ public class Post {
      * 미디어 URL 배열 (선택사항)
      * 보안: URL 검증 및 크기 제한
      */
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(
-        name = "post_media_urls",
-        joinColumns = @JoinColumn(name = "post_id"),
-        indexes = @Index(name = "idx_post_media_urls_post_id", columnList = "post_id")
-    )
-    @Column(name = "media_url", length = 500)
+    @Column(name = "media_urls", columnDefinition = "jsonb")
     @Size(max = 10, message = "미디어는 최대 10개까지 업로드 가능합니다")
     @Builder.Default
     private Set<String> mediaUrls = new HashSet<>();
