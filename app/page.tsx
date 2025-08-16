@@ -359,19 +359,18 @@ export default function SnapFitMobile() {
         const allProducts = await response.json()
         
         // 프론트엔드에서 필터링
-        
-                  let filteredProducts = allProducts.filter((product: any) => {
-            if (major && product.majorCategory !== major) {
-              return false
-            }
-            if (sub && sub !== "신상" && product.subCategory !== sub) {
-              return false
-            }
-            if (sub === "신상" && !product.newProduct) {
-              return false
-            }
-            return true
-          })
+        let filteredProducts = allProducts.filter((product: any) => {
+          if (major && product.majorCategory !== major) {
+            return false
+          }
+          if (sub && sub !== "신상" && product.subCategory !== sub) {
+            return false
+          }
+          if (sub === "신상" && !product.isNewProduct) {
+            return false
+          }
+          return true
+        })
         
         // 좋아요 상태 반영
         const productsWithLikes = filteredProducts.map((product: any) => ({

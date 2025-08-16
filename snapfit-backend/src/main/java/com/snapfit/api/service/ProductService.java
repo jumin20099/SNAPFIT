@@ -141,10 +141,8 @@ public class ProductService {
     public List<Product> processNewProductCategory(List<Product> products) {
         return products.stream()
             .map(product -> {
-                // 신상인 경우에만 subCategory를 "신상"으로 설정 (이미 설정된 경우는 유지)
-                if (product.isNewProduct() && (product.getSubCategory() == null || product.getSubCategory().equals("신상"))) {
-                    product.setSubCategory("신상");
-                }
+                // 신상은 내부적인 태그이므로 subCategory를 변경하지 않음
+                // 신상 여부는 isNewProduct() 필드로만 확인
                 return product;
             })
             .collect(Collectors.toList());
@@ -177,10 +175,8 @@ public class ProductService {
                 .anyMatch(like -> like.getTargetIdx().equals(productIdx) && like.getTargetType() == TargetType.PRODUCT);
         }
 
-        // 신상 카테고리 처리
-        if (product.isNewProduct()) {
-            product.setSubCategory("신상");
-        }
+        // 신상 카테고리 처리 - 신상은 내부적인 태그이므로 subCategory를 변경하지 않음
+        // 신상 여부는 isNewProduct() 필드로만 확인
 
         return new ProductDetailDto(product, cumulativeViews, actualViews, likesCount, likedByUser, liveViewers);
     }
