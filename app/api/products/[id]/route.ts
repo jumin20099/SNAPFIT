@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080'
 
@@ -9,8 +10,18 @@ export async function GET(
   try {
     const productId = params.id
 
-    const authHeader =
-      request.headers.get('authorization') || request.headers.get('Authorization') || ''
+    // 쿠키에서 토큰 읽기 (SSR에서 사용)
+    const cookieStore = cookies()
+    const cookieToken = cookieStore.get('auth_token')?.value
+    console.log('상품 상세 API - 쿠키 토큰:', cookieToken ? '존재함' : '없음')
+    
+    // 헤더에서 토큰 읽기 (클라이언트에서 사용)
+    const headerToken = request.headers.get('authorization') || request.headers.get('Authorization') || ''
+    console.log('상품 상세 API - 헤더 토큰:', headerToken ? '존재함' : '없음')
+    
+    // 쿠키 토큰이 있으면 사용, 없으면 헤더 토큰 사용
+    const authToken = cookieToken || headerToken.replace('Bearer ', '')
+    console.log('상품 상세 API - 최종 사용 토큰:', authToken ? '존재함' : '없음')
 
     const url = `${API_BASE_URL}/api/products/${productId}`
     const maxAttempts = 3
@@ -20,8 +31,9 @@ export async function GET(
         const response = await fetch(url, {
           method: 'GET',
           headers: {
-            ...(authHeader ? { Authorization: authHeader } : {}),
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           },
+          credentials: 'include', // 쿠키 전달을 위해 필요
           cache: 'no-store',
         })
         if (response.ok) {

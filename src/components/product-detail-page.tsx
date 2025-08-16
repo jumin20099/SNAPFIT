@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ArrowLeft, Heart, Share2, ShoppingCart, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 interface Product {
-  productIdx: number
+  productIdx?: number
+  id?: number
   productName: string
   productContent: string
   productPrice: number
@@ -32,9 +33,25 @@ export default function ProductDetailPage({
   onToggleLike 
 }: ProductDetailPageProps) {
   const [selectedImage, setSelectedImage] = useState(0)
+  const [localLiked, setLocalLiked] = useState(product.liked || false)
   
   // 여러 이미지가 있다고 가정 (실제로는 product.images 배열이 있을 것)
   const images = [product.productImage, product.productImage, product.productImage]
+  
+  // 좋아요 상태가 변경될 때마다 로컬 상태도 업데이트
+  useEffect(() => {
+    console.log('ProductDetailPage - 좋아요 상태 변경 감지:', product.liked) // 디버깅용
+    setLocalLiked(product.liked || false)
+  }, [product.liked])
+  
+  const handleToggleLike = () => {
+    const newLikedState = !localLiked
+    setLocalLiked(newLikedState)
+    const productId = product.productIdx || product.id
+    if (productId) {
+      onToggleLike(productId)
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-white z-[9999] flex flex-col">
@@ -60,11 +77,11 @@ export default function ProductDetailPage({
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
-              onToggleLike(product.productIdx)
+              handleToggleLike()
             }}
             className="p-2 hover:bg-gray-100"
           >
-            <Heart className={`w-5 h-5 ${product.liked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
+            <Heart className={`w-5 h-5 ${localLiked ? "fill-red-500 text-red-500" : "text-gray-400"}`} />
           </Button>
           <Button 
             variant="ghost" 

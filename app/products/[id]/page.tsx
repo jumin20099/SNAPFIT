@@ -1,10 +1,12 @@
+"use client"
+
 import Image from 'next/image'
 import AddToCartButton from '@/components/add-to-cart-button'
 import LikeButton from '@/components/like-button'
 import { formatCurrencyKRW } from '@/lib/utils'
 import ViewCountDisplay from '@/components/ViewCountDisplay'
-import { headers } from 'next/headers'
 import ActualViewIncrementer from '@/components/ActualViewIncrementer'
+import { useEffect, useState } from 'react'
 
 type Product = {
   productIdx: number
@@ -25,57 +27,110 @@ type ProductDetailDto = {
   liveViewers: number
 }
 
-function getBaseUrl() {
-  const h = headers()
-  const proto = h.get('x-forwarded-proto') ?? 'http'
-  const host = h.get('x-forwarded-host') ?? h.get('host')
-  if (host) return `${proto}://${host}`
-  return process.env.NEXT_PUBLIC_APP_ORIGIN || 'http://localhost:3000'
-}
+export default function ProductDetailPage({ params }: { params: { id: string } }) {
+  const [detail, setDetail] = useState<ProductDetailDto | null>(null)
+  const [related, setRelated] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-async function getProductDetail(productId: string): Promise<ProductDetailDto> {
-  const base = getBaseUrl()
-  const res = await fetch(`${base}/api/products/${productId}`, {
-    // 상세는 신선도 우선. 이후 필요한 경우 revalidate로 변경 가능
-    cache: 'no-store',
-  })
-  if (!res.ok) {
-    throw new Error('상품 정보를 불러오지 못했습니다.')
-  }
-  return res.json()
-}
-
-async function getRelatedProducts(major?: string | null, sub?: string | null) {
-  const usp = new URLSearchParams()
-  if (major) usp.append('major', major)
-  if (sub) usp.append('sub', sub as string)
-  const base = getBaseUrl()
-  const res = await fetch(`${base}/api/products${usp.toString() ? `?${usp.toString()}` : ''}`, {
-    cache: 'no-store',
-  })
-  if (!res.ok) return []
-  return res.json()
-}
-
-export default async function ProductDetailPage({ params }: { params: { id: string } }) {
-  const detail = await getProductDetail(params.id)
-  // 조회수 증가 트리거는 클라이언트에서 실행 (서버에서 실행 시 식별자 쿠키 부재로 false 가능)
-  const p = detail.product
-  const relatedRaw = await getRelatedProducts(p.majorCategory, p.subCategory)
-  const related = Array.isArray(relatedRaw)
-    ? relatedRaw
-        .filter((rp: any) => rp?.productIdx !== p.productIdx)
-        .filter((rp: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.productIdx === rp.productIdx) === idx)
-        .sort((a: any, b: any) => {
-          const subEqA = p.subCategory && a.subCategory === p.subCategory ? 1 : 0
-          const subEqB = p.subCategory && b.subCategory === p.subCategory ? 1 : 0
-          if (subEqA !== subEqB) return subEqB - subEqA
-          const priceA = Math.abs((a.productPrice ?? 0) - (p.productPrice ?? 0))
-          const priceB = Math.abs((b.productPrice ?? 0) - (p.productPrice ?? 0))
-          return priceA - priceB
+  useEffect(() => {
+    const fetchProductDetail = async () => {
+      try {
+        setLoading(true)
+        
+        // 클라이언트에서 직접 백엔드 API 호출 (쿠키 자동 전달)
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
+        const response = await fetch(`${API_BASE_URL}/api/products/${params.id}`, {
+          credentials: 'include', // 쿠키 자동 전달
         })
-    : []
+        
+        if (response.ok) {
+          const data = await response.json()
+          setDetail(data)
+          
+          // 연관 상품 가져오기
+          const usp = new URLSearchParams()
+          if (data.product.majorCategory) usp.append('major', data.product.majorCategory)
+          if (data.product.subCategory) usp.append('sub', data.product.subCategory)
+          
+          const relatedResponse = await fetch(`${API_BASE_URL}/api/products${usp.toString() ? `?${usp.toString()}` : ''}`, {
+            credentials: 'include',
+          })
+          if (relatedResponse.ok) {
+            const relatedData = await relatedResponse.json()
+            const filteredRelated = Array.isArray(relatedData)
+              ? relatedData
+                  .filter((rp: any) => rp?.productIdx !== data.product.productIdx)
+                  .filter((rp: any, idx: number, arr: any[]) => arr.findIndex((x: any) => x.productIdx === rp.productIdx) === idx)
+                  .sort((a: any, b: any) => {
+                    const subEqA = data.product.subCategory && a.subCategory === data.product.subCategory ? 1 : 0
+                    const subEqB = data.product.subCategory && b.subCategory === data.product.subCategory ? 1 : 0
+                    if (subEqA !== subEqB) return subEqB - subEqA
+                    const priceA = Math.abs((a.productPrice ?? 0) - (data.product.productPrice ?? 0))
+                    const priceB = Math.abs((b.productPrice ?? 0) - (data.product.productPrice ?? 0))
+                    return priceA - priceB
+                  })
+              : []
+            setRelated(filteredRelated)
+          }
+        }
+      } catch (error) {
+        console.error('상품 정보를 불러오지 못했습니다:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
+    fetchProductDetail()
+  }, [params.id])
+
+  // 좋아요 상태를 주기적으로 확인 (무한 루프 방지)
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      try {
+        const response = await fetch('/api/likes/my', {
+          credentials: 'include',
+        })
+        if (response.ok) {
+          const likedIds = await response.json()
+          const isLiked = likedIds.some((like: any) => 
+            like.targetIdx === Number(params.id) && like.targetType === 'PRODUCT'
+          )
+          
+          // 현재 상태와 다를 때만 업데이트 (무한 루프 방지)
+          setDetail(prev => {
+            if (prev && prev.likedByUser !== isLiked) {
+              return {
+                ...prev,
+                likedByUser: isLiked
+              }
+            }
+            return prev
+          })
+        }
+      } catch (error) {
+        console.error('좋아요 상태 확인 실패:', error)
+      }
+    }
+
+    // 초기 로드 시 즉시 확인
+    checkLikeStatus()
+    
+    // 이후 2초마다 좋아요 상태 확인
+    const interval = setInterval(checkLikeStatus, 2000)
+    return () => clearInterval(interval)
+  }, [params.id])
+
+  if (loading || !detail) {
+    return (
+      <main className="mx-auto max-w-screen-lg p-4">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">로딩 중...</div>
+        </div>
+      </main>
+    )
+  }
+
+  const p = detail.product
   const priceFormatted = formatCurrencyKRW(p.productPrice)
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -185,34 +240,6 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
       </section>
     </main>
   )
-}
-
-export async function generateMetadata({ params }: { params: { id: string } }) {
-  try {
-    const detail = await getProductDetail(params.id)
-    const p = detail.product
-    const title = `${p.productName} | Snapfit`
-    const description = p.productContent?.slice(0, 120) || '상품 상세 정보'
-    const images = [p.productImage].filter(Boolean)
-    return {
-      title,
-      description,
-      openGraph: {
-        title,
-        description,
-        images,
-        url: `/products/${params.id}`,
-      },
-      alternates: {
-        canonical: `/products/${params.id}`,
-      },
-    }
-  } catch {
-    return {
-      title: '상품 상세 | Snapfit',
-      description: '상품 상세 정보',
-    }
-  }
 }
 
 
