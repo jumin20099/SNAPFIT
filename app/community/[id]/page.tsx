@@ -223,15 +223,18 @@ export default function PostDetailPage() {
 
       if (response.ok) {
         const data = await response.json()
+        console.log('좋아요 토글 응답:', data) // 디버깅 로그
         
         // 모든 게시글의 좋아요 상태 업데이트
-        setPosts(prev => 
-          prev.map(post => 
+        setPosts(prev => {
+          const updatedPosts = prev.map(post => 
             post.postId === postId 
               ? { ...post, liked: data.liked, likeCount: data.count }
               : post
           )
-        )
+          console.log('업데이트된 게시글:', updatedPosts.find(p => p.postId === postId)) // 디버깅 로그
+          return updatedPosts
+        })
         
         // 현재 게시글의 좋아요 상태 즉시 업데이트
         if (currentPost?.postId === postId) {
@@ -262,15 +265,18 @@ export default function PostDetailPage() {
 
       if (response.ok) {
         const data = await response.json()
+        console.log('스크랩 토글 응답:', data) // 디버깅 로그
         
         // 모든 게시글의 스크랩 상태 업데이트
-        setPosts(prev => 
-          prev.map(post => 
+        setPosts(prev => {
+          const updatedPosts = prev.map(post => 
             post.postId === postId 
               ? { ...post, scraped: data.scraped, scrapCount: data.count }
               : post
           )
-        )
+          console.log('업데이트된 게시글:', updatedPosts.find(p => p.postId === postId)) // 디버깅 로그
+          return updatedPosts
+        })
         
         // 현재 게시글의 스크랩 상태 즉시 업데이트
         if (currentPost?.postId === postId) {
@@ -376,7 +382,7 @@ export default function PostDetailPage() {
                   onClick={() => toggleLike(post.postId)} 
                   className="p-2"
                 >
-                  <Heart className={`w-6 h-6 ${post.postId === currentPost?.postId ? isLiked : post.liked ? "fill-red-500 text-red-500" : ""}`} />
+                  <Heart className={`w-6 h-6 ${post.liked ? "fill-red-500 text-red-500" : ""}`} />
                 </Button>
                 <Button variant="ghost" size="sm" className="p-2">
                   <MessageSquare className="w-6 h-6" />
@@ -391,7 +397,7 @@ export default function PostDetailPage() {
                     onClick={() => toggleScrap(post.postId)} 
                     className="p-2"
                   >
-                    <Bookmark className={`w-6 h-6 ${post.postId === currentPost?.postId ? isScraped : post.scraped ? "fill-blue-500 text-blue-500" : ""}`} />
+                    <Bookmark className={`w-6 h-6 ${post.scraped ? "fill-blue-500 text-blue-500" : ""}`} />
                   </Button>
                 </div>
               </div>
