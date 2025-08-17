@@ -1,14 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Heart, Search, Bell, User, Filter, ChevronDown, Home, Users, Bookmark } from "lucide-react"
+import { Heart, Search, Bell, User, Filter, ChevronDown, Home, Users, Bookmark } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import PostDetailPage from "./post-detail-page"
-import PostCreatePage from "./post-create-page"
+import { useRouter } from "next/navigation"
 
 interface Post {
   postId: number
@@ -32,12 +31,8 @@ const filterOptions = {
   sort: ["최신순", "좋아요순", "댓글순", "스크랩순"],
 }
 
-interface CommunityPageProps {
-  isOpen: boolean
-  onClose: () => void
-}
-
-export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
+export default function CommunityPage() {
+  const router = useRouter()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState("home")
@@ -48,8 +43,6 @@ export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
     type: "전체",
     sort: "최신순",
   })
-  const [selectedPostId, setSelectedPostId] = useState<number | null>(null)
-  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false)
 
   // 게시글 목록 가져오기
   const fetchPosts = async () => {
@@ -104,10 +97,8 @@ export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
 
   // 컴포넌트 마운트 시 게시글 로드
   useEffect(() => {
-    if (isOpen) {
-      fetchPosts()
-    }
-  }, [isOpen])
+    fetchPosts()
+  }, [])
 
   const toggleLike = (postId: number) => {
     setPosts(
@@ -180,41 +171,22 @@ export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
   }
 
   const handlePostClick = (postId: number) => {
-    setSelectedPostId(postId)
-  }
-
-  const handleClosePostDetail = () => {
-    setSelectedPostId(null)
+    router.push(`/community/${postId}`)
   }
 
   const handleFilterChange = (filterType: string, value: string) => {
     setFilters((prev) => ({ ...prev, [filterType]: value }))
   }
 
-  if (!isOpen) return null
-
-  // 게시글 상세 페이지가 열려있으면 해당 컴포넌트 렌더링
-  if (selectedPostId !== null) {
-    return <PostDetailPage isOpen={true} onClose={handleClosePostDetail} postId={selectedPostId} />
-  }
-
-  // 글 작성 페이지가 열려있으면 해당 컴포넌트 렌더링
-  if (isCreatePostOpen) {
-    return <PostCreatePage isOpen={true} onClose={() => setIsCreatePostOpen(false)} />
-  }
-
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col h-screen">
+    <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="bg-white border-b p-4 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onClose} className="p-1 h-8 w-8">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
           <div className="font-bold text-2xl">SNAP</div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setIsCreatePostOpen(true)} className="text-blue-600">
+          <Button variant="ghost" size="sm" onClick={() => router.push('/community/create')} className="text-blue-600">
             글쓰기
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setIsSearchMode(!isSearchMode)}>
@@ -239,10 +211,10 @@ export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+      <div className="flex-1">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Tab Navigation */}
-          <div className="border-b bg-white flex-shrink-0">
+          <div className="border-b bg-white">
             <TabsList className="w-full grid grid-cols-3 bg-transparent h-12 p-0">
               <TabsTrigger
                 value="home"
@@ -266,7 +238,7 @@ export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
           </div>
 
           {/* Filters */}
-          <div className="border-b bg-white p-3 flex-shrink-0">
+          <div className="border-b bg-white p-3">
             <div className="flex items-center gap-2 overflow-x-auto">
               {Object.entries(filterOptions).map(([filterType, options]) => (
                 <div key={filterType} className="relative">
@@ -313,8 +285,8 @@ export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto">
-            <TabsContent value="home" className="h-full m-0">
+          <div className="w-full">
+            <TabsContent value="home" className="m-0">
               <div className="p-3">
                 {loading ? (
                   <div className="flex items-center justify-center h-32">
@@ -375,16 +347,16 @@ export default function CommunityPage({ isOpen, onClose }: CommunityPageProps) {
               </div>
             </TabsContent>
 
-            <TabsContent value="following" className="h-full m-0">
-              <div className="p-4 text-center text-gray-500 flex flex-col items-center justify-center h-full">
+            <TabsContent value="following" className="m-0">
+              <div className="p-4 text-center text-gray-500 flex flex-col items-center justify-center h-32">
                 <Users className="w-12 h-12 mb-4 text-gray-400" />
                 <h3 className="text-lg font-medium mb-2">팔로잉</h3>
                 <p>팔로우한 사용자들의 최신 게시글을 확인해보세요!</p>
               </div>
             </TabsContent>
 
-            <TabsContent value="profile" className="h-full m-0">
-              <div className="p-4 text-center text-gray-500 flex flex-col items-center justify-center h-full">
+            <TabsContent value="profile" className="m-0">
+              <div className="p-4 text-center text-gray-500 flex flex-col items-center justify-center h-32">
                 <div className="w-20 h-20 rounded-full bg-gray-200 mb-4"></div>
                 <h3 className="text-lg font-medium mb-2">프로필</h3>
                 <p>나만의 스타일을 공유하고 다른 사용자들과 소통해보세요!</p>

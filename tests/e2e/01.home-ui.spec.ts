@@ -52,4 +52,46 @@ test.describe('Home UI smoke', () => {
     await expect(page.getByText('제휴사 등록 신청')).toBeVisible();
     await expect(page.getByText('회사명 *')).toBeVisible();
   });
+
+  test('community button navigates to community page', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: /커뮤니티/ })).toBeVisible();
+    await page.getByRole('button', { name: /커뮤니티/ }).click();
+    
+    // 커뮤니티 페이지로 이동했는지 확인
+    await expect(page).toHaveURL('/community');
+    await expect(page.getByText('SNAP')).toBeVisible();
+    await expect(page.getByRole('button', { name: '글쓰기' })).toBeVisible();
+  });
+
+  test('my page button navigates to my page', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: /마이페이지/ })).toBeVisible();
+    await page.getByRole('button', { name: /마이페이지/ }).click();
+    
+    // 마이페이지로 이동했는지 확인
+    await expect(page).toHaveURL('/my-page');
+    await expect(page.getByText('마이페이지')).toBeVisible();
+  });
+
+  test('login button navigates to login page', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: '로그인' })).toBeVisible();
+    await page.getByRole('button', { name: '로그인' }).click();
+    
+    // 로그인 페이지로 이동했는지 확인
+    await expect(page).toHaveURL('/login');
+    await expect(page.getByRole('heading', { name: 'SNAPFIT' })).toBeVisible();
+  });
+
+  test('partner application button navigates to partner application page', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: '제휴신청' })).toBeVisible();
+    await page.getByRole('button', { name: '제휴신청' }).click();
+    
+    // 제휴사 신청 페이지로 이동했는지 확인
+    await expect(page).toHaveURL('/partner-application');
+    await expect(page.getByText('제휴사 등록 신청')).toBeVisible();
+    await expect(page.getByText('회사명 *')).toBeVisible();
+  });
 });

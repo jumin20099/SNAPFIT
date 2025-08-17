@@ -7,16 +7,10 @@ import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import MyPage from "@/components/my-page"
-import OutfitSharingPage from "@/components/outfit-sharing-page"
-import SocialLoginPage from "@/components/social-login"
-import AdminPage from "@/components/admin-page"
-import PartnerMainPage from "@/components/partner-main-page"
-import PartnerApplicationStandalone from "@/components/partner-application-standalone"
 import ProductCard from "@/components/product-card"
 import ProductDetailPage from "@/components/product-detail-page"
-import CommunityPage from "@/components/community-page"
 import { useModals } from "@/contexts/ModalContext"
+import { useRouter } from "next/navigation"
 
 const categories = ["전체", "남성복", "여성복"]
 const majorCategories = ["좋아요", "상의", "하의", "아우터", "신발", "가방", "패션소품"]
@@ -107,8 +101,8 @@ const subCategoryDetails = {
 const mockProducts: any[] = []
 
 export default function SnapFitMobile() {
-  const { isCommunityOpen, openCommunity, closeCommunity } = useModals()
-  const [isProductPanelOpen, setIsProductPanelOpen] = useState(false)
+  const { isProductPanelOpen, setIsProductPanelOpen } = useModals()
+  const router = useRouter()
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState("전체")
   const [selectedMajorCategory, setSelectedMajorCategory] = useState("")
@@ -119,12 +113,6 @@ export default function SnapFitMobile() {
   const [products, setProducts] = useState(mockProducts)
   const [categoryProducts, setCategoryProducts] = useState<any[]>([])
   const [isLoadingCategory, setIsLoadingCategory] = useState(false)
-  const [isMyPageOpen, setIsMyPageOpen] = useState(false)
-  const [isSocialLoginOpen, setIsSocialLoginOpen] = useState(false)
-  const [isOutfitSharingOpen, setIsOutfitSharingOpen] = useState(false)
-  const [isAdminPageOpen, setIsAdminPageOpen] = useState(false)
-  const [isPartnerPageOpen, setIsPartnerPageOpen] = useState(false)
-  const [isPartnerApplicationOpen, setIsPartnerApplicationOpen] = useState(false)
   const [userInfo, setUserInfo] = useState<{ role?: string; email?: string } | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [isProductDetailOpen, setIsProductDetailOpen] = useState(false)
@@ -299,9 +287,29 @@ export default function SnapFitMobile() {
   }
 
   useEffect(() => {
-    fetchUserInfo()
-    // 초기 좋아요 ID 동기화
-    fetchLikedIds()
+    // URL에서 로그인 성공 토큰 확인
+    const urlParams = new URLSearchParams(window.location.search)
+    const token = urlParams.get('token')
+    const loginSuccess = urlParams.get('login')
+    
+    if (token && loginSuccess === 'success') {
+      // 토큰을 로컬 스토리지에 저장
+      localStorage.setItem('token', token)
+      
+      // URL에서 토큰 파라미터 제거
+      const newUrl = new URL(window.location.href)
+      newUrl.searchParams.delete('token')
+      newUrl.searchParams.delete('login')
+      window.history.replaceState({}, '', newUrl.toString())
+      
+      // 사용자 정보 새로고침
+      fetchUserInfo()
+      fetchLikedIds()
+    } else {
+      // 기존 로직
+      fetchUserInfo()
+      fetchLikedIds()
+    }
   }, [])
 
   // 좋아요한 상품들 상태
@@ -747,15 +755,16 @@ export default function SnapFitMobile() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsMyPageOpen(true)}
+          onClick={() => router.push('/my-page')}
           className="bg-white/90 backdrop-blur-sm"
         >
-          <User className="w-4 h-4" />
+          <User className="w-4 h-4 mr-1" />
+          마이페이지
         </Button>
         <Button
           variant="outline"
           size="sm"
-          onClick={openCommunity}
+          onClick={() => router.push('/community')}
           className="bg-white/90 backdrop-blur-sm"
         >
           <Users className="w-4 h-4 mr-1" />
@@ -766,7 +775,7 @@ export default function SnapFitMobile() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsPartnerPageOpen(true)}
+            onClick={() => router.push('/partner-dashboard')}
             className="bg-white/90 backdrop-blur-sm"
           >
             <Store className="w-4 h-4" />
@@ -777,7 +786,7 @@ export default function SnapFitMobile() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsAdminPageOpen(true)}
+            onClick={() => router.push('/admin')}
             className="bg-white/90 backdrop-blur-sm"
           >
             <Settings className="w-4 h-4" />
@@ -787,7 +796,7 @@ export default function SnapFitMobile() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsPartnerApplicationOpen(true)}
+          onClick={() => router.push('/partner-application')}
           className="bg-white/90 backdrop-blur-sm"
         >
           제휴신청
@@ -812,7 +821,7 @@ export default function SnapFitMobile() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsSocialLoginOpen(true)}
+          onClick={() => router.push('/login')}
           className="bg-white/90 backdrop-blur-sm"
         >
           로그인
@@ -1083,29 +1092,23 @@ export default function SnapFitMobile() {
       </Sheet>
 
       {/* My Page */}
-      <MyPage open={isMyPageOpen} onOpenChange={setIsMyPageOpen} />
+      {/* <MyPage open={isMyPageOpen} onOpenChange={setIsMyPageOpen} /> */}
 
       {/* Social Login Page */}
-      <SocialLoginPage
+      {/* <SocialLoginPage
         open={isSocialLoginOpen} 
         onOpenChange={setIsSocialLoginOpen} 
         onSwitchToSignup={() => {}}
-      />
-
-      {/* Community Page */}
-      <CommunityPage isOpen={isCommunityOpen} onClose={closeCommunity} />
-
-      {/* Outfit Sharing Page */}
-      <OutfitSharingPage isOpen={isOutfitSharingOpen} onClose={() => setIsOutfitSharingOpen(false)} />
+      /> */}
 
       {/* Admin Page */}
-      <AdminPage isOpen={isAdminPageOpen} onClose={() => setIsAdminPageOpen(false)} userRole={userInfo?.role} />
+      {/* <AdminPage isOpen={isAdminPageOpen} onClose={() => setIsAdminPageOpen(false)} userRole={userInfo?.role} /> */}
 
       {/* Partner Page */}
-      <PartnerMainPage isOpen={isPartnerPageOpen} onClose={() => setIsPartnerPageOpen(false)} userRole={userInfo?.role} />
+      {/* <PartnerMainPage isOpen={isPartnerPageOpen} onClose={() => setIsPartnerPageOpen(false)} userRole={userInfo?.role} /> */}
 
       {/* Partner Application Page */}
-      <PartnerApplicationStandalone isOpen={isPartnerApplicationOpen} onClose={() => setIsPartnerApplicationOpen(false)} />
+      {/* <PartnerApplicationStandalone isOpen={isPartnerApplicationOpen} onClose={() => setIsPartnerApplicationOpen(false)} /> */}
 
       {/* Product Detail Page */}
       {isProductDetailOpen && selectedProduct && (

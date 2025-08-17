@@ -2,6 +2,7 @@
 
 import { User, Users, Grid3X3, Store } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 interface HeaderNavProps {
   onMyPageClick: () => void
@@ -11,6 +12,12 @@ interface HeaderNavProps {
 }
 
 export const HeaderNav = ({ onMyPageClick, onCommunityClick, onCategoryClick, onPartnerClick }: HeaderNavProps) => {
+  const router = useRouter()
+
+  const handleCommunityClick = () => {
+    router.push('/community')
+  }
+
   return (
     <>
       <div className="absolute top-4 left-4 flex gap-2">
@@ -25,7 +32,7 @@ export const HeaderNav = ({ onMyPageClick, onCommunityClick, onCategoryClick, on
         <Button
           variant="outline"
           size="sm"
-          onClick={onCommunityClick}
+          onClick={handleCommunityClick}
           className="bg-white/90 backdrop-blur-sm"
         >
           <Users className="w-4 h-4" />

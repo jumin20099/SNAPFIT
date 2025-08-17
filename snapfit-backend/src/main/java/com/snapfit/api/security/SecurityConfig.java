@@ -73,15 +73,9 @@ public class SecurityConfig {
                     OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
                     String token = (String) oauth2User.getAttributes().get("token");
                     
-                    // 쿠키에 토큰 저장
-                    jakarta.servlet.http.Cookie tokenCookie = new jakarta.servlet.http.Cookie("auth_token", token);
-                    tokenCookie.setPath("/");
-                    tokenCookie.setHttpOnly(false); // JavaScript에서 접근 가능하도록
-                    tokenCookie.setSecure(false); // 개발 환경에서는 false
-                    tokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7일
-                    response.addCookie(tokenCookie);
-                    
-                    response.sendRedirect("http://localhost:3000");
+                    // URL 파라미터로 토큰 전달
+                    String redirectUrl = "http://localhost:3000?token=" + token + "&login=success";
+                    response.sendRedirect(redirectUrl);
                 })
             );
         }
