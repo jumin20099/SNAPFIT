@@ -317,4 +317,28 @@ public interface FollowRepository extends JpaRepository<Follow, Follow.FollowId>
            "  SELECT COUNT(p) FROM Post p WHERE p.author.userIdx = u.userIdx AND p.isDeleted = false" +
            ") DESC, f.createdAt DESC")
     Page<Follow> findFollowersOrderByPostCount(@Param("followeeId") UUID followeeId, Pageable pageable);
+
+    /**
+     * 팔로우한 사용자들의 게시글 조회 (개인화 피드용)
+     * 성능: JOIN 최적화, 인덱스 활용
+     */
+    @Query("SELECT p FROM Post p " +
+           "JOIN Follow f ON p.author.userIdx = f.followee.userIdx " +
+           "WHERE f.follower.userIdx = :followerId AND p.isDeleted = false " +
+           "ORDER BY p.createdAt DESC, p.postId DESC")
+    Page<com.snapfit.api.entity.Post> findFollowedUsersPosts(@Param("followerId") UUID followerId, Pageable pageable);
+
+    /**
+     * 사용자별 스폰서드 게시글 조회 (공정 노출용)
+     * 성능: 랜덤 선택, 인덱스 활용
+     */
+    @Query(value = "SELECT p.* FROM posts p " +
+                   "WHERE p.is_sponsored = true AND p.is_deleted = false " +
+                   "AND p.author_user_idx NOT IN (" +
+                   "  SELECT f.followee_user_idx FROM follows f WHERE f.follower_user_idx = :userId" +
+                   ") " +
+                   "ORDER BY RANDOM() " +
+                   "LIMIT :limit", 
+           nativeQuery = true)
+    List<com.snapfit.api.entity.Post> findSponsoredPostsForUser(@Param("userId") UUID userId, @Param("limit") int limit);
 }
