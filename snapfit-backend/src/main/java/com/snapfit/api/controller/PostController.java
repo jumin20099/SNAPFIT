@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -132,16 +133,23 @@ public class PostController {
      * @return 게시글 목록
      */
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<Page<PostResponseDto>> getPosts(
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         log.info("게시글 목록 조회 요청: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
         
-        // TODO: 실제 게시글 목록 조회 로직 구현
-        // Page<Post> posts = postService.getPosts(pageable);
-        // Page<PostResponseDto> response = posts.map(this::convertToDto);
-        
-        // 임시 응답
-        return ResponseEntity.ok(Page.empty(pageable));
+        try {
+            // 실제 게시글 목록 조회
+            Page<Post> posts = postRepository.findAll(pageable);
+            Page<PostResponseDto> response = posts.map(this::convertToDto);
+            
+            log.info("게시글 목록 조회 성공: 총 {}개", response.getTotalElements());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("게시글 목록 조회 실패", e);
+            throw new RuntimeException("게시글 목록 조회 중 오류가 발생했습니다: " + e.getMessage());
+        }
     }
 
     /**
@@ -284,15 +292,33 @@ public class PostController {
         dto.setPostId(post.getPostId());
         dto.setTitle(""); // Post 엔티티에는 title이 없음
         dto.setContent(post.getContent());
-        dto.setTags(post.getTags().stream().map(Tag::getName).collect(Collectors.toList()));
+        
+        // tags 컬렉션을 안전하게 처리
+        try {
+            if (post.getTags() != null && !post.getTags().isEmpty()) {
+                dto.setTags(post.getTags().stream()
+                    .map(Tag::getName)
+                    .collect(Collectors.toList()));
+            } else {
+                dto.setTags(new ArrayList<>());
+            }
+        } catch (Exception e) {
+            log.warn("Post {}의 tags 처리 중 오류 발생: {}", post.getPostId(), e.getMessage());
+            dto.setTags(new ArrayList<>());
+        }
+        
         dto.setMediaUrls(new ArrayList<>(post.getMediaUrls())); // Set을 List로 변환
         dto.setAuthorId(post.getAuthor().getUserIdx().toString()); // UUID를 String으로 변환
+        dto.setAuthorName(post.getAuthor().getNickname());
+        dto.setAuthorProfileImage(post.getAuthor().getProfileImage() != null ? post.getAuthor().getProfileImage() : "");
         dto.setLikeCount(post.getLikeCount());
         dto.setScrapCount(post.getScrapCount());
         dto.setCommentCount(post.getCommentCount());
         dto.setViewCount(post.getViewCount());
         dto.setCreatedAt(post.getCreatedAt());
         dto.setUpdatedAt(post.getUpdatedAt());
+        dto.setIsLiked(false); // 기본값 설정
+        dto.setIsScrapped(false); // 기본값 설정
         return dto;
     }
 }
