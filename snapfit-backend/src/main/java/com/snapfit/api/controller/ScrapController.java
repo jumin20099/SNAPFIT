@@ -33,7 +33,10 @@ public class ScrapController {
                                     @AuthenticationPrincipal CustomOAuth2User principal) {
         User user = current(principal);
         boolean scraped = scrapService.toggleScrap(user.getUserIdx(), postId);
-        long count = (Long) scrapService.getPostScrapStatistics(postId).get("totalScraps");
+        
+        // 스크랩 개수를 직접 계산
+        long count = scrapService.getPostScrapCount(postId);
+        
         return ResponseEntity.ok().body(Map.of("scraped", scraped, "count", count));
     }
 

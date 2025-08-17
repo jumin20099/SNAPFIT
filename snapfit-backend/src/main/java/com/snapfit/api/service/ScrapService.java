@@ -238,6 +238,24 @@ public class ScrapService {
     }
 
     /**
+     * 게시글별 스크랩 개수 조회
+     * 성능: 단순 COUNT 쿼리
+     */
+    public long getPostScrapCount(Long postId) {
+        log.info("게시글 스크랩 개수 조회 시작: 게시글={}", postId);
+        
+        try {
+            long count = scrapRepository.countByPostId(postId);
+            log.info("게시글 스크랩 개수 조회 완료: 게시글={}, 개수={}", postId, count);
+            return count;
+            
+        } catch (Exception e) {
+            log.error("게시글 스크랩 개수 조회 실패: 게시글={}", postId, e);
+            return 0L;
+        }
+    }
+
+    /**
      * 게시글별 스크랩 통계 조회
      * 성능: 집계 쿼리 최적화
      */
