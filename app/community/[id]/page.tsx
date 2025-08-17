@@ -57,8 +57,6 @@ export default function PostDetailPage() {
 
   // 사용자 상호작용 상태 가져오기 (좋아요, 스크랩)
   const fetchUserInteractions = useCallback(async () => {
-    if (!currentPost) return
-    
     try {
       // 로컬 스토리지에서 이전 상태 복원 (API 실패 시 대체)
       const storedLikedPosts = localStorage.getItem('likedPosts')
@@ -272,9 +270,10 @@ export default function PostDetailPage() {
         
         // 게시글이 로드된 후 즉시 사용자 상호작용 상태 확인
         if (page === 0) {
+          // 약간의 지연을 두어 상태가 안정화되도록 함
           setTimeout(() => {
             fetchUserInteractions()
-          }, 100) // 약간의 지연을 두어 상태가 안정화되도록 함
+          }, 200)
         }
       } else {
         console.error('게시글 로드 실패:', response.status)
@@ -320,12 +319,12 @@ export default function PostDetailPage() {
     }
   }, [postId]) // fetchPosts를 의존성에서 제거하여 무한루프 방지
 
-  // 게시글이 로드된 후 사용자 상호작용 상태 확인 (이 부분은 제거 - fetchPosts 내부에서 처리)
-  // useEffect(() => {
-  //   if (posts.length > 0 && currentPost && !userInteractionsLoaded) {
-  //     fetchUserInteractions()
-  //   }
-  // }, [posts.length, currentPost, userInteractionsLoaded, fetchUserInteractions])
+  // currentPost가 변경될 때마다 사용자 상호작용 상태 확인
+  useEffect(() => {
+    if (currentPost) {
+      fetchUserInteractions()
+    }
+  }, [currentPost, fetchUserInteractions])
 
   const toggleLike = async (postId: number) => {
     try {
