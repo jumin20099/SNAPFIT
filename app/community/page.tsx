@@ -116,11 +116,15 @@ export default function CommunityPage() {
         
         if (likesResponse.ok) {
           const likesData = await likesResponse.json()
+          console.log('좋아요 API 응답:', likesData)
+          
           const likedPostIds = new Set(
             likesData
-              .filter((like: any) => like?.targetType === 'POST')
+              .filter((like: any) => like?.targetType === 'OUTFIT_SHARE')
               .map((like: any) => Number(like?.targetIdx))
           )
+          
+          console.log('파싱된 좋아요 게시글 ID:', Array.from(likedPostIds))
           
           setPosts(prev => prev.map(post => ({
             ...post,

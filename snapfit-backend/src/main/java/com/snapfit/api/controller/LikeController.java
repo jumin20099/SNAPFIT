@@ -12,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/likes")
@@ -56,18 +57,23 @@ public class LikeController {
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<Long>> myLikes(@AuthenticationPrincipal CustomOAuth2User principal) {
+    public ResponseEntity<List<Map<String, Object>>> myLikes(@AuthenticationPrincipal CustomOAuth2User principal) {
         try {
             User user = current(principal);
             List<Like> userLikes = likeService.listUserLikes(user);
             
-            // POST 타입(OUTFIT_SHARE)의 좋아요만 필터링하여 ID 반환
-            List<Long> likedPostIds = userLikes.stream()
+            // POST 타입(OUTFIT_SHARE)의 좋아요만 필터링하여 ID와 타입 정보 반환
+            List<Map<String, Object>> likedPosts = userLikes.stream()
                 .filter(like -> like.getTargetType() == TargetType.OUTFIT_SHARE)
-                .map(Like::getTargetIdx)
+                .map(like -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("targetIdx", like.getTargetIdx());
+                    map.put("targetType", like.getTargetType().toString());
+                    return map;
+                })
                 .toList();
             
-            return ResponseEntity.ok(likedPostIds);
+            return ResponseEntity.ok(likedPosts);
         } catch (Exception e) {
             // 오류 발생 시 빈 리스트 반환
             return ResponseEntity.ok(List.of());
