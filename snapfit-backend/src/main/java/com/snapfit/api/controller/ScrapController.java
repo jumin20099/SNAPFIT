@@ -47,10 +47,15 @@ public class ScrapController {
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<Scrap>> myScraps(@AuthenticationPrincipal CustomOAuth2User principal) {
-        User user = current(principal);
-        return ResponseEntity.ok(scrapService.getUserScraps(user.getUserIdx(), 
-            org.springframework.data.domain.PageRequest.of(0, 50)).getContent());
+    public ResponseEntity<List<Long>> myScraps(@AuthenticationPrincipal CustomOAuth2User principal) {
+        try {
+            User user = current(principal);
+            List<Long> scrapedPostIds = scrapService.getUserScrapedPostIds(user.getUserIdx());
+            return ResponseEntity.ok(scrapedPostIds);
+        } catch (Exception e) {
+            // 오류 발생 시 빈 리스트 반환
+            return ResponseEntity.ok(List.of());
+        }
     }
 
     @GetMapping("/check")

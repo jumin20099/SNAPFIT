@@ -179,11 +179,8 @@ export default function PostDetailPage() {
         })
         
         if (scrapsResponse.ok) {
-          const scrapsData = await scrapsResponse.json()
           const scrapedPostIds = new Set(
-            scrapsData
-              .filter((scrap: any) => scrap?.post?.postId)
-              .map((scrap: any) => Number(scrap?.post?.postId))
+            (await scrapsResponse.json()).map((postId: number) => Number(postId))
           )
           
           setPosts(prev => prev.map(post => ({
