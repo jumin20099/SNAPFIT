@@ -51,16 +51,174 @@ export default function PostDetailPage() {
   const [isScraped, setIsScraped] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
   const [currentPost, setCurrentPost] = useState<Post | null>(null)
+  const [userInteractionsLoaded, setUserInteractionsLoaded] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const observer = useRef<IntersectionObserver>()
+
+  // 사용자 상호작용 상태 가져오기 (좋아요, 스크랩)
+  const fetchUserInteractions = useCallback(async () => {
+    if (!currentPost) return
+    
+    try {
+      // 로컬 스토리지에서 이전 상태 복원 (API 실패 시 대체)
+      const storedLikedPosts = localStorage.getItem('likedPosts')
+      const storedScrapedPosts = localStorage.getItem('scrapedPosts')
+      
+      let likedPostIds = new Set<number>()
+      let scrapedPostIds = new Set<number>()
+      
+      // 로컬 스토리지에서 복원된 상태가 있으면 사용
+      if (storedLikedPosts) {
+        try {
+          const parsed = JSON.parse(storedLikedPosts)
+          if (Array.isArray(parsed)) {
+            likedPostIds = new Set(parsed)
+          }
+        } catch (e) {
+          console.warn('로컬 스토리지의 좋아요 데이터 파싱 실패:', e)
+        }
+      }
+      
+      if (storedScrapedPosts) {
+        try {
+          const parsed = JSON.parse(storedScrapedPosts)
+          if (Array.isArray(parsed)) {
+            scrapedPostIds = new Set(parsed)
+          }
+        } catch (e) {
+          console.warn('로컬 스토리지의 스크랩 데이터 파싱 실패:', e)
+        }
+      }
+      
+      // 백엔드 API에서 최신 상태 가져오기
+      const [likesResponse, scrapsResponse] = await Promise.all([
+        fetch('/api/likes/my'),
+        fetch('/api/scraps/my')
+      ])
+      
+      // 좋아요 상태 파싱
+      if (likesResponse.ok) {
+        const likesData = await likesResponse.json()
+        console.log('좋아요 API 응답:', likesData)
+        
+        // 백엔드 응답 구조에 따라 데이터 파싱
+        if (Array.isArray(likesData)) {
+          if (likesData.length > 0) {
+            const firstItem = likesData[0]
+            console.log('첫 번째 좋아요 항목:', firstItem)
+            
+            if (typeof firstItem === 'number') {
+              // 숫자 배열인 경우 (게시글 ID 목록)
+              console.log('게시글 ID 배열로 인식')
+              likedPostIds = new Set(likesData.map(id => Number(id)))
+            } else if (firstItem && typeof firstItem === 'object') {
+              // 객체 배열인 경우 (Like 엔티티)
+              console.log('Like 엔티티 배열로 인식')
+              likedPostIds = new Set(
+                likesData
+                  .filter((like: any) => like?.targetType === 'POST')
+                  .map((like: any) => Number(like?.targetIdx))
+              )
+            }
+          }
+        } else if (likesData.content && Array.isArray(likesData.content)) {
+          // 페이지네이션된 응답인 경우
+          console.log('페이지네이션된 응답으로 인식')
+          likedPostIds = new Set(
+            likesData.content
+              .filter((like: any) => like?.targetType === 'POST')
+              .map((like: any) => Number(like?.targetIdx))
+          )
+        }
+        
+        console.log('파싱된 좋아요 게시글 ID:', Array.from(likedPostIds))
+      } else {
+        console.error('좋아요 API 응답 오류:', likesResponse.status)
+        console.log('로컬 스토리지의 좋아요 상태를 사용합니다')
+      }
+      
+      // 스크랩 상태 파싱
+      if (scrapsResponse.ok) {
+        const scrapsData = await scrapsResponse.json()
+        console.log('스크랩 API 응답:', scrapsData)
+        
+        if (Array.isArray(scrapsData)) {
+          scrapedPostIds = new Set(scrapsData.map(id => Number(id)))
+        }
+        console.log('파싱된 스크랩 게시글 ID:', Array.from(scrapedPostIds))
+      } else {
+        console.error('스크랩 API 응답 오류:', scrapsResponse.status)
+        console.log('로컬 스토리지의 스크랩 상태를 사용합니다')
+      }
+      
+      // 게시글 상태 업데이트 (좋아요/스크랩 개수는 백엔드에서 받은 데이터 유지)
+      setPosts(prev => {
+        const updatedPosts = prev.map((post: Post) => {
+          const isLiked = likedPostIds.has(post.postId)
+          const isScraped = scrapedPostIds.has(post.postId)
+          
+          console.log(`게시글 ${post.postId}: liked=${isLiked}, scraped=${isScraped}, likeCount=${post.likeCount}, scrapCount=${post.scrapCount}`)
+          
+          return {
+            ...post,
+            liked: isLiked,
+            scraped: isScraped
+            // likeCount와 scrapCount는 백엔드에서 받은 원본 데이터 유지
+          }
+        })
+        
+        console.log('업데이트된 게시글 목록:', updatedPosts.map((p: Post) => ({ 
+          postId: p.postId, 
+          liked: p.liked, 
+          scraped: p.scraped,
+          likeCount: p.likeCount,
+          scrapCount: p.scrapCount
+        })))
+        
+        return updatedPosts
+      })
+      
+      // 현재 게시글의 상태도 업데이트
+      if (currentPost) {
+        const isLiked = likedPostIds.has(currentPost.postId)
+        const isScraped = scrapedPostIds.has(currentPost.postId)
+        
+        setIsLiked(isLiked)
+        setIsScraped(isScraped)
+        
+        console.log('현재 게시글 상태 업데이트:', {
+          postId: currentPost.postId,
+          liked: isLiked,
+          scraped: isScraped
+        })
+      }
+      
+      // 로컬 스토리지에 최신 상태 저장
+      localStorage.setItem('likedPosts', JSON.stringify(Array.from(likedPostIds)))
+      localStorage.setItem('scrapedPosts', JSON.stringify(Array.from(scrapedPostIds)))
+      
+      console.log('사용자 상호작용 상태 로드 완료:', {
+        likedPosts: Array.from(likedPostIds),
+        scrapedPosts: Array.from(scrapedPostIds)
+      })
+      
+    } catch (error) {
+      console.error('사용자 상호작용 상태 로드 실패:', error)
+      // 에러 발생 시 로컬 스토리지의 상태를 사용
+      console.log('로컬 스토리지의 상태를 사용합니다')
+    }
+  }, [currentPost])
 
   // 게시글 목록 가져오기
   const fetchPosts = useCallback(async (page: number = 0) => {
     if (loading || !hasMore) return
     
     setLoading(true)
+    setError(null) // 에러 상태 초기화
     try {
-      // 백엔드 API URL (Spring Boot 기본 포트: 8080)
-      const response = await fetch(`http://localhost:8080/api/posts?page=${page}&size=10`)
+      // 백엔드 API URL (환경 변수 사용)
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
+      const response = await fetch(`${API_BASE_URL}/api/posts?page=${page}&size=10`)
       if (response.ok) {
         const data = await response.json()
         const newPosts = data.content || []
@@ -73,28 +231,29 @@ export default function PostDetailPage() {
           authorName: post.authorName || "익명",
           authorProfileImage: post.authorProfileImage || "/placeholder.svg",
           mediaUrls: post.mediaUrls || [],
-          likeCount: post.likeCount || 0,
+          likeCount: post.likeCount || 0, // 백엔드에서 받은 좋아요 개수 유지
           commentCount: post.commentCount || 0,
           scrapCount: post.scrapCount || 0,
           createdAt: post.createdAt,
           tags: post.tags || [],
-          liked: post.isLiked || false,
-          scraped: post.isScrapped || false,
+          liked: false, // 초기값은 false로 설정, fetchUserInteractions에서 실제 상태로 업데이트
+          scraped: false, // 초기값은 false로 설정, fetchUserInteractions에서 실제 상태로 업데이트
           type: post.type || "fashion-tip"
         }))
         
         if (page === 0) {
           // 선택한 게시글을 제일 위에 오도록 정렬
-          const targetPost = transformedPosts.find(p => p.postId === postId)
+          const targetPost = transformedPosts.find((p: Post) => p.postId === postId)
           if (targetPost) {
             // 선택한 게시글을 제거하고 맨 앞에 추가
-            const otherPosts = transformedPosts.filter(p => p.postId !== postId)
+            const otherPosts = transformedPosts.filter((p: Post) => p.postId !== postId)
             const sortedPosts = [targetPost, ...otherPosts]
             setPosts(sortedPosts)
             
             setCurrentPost(targetPost)
-            setIsLiked(targetPost.liked || false)
-            setIsScraped(targetPost.scraped || false)
+            // 초기 상태는 false로 설정하고, fetchUserInteractions에서 실제 상태로 업데이트
+            setIsLiked(false)
+            setIsScraped(false)
           } else {
             setPosts(transformedPosts)
           }
@@ -105,16 +264,39 @@ export default function PostDetailPage() {
         setHasMore(!data.last)
         setCurrentPage(page)
         
-        console.log('게시글 로드 성공:', transformedPosts)
+        console.log('게시글 로드 성공:', transformedPosts.map(p => ({ 
+          postId: p.postId, 
+          likeCount: p.likeCount, 
+          scrapCount: p.scrapCount 
+        }))) // 디버깅: 좋아요/스크랩 개수 확인
+        
+        // 게시글이 로드된 후 즉시 사용자 상호작용 상태 확인
+        if (page === 0) {
+          setTimeout(() => {
+            fetchUserInteractions()
+          }, 100) // 약간의 지연을 두어 상태가 안정화되도록 함
+        }
       } else {
         console.error('게시글 로드 실패:', response.status)
+        setError(`게시글을 불러오는데 실패했습니다. (${response.status})`)
+        // 에러 발생 시 hasMore를 false로 설정하여 더 이상 시도하지 않음
+        setHasMore(false)
       }
     } catch (error) {
       console.error('게시글 로드 중 오류:', error)
+      // 에러 발생 시 hasMore를 false로 설정하여 더 이상 시도하지 않음
+      setHasMore(false)
+      
+      // 네트워크 에러인 경우 사용자에게 알림
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        setError('백엔드 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.')
+      } else {
+        setError('게시글을 불러오는 중 오류가 발생했습니다.')
+      }
     } finally {
       setLoading(false)
     }
-  }, [loading, hasMore, postId])
+  }, [postId, fetchUserInteractions]) // fetchUserInteractions를 의존성에 추가
 
   // 무한 스크롤을 위한 마지막 요소 관찰
   const lastPostElementRef = useCallback((node: HTMLDivElement) => {
@@ -123,7 +305,7 @@ export default function PostDetailPage() {
     if (observer.current) observer.current.disconnect()
     
     observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
+      if (entries[0].isIntersecting && hasMore && !loading) {
         fetchPosts(currentPage + 1)
       }
     })
@@ -131,77 +313,19 @@ export default function PostDetailPage() {
     if (node) observer.current.observe(node)
   }, [loading, hasMore, currentPage, fetchPosts])
 
-  // 컴포넌트 마운트 시 게시글 로드
+  // 컴포넌트 마운트 시 게시글 로드 (한 번만 실행)
   useEffect(() => {
     if (postId) {
       fetchPosts(0)
     }
-  }, [postId, fetchPosts])
+  }, [postId]) // fetchPosts를 의존성에서 제거하여 무한루프 방지
 
-  // 사용자별 좋아요 및 스크랩 상태 가져오기
-  useEffect(() => {
-    const fetchUserInteractions = async () => {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
-      try {
-        // 좋아요 상태 가져오기
-        const likesResponse = await fetch('http://localhost:8080/api/likes/my', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        
-        if (likesResponse.ok) {
-          const likesData = await likesResponse.json()
-          const likedPostIds = new Set(
-            likesData
-              .filter((like: any) => like?.targetType === 'POST')
-              .map((like: any) => Number(like?.targetIdx))
-          )
-          
-          setPosts(prev => prev.map(post => ({
-            ...post,
-            liked: likedPostIds.has(post.postId)
-          })))
-          
-          // 현재 게시글의 좋아요 상태 설정
-          if (currentPost && likedPostIds.has(currentPost.postId)) {
-            setIsLiked(true)
-          }
-        }
-
-        // 스크랩 상태 가져오기
-        const scrapsResponse = await fetch('http://localhost:8080/api/scraps/my', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        
-        if (scrapsResponse.ok) {
-          const scrapedPostIds = new Set(
-            (await scrapsResponse.json()).map((postId: number) => Number(postId))
-          )
-          
-          setPosts(prev => prev.map(post => ({
-            ...post,
-            scraped: scrapedPostIds.has(post.postId)
-          })))
-          
-          // 현재 게시글의 스크랩 상태 설정
-          if (currentPost && scrapedPostIds.has(currentPost.postId)) {
-            setIsScraped(true)
-          }
-        }
-      } catch (error) {
-        console.error('사용자 상호작용 상태 가져오기 실패:', error)
-      }
-    }
-
-    if (posts.length > 0 && currentPost) {
-      fetchUserInteractions()
-    }
-  }, [currentPost, posts.length])
+  // 게시글이 로드된 후 사용자 상호작용 상태 확인 (이 부분은 제거 - fetchPosts 내부에서 처리)
+  // useEffect(() => {
+  //   if (posts.length > 0 && currentPost && !userInteractionsLoaded) {
+  //     fetchUserInteractions()
+  //   }
+  // }, [posts.length, currentPost, userInteractionsLoaded, fetchUserInteractions])
 
   const toggleLike = async (postId: number) => {
     try {
@@ -211,37 +335,75 @@ export default function PostDetailPage() {
         return
       }
 
-      const response = await fetch(`http://localhost:8080/api/likes/toggle?targetIdx=${postId}&targetType=POST`, {
+      const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({ 
+          targetIdx: String(postId), 
+          targetType: 'POST' 
+        })
       })
 
       if (response.ok) {
         const data = await response.json()
         console.log('좋아요 토글 응답:', data) // 디버깅 로그
         
-        // 모든 게시글의 좋아요 상태 업데이트
+        // 모든 게시글의 좋아요 상태와 개수 업데이트
         setPosts(prev => {
           const updatedPosts = prev.map(post => 
             post.postId === postId 
-              ? { ...post, liked: data.liked, likeCount: data.count }
+              ? { 
+                  ...post, 
+                  liked: data.liked, 
+                  likeCount: data.count // 서버에서 받은 정확한 개수 사용
+                }
               : post
           )
-          console.log('업데이트된 게시글:', updatedPosts.find(p => p.postId === postId)) // 디버깅 로그
+          
+          const updatedPost = updatedPosts.find(p => p.postId === postId)
+          console.log('업데이트된 게시글:', updatedPost)
+          console.log('좋아요 개수 변경:', { 
+            이전: prev.find(p => p.postId === postId)?.likeCount, 
+            이후: data.count 
+          })
+          
           return updatedPosts
         })
         
-        // 현재 게시글의 좋아요 상태 즉시 업데이트
-        if (currentPost?.postId === postId) {
-          setIsLiked(data.liked)
+        // 현재 게시글 상태도 업데이트
+        setIsLiked(data.liked)
+        
+        // 로컬 스토리지에 좋아요 상태 저장
+        const currentLikedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]')
+        if (data.liked) {
+          if (!currentLikedPosts.includes(postId)) {
+            currentLikedPosts.push(postId)
+          }
+        } else {
+          const index = currentLikedPosts.indexOf(postId)
+          if (index > -1) {
+            currentLikedPosts.splice(index, 1)
+          }
         }
+        localStorage.setItem('likedPosts', JSON.stringify(currentLikedPosts))
+        
+        console.log('좋아요 상태 업데이트 완료:', { postId, liked: data.liked, count: data.count })
       } else {
         console.error('좋아요 토글 실패:', response.status)
+        // 에러 발생 시 사용자에게 알림
+        setError(`좋아요 토글에 실패했습니다. (${response.status})`)
       }
     } catch (error) {
       console.error('좋아요 토글 중 오류:', error)
+      // 네트워크 에러인 경우 사용자에게 알림
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        setError('백엔드 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.')
+      } else {
+        setError('좋아요 토글 중 오류가 발생했습니다.')
+      }
     }
   }
 
@@ -253,37 +415,72 @@ export default function PostDetailPage() {
         return
       }
 
-      const response = await fetch(`http://localhost:8080/api/scraps/toggle?postId=${postId}`, {
+      const response = await fetch('/api/scraps/toggle', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ postId })
       })
 
       if (response.ok) {
         const data = await response.json()
         console.log('스크랩 토글 응답:', data) // 디버깅 로그
         
-        // 모든 게시글의 스크랩 상태 업데이트
+        // 모든 게시글의 스크랩 상태와 개수 업데이트
         setPosts(prev => {
           const updatedPosts = prev.map(post => 
             post.postId === postId 
-              ? { ...post, scraped: data.scraped, scrapCount: data.count }
+              ? { 
+                  ...post, 
+                  scraped: data.scraped, 
+                  scrapCount: data.count // 서버에서 받은 정확한 개수 사용
+                }
               : post
           )
-          console.log('업데이트된 게시글:', updatedPosts.find(p => p.postId === postId)) // 디버깅 로그
+          
+          const updatedPost = updatedPosts.find(p => p.postId === postId)
+          console.log('업데이트된 게시글:', updatedPost)
+          console.log('스크랩 개수 변경:', { 
+            이전: prev.find(p => p.postId === postId)?.scrapCount, 
+            이후: data.count 
+          })
+          
           return updatedPosts
         })
         
-        // 현재 게시글의 스크랩 상태 즉시 업데이트
-        if (currentPost?.postId === postId) {
-          setIsScraped(data.scraped)
+        // 현재 게시글 상태도 업데이트
+        setIsScraped(data.scraped)
+        
+        // 로컬 스토리지에 스크랩 상태 저장
+        const currentScrapedPosts = JSON.parse(localStorage.getItem('scrapedPosts') || '[]')
+        if (data.scraped) {
+          if (!currentScrapedPosts.includes(postId)) {
+            currentScrapedPosts.push(postId)
+          }
+        } else {
+          const index = currentScrapedPosts.indexOf(postId)
+          if (index > -1) {
+            currentScrapedPosts.splice(index, 1)
+          }
         }
+        localStorage.setItem('scrapedPosts', JSON.stringify(currentScrapedPosts))
+        
+        console.log('스크랩 상태 업데이트 완료:', { postId, scraped: data.scraped, count: data.count })
       } else {
         console.error('스크랩 토글 실패:', response.status)
+        // 에러 발생 시 사용자에게 알림
+        setError(`스크랩 토글에 실패했습니다. (${response.status})`)
       }
     } catch (error) {
       console.error('스크랩 토글 중 오류:', error)
+      // 네트워크 에러인 경우 사용자에게 알림
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        setError('백엔드 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.')
+      } else {
+        setError('스크랩 토글 중 오류가 발생했습니다.')
+      }
     }
   }
 
@@ -334,6 +531,23 @@ export default function PostDetailPage() {
 
       {/* Posts Feed */}
       <div className="flex-1">
+        {/* 에러 메시지 표시 */}
+        {error && (
+          <div className="p-4 text-center">
+            <div className="text-red-600 mb-4">{error}</div>
+            <Button 
+              onClick={() => {
+                setError(null)
+                setHasMore(true)
+                fetchPosts(0)
+              }}
+              variant="outline"
+            >
+              다시 시도
+            </Button>
+          </div>
+        )}
+        
         {posts.map((post, index) => (
           <div 
             key={post.postId} 
