@@ -155,13 +155,28 @@ export default function PostDetailPage() {
           const isLiked = likedPostIds.has(post.postId)
           const isScraped = scrapedPostIds.has(post.postId)
           
-          console.log(`게시글 ${post.postId}: liked=${isLiked}, scraped=${isScraped}, likeCount=${post.likeCount}, scrapCount=${post.scrapCount}`)
+          // 좋아요 개수 보정: 백엔드에서 0으로 오는 경우 로컬 스토리지에서 복원
+          let correctedLikeCount = post.likeCount
+          if (post.likeCount === 0 && isLiked) {
+            // 좋아요 상태가 true인데 개수가 0이면 로컬 스토리지에서 복원 시도
+            const storedCount = localStorage.getItem(`likeCount_${post.postId}`)
+            if (storedCount) {
+              correctedLikeCount = parseInt(storedCount, 10)
+              console.log(`게시글 ${post.postId}의 좋아요 개수 복원: ${post.likeCount} -> ${correctedLikeCount}`)
+            } else {
+              // 저장된 개수가 없으면 최소 1로 설정
+              correctedLikeCount = 1
+              console.log(`게시글 ${post.postId}의 좋아요 개수 기본값 설정: ${post.likeCount} -> ${correctedLikeCount}`)
+            }
+          }
+          
+          console.log(`게시글 ${post.postId}: liked=${isLiked}, scraped=${isScraped}, likeCount=${post.likeCount}->${correctedLikeCount}, scrapCount=${post.scrapCount}`)
           
           return {
             ...post,
             liked: isLiked,
-            scraped: isScraped
-            // likeCount와 scrapCount는 백엔드에서 받은 원본 데이터 유지
+            scraped: isScraped,
+            likeCount: correctedLikeCount // 보정된 좋아요 개수 사용
           }
         })
         
@@ -375,7 +390,7 @@ export default function PostDetailPage() {
         // 현재 게시글 상태도 업데이트
         setIsLiked(data.liked)
         
-        // 로컬 스토리지에 좋아요 상태 저장
+        // 로컬 스토리지에 좋아요 상태와 개수 저장
         const currentLikedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]')
         if (data.liked) {
           if (!currentLikedPosts.includes(postId)) {
@@ -388,6 +403,9 @@ export default function PostDetailPage() {
           }
         }
         localStorage.setItem('likedPosts', JSON.stringify(currentLikedPosts))
+        
+        // 좋아요 개수도 로컬 스토리지에 저장
+        localStorage.setItem(`likeCount_${postId}`, data.count.toString())
         
         console.log('좋아요 상태 업데이트 완료:', { postId, liked: data.liked, count: data.count })
       } else {
