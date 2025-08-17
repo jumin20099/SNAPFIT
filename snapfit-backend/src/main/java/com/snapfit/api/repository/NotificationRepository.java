@@ -86,4 +86,48 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
            "  ELSE 8 " +
            "END ASC, n.createdAt DESC")
     Page<Notification> findByUserIdOrderByPriorityAndCreatedAtDesc(@Param("userId") UUID userId, Pageable pageable);
+
+    /**
+     * 사용자별 알림 목록 조회 (생성일 기준 내림차순)
+     * 성능: user_id 인덱스 활용
+     */
+    Page<Notification> findByUser_UserIdxOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+
+    /**
+     * 사용자별 읽지 않은 알림 수 조회
+     * 성능: 복합 인덱스 활용
+     */
+    long countByUser_UserIdxAndIsReadFalse(UUID userId);
+
+    /**
+     * 사용자별 전체 알림 수 조회
+     * 성능: user_id 인덱스 활용
+     */
+    long countByUser_UserIdx(UUID userId);
+
+    /**
+     * 사용자별 마지막 알림 시간 조회
+     * 성능: user_id 인덱스 활용
+     */
+    @Query("SELECT MAX(n.createdAt) FROM Notification n WHERE n.user.userIdx = :userId")
+    LocalDateTime findLastNotificationTimeByUserId(@Param("userId") UUID userId);
+
+    /**
+     * 사용자별 알림 타입별 통계 조회
+     * 성능: 집계 쿼리 최적화
+     */
+    @Query("SELECT n.type as notificationType, COUNT(n) as count " +
+           "FROM Notification n " +
+           "WHERE n.user.userIdx = :userId " +
+           "GROUP BY n.type " +
+           "ORDER BY count DESC")
+    List<Object[]> getNotificationTypeStatsByUserId(@Param("userId") UUID userId);
+
+    /**
+     * 사용자별 모든 알림 읽음 처리
+     * 성능: 배치 업데이트
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.userIdx = :userId AND n.isRead = false")
+    int markAllAsReadByUserId(@Param("userId") UUID userId);
 }
