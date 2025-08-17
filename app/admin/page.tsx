@@ -1,20 +1,74 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Settings, Users, Store, Package, CheckCircle, XCircle, Clock } from "lucide-react"
+import { ArrowLeft, Plus, Edit, Trash2, Store, Package, BarChart3, FileText, Users, CheckCircle, XCircle, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
+
+export interface Product {
+  id?: number
+  product_name: string
+  product_content: string
+  product_image: string
+  product_link: string
+  product_category: string
+  store_mall: string
+  price: string
+  created_at?: string
+  status?: "active" | "inactive"
+  type?: "일반" | "제휴사"
+  isActive?: boolean
+  isPartner?: boolean
+  majorCategory: string;
+  subCategory: string;
+  genderCategory: string;
+  updateRequestStatus?: string;
+  originalProductName?: string;
+  originalProductContent?: string;
+  originalProductImage?: string;
+  originalProductLink?: string;
+  originalGenderCategory?: string;
+  originalMajorCategory?: string;
+  originalSubCategory?: string;
+  originalProductPrice?: string;
+  requestedProductName?: string;
+  requestedProductContent?: string;
+  requestedProductImage?: string;
+  requestedProductLink?: string;
+  requestedGenderCategory?: string;
+  requestedMajorCategory?: string;
+  requestedSubCategory?: string;
+  requestedProductPrice?: string;
+}
+
+interface AdminStoreMall {
+  id?: number
+  storeIdx?: number
+  storeName: string
+  contact: string
+  storeLink: string
+  royaltyRate: number
+  storeLogo: string
+  isActive?: boolean
+  createdAt?: string
+  updatedAt?: string
+}
 
 export default function AdminPage() {
   const router = useRouter()
   const [userInfo, setUserInfo] = useState<{ role?: string; email?: string } | null>(null)
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalPartners: 0,
-    totalProducts: 0,
-    pendingApplications: 0
-  })
+  const [activeTab, setActiveTab] = useState("dashboard")
+  const [products, setProducts] = useState<Product[]>([])
+  const [storeMalls, setStoreMalls] = useState<AdminStoreMall[]>([])
+  const [loading, setLoading] = useState(false)
+  const [partners, setPartners] = useState<Array<{id:number, companyName:string}>>([])
+  const [selectedPartnerId, setSelectedPartnerId] = useState<number | null>(null)
+  const [selectedPartnerName, setSelectedPartnerName] = useState<string>('전체')
+  const [partnerProducts, setPartnerProducts] = useState<Product[]>([])
+  const [updateRequests, setUpdateRequests] = useState<Product[]>([])
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -46,28 +100,219 @@ export default function AdminPage() {
   }, [router])
 
   useEffect(() => {
-    // 어드민 통계 데이터 가져오기
-    const fetchStats = async () => {
+    if (userInfo) {
+      loadData()
+    }
+  }, [userInfo])
+
+  const loadData = async () => {
+    setLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+
+      // 상품 데이터 로드
+      const productsRes = await fetch("/api/admin/products", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (productsRes.ok) {
+        const productsData = await productsRes.json()
+        setProducts(productsData)
+      }
+
+      // 제휴몰 데이터 로드
+      const mallsRes = await fetch("/api/admin/store-malls", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (mallsRes.ok) {
+        const mallsData = await mallsRes.json()
+        setStoreMalls(mallsData)
+      }
+
+      // 제휴사 상품 데이터 로드
+      const partnerProductsRes = await fetch("/api/admin/partner/products", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (partnerProductsRes.ok) {
+        const partnerProductsData = await partnerProductsRes.json()
+        setPartnerProducts(partnerProductsData)
+      }
+
+      // 파트너 목록 로드
+      const partnersRes = await fetch("/api/partner/admin/applications", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (partnersRes.ok) {
+        const apps = await partnersRes.json()
+        const approved = apps.filter((a: any) => a.status === 'approved')
+        setPartners(approved.map((a: any) => ({ id: a.id, companyName: a.companyName })))
+      }
+
+      // 수정 요청 목록 로드
+      const updateRequestsRes = await fetch("/api/partner/admin/products/update-requests", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (updateRequestsRes.ok) {
+        const data = await updateRequestsRes.json()
+        setUpdateRequests(data)
+      }
+    } catch (error) {
+      console.error("데이터 로드 실패:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteProduct = async (productId: number, isPartner: boolean = false) => {
+    if (confirm("정말로 이 상품을 삭제하시겠습니까?")) {
       try {
-        const token = localStorage.getItem('token')
-        if (token) {
-          const response = await fetch('/api/admin/dashboard', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+        const token = localStorage.getItem("token")
+        if (isPartner) {
+          const res = await fetch(`/api/partner/products/${productId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` }
           })
-          if (response.ok) {
-            const data = await response.json()
-            setStats(data)
+          if (!res.ok) {
+            alert("삭제 실패")
+            return
+          }
+        } else {
+          const res = await fetch(`/api/admin/products/${productId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (!res.ok) {
+            alert("삭제 실패")
+            return
           }
         }
+        alert("삭제 성공")
+        loadData()
       } catch (error) {
-        console.error('통계 데이터 가져오기 실패:', error)
+        console.error("삭제 실패:", error)
+        alert("삭제 실패")
       }
     }
+  }
 
-    fetchStats()
-  }, [])
+  const handleToggleProductStatus = async (productId: number, newStatus: boolean, isPartner: boolean) => {
+    try {
+      const token = localStorage.getItem("token")
+      const url = isPartner 
+        ? `/api/partner/products/${productId}/status`
+        : `/api/admin/products/${productId}/status`
+      
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ isActive: newStatus })
+      })
+      
+      if (res.ok) {
+        await loadData()
+      } else {
+        alert("상태 변경 실패")
+      }
+    } catch (error) {
+      console.error("상태 변경 실패:", error)
+      alert("상태 변경 실패")
+    }
+  }
+
+  const handleToggleMallStatus = async (mallId: number, newStatus: boolean) => {
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`/api/admin/store-malls/${mallId}/status`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+        body: JSON.stringify({ isActive: newStatus })
+      })
+      
+      if (res.ok) {
+        await loadData()
+      } else {
+        alert("상태 변경 실패")
+      }
+    } catch (error) {
+      console.error("상태 변경 실패:", error)
+      alert("상태 변경 실패")
+    }
+  }
+
+  const handleDeleteMall = async (mallId: number) => {
+    if (confirm("정말로 이 제휴몰을 삭제하시겠습니까?")) {
+      try {
+        const token = localStorage.getItem("token")
+        const res = await fetch(`/api/admin/store-malls/${mallId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        if (res.ok) {
+          alert("삭제 성공")
+          loadData()
+        } else {
+          alert("삭제 실패")
+        }
+      } catch (error) {
+        console.error("삭제 실패:", error)
+        alert("삭제 실패")
+      }
+    }
+  }
+
+  const handleApproveUpdateRequest = async (productId: number) => {
+    if (confirm("이 수정 요청을 승인하시겠습니까?")) {
+      try {
+        const token = localStorage.getItem("token")
+        const res = await fetch(`/api/partner/admin/products/${productId}/update-request/approve`, {
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.ok) {
+          alert("수정 요청이 승인되었습니다.")
+          loadData()
+        } else {
+          alert("승인 실패")
+        }
+      } catch (error) {
+        console.error("승인 중 오류:", error)
+        alert("승인 중 오류가 발생했습니다.")
+      }
+    }
+  }
+
+  const handleRejectUpdateRequest = async (productId: number) => {
+    const rejectionReason = prompt("거절 사유를 입력해주세요:")
+    if (rejectionReason) {
+      try {
+        const token = localStorage.getItem("token")
+        const res = await fetch(`/api/partner/admin/products/${productId}/update-request/reject`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ rejectionReason }),
+        })
+        if (res.ok) {
+          alert("수정 요청이 거절되었습니다.")
+          loadData()
+        } else {
+          alert("거절 실패")
+        }
+      } catch (error) {
+        console.error("거절 중 오류:", error)
+        alert("거절 중 오류가 발생했습니다.")
+      }
+    }
+  }
 
   if (!userInfo || userInfo.role !== 'ADMIN') {
     return null
@@ -85,197 +330,384 @@ export default function AdminPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-lg font-semibold">어드민 대시보드</h1>
-        <div className="w-10" />
+        <h1 className="text-lg font-semibold">관리자 페이지</h1>
+        <Badge variant="secondary">Admin</Badge>
       </div>
 
-      <div className="p-4">
-        {/* Welcome Section */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Settings className="w-8 h-8 text-red-600" />
-              <div>
-                <h2 className="text-xl font-semibold">안녕하세요, {userInfo.email}님!</h2>
-                <p className="text-gray-600">어드민 대시보드에서 플랫폼을 관리하세요.</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-500" />
-                <div>
-                  <p className="text-sm text-gray-600">총 사용자</p>
-                  <p className="text-2xl font-bold">{stats.totalUsers}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Store className="w-5 h-5 text-green-500" />
-                <div>
-                  <p className="text-sm text-gray-600">총 제휴사</p>
-                  <p className="text-2xl font-bold">{stats.totalPartners}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Package className="w-5 h-5 text-purple-500" />
-                <div>
-                  <p className="text-sm text-gray-600">총 상품</p>
-                  <p className="text-2xl font-bold">{stats.totalProducts}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-orange-500" />
-                <div>
-                  <p className="text-sm text-gray-600">대기 신청</p>
-                  <p className="text-2xl font-bold">{stats.pendingApplications}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Store className="w-5 h-5" />
-                제휴사 관리
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => router.push('/admin/partner-applications')}
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          {/* Tab Navigation */}
+          <div className="border-b bg-white flex-shrink-0">
+            <TabsList className="w-full grid grid-cols-5 bg-transparent h-12 p-0">
+              <TabsTrigger
+                value="dashboard"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
               >
-                <Clock className="w-4 h-4 mr-2" />
-                제휴사 신청 관리
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => router.push('/admin/partner-status')}
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">대시보드</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="products"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
               >
-                <Store className="w-4 h-4 mr-2" />
-                제휴사 상태 관리
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                상품 관리
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => router.push('/admin/product-approvals')}
+                <Package className="w-4 h-4" />
+                <span className="hidden sm:inline">상품 관리</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="stores"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
               >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                상품 승인 관리
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => router.push('/admin/products')}
+                <Store className="w-4 h-4" />
+                <span className="hidden sm:inline">제휴몰</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="applications"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
               >
-                <Package className="w-4 h-4 mr-2" />
-                전체 상품 관리
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">제휴 신청</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="update-requests"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                <span className="hidden sm:inline">수정 요청</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        {/* Recent Activities */}
-        <Card>
-          <CardHeader>
-            <CardTitle>최근 활동</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                <div className="flex-1">
-                  <p className="font-medium">새 제휴사가 승인되었습니다</p>
-                  <p className="text-sm text-gray-600">방금 전</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <XCircle className="w-5 h-5 text-red-500" />
-                <div className="flex-1">
-                  <p className="font-medium">부적절한 상품이 거부되었습니다</p>
-                  <p className="text-sm text-gray-600">10분 전</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <Clock className="w-5 h-5 text-orange-500" />
-                <div className="flex-1">
-                  <p className="font-medium">새 제휴사 신청이 접수되었습니다</p>
-                  <p className="text-sm text-gray-600">30분 전</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <Users className="w-5 h-5 text-blue-500" />
-                <div className="flex-1">
-                  <p className="font-medium">새 사용자가 가입했습니다</p>
-                  <p className="text-sm text-gray-600">1시간 전</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto">
+            <TabsContent value="dashboard" className="h-full m-0 p-4">
+              <div className="space-y-6">
+                <h2 className="text-2xl font-bold">대시보드</h2>
 
-        {/* System Status */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>시스템 상태</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm">데이터베이스</span>
+                {/* 통계 카드들 */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-gray-600">총 상품</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{products.length + partnerProducts.length}</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-gray-600">제휴몰</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">
+                        {storeMalls.filter((m: AdminStoreMall) => m.isActive).length}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-gray-600">제휴사</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{partners.length}</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-gray-600">수정 요청</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{updateRequests.length}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* 빠른 액션 카드들 */}
+                <div className="grid grid-cols-2 gap-4 mt-6">
+                  <Card
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => router.push('/admin/partner-applications')}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <FileText className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                      <h3 className="font-medium">제휴 신청 관리</h3>
+                      <p className="text-sm text-gray-600">신청서 검토 및 승인</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => router.push('/admin/product-approvals')}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <Package className="w-8 h-8 mx-auto mb-2 text-green-600" />
+                      <h3 className="font-medium">제휴사 상품 승인</h3>
+                      <p className="text-sm text-gray-600">제휴사 상품 검토 및 승인</p>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm">API 서버</span>
+            </TabsContent>
+
+            <TabsContent value="products" className="h-full m-0 p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-bold">상품 관리</h2>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setSelectedPartnerId(selectedPartnerId ? null : 0)}
+                    >
+                      {selectedPartnerId ? selectedPartnerName : '전체'} ▼
+                    </Button>
+                  </div>
+                  <Button onClick={() => router.push('/admin/products/add')} className="flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    상품 추가
+                  </Button>
+                </div>
+
+                {loading ? (
+                  <div className="text-center py-8">로딩 중...</div>
+                ) : (
+                  <div className="grid gap-4">
+                    {(selectedPartnerId ? partnerProducts : products).map((product: Product) => {
+                      const mall = storeMalls.find(m => m.id?.toString() === product.store_mall?.toString());
+                      return (
+                        <Card key={product.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <img
+                                src={product.product_image || "/placeholder.svg"}
+                                alt={product.product_name}
+                                className="w-16 h-16 object-cover rounded"
+                              />
+                              <div className="flex-1">
+                                <h3 className="font-medium">{product.product_name}</h3>
+                                <p className="text-sm text-gray-600 mb-1">{mall ? mall.storeName : '-'}</p>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline">
+                                    {product.genderCategory || "전체"} / {product.majorCategory} / {product.subCategory}
+                                  </Badge>
+                                  <span className="text-sm font-medium">{product.price}</span>
+                                  <Badge variant="secondary">{product.type || "일반"}</Badge>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleToggleProductStatus(product.id!, !(product.isActive ?? (product.status !== 'active')), !!product.isPartner)}
+                                  className={
+                                    (product.isActive ?? (product.status === 'active'))
+                                    ? "text-green-600 hover:text-green-700"
+                                    : "text-red-600 hover:text-red-700"
+                                  }
+                                >
+                                  {(product.isActive ?? (product.status === 'active')) ? "활성화됨" : "비활성화됨"}
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => router.push(`/admin/products/${product.id}/edit`)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteProduct(product.id!, !!product.isPartner)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm">파일 스토리지</span>
+            </TabsContent>
+
+            <TabsContent value="stores" className="h-full m-0 p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold">제휴몰 관리</h2>
+                  <Button onClick={() => router.push('/admin/store-malls/add')}>
+                    + 제휴몰 추가
+                  </Button>
+                </div>
+                {loading ? (
+                  <div className="text-center py-8">로딩 중...</div>
+                ) : (
+                  <div className="grid gap-4">
+                    {storeMalls.map((mall: AdminStoreMall) => (
+                      <Card key={mall.id}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-4">
+                            <img
+                              src={mall.storeLogo || "/placeholder.svg"}
+                              alt={mall.storeName}
+                              className="w-16 h-16 object-contain rounded"
+                            />
+                            <div className="flex-1">
+                              <h3 className="font-medium">{mall.storeName}</h3>
+                              <a href={mall.storeLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-xs">{mall.storeLink}</a>
+                              <div className="text-sm text-gray-600 mt-1">담당자: {mall.contact || '-'}</div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline">로열티율: {mall.royaltyRate ?? '-'}%</Badge>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleMallStatus(mall.id!, !mall.isActive)}
+                                className={
+                                  mall.isActive
+                                  ? "text-green-600 hover:text-green-700 border-green-200"
+                                  : "text-red-600 hover:text-red-700 border-red-200"
+                                }
+                              >
+                                {mall.isActive ? "활성화됨" : "비활성화됨"}
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => router.push(`/admin/store-malls/${mall.id}/edit`)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteMall(mall.id!)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm">이메일 서비스</span>
+            </TabsContent>
+
+            <TabsContent value="applications" className="h-full m-0 p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">제휴 신청 관리</h2>
+                </div>
+                {loading ? (
+                  <div className="text-center py-8">로딩 중...</div>
+                ) : (
+                  <div className="grid gap-4">
+                    <div className="text-center py-8">
+                      <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">제휴 신청 관리 기능</p>
+                      <Button 
+                        onClick={() => router.push('/admin/partner-applications')} 
+                        className="mt-4"
+                      >
+                        제휴 신청 관리 페이지로 이동
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </TabsContent>
+
+            <TabsContent value="update-requests" className="h-full m-0 p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">수정 요청 관리</h2>
+                </div>
+                {loading ? (
+                  <div className="text-center py-8">로딩 중...</div>
+                ) : (
+                  <div className="grid gap-4">
+                    {updateRequests.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600">수정 요청이 없습니다.</p>
+                      </div>
+                    ) : (
+                      updateRequests.map((product: Product) => (
+                        <Card key={product.id}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <img
+                                src={product.product_image || "/placeholder.svg"}
+                                alt={product.product_name}
+                                className="w-16 h-16 object-cover rounded"
+                              />
+                              <div className="flex-1">
+                                <h3 className="font-medium mb-1">{product.requestedProductName || product.product_name}</h3>
+                                <p className="text-sm text-gray-600 mb-2">{product.requestedProductContent || product.product_content}</p>
+                                <table className="w-full border text-sm mb-2">
+                                  <thead>
+                                    <tr>
+                                      <th className="w-24 bg-gray-50">항목</th>
+                                      <th className="bg-gray-50">수정 전</th>
+                                      <th className="bg-gray-50">수정 후</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {[
+                                      { label: "상품명", before: product.originalProductName, after: product.requestedProductName },
+                                      { label: "설명", before: product.originalProductContent, after: product.requestedProductContent },
+                                      { label: "카테고리", before: [product.originalGenderCategory, product.originalMajorCategory, product.originalSubCategory].filter(Boolean).join(" / "), after: [product.requestedGenderCategory, product.requestedMajorCategory, product.requestedSubCategory].filter(Boolean).join(" / ") },
+                                      { label: "가격", before: product.originalProductPrice, after: product.requestedProductPrice },
+                                      { label: "링크", before: product.originalProductLink, after: product.requestedProductLink },
+                                    ].map(({ label, before, after }) => (
+                                      <tr key={label}>
+                                        <td className="font-medium text-gray-700 bg-gray-50">{label}</td>
+                                        <td className="px-2 py-1 border-r">{before}</td>
+                                        <td className={`px-2 py-1 ${before !== after ? "bg-green-100 font-semibold" : ""}`}>{after}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                              <div className="flex flex-col gap-2 min-w-[80px]">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleApproveUpdateRequest(product.id!)}
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  승인
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRejectUpdateRequest(product.id!)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  거절
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </div>
+        </Tabs>
       </div>
     </div>
   )
