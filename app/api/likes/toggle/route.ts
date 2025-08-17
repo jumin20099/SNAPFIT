@@ -10,21 +10,21 @@ export async function POST(request: NextRequest) {
 
     if (contentType.includes('application/json')) {
       const json = await request.json()
-      targetIdx = json.productId?.toString() ?? json.targetIdx?.toString() ?? json.id?.toString() ?? null
-      targetType = (json.targetType ?? 'PRODUCT')?.toString()
+      targetIdx = json.postId?.toString() ?? json.productId?.toString() ?? json.targetIdx?.toString() ?? json.id?.toString() ?? null
+      targetType = (json.targetType ?? 'POST')?.toString()
     } else if (
       contentType.includes('application/x-www-form-urlencoded') ||
       contentType.includes('multipart/form-data')
     ) {
       const formData = await request.formData()
-      targetIdx = (formData.get('targetIdx') || formData.get('productId') || formData.get('id')) as string | null
-      targetType = ((formData.get('targetType') as string) || 'PRODUCT') as string
+      targetIdx = (formData.get('postId') || formData.get('targetIdx') || formData.get('productId') || formData.get('id')) as string | null
+      targetType = ((formData.get('targetType') as string) || 'POST') as string
     } else {
       // 지원하지 않는 타입일 경우 JSON으로 한 번 더 시도
       try {
         const json = await request.json()
-        targetIdx = json.productId?.toString() ?? json.targetIdx?.toString() ?? json.id?.toString() ?? null
-        targetType = (json.targetType ?? 'PRODUCT')?.toString()
+        targetIdx = json.postId?.toString() ?? json.productId?.toString() ?? json.targetIdx?.toString() ?? json.id?.toString() ?? null
+        targetType = (json.targetType ?? 'POST')?.toString()
       } catch {
         return NextResponse.json({ error: '지원하지 않는 Content-Type' }, { status: 400 })
       }

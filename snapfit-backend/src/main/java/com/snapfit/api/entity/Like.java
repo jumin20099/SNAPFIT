@@ -32,7 +32,7 @@ import lombok.Setter;
 public class Like {
 
     public enum TargetType {
-        OUTFIT, PRODUCT, OUTFIT_SHARE, COMMENT
+        POST, OUTFIT, PRODUCT, OUTFIT_SHARE, COMMENT
     }
 
     @Id

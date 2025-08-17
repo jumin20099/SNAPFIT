@@ -35,20 +35,20 @@
 - [x] SearchService.java 생성 (PostgreSQL 기반 통합 검색)
 
 ### 컨트롤러 레이어
-- [ ] CommunityController.java 생성 (통합 커뮤니티 API)
-- [ ] PostController.java 생성 (게시글 API 엔드포인트)
-- [ ] ScrapController.java 생성 (스크랩 API)
-- [ ] FollowController.java 생성 (팔로우 API)
-- [ ] CommentController.java 생성 (댓글 API)
-- [ ] SearchController.java 생성 (검색 API)
+- [x] CommunityController.java 생성 (통합 커뮤니티 API)
+- [x] PostController.java 생성 (게시글 API 엔드포인트)
+- [x] ScrapController.java 생성 (스크랩 API)
+- [x] FollowController.java 생성 (팔로우 API)
+- [x] CommentController.java 생성 (댓글 API)
+- [x] SearchController.java 생성 (검색 API)
 
 ### 프론트엔드 API 연동
-- [ ] useInfinitePosts.ts 훅 생성 (무한 스크롤)
-- [ ] useCreatePost.ts 훅 생성 (게시글 생성)
-- [ ] useToggleScrap.ts 훅 생성 (스크랩 토글)
-- [ ] useToggleFollow.ts 훅 생성 (팔로우 토글)
-- [ ] useComments.ts 훅 생성 (댓글 CRUD)
-- [ ] useSearch.ts 훅 생성 (통합 검색)
+- [x] useInfinitePosts.ts 훅 생성 (무한 스크롤)
+- [x] useCreatePost.ts 훅 생성 (게시글 생성)
+- [x] useToggleScrap.ts 훅 생성 (스크랩 토글)
+- [x] useToggleFollow.ts 훅 생성 (팔로우 토글)
+- [x] useComments.ts 훅 생성 (댓글 CRUD)
+- [x] useSearch.ts 훅 생성 (통합 검색)
 
 ## 🌟 P2: 소셜 기능 구현
 

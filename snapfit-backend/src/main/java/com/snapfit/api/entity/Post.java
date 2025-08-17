@@ -2,6 +2,8 @@ package com.snapfit.api.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.snapfit.api.entity.Like;
+import com.snapfit.api.entity.Scrap;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -142,11 +144,59 @@ public class Post {
     private Long scrapCount = 0L;
 
     /**
-     * 댓글 수 (성능: 트리거로 자동 업데이트)
+     * 댓글 수 (지연 로딩으로 성능 최적화)
      */
     @Column(name = "comment_count", nullable = false)
     @Builder.Default
     private Long commentCount = 0L;
+
+    /**
+     * 좋아요 수 (실시간 계산)
+     */
+    @Transient
+    private Integer calculatedLikeCount;
+
+    /**
+     * 스크랩 수 (실시간 계산)
+     */
+    @Transient
+    private Integer calculatedScrapCount;
+
+    /**
+     * 실제 좋아요 개수 계산 (실시간)
+     */
+    public Integer getCalculatedLikeCount() {
+        if (calculatedLikeCount != null) {
+            return calculatedLikeCount;
+        }
+        // 기본값으로 저장된 개수 반환
+        return likeCount != null ? likeCount.intValue() : 0;
+    }
+
+    /**
+     * 실제 스크랩 개수 계산 (실시간)
+     */
+    public Integer getCalculatedScrapCount() {
+        if (calculatedScrapCount != null) {
+            return calculatedScrapCount;
+        }
+        // 기본값으로 저장된 개수 반환
+        return scrapCount != null ? scrapCount.intValue() : 0;
+    }
+
+    /**
+     * 계산된 좋아요 개수 설정
+     */
+    public void setCalculatedLikeCount(Integer count) {
+        this.calculatedLikeCount = count;
+    }
+
+    /**
+     * 계산된 스크랩 개수 설정
+     */
+    public void setCalculatedScrapCount(Integer count) {
+        this.calculatedScrapCount = count;
+    }
 
     /**
      * 조회수 (성능: Redis 캐시 + 배치 업데이트)
@@ -289,6 +339,66 @@ public class Post {
         
         // 새 태그 추가
         newTags.forEach(this::addTag);
+    }
+
+    /**
+     * 좋아요 추가
+     */
+    public void addLike(Like like) {
+        // 좋아요 관계는 별도 테이블에서 관리하므로 여기서는 카운트만 증가
+        if (like != null) {
+            incrementLikeCount();
+        }
+    }
+
+    /**
+     * 좋아요 제거
+     */
+    public void removeLike(Like like) {
+        // 좋아요 관계는 별도 테이블에서 관리하므로 여기서는 카운트만 감소
+        if (like != null) {
+            decrementLikeCount();
+        }
+    }
+
+    /**
+     * 스크랩 추가
+     */
+    public void addScrap(Scrap scrap) {
+        // 스크랩 관계는 별도 테이블에서 관리하므로 여기서는 카운트만 증가
+        if (scrap != null) {
+            incrementScrapCount();
+        }
+    }
+
+    /**
+     * 스크랩 제거
+     */
+    public void removeScrap(Scrap scrap) {
+        // 스크랩 관계는 별도 테이블에서 관리하므로 여기서는 카운트만 감소
+        if (scrap != null) {
+            decrementScrapCount();
+        }
+    }
+
+    /**
+     * 사용자가 좋아요를 눌렀는지 확인
+     * 실제 확인은 서비스 레이어에서 별도 쿼리로 수행
+     */
+    public boolean isLikedByUser(User user) {
+        // 이 메서드는 더 이상 사용되지 않음
+        // 실제 확인은 PostController에서 별도 쿼리로 수행
+        return false;
+    }
+
+    /**
+     * 사용자가 스크랩을 눌렀는지 확인
+     * 실제 확인은 서비스 레이어에서 별도 쿼리로 수행
+     */
+    public boolean isScrappedByUser(User user) {
+        // 이 메서드는 더 이상 사용되지 않음
+        // 실제 확인은 PostController에서 별도 쿼리로 수행
+        return false;
     }
 
     /**

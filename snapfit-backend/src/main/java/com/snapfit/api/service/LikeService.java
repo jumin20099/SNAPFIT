@@ -12,6 +12,7 @@ import com.snapfit.api.entity.Like;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.entity.Like.TargetType;
 import com.snapfit.api.repository.LikeRepository;
+import com.snapfit.api.repository.PostRepository;
 
 /**
  * 좋아요 기능 서비스.
@@ -19,10 +20,12 @@ import com.snapfit.api.repository.LikeRepository;
 @Service
 public class LikeService {
     private final LikeRepository likeRepository;
+    private final PostRepository postRepository;
 
     @Autowired
-    public LikeService(LikeRepository likeRepository) {
+    public LikeService(LikeRepository likeRepository, PostRepository postRepository) {
         this.likeRepository = likeRepository;
+        this.postRepository = postRepository;
     }
 
     /**
@@ -50,9 +53,17 @@ public class LikeService {
     public boolean toggleLike(User user, Long targetIdx, TargetType targetType) {
         Optional<Like> existing = likeRepository.findByUserAndTargetIdxAndTargetType(user, targetIdx, targetType);
         if (existing.isPresent()) {
+            // 좋아요 취소
             likeRepository.delete(existing.get());
+            
+            // POST 타입인 경우 Post의 likeCount 감소
+            if (targetType == TargetType.OUTFIT_SHARE) {
+                postRepository.decrementLikeCount(targetIdx);
+            }
+            
             return false; // 취소됨
         } else {
+            // 좋아요 등록
             Like like = Like.builder()
                     .user(user)
                     .targetIdx(targetIdx)
@@ -60,6 +71,12 @@ public class LikeService {
                     .isLike(true)
                     .build();
             likeRepository.save(like);
+            
+            // POST 타입인 경우 Post의 likeCount 증가
+            if (targetType == TargetType.OUTFIT_SHARE) {
+                postRepository.incrementLikeCount(targetIdx);
+            }
+            
             return true; // 좋아요 등록
         }
     }

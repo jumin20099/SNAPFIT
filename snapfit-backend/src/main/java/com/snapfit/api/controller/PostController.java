@@ -5,14 +5,19 @@ import com.snapfit.api.dto.tag.TagResponseDto;
 import com.snapfit.api.entity.Post;
 import com.snapfit.api.entity.Tag;
 import com.snapfit.api.entity.User;
+import com.snapfit.api.entity.Like;
 import com.snapfit.api.repository.PostRepository;
 import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.repository.LikeRepository;
+import com.snapfit.api.repository.ScrapRepository;
+import com.snapfit.api.security.JwtUtil;
 import com.snapfit.api.service.PostService;
 import com.snapfit.api.service.TagService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +45,9 @@ public class PostController {
     private final TagService tagService;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final LikeRepository likeRepository;
+    private final ScrapRepository scrapRepository;
+    private final JwtUtil jwtUtil;
 
     /**
      * 게시글 생성
@@ -128,27 +136,71 @@ public class PostController {
     }
 
     /**
-     * 게시글 목록 조회 (페이지네이션)
-     * @param pageable 페이지 정보
-     * @return 게시글 목록
+     * 게시글 목록 조회 (페이징, 정렬, 검색 지원)
+     * 보안: 삭제된 게시글 제외, 작성자 정보 포함
      */
     @GetMapping
     @Transactional(readOnly = true)
     public ResponseEntity<Page<PostResponseDto>> getPosts(
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
-        log.info("게시글 목록 조회 요청: page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String tag,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        
+        log.info("게시글 목록 조회 요청: page={}, size={}, search={}, tag={}", 
+                pageable.getPageNumber(), pageable.getPageSize(), search, tag);
         
         try {
-            // 실제 게시글 목록 조회
-            Page<Post> posts = postRepository.findAll(pageable);
-            Page<PostResponseDto> response = posts.map(this::convertToDto);
+            // 검색 조건에 따른 게시글 조회
+            Page<Post> posts;
+            if (search != null && !search.trim().isEmpty()) {
+                posts = postService.searchPosts(search, pageable);
+            } else if (tag != null && !tag.trim().isEmpty()) {
+                posts = postService.getPostsByTag(tag, pageable);
+            } else {
+                posts = postRepository.findAll(pageable);
+            }
             
-            log.info("게시글 목록 조회 성공: 총 {}개", response.getTotalElements());
+            // 사용자 인증 정보 추출
+            final String token = authHeader != null && authHeader.startsWith("Bearer ") 
+                ? authHeader.substring(7) 
+                : null;
+            
+            // 토큰이 있으면 사용자별 좋아요/스크랩 상태 포함하여 변환
+            Page<PostResponseDto> response;
+            if (token != null) {
+                response = posts.map(post -> {
+                    try {
+                        // 실시간 개수 계산 및 설정
+                        setRealTimeCounts(post);
+                        return convertToDtoWithUserStatus(post, token);
+                    } catch (Exception e) {
+                        log.error("Post {} 변환 중 오류 발생: {}", post.getPostId(), e.getMessage());
+                        // 오류 발생 시 기본 DTO 반환
+                        return convertToDto(post);
+                    }
+                });
+            } else {
+                response = posts.map(post -> {
+                    try {
+                        // 실시간 개수 계산 및 설정
+                        setRealTimeCounts(post);
+                        return convertToDto(post);
+                    } catch (Exception e) {
+                        log.error("Post {} 변환 중 오류 발생: {}", post.getPostId(), e.getMessage());
+                        // 오류 발생 시 기본 DTO 반환
+                        return convertToDto(post);
+                    }
+                });
+            }
+            
+            log.info("게시글 목록 조회 완료: {}개", response.getTotalElements());
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             log.error("게시글 목록 조회 실패", e);
-            throw new RuntimeException("게시글 목록 조회 중 오류가 발생했습니다: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Page.empty(pageable));
         }
     }
 
@@ -311,14 +363,82 @@ public class PostController {
         dto.setAuthorId(post.getAuthor().getUserIdx().toString()); // UUID를 String으로 변환
         dto.setAuthorName(post.getAuthor().getNickname());
         dto.setAuthorProfileImage(post.getAuthor().getProfileImage() != null ? post.getAuthor().getProfileImage() : "");
-        dto.setLikeCount(post.getLikeCount());
-        dto.setScrapCount(post.getScrapCount());
+        dto.setLikeCount(post.getCalculatedLikeCount() != null ? post.getCalculatedLikeCount().longValue() : 0L);
+        dto.setScrapCount(post.getCalculatedScrapCount() != null ? post.getCalculatedScrapCount().longValue() : 0L);
         dto.setCommentCount(post.getCommentCount());
         dto.setViewCount(post.getViewCount());
-        dto.setCreatedAt(post.getCreatedAt());
-        dto.setUpdatedAt(post.getUpdatedAt());
+        
+        log.info("Post {} DTO 변환 완료: likeCount={}, scrapCount={}, calculatedLikeCount={}, calculatedScrapCount={}", 
+            post.getPostId(), dto.getLikeCount(), dto.getScrapCount(), post.getCalculatedLikeCount(), post.getCalculatedScrapCount());
         dto.setIsLiked(false); // 기본값 설정
         dto.setIsScrapped(false); // 기본값 설정
         return dto;
+    }
+
+    /**
+     * 사용자별 좋아요/스크랩 상태를 포함하여 DTO로 변환하는 헬퍼 메서드
+     */
+    private PostResponseDto convertToDtoWithUserStatus(Post post, String token) {
+        PostResponseDto dto = convertToDto(post); // 기본 정보는 공통 메서드로 처리
+
+        // 사용자 인증 정보 추출 및 상태 계산
+        if (token != null) {
+            try {
+                // JWT 토큰에서 이메일 추출
+                String email = jwtUtil.getSubjectFromToken(token);
+                if (email != null) {
+                    // 이메일로 사용자 찾기
+                    userRepository.findByEmail(email).ifPresent(currentUser -> {
+                        // 좋아요 상태 확인
+                        boolean userLiked = likeRepository.existsByUserIdAndPostId(currentUser.getUserIdx(), post.getPostId());
+                        
+                        // 스크랩 상태 확인
+                        boolean userScrapped = scrapRepository.existsByUserIdAndPostId(currentUser.getUserIdx(), post.getPostId());
+                        
+                        // DTO에 상태 설정
+                        dto.setIsLiked(userLiked);
+                        dto.setIsScrapped(userScrapped);
+                    });
+                }
+            } catch (Exception e) {
+                log.warn("JWT 토큰 파싱 중 오류 발생: {}", e.getMessage());
+                // 토큰이 유효하지 않거나 오류가 발생하면 비로그인 상태로 간주
+                dto.setIsLiked(false);
+                dto.setIsScrapped(false);
+            }
+        } else {
+            // 토큰이 없는 경우 비로그인 상태
+            dto.setIsLiked(false);
+            dto.setIsScrapped(false);
+        }
+
+        return dto;
+    }
+
+    /**
+     * 실시간 좋아요/스크랩 개수 계산 및 설정
+     */
+    private void setRealTimeCounts(Post post) {
+        try {
+            log.info("Post {} 실시간 개수 계산 시작", post.getPostId());
+            
+            // 좋아요 개수 계산 - POST 타입을 OUTFIT_SHARE로 매핑
+            Long likeCount = likeRepository.countByTargetIdxAndTargetTypeAndIsLikeTrue(
+                post.getPostId(), Like.TargetType.OUTFIT_SHARE);
+            post.setCalculatedLikeCount(likeCount.intValue());
+            
+            // 스크랩 개수 계산
+            Long scrapCount = scrapRepository.countByPostId(post.getPostId());
+            post.setCalculatedScrapCount(scrapCount.intValue());
+            
+            log.info("Post {} 실시간 개수 계산 완료: 좋아요={}, 스크랩={}, calculatedLikeCount={}, calculatedScrapCount={}", 
+                post.getPostId(), likeCount, scrapCount, post.getCalculatedLikeCount(), post.getCalculatedScrapCount());
+                
+        } catch (Exception e) {
+            log.error("Post {} 실시간 개수 계산 실패: {}", post.getPostId(), e.getMessage(), e);
+            // 오류 발생 시 기본값 사용
+            post.setCalculatedLikeCount(post.getLikeCount() != null ? post.getLikeCount().intValue() : 0);
+            post.setCalculatedScrapCount(post.getScrapCount() != null ? post.getScrapCount().intValue() : 0);
+        }
     }
 }
