@@ -5,6 +5,7 @@ import com.snapfit.api.entity.Scrap;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.PostRepository;
 import com.snapfit.api.repository.ScrapRepository;
+import com.snapfit.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -31,6 +32,7 @@ public class ScrapService {
 
     private final ScrapRepository scrapRepository;
     private final PostRepository postRepository;
+    private final UserRepository userRepository;
 
     /**
      * 스크랩 토글 (추가/제거)
@@ -81,12 +83,22 @@ public class ScrapService {
                 throw new RuntimeException("이미 스크랩한 게시글입니다");
             }
             
+            // 게시글 엔티티 조회
+            Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
+            
+            // 사용자 엔티티 조회
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+            
             // 스크랩 생성
             Scrap scrap = Scrap.builder()
                 .id(Scrap.ScrapId.builder()
                     .userId(userId)
                     .postId(postId)
                     .build())
+                .user(user)
+                .post(post)
                 .createdAt(java.time.LocalDateTime.now())
                 .build();
             
@@ -235,9 +247,18 @@ public class ScrapService {
         try {
             Object[] stats = scrapRepository.getScrapStatisticsByPostId(postId);
             
+            // 배열 길이 확인 및 안전한 접근
+            if (stats == null || stats.length < 2) {
+                log.warn("스크랩 통계 데이터가 예상과 다릅니다: 게시글={}, 배열길이={}", postId, stats != null ? stats.length : 0);
+                return Map.of(
+                    "totalScraps", 0L,
+                    "uniqueUsers", 0L
+                );
+            }
+            
             Map<String, Object> statistics = Map.of(
-                "totalScraps", stats[0],
-                "uniqueUsers", stats[1]
+                "totalScraps", stats[0] != null ? stats[0] : 0L,
+                "uniqueUsers", stats[1] != null ? stats[1] : 0L
             );
             
             log.info("게시글 스크랩 통계 조회 완료: 게시글={}", postId);
@@ -245,7 +266,11 @@ public class ScrapService {
             
         } catch (Exception e) {
             log.error("게시글 스크랩 통계 조회 실패: 게시글={}", postId, e);
-            throw new RuntimeException("스크랩 통계 조회 중 오류가 발생했습니다", e);
+            // 오류 발생 시 기본값 반환
+            return Map.of(
+                "totalScrap", 0L,
+                "uniqueUsers", 0L
+            );
         }
     }
 

@@ -84,23 +84,26 @@ export default function PostDetailPage() {
         }))
         
         if (page === 0) {
-          setPosts(transformedPosts)
+          // 선택한 게시글을 제일 위에 오도록 정렬
+          const targetPost = transformedPosts.find(p => p.postId === postId)
+          if (targetPost) {
+            // 선택한 게시글을 제거하고 맨 앞에 추가
+            const otherPosts = transformedPosts.filter(p => p.postId !== postId)
+            const sortedPosts = [targetPost, ...otherPosts]
+            setPosts(sortedPosts)
+            
+            setCurrentPost(targetPost)
+            setIsLiked(targetPost.liked || false)
+            setIsScraped(targetPost.scraped || false)
+          } else {
+            setPosts(transformedPosts)
+          }
         } else {
           setPosts(prev => [...prev, ...transformedPosts])
         }
         
         setHasMore(!data.last)
         setCurrentPage(page)
-        
-        // 현재 게시글 찾기
-        if (page === 0) {
-          const targetPost = transformedPosts.find(p => p.postId === postId)
-          if (targetPost) {
-            setCurrentPost(targetPost)
-            setIsLiked(targetPost.liked || false)
-            setIsScraped(targetPost.scraped || false)
-          }
-        }
         
         console.log('게시글 로드 성공:', transformedPosts)
       } else {
@@ -135,31 +138,143 @@ export default function PostDetailPage() {
     }
   }, [postId, fetchPosts])
 
-  const toggleLike = (postId: number) => {
-    setPosts(prev => 
-      prev.map(post => 
-        post.postId === postId 
-          ? { ...post, liked: !post.liked, likeCount: post.liked ? post.likeCount - 1 : post.likeCount + 1 }
-          : post
-      )
-    )
-    
-    if (currentPost?.postId === postId) {
-      setIsLiked(!isLiked)
+  // 사용자별 좋아요 및 스크랩 상태 가져오기
+  useEffect(() => {
+    const fetchUserInteractions = async () => {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      try {
+        // 좋아요 상태 가져오기
+        const likesResponse = await fetch('http://localhost:8080/api/likes/my', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (likesResponse.ok) {
+          const likesData = await likesResponse.json()
+          const likedPostIds = new Set(
+            likesData
+              .filter((like: any) => like?.targetType === 'POST')
+              .map((like: any) => Number(like?.targetIdx))
+          )
+          
+          setPosts(prev => prev.map(post => ({
+            ...post,
+            liked: likedPostIds.has(post.postId)
+          })))
+          
+          // 현재 게시글의 좋아요 상태 설정
+          if (currentPost && likedPostIds.has(currentPost.postId)) {
+            setIsLiked(true)
+          }
+        }
+
+        // 스크랩 상태 가져오기
+        const scrapsResponse = await fetch('http://localhost:8080/api/scraps/my', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (scrapsResponse.ok) {
+          const scrapsData = await scrapsResponse.json()
+          const scrapedPostIds = new Set(
+            scrapsData
+              .filter((scrap: any) => scrap?.post?.postId)
+              .map((scrap: any) => Number(scrap?.post?.postId))
+          )
+          
+          setPosts(prev => prev.map(post => ({
+            ...post,
+            scraped: scrapedPostIds.has(post.postId)
+          })))
+          
+          // 현재 게시글의 스크랩 상태 설정
+          if (currentPost && scrapedPostIds.has(currentPost.postId)) {
+            setIsScraped(true)
+          }
+        }
+      } catch (error) {
+        console.error('사용자 상호작용 상태 가져오기 실패:', error)
+      }
+    }
+
+    if (posts.length > 0) {
+      fetchUserInteractions()
+    }
+  }, [posts.length])
+
+  const toggleLike = async (postId: number) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('로그인이 필요합니다')
+        return
+      }
+
+      const response = await fetch(`http://localhost:8080/api/likes/toggle?targetIdx=${postId}&targetType=POST`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setPosts(prev => 
+          prev.map(post => 
+            post.postId === postId 
+              ? { ...post, liked: data.liked, likeCount: data.count }
+              : post
+          )
+        )
+        
+        if (currentPost?.postId === postId) {
+          setIsLiked(data.liked)
+        }
+      } else {
+        console.error('좋아요 토글 실패:', response.status)
+      }
+    } catch (error) {
+      console.error('좋아요 토글 중 오류:', error)
     }
   }
 
-  const toggleScrap = (postId: number) => {
-    setPosts(prev => 
-      prev.map(post => 
-        post.postId === postId 
-          ? { ...post, scraped: !post.scraped, scrapCount: post.scraped ? post.scrapCount - 1 : post.scrapCount + 1 }
-          : post
-      )
-    )
-    
-    if (currentPost?.postId === postId) {
-      setIsScraped(!isScraped)
+  const toggleScrap = async (postId: number) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('로그인이 필요합니다')
+        return
+      }
+
+      const response = await fetch(`http://localhost:8080/api/scraps/toggle?postId=${postId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setPosts(prev => 
+          prev.map(post => 
+            post.postId === postId 
+              ? { ...post, scraped: data.scraped, scrapCount: data.count }
+              : post
+          )
+        )
+        
+        if (currentPost?.postId === postId) {
+          setIsScraped(data.scraped)
+        }
+      } else {
+        console.error('스크랩 토글 실패:', response.status)
+      }
+    } catch (error) {
+      console.error('스크랩 토글 중 오류:', error)
     }
   }
 
@@ -274,7 +389,9 @@ export default function PostDetailPage() {
                   </Button>
                 </div>
               </div>
-              <div className="text-sm font-medium">좋아요 {post.likeCount}개</div>
+              <div className="text-sm font-medium">
+                좋아요 {post.likeCount}개 · 스크랩 {post.scrapCount}개
+              </div>
             </div>
 
             {/* Tags */}

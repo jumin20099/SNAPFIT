@@ -100,24 +100,126 @@ export default function CommunityPage() {
     fetchPosts()
   }, [])
 
-  const toggleLike = (postId: number) => {
-    setPosts(
-      posts.map((post) =>
-        post.postId === postId
-          ? { ...post, likeCount: post.liked ? post.likeCount - 1 : post.likeCount + 1, liked: !post.liked }
-          : post,
-      ),
-    )
+  // 사용자별 좋아요 및 스크랩 상태 가져오기
+  useEffect(() => {
+    const fetchUserInteractions = async () => {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      try {
+        // 좋아요 상태 가져오기
+        const likesResponse = await fetch('http://localhost:8080/api/likes/my', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (likesResponse.ok) {
+          const likesData = await likesResponse.json()
+          const likedPostIds = new Set(
+            likesData
+              .filter((like: any) => like?.targetType === 'POST')
+              .map((like: any) => Number(like?.targetIdx))
+          )
+          
+          setPosts(prev => prev.map(post => ({
+            ...post,
+            liked: likedPostIds.has(post.postId)
+          })))
+        }
+
+        // 스크랩 상태 가져오기
+        const scrapsResponse = await fetch('http://localhost:8080/api/scraps/my', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (scrapsResponse.ok) {
+          const scrapsData = await scrapsResponse.json()
+          const scrapedPostIds = new Set(
+            scrapsData
+              .filter((scrap: any) => scrap?.post?.postId)
+              .map((scrap: any) => Number(scrap?.post?.postId))
+          )
+          
+          setPosts(prev => prev.map(post => ({
+            ...post,
+            scraped: scrapedPostIds.has(post.postId)
+          })))
+        }
+      } catch (error) {
+        console.error('사용자 상호작용 상태 가져오기 실패:', error)
+      }
+    }
+
+    if (posts.length > 0) {
+      fetchUserInteractions()
+    }
+  }, [posts.length])
+
+  const toggleLike = async (postId: number) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('로그인이 필요합니다')
+        return
+      }
+
+      const response = await fetch(`http://localhost:8080/api/likes/toggle?targetIdx=${postId}&targetType=POST`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setPosts(
+          posts.map((post) =>
+            post.postId === postId
+              ? { ...post, likeCount: data.count, liked: data.liked }
+              : post,
+          ),
+        )
+      } else {
+        console.error('좋아요 토글 실패:', response.status)
+      }
+    } catch (error) {
+      console.error('좋아요 토글 중 오류:', error)
+    }
   }
 
-  const toggleScrap = (postId: number) => {
-    setPosts(
-      posts.map((post) =>
-        post.postId === postId
-          ? { ...post, scrapCount: post.scraped ? post.scrapCount - 1 : post.scrapCount + 1, scraped: !post.scraped }
-          : post,
-      ),
-    )
+  const toggleScrap = async (postId: number) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('로그인이 필요합니다')
+        return
+      }
+
+      const response = await fetch(`http://localhost:8080/api/scraps/toggle?postId=${postId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setPosts(
+          posts.map((post) =>
+            post.postId === postId
+              ? { ...post, scrapCount: data.count, scraped: data.scraped }
+              : post,
+          ),
+        )
+      } else {
+        console.error('스크랩 토글 실패:', response.status)
+      }
+    } catch (error) {
+      console.error('스크랩 토글 중 오류:', error)
+    }
   }
 
   const getFilteredAndSortedPosts = () => {
@@ -321,6 +423,28 @@ export default function CommunityPage() {
                           >
                             <Heart className={`w-3 h-3 ${post.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
                           </Button>
+                          
+                          {/* Scrap Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute top-2 right-12 p-1 bg-white/20 backdrop-blur-sm rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleScrap(post.postId)
+                            }}
+                          >
+                            <Bookmark className={`w-3 h-3 ${post.scraped ? "fill-blue-500 text-blue-500" : "text-white"}`} />
+                          </Button>
+                          
+                          {/* Post Stats */}
+                          <div className="absolute bottom-2 left-2 right-2 bg-black/50 backdrop-blur-sm rounded text-white text-xs p-1">
+                            <div className="flex items-center justify-between">
+                              <span>❤️ {post.likeCount}</span>
+                              <span>💬 {post.commentCount}</span>
+                              <span>🔖 {post.scrapCount}</span>
+                            </div>
+                          </div>
                         </div>
                       </Card>
                     ))}

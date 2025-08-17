@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -213,60 +214,70 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      * 게시글 조회수 증가 (배치 업데이트용)
      * 성능: UPDATE 쿼리 최적화
      */
+    @Modifying
     @Query("UPDATE Post p SET p.viewCount = p.viewCount + 1 WHERE p.postId = :postId")
     void incrementViewCount(@Param("postId") Long postId);
 
     /**
      * 좋아요 수 증가
      */
+    @Modifying
     @Query("UPDATE Post p SET p.likeCount = p.likeCount + 1 WHERE p.postId = :postId")
     void incrementLikeCount(@Param("postId") Long postId);
 
     /**
      * 좋아요 수 감소
      */
+    @Modifying
     @Query("UPDATE Post p SET p.likeCount = GREATEST(p.likeCount - 1, 0) WHERE p.postId = :postId")
     void decrementLikeCount(@Param("postId") Long postId);
 
     /**
      * 스크랩 수 증가
      */
+    @Modifying
     @Query("UPDATE Post p SET p.scrapCount = p.scrapCount + 1 WHERE p.postId = :postId")
     void incrementScrapCount(@Param("postId") Long postId);
 
     /**
      * 스크랩 수 감소
      */
+    @Modifying
     @Query("UPDATE Post p SET p.scrapCount = GREATEST(p.scrapCount - 1, 0) WHERE p.postId = :postId")
     void decrementScrapCount(@Param("postId") Long postId);
 
     /**
      * 댓글 수 증가
      */
+    @Modifying
     @Query("UPDATE Post p SET p.commentCount = p.commentCount + 1 WHERE p.postId = :postId")
     void incrementCommentCount(@Param("postId") Long postId);
 
     /**
      * 댓글 수 감소
      */
+    @Modifying
     @Query("UPDATE Post p SET p.commentCount = GREATEST(p.commentCount - 1, 0) WHERE p.postId = :postId")
     void decrementCommentCount(@Param("postId") Long postId);
 
     /**
      * 게시글 Soft Delete
      */
+    @Modifying
     @Query("UPDATE Post p SET p.isDeleted = true, p.updatedAt = :updatedAt WHERE p.postId = :postId")
     void softDeletePost(@Param("postId") Long postId, @Param("updatedAt") LocalDateTime updatedAt);
 
     /**
      * 게시글 복구
      */
+    @Modifying
     @Query("UPDATE Post p SET p.isDeleted = false, p.updatedAt = :updatedAt WHERE p.postId = :postId")
     void restorePost(@Param("postId") Long postId, @Param("updatedAt") LocalDateTime updatedAt);
 
     /**
      * 스폰서드 상태 변경
      */
+    @Modifying
     @Query("UPDATE Post p SET p.isSponsored = :isSponsored, p.updatedAt = :updatedAt WHERE p.postId = :postId")
     void updateSponsoredStatus(@Param("postId") Long postId, 
                               @Param("isSponsored") Boolean isSponsored, 

@@ -1,0 +1,60 @@
+package com.snapfit.api.controller;
+
+import com.snapfit.api.entity.Scrap;
+import com.snapfit.api.entity.User;
+import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.security.CustomOAuth2User;
+import com.snapfit.api.service.ScrapService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/scraps")
+@RequiredArgsConstructor
+public class ScrapController {
+
+    private final ScrapService scrapService;
+    private final UserRepository userRepository;
+
+    private User current(@AuthenticationPrincipal CustomOAuth2User principal) {
+        if (principal == null) throw new IllegalArgumentException("인증 필요");
+        return userRepository.findById(principal.getUser().getUserIdx())
+                .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
+    }
+
+    @PostMapping("/toggle")
+    public ResponseEntity<?> toggle(@RequestParam Long postId,
+                                    @AuthenticationPrincipal CustomOAuth2User principal) {
+        User user = current(principal);
+        boolean scraped = scrapService.toggleScrap(user.getUserIdx(), postId);
+        long count = (Long) scrapService.getPostScrapStatistics(postId).get("totalScraps");
+        return ResponseEntity.ok().body(Map.of("scraped", scraped, "count", count));
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<Long> count(@RequestParam Long postId) {
+        Map<String, Object> stats = scrapService.getPostScrapStatistics(postId);
+        return ResponseEntity.ok((Long) stats.get("totalScraps"));
+    }
+
+    @GetMapping("/my")
+    public ResponseEntity<List<Scrap>> myScraps(@AuthenticationPrincipal CustomOAuth2User principal) {
+        User user = current(principal);
+        return ResponseEntity.ok(scrapService.getUserScraps(user.getUserIdx(), 
+            org.springframework.data.domain.PageRequest.of(0, 50)).getContent());
+    }
+
+    @GetMapping("/check")
+    public ResponseEntity<Boolean> checkScrap(@RequestParam Long postId,
+                                             @AuthenticationPrincipal CustomOAuth2User principal) {
+        User user = current(principal);
+        boolean scraped = scrapService.isScraped(user.getUserIdx(), postId);
+        return ResponseEntity.ok(scraped);
+    }
+}
