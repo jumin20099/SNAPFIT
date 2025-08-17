@@ -1,5 +1,6 @@
 package com.snapfit.api.service;
 
+import com.snapfit.api.dto.notification.NotificationResponseDto;
 import com.snapfit.api.entity.Notification;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.NotificationRepository;
@@ -43,7 +44,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
-    private final RedisTemplate<String, Object> redisTemplate;
+    // private final RedisTemplate<String, Object> redisTemplate; // Redis 의존성 일시 제거
 
     // Redis 키 상수
     private static final String NOTIFICATION_COUNT_KEY = "notification:count:";
@@ -375,20 +376,19 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public long getUnreadNotificationCount(UUID userId) {
         try {
-            // 캐시에서 조회 시도
-            String cacheKey = NOTIFICATION_UNREAD_KEY + userId;
-            Object cached = redisTemplate.opsForValue().get(cacheKey);
+            // Redis 의존성 일시 제거로 인해 DB에서 직접 조회
+            // String cacheKey = NOTIFICATION_UNREAD_KEY + userId;
+            // Object cached = redisTemplate.opsForValue().get(cacheKey);
             
-            if (cached instanceof Long) {
-                log.debug("캐시에서 읽지 않은 알림 개수 조회: userId={}, count={}", userId, cached);
-                return (Long) cached;
-            }
+            // if (cached instanceof Long) {
+            //     log.debug("캐시에서 읽지 않은 알림 개수 조회: userId={}, count={}", userId, cached);
+            //     return (Long) cached;
+            // }
 
             // DB에서 조회
             long count = notificationRepository.countByUser_UserIdxAndIsReadFalse(userId);
             
-            // 캐시에 저장
-            redisTemplate.opsForValue().set(cacheKey, count, UNREAD_CACHE_TTL, TimeUnit.SECONDS);
+            // redisTemplate.opsForValue().set(cacheKey, count, UNREAD_CACHE_TTL, TimeUnit.SECONDS);
             
             log.debug("DB에서 읽지 않은 알림 개수 조회: userId={}, count={}", userId, count);
             return count;
@@ -404,13 +404,12 @@ public class NotificationService {
      */
     private void updateNotificationCache(UUID userId) {
         try {
-            // 읽지 않은 알림 개수 캐시 무효화
-            String unreadKey = NOTIFICATION_UNREAD_KEY + userId;
-            redisTemplate.delete(unreadKey);
+            // Redis 의존성 일시 제거로 인해 캐시 업데이트 비활성화
+            // String unreadKey = NOTIFICATION_UNREAD_KEY + userId;
+            // redisTemplate.delete(unreadKey);
 
-            // 전체 알림 개수 캐시 무효화
-            String countKey = NOTIFICATION_COUNT_KEY + userId;
-            redisTemplate.delete(countKey);
+            // String countKey = NOTIFICATION_COUNT_KEY + userId;
+            // redisTemplate.delete(countKey);
 
             log.debug("알림 캐시 업데이트 완료: userId={}", userId);
 
@@ -424,22 +423,20 @@ public class NotificationService {
      */
     private boolean isRateLimited(UUID userId, String action) {
         try {
-            String rateLimitKey = NOTIFICATION_RATE_LIMIT_KEY + userId + ":" + action;
+            // Redis 의존성 일시 제거로 인해 Rate limiting 비활성화
+            // String rateLimitKey = NOTIFICATION_RATE_LIMIT_KEY + userId + ":" + action;
             
-            // 현재 요청 수 확인
-            Object currentCount = redisTemplate.opsForValue().get(rateLimitKey);
-            int count = currentCount != null ? (Integer) currentCount : 0;
+            // Object currentCount = redisTemplate.opsForValue().get(rateLimitKey);
+            // int count = currentCount != null ? (Integer) currentCount : 0;
 
-            // 제한 확인 (1시간에 100개)
-            if (count >= 100) {
-                return true;
-            }
+            // if (count >= 100) {
+            //     return true;
+            // }
 
-            // 요청 수 증가
-            redisTemplate.opsForValue().increment(rateLimitKey);
-            redisTemplate.expire(rateLimitKey, RATE_LIMIT_TTL, TimeUnit.SECONDS);
+            // redisTemplate.opsForValue().increment(rateLimitKey);
+            // redisTemplate.expire(rateLimitKey, RATE_LIMIT_TTL, TimeUnit.SECONDS);
 
-            return false;
+            return false; // 일시적으로 제한하지 않음
 
         } catch (Exception e) {
             log.error("Rate limiting 확인 실패: userId={}, action={}", userId, action, e);
@@ -452,11 +449,11 @@ public class NotificationService {
      */
     private void updateRateLimit(UUID userId, String action) {
         try {
-            String rateLimitKey = NOTIFICATION_RATE_LIMIT_KEY + userId + ":" + action;
+            // Redis 의존성 일시 제거로 인해 Rate limiting 비활성화
+            // String rateLimitKey = NOTIFICATION_RATE_LIMIT_KEY + userId + ":" + action;
             
-            // 요청 수 증가
-            redisTemplate.opsForValue().increment(rateLimitKey);
-            redisTemplate.expire(rateLimitKey, RATE_LIMIT_TTL, TimeUnit.SECONDS);
+            // redisTemplate.opsForValue().increment(rateLimitKey);
+            // redisTemplate.expire(rateLimitKey, RATE_LIMIT_TTL, TimeUnit.SECONDS);
 
         } catch (Exception e) {
             log.error("Rate limiting 업데이트 실패: userId={}, action={}", userId, action, e);
@@ -480,6 +477,162 @@ public class NotificationService {
         } catch (Exception e) {
             log.error("알림 통계 조회 실패: userId={}", userId, e);
             return Map.of();
+        }
+    }
+
+    /**
+     * 사용자의 알림 목록을 가져옵니다
+     */
+    @Transactional(readOnly = true)
+    public List<NotificationResponseDto> getUserNotifications(UUID userId) {
+        try {
+            List<Notification> notifications = notificationRepository.findByUser_UserIdxOrderByCreatedAtDesc(userId);
+            return notifications.stream()
+                    .map(NotificationResponseDto::fromEntity)
+                    .toList();
+        } catch (Exception e) {
+            log.error("사용자 알림 목록 조회 실패: userId={}", userId, e);
+            return List.of();
+        }
+    }
+
+    /**
+     * 특정 알림을 읽음 처리합니다
+     */
+    @Transactional
+    public void markAsRead(Long notificationId, UUID userId) {
+        try {
+            Notification notification = notificationRepository.findByNotificationIdAndUser_UserIdx(notificationId, userId)
+                    .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다"));
+
+            notification.setIsRead(true);
+            notificationRepository.save(notification);
+
+            // 캐시 업데이트
+            updateNotificationCache(userId);
+
+            log.info("알림 읽음 처리 완료: notificationId={}, userId={}", notificationId, userId);
+
+        } catch (Exception e) {
+            log.error("알림 읽음 처리 실패: notificationId={}, userId={}", notificationId, userId, e);
+            throw e;
+        }
+    }
+
+    /**
+     * 모든 알림을 읽음 처리합니다
+     */
+    @Transactional
+    public void markAllAsRead(UUID userId) {
+        try {
+            List<Notification> unreadNotifications = notificationRepository.findByUser_UserIdxAndIsReadFalse(userId);
+            
+            for (Notification notification : unreadNotifications) {
+                notification.setIsRead(true);
+            }
+            
+            notificationRepository.saveAll(unreadNotifications);
+
+            // 캐시 업데이트
+            updateNotificationCache(userId);
+
+            log.info("모든 알림 읽음 처리 완료: userId={}, count={}", userId, unreadNotifications.size());
+
+        } catch (Exception e) {
+            log.error("모든 알림 읽음 처리 실패: userId={}", userId, e);
+            throw e;
+        }
+    }
+
+    /**
+     * 특정 알림을 삭제합니다
+     */
+    @Transactional
+    public void deleteNotification(Long notificationId, UUID userId) {
+        try {
+            Notification notification = notificationRepository.findByNotificationIdAndUser_UserIdx(notificationId, userId)
+                    .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다"));
+
+            notificationRepository.delete(notification);
+
+            // 캐시 업데이트
+            updateNotificationCache(userId);
+
+            log.info("알림 삭제 완료: notificationId={}, userId={}", notificationId, userId);
+
+        } catch (Exception e) {
+            log.error("알림 삭제 실패: notificationId={}, userId={}", notificationId, userId, e);
+            throw e;
+        }
+    }
+
+    /**
+     * 모든 알림을 삭제합니다
+     */
+    @Transactional
+    public void deleteAllNotifications(UUID userId) {
+        try {
+            List<Notification> notifications = notificationRepository.findByUser_UserIdx(userId);
+            notificationRepository.deleteAll(notifications);
+
+            // 캐시 업데이트
+            updateNotificationCache(userId);
+
+            log.info("모든 알림 삭제 완료: userId={}, count={}", userId, notifications.size());
+
+        } catch (Exception e) {
+            log.error("모든 알림 삭제 실패: userId={}", userId, e);
+            throw e;
+        }
+    }
+
+    /**
+     * 읽지 않은 알림 개수를 가져옵니다
+     */
+    @Transactional(readOnly = true)
+    public Long getUnreadCount(UUID userId) {
+        return getUnreadNotificationCount(userId);
+    }
+
+    /**
+     * 테스트용 알림 생성 (개발 환경에서만 사용)
+     */
+    @Transactional
+    public void createTestNotification(UUID userId) {
+        try {
+            // 좋아요 알림
+            Notification likeNotification = createNotification(
+                null, userId, "LIKE", 
+                "테스트 좋아요 알림", 
+                Map.of("postId", 1L, "type", "post")
+            );
+
+            // 댓글 알림
+            Notification commentNotification = createNotification(
+                null, userId, "COMMENT", 
+                "테스트 댓글 알림", 
+                Map.of("postId", 1L, "commentId", 1L, "type", "post")
+            );
+
+            // 팔로우 알림
+            Notification followNotification = createNotification(
+                null, userId, "FOLLOW", 
+                "테스트 팔로우 알림", 
+                Map.of()
+            );
+
+            // 시스템 알림
+            Notification systemNotification = createNotification(
+                null, userId, "SYSTEM", 
+                "테스트 시스템 알림", 
+                Map.of("message", "테스트 시스템 알림입니다.")
+            );
+
+            log.info("테스트 알림 생성 완료: userId={}, count=4", userId);
+
+        } catch (Exception e) {
+            log.error("테스트 알림 생성 실패: userId={}", userId, e);
+            throw e;
         }
     }
 }

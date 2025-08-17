@@ -130,4 +130,28 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @org.springframework.data.jpa.repository.Modifying
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.user.userIdx = :userId AND n.isRead = false")
     int markAllAsReadByUserId(@Param("userId") UUID userId);
+
+    /**
+     * 사용자별 알림 목록 조회 (페이징 없음)
+     */
+    @Query("SELECT n FROM Notification n WHERE n.user.userIdx = :userId ORDER BY n.createdAt DESC")
+    List<Notification> findByUser_UserIdxOrderByCreatedAtDesc(@Param("userId") UUID userId);
+
+    /**
+     * 특정 알림 조회 (사용자 ID와 알림 ID로)
+     */
+    @Query("SELECT n FROM Notification n WHERE n.notificationId = :notificationId AND n.user.userIdx = :userId")
+    java.util.Optional<Notification> findByNotificationIdAndUser_UserIdx(@Param("notificationId") Long notificationId, @Param("userId") UUID userId);
+
+    /**
+     * 사용자별 읽지 않은 알림 목록 조회
+     */
+    @Query("SELECT n FROM Notification n WHERE n.user.userIdx = :userId AND n.isRead = false")
+    List<Notification> findByUser_UserIdxAndIsReadFalse(@Param("userId") UUID userId);
+
+    /**
+     * 사용자별 모든 알림 목록 조회
+     */
+    @Query("SELECT n FROM Notification n WHERE n.user.userIdx = :userId")
+    List<Notification> findByUser_UserIdx(@Param("userId") UUID userId);
 }

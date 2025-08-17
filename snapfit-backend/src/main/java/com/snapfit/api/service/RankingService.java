@@ -1,5 +1,6 @@
 package com.snapfit.api.service;
 
+import com.snapfit.api.dto.ranking.RankingPostDto;
 import com.snapfit.api.entity.Post;
 import com.snapfit.api.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 public class RankingService {
 
     private final PostRepository postRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
+    // private final RedisTemplate<String, Object> redisTemplate; // Redis 의존성 일시 제거
     
     // Redis 키 상수
     private static final String RANKING_CACHE_KEY = "ranking:posts:trending";
@@ -255,7 +256,8 @@ public class RankingService {
      */
     private void cacheRanking(String key, List<Post> posts, long ttlSeconds) {
         try {
-            redisTemplate.opsForValue().set(key, posts, ttlSeconds, TimeUnit.SECONDS);
+            // Redis 의존성 일시 제거로 인해 캐시 저장 비활성화
+            // redisTemplate.opsForValue().set(key, posts, ttlSeconds, TimeUnit.SECONDS);
             log.debug("랭킹 캐시 저장 완료: key={}, posts={}개, TTL={}초", key, posts.size(), ttlSeconds);
         } catch (Exception e) {
             log.error("랭킹 캐시 저장 실패: key={}, error={}", key, e.getMessage(), e);
@@ -268,10 +270,11 @@ public class RankingService {
     @SuppressWarnings("unchecked")
     private List<Post> getCachedRanking(String key) {
         try {
-            Object cached = redisTemplate.opsForValue().get(key);
-            if (cached instanceof List) {
-                return (List<Post>) cached;
-            }
+            // Redis 의존성 일시 제거로 인해 캐시 조회 비활성화
+            // Object cached = redisTemplate.opsForValue().get(key);
+            // if (cached instanceof List) {
+            //     return (List<Post>) cached;
+            // }
         } catch (Exception e) {
             log.error("캐시에서 랭킹 조회 실패: key={}, error={}", key, e.getMessage(), e);
         }
@@ -284,10 +287,10 @@ public class RankingService {
      */
     public void invalidateRankingCache(Long postId) {
         try {
-            // 관련 캐시 키들 무효화
-            redisTemplate.delete(RANKING_CACHE_KEY);
-            redisTemplate.delete(RANKING_CACHE_KEY_DAILY);
-            redisTemplate.delete(RANKING_CACHE_KEY_WEEKLY);
+            // Redis 의존성 일시 제거로 인해 캐시 무효화 비활성화
+            // redisTemplate.delete(RANKING_CACHE_KEY);
+            // redisTemplate.delete(RANKING_CACHE_KEY_DAILY);
+            // redisTemplate.delete(RANKING_CACHE_KEY_WEEKLY);
             
             log.debug("게시글 {} 관련 랭킹 캐시 무효화 완료", postId);
         } catch (Exception e) {
@@ -343,6 +346,112 @@ public class RankingService {
         } catch (Exception e) {
             log.error("랭킹 통계 조회 실패: {}", e.getMessage(), e);
             return Collections.emptyMap();
+        }
+    }
+
+    /**
+     * Post 엔티티를 RankingPostDto로 변환
+     */
+    private RankingPostDto convertToDto(Post post, double rankingScore) {
+        try {
+            // mediaUrls에서 첫 번째 이미지만 추출 (base64 데이터 길이 제한)
+            String thumbnailUrl = null;
+            if (post.getMediaUrls() != null && !post.getMediaUrls().isEmpty()) {
+                String firstImage = post.getMediaUrls().iterator().next();
+                // base64 데이터가 너무 길면 잘라내기
+                if (firstImage.length() > 1000) {
+                    thumbnailUrl = firstImage.substring(0, 1000) + "...";
+                } else {
+                    thumbnailUrl = firstImage;
+                }
+            }
+
+                           // mediaUrls 배열 생성 (base64 데이터 길이 제한)
+               String[] mediaUrlsArray = null;
+               if (post.getMediaUrls() != null && !post.getMediaUrls().isEmpty()) {
+                   mediaUrlsArray = post.getMediaUrls().stream()
+                       .map(url -> url.length() > 1000 ? url.substring(0, 1000) + "..." : url)
+                       .toArray(String[]::new);
+               }
+
+               // tags 배열 생성
+               String[] tagsArray = null;
+               if (post.getTags() != null && !post.getTags().isEmpty()) {
+                   log.debug("Post {} 태그 정보: {}개", post.getPostId(), post.getTags().size());
+                   tagsArray = post.getTags().stream()
+                       .map(tag -> tag.getName())
+                       .toArray(String[]::new);
+               } else {
+                   log.debug("Post {} 태그 없음", post.getPostId());
+               }
+
+               return RankingPostDto.builder()
+                   .postId(post.getPostId())
+                   .content(post.getContent())
+                   .authorName(post.getAuthor() != null ? post.getAuthor().getNickname() : "알 수 없음")
+                   .authorAvatar(post.getAuthor() != null ? post.getAuthor().getProfileImage() : null)
+                   .thumbnailUrl(thumbnailUrl)
+                   .mediaUrls(mediaUrlsArray)
+                   .tags(tagsArray)
+                   .likeCount(post.getLikeCount() != null ? post.getLikeCount().intValue() : 0)
+                   .commentCount(post.getCommentCount() != null ? post.getCommentCount().intValue() : 0)
+                   .scrapCount(post.getScrapCount() != null ? post.getScrapCount().intValue() : 0)
+                   .viewCount(post.getViewCount() != null ? post.getViewCount().intValue() : 0)
+                   .createdAt(post.getCreatedAt())
+                   .rankingScore(rankingScore)
+                   .build();
+                
+        } catch (Exception e) {
+            log.error("Post를 DTO로 변환 실패: postId={}, error={}", post.getPostId(), e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 트렌딩 게시글 랭킹 조회 (DTO 반환)
+     */
+    public List<RankingPostDto> getTrendingPostsDto(int limit) {
+        try {
+            List<Post> posts = getTrendingPosts(limit);
+            return posts.stream()
+                .map(post -> convertToDto(post, calculateRankingScore(post)))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("트렌딩 게시글 DTO 변환 실패: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 일일 랭킹 조회 (DTO 반환)
+     */
+    public List<RankingPostDto> getDailyRankingDto(int limit) {
+        try {
+            List<Post> posts = getDailyRanking(limit);
+            return posts.stream()
+                .map(post -> convertToDto(post, calculateRankingScore(post)))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("일일 랭킹 DTO 변환 실패: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 주간 랭킹 조회 (DTO 반환)
+     */
+    public List<RankingPostDto> getWeeklyRankingDto(int limit) {
+        try {
+            List<Post> posts = getWeeklyRanking(limit);
+            return posts.stream()
+                .map(post -> convertToDto(post, calculateRankingScore(post)))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("주간 랭킹 DTO 변환 실패: {}", e.getMessage(), e);
+            return Collections.emptyList();
         }
     }
 }

@@ -66,8 +66,12 @@
 ### 알림 시스템
 - [x] WebSocket 알림 전송 구현
 - [x] 알림 타입별 처리 (좋아요, 댓글, 팔로우)
-- [ ] notification-page.tsx 완성
-- [ ] 실시간 알림 배지 업데이트
+- [x] notification-page.tsx 완성
+- [x] NotificationController.java 생성
+- [x] NotificationResponseDto.java 생성
+- [x] useNotifications.ts 훅 생성
+- [x] 메인 페이지 알림 버튼 통합
+- [ ] 실시간 알림 배지 업데이트 (WebSocket 연동)
 
 ## 🛡️ P3: 안전 시스템 구축
 

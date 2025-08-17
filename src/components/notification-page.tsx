@@ -1,23 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { ArrowLeft, X, Heart, MessageSquare, UserPlus, Bell, Trash2 } from "lucide-react"
+import { ArrowLeft, X, Heart, MessageSquare, UserPlus, Bell, Trash2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-
-interface Notification {
-  id: number
-  type: "like" | "comment" | "follow" | "system"
-  title: string
-  message: string
-  timestamp: string
-  read: boolean
-  avatar?: string
-  image?: string
-  userName?: string
-}
+import { useNotifications } from "@/hooks/useNotifications"
 
 interface NotificationPageProps {
   isOpen: boolean
@@ -25,7 +14,18 @@ interface NotificationPageProps {
 }
 
 export default function NotificationPage({ isOpen, onClose }: NotificationPageProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const {
+    notifications,
+    loading,
+    error,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    deleteAllNotifications
+  } = useNotifications()
+
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const getTimeAgo = (timestamp: string) => {
     const now = new Date()
@@ -63,7 +63,20 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
     }
   }
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const handleDeleteNotification = async (notificationId: number) => {
+    setDeletingId(notificationId)
+    try {
+      await deleteNotification(notificationId)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleDeleteAll = async () => {
+    if (window.confirm('모든 알림을 삭제하시겠습니까?')) {
+      await deleteAllNotifications()
+    }
+  }
 
   if (!isOpen) return null
 
@@ -86,12 +99,22 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
         </div>
         <div className="flex items-center gap-2">
           {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => {}} className="text-blue-600 text-sm">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={markAllAsRead} 
+              className="text-blue-600 text-sm"
+            >
               모두 읽음
             </Button>
           )}
           {notifications.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => {}} className="text-red-600">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleDeleteAll} 
+              className="text-red-600"
+            >
               <Trash2 className="w-4 h-4" />
             </Button>
           )}
@@ -100,7 +123,21 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {notifications.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-full">
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400 mb-4" />
+            <p className="text-gray-500">알림을 불러오는 중...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-full text-red-500">
+            <Bell className="w-16 h-16 mb-4 text-red-300" />
+            <h3 className="text-lg font-medium mb-2">오류가 발생했습니다</h3>
+            <p className="text-sm mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              다시 시도
+            </Button>
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
             <Bell className="w-16 h-16 mb-4 text-gray-300" />
             <h3 className="text-lg font-medium mb-2">알림이 없습니다</h3>
@@ -119,7 +156,7 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                     <div className="flex-shrink-0">
                       {notification.avatar ? (
                         <Avatar className="w-10 h-10">
-                          <AvatarImage src={notification.avatar || "/placeholder.svg"} alt={notification.userName} />
+                          <AvatarImage src={notification.avatar} alt={notification.userName} />
                           <AvatarFallback>{notification.userName?.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                       ) : (
@@ -145,7 +182,7 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => {}}
+                                onClick={() => markAsRead(notification.id)}
                                 className="text-blue-600 text-xs h-6 px-2"
                               >
                                 읽음 처리
@@ -158,7 +195,7 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                         {notification.image && (
                           <div className="ml-3 flex-shrink-0">
                             <img
-                              src={notification.image || "/placeholder.svg"}
+                              src={notification.image}
                               alt="알림 이미지"
                               className="w-12 h-12 rounded object-cover"
                             />
@@ -171,10 +208,15 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {}}
+                      onClick={() => handleDeleteNotification(notification.id)}
+                      disabled={deletingId === notification.id}
                       className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 flex-shrink-0"
                     >
-                      <X className="w-4 h-4" />
+                      {deletingId === notification.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <X className="w-4 h-4" />
+                      )}
                     </Button>
                   </div>
                 </CardContent>

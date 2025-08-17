@@ -1,6 +1,6 @@
 package com.snapfit.api.controller;
 
-import com.snapfit.api.entity.Post;
+import com.snapfit.api.dto.ranking.RankingPostDto;
 import com.snapfit.api.service.RankingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +28,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/ranking")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*") // CORS 허용
 public class RankingController {
 
     private final RankingService rankingService;
@@ -37,7 +38,7 @@ public class RankingController {
      * 최적화: Redis 캐시 활용, 60초 TTL
      */
     @GetMapping("/trending")
-    public ResponseEntity<List<Post>> getTrendingPosts(
+    public ResponseEntity<List<RankingPostDto>> getTrendingPosts(
             @RequestParam(defaultValue = "20") int limit) {
         try {
             // 입력값 검증
@@ -47,7 +48,7 @@ public class RankingController {
             
             log.info("트렌딩 게시글 랭킹 조회 요청: limit={}", limit);
             
-            List<Post> trendingPosts = rankingService.getTrendingPosts(limit);
+            List<RankingPostDto> trendingPosts = rankingService.getTrendingPostsDto(limit);
             
             log.info("트렌딩 게시글 랭킹 조회 완료: {}개", trendingPosts.size());
             
@@ -64,7 +65,7 @@ public class RankingController {
      * 최적화: Redis 캐시 활용, 1시간 TTL
      */
     @GetMapping("/daily")
-    public ResponseEntity<List<Post>> getDailyRanking(
+    public ResponseEntity<List<RankingPostDto>> getDailyRanking(
             @RequestParam(defaultValue = "20") int limit) {
         try {
             // 입력값 검증
@@ -74,7 +75,7 @@ public class RankingController {
             
             log.info("일일 랭킹 조회 요청: limit={}", limit);
             
-            List<Post> dailyPosts = rankingService.getDailyRanking(limit);
+            List<RankingPostDto> dailyPosts = rankingService.getDailyRankingDto(limit);
             
             log.info("일일 랭킹 조회 완료: {}개", dailyPosts.size());
             
@@ -91,7 +92,7 @@ public class RankingController {
      * 최적화: Redis 캐시 활용, 24시간 TTL
      */
     @GetMapping("/weekly")
-    public ResponseEntity<List<Post>> getWeeklyRanking(
+    public ResponseEntity<List<RankingPostDto>> getWeeklyRanking(
             @RequestParam(defaultValue = "20") int limit) {
         try {
             // 입력값 검증
@@ -101,7 +102,7 @@ public class RankingController {
             
             log.info("주간 랭킹 조회 요청: limit={}", limit);
             
-            List<Post> weeklyPosts = rankingService.getWeeklyRanking(limit);
+            List<RankingPostDto> weeklyPosts = rankingService.getWeeklyRankingDto(limit);
             
             log.info("주간 랭킹 조회 완료: {}개", weeklyPosts.size());
             

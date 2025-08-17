@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useContext } from "react"
-import { Search, Heart, Grid3X3, User, X, Users, Settings, Store, Package } from "lucide-react"
+import { Search, Heart, Grid3X3, User, X, Users, Settings, Store, Package, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import ProductCard from "@/components/product-card"
 import ProductDetailPage from "@/components/product-detail-page"
+import NotificationPage from "@/components/notification-page"
 import { useModals } from "@/contexts/ModalContext"
 import { useRouter } from "next/navigation"
 
@@ -305,16 +306,43 @@ export default function SnapFitMobile() {
       // 사용자 정보 새로고침
       fetchUserInfo()
       fetchLikedIds()
+      fetchUnreadNotificationCount()
     } else {
       // 기존 로직
       fetchUserInfo()
       fetchLikedIds()
+      fetchUnreadNotificationCount()
     }
   }, [])
 
   // 좋아요한 상품들 상태
   const [likedProducts, setLikedProducts] = useState<any[]>([])
   const [isLoadingLikedProducts, setIsLoadingLikedProducts] = useState(false)
+
+  // 알림 관련 상태
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
+
+  // 읽지 않은 알림 개수 가져오기
+  const fetchUnreadNotificationCount = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!token) return;
+      
+      const response = await fetch('/api/notifications/unread-count', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const count = await response.json();
+        setUnreadNotificationCount(count);
+      }
+    } catch (error) {
+      console.error('읽지 않은 알림 개수 가져오기 실패:', error);
+    }
+  }
 
   // 좋아요한 상품들 가져오기
   const fetchLikedProducts = async () => {
@@ -792,6 +820,23 @@ export default function SnapFitMobile() {
             <Settings className="w-4 h-4" />
           </Button>
         )}
+        {/* 알림 버튼 */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsNotificationOpen(true)}
+          className="bg-white/90 backdrop-blur-sm relative"
+        >
+          <Bell className="w-4 h-4" />
+          {unreadNotificationCount > 0 && (
+            <Badge 
+              variant="destructive" 
+              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
+            >
+              {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+            </Badge>
+          )}
+        </Button>
         {/* 제휴 신청 버튼 - 모든 권한에 표시 */}
         <Button
           variant="outline"
@@ -1119,6 +1164,12 @@ export default function SnapFitMobile() {
           onToggleLike={toggleCategoryProductLike}
         />
       )}
+
+      {/* Notification Page */}
+      <NotificationPage
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+      />
 
     </div>
   )

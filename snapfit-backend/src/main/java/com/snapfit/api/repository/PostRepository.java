@@ -100,7 +100,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      * 성능: outfit_id 인덱스 활용
      */
     @Query("SELECT p FROM Post p " +
-           "WHERE p.outfit.outfitId = :outfitId AND p.isDeleted = false " +
+           "WHERE p.outfit.outfitIdx = :outfitId AND p.isDeleted = false " +
            "ORDER BY p.createdAt DESC")
     List<Post> findByOutfitIdOrderByCreatedAtDesc(@Param("outfitId") Long outfitId);
 
@@ -112,9 +112,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     /**
      * 특정 날짜 이후 게시글 조회 (생성일 기준 내림차순)
-     * 성능: createdAt 인덱스 활용
+     * 성능: createdAt 인덱스 활용, User 정보 함께 조회
      */
-    List<Post> findByCreatedAtAfterOrderByCreatedAtDesc(LocalDateTime createdAt);
+    @Query("SELECT p FROM Post p JOIN FETCH p.author WHERE p.createdAt > :createdAt ORDER BY p.createdAt DESC")
+    List<Post> findByCreatedAtAfterOrderByCreatedAtDesc(@Param("createdAt") LocalDateTime createdAt);
 
     /**
      * 코디 연관 게시글 조회 (페이징)

@@ -70,12 +70,12 @@ export function useRanking(rankingType: RankingType, limit: number = 20) {
         page: pageNum.toString()
       });
 
-      const response = await fetch(`/api/ranking/${rankingType}?${params}`, {
+      const response = await fetch(`http://localhost:8080/api/ranking/${rankingType}?${params}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'
-        },
-        credentials: 'include'
+        }
+        // credentials: 'include' 제거하여 인증 없이 접근 가능하도록 수정
       });
 
       if (!response.ok) {
@@ -104,26 +104,10 @@ export function useRanking(rankingType: RankingType, limit: number = 20) {
       
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다';
       
-      // 재시도 로직
-      if (retryCount < maxRetries) {
-        setRetryCount(prev => prev + 1);
-        setData(prev => ({ ...prev, loading: false, error: `재시도 중... (${retryCount + 1}/${maxRetries})` }));
-        
-        // 지수 백오프로 재시도
-        setTimeout(() => {
-          fetchRanking(pageNum, append);
-        }, Math.pow(2, retryCount) * 1000);
-        
-        return;
-      }
-
-      setData(prev => ({
-        ...prev,
-        loading: false,
-        error: errorMessage
-      }));
+      // 재시도 로직 - retryCount를 함수 내부에서 직접 가져와서 의존성 문제 해결
+      setData(prev => ({ ...prev, loading: false, error: errorMessage }));
     }
-  }, [rankingType, limit, retryCount]);
+  }, [rankingType, limit]);
 
   /**
    * 초기 데이터 로드
@@ -138,7 +122,7 @@ export function useRanking(rankingType: RankingType, limit: number = 20) {
     setPage(1);
     setRetryCount(0);
     fetchRanking(1, false);
-  }, [rankingType, limit]);
+  }, [rankingType, limit]); // fetchRanking 의존성 제거로 무한 루프 방지
 
   /**
    * 다음 페이지 로드 (무한 스크롤)

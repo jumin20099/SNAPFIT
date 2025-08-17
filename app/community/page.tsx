@@ -660,7 +660,7 @@ function RankingTabContent({ ranking, title, description }: RankingTabContentPro
 
               {/* 게시글 이미지 */}
               <img
-                src={post.mediaUrls.length > 0 ? post.mediaUrls[0] : "/placeholder.svg"}
+                src={post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls[0] : "/placeholder.svg"}
                 alt={post.content.substring(0, 20)}
                 className="w-full h-48 object-cover"
               />
@@ -729,7 +729,7 @@ function RankingTabContent({ ranking, title, description }: RankingTabContentPro
               </p>
               
               {/* 태그 */}
-              {post.tags.length > 0 && (
+              {post.tags && post.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-2">
                   {post.tags.slice(0, 3).map((tag, tagIndex) => (
                     <Badge key={tagIndex} variant="outline" className="text-xs px-2 py-1">
