@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
 import { useTrendingRanking, useDailyRanking, useWeeklyRanking, RankingPost } from "@/hooks/useRanking"
+import { useFollowingPosts } from "@/hooks/useFollowingPosts"
 import PostCreatePage from "@/components/post-create-page"
 
 interface Post {
@@ -51,6 +52,9 @@ export default function CommunityPage() {
   const trendingRanking = useTrendingRanking(20)
   const dailyRanking = useDailyRanking(20)
   const weeklyRanking = useWeeklyRanking(20)
+  
+  // 팔로잉 게시글 훅
+  const followingPosts = useFollowingPosts()
 
   // 게시글 목록 가져오기
   const fetchPosts = async () => {
@@ -332,7 +336,7 @@ export default function CommunityPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Tab Navigation */}
           <div className="border-b bg-white">
-            <TabsList className="w-full grid grid-cols-4 bg-transparent h-12 p-0">
+            <TabsList className="w-full grid grid-cols-3 bg-transparent h-12 p-0">
               <TabsTrigger
                 value="home"
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none h-full"
@@ -350,12 +354,6 @@ export default function CommunityPage() {
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none h-full"
               >
                 팔로잉
-              </TabsTrigger>
-              <TabsTrigger
-                value="profile"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none h-full"
-              >
-                프로필
               </TabsTrigger>
             </TabsList>
           </div>
@@ -427,7 +425,7 @@ export default function CommunityPage() {
                       <Card key={post.postId} className="overflow-hidden cursor-pointer" onClick={() => handlePostClick(post.postId)}>
                         <div className="relative">
                           <img
-                            src={post.mediaUrls.length > 0 ? post.mediaUrls[0] : "/placeholder.svg"}
+                            src={post.mediaUrls.length > 0 ? post.mediaUrls[0] : "/file.svg"}
                             alt={post.content.substring(0, 20)}
                             className="w-full h-48 object-cover"
                           />
@@ -492,14 +490,6 @@ export default function CommunityPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="following" className="m-0">
-              <div className="p-4 text-center text-gray-500 flex flex-col items-center justify-center h-32">
-                <Users className="w-12 h-12 mb-4 text-gray-400" />
-                <h3 className="text-lg font-medium mb-2">팔로잉</h3>
-                <p>팔로우한 사용자들의 최신 게시글을 확인해보세요!</p>
-              </div>
-            </TabsContent>
-
             <TabsContent value="ranking" className="m-0">
               <div className="p-4">
                 {/* 랭킹 탭 내부 탭 */}
@@ -549,11 +539,83 @@ export default function CommunityPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="profile" className="m-0">
-              <div className="p-4 text-center text-gray-500 flex flex-col items-center justify-center h-32">
-                <div className="w-20 h-20 rounded-full bg-gray-200 mb-4"></div>
-                <h3 className="text-lg font-medium mb-2">프로필</h3>
-                <p>나만의 스타일을 공유하고 다른 사용자들과 소통해보세요!</p>
+            <TabsContent value="following" className="m-0">
+              <div className="p-3">
+                {followingPosts.loading ? (
+                  <div className="flex items-center justify-center h-32">
+                    <div className="text-gray-500">팔로잉 게시글을 불러오는 중...</div>
+                  </div>
+                ) : followingPosts.error ? (
+                  <div className="text-center text-gray-500 py-8">
+                    <div className="mb-4">
+                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">팔로잉 게시글 로드 실패</h3>
+                    <p className="mb-4">{followingPosts.error}</p>
+                    <Button onClick={followingPosts.refresh} variant="outline">
+                      다시 시도
+                    </Button>
+                  </div>
+                ) : followingPosts.posts.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8">
+                    <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-medium mb-2">팔로잉 게시글이 없습니다</h3>
+                    <p className="mb-4">팔로우한 사용자들의 게시글이 여기에 표시됩니다.</p>
+                    <p className="text-sm text-gray-400">다른 사용자를 팔로우해보세요!</p>
+                  </div>
+                ) : (
+                  /* 3열 고정 그리드 레이아웃 */
+                  <div className="grid grid-cols-3 gap-2">
+                    {followingPosts.posts.map((post) => (
+                      <Card key={post.postId} className="overflow-hidden cursor-pointer" onClick={() => handlePostClick(post.postId)}>
+                        <div className="relative">
+                          <img
+                            src={post.mediaUrls.length > 0 ? post.mediaUrls[0] : "/file.svg"}
+                            alt={post.content.substring(0, 20)}
+                            className="w-full h-48 object-cover"
+                          />
+
+                          {/* Like Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute top-2 right-2 p-1 bg-white/20 backdrop-blur-sm rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleLike(post.postId)
+                            }}
+                          >
+                            <Heart className={`w-3 h-3 ${post.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
+                          </Button>
+                          
+                          {/* Scrap Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute top-2 right-12 p-1 bg-white/20 backdrop-blur-sm rounded-full"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleScrap(post.postId)
+                            }}
+                          >
+                            <Bookmark className={`w-3 h-3 ${post.scraped ? "fill-blue-500 text-blue-500" : "text-white"}`} />
+                          </Button>
+                          
+                          {/* Post Stats */}
+                          <div className="absolute bottom-2 left-2 right-2 bg-black/50 backdrop-blur-sm rounded text-white text-xs p-1">
+                            <div className="flex items-center justify-between">
+                              <span>❤️ {post.likeCount}</span>
+                              <span>💬 {post.commentCount}</span>
+                              <span>🔖 {post.scrapCount}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
           </div>
@@ -674,7 +736,7 @@ function RankingTabContent({ ranking, title, description }: RankingTabContentPro
 
               {/* 게시글 이미지 */}
               <img
-                src={post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls[0] : "/placeholder.svg"}
+                src={post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls[0] : "/file.svg"}
                 alt={post.content.substring(0, 20)}
                 className="w-full h-48 object-cover"
               />
@@ -731,7 +793,7 @@ function RankingTabContent({ ranking, title, description }: RankingTabContentPro
             <div className="p-3">
               <div className="flex items-center gap-2 mb-2">
                 <img
-                  src={post.authorProfileImage || "/placeholder.svg"}
+                  src={post.authorProfileImage || "/file.svg"}
                   alt={post.authorName}
                   className="w-6 h-6 rounded-full"
                 />
