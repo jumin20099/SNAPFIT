@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Package, BarChart3, FileText, CheckCircle, XCircle, Clock, Store, Plus } from "lucide-react"
+import { ArrowLeft, Package, BarChart3, FileText, CheckCircle, XCircle, Clock, Store, Plus, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -37,6 +37,7 @@ export default function PartnerDashboardPage() {
     monthlyRevenue: 0,
     recentActivities: []
   })
+  const [showProductDetails, setShowProductDetails] = useState(false)
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -166,141 +167,122 @@ export default function PartnerDashboardPage() {
       </div>
 
       <div className="p-4">
-        {/* Welcome Section */}
+        {/* 상품 정보 요약 버튼 */}
         <Card className="mb-6">
           <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Store className="w-8 h-8 text-blue-600" />
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">안녕하세요, {userInfo.email}님!</h2>
-                <p className="text-gray-600">제휴사 대시보드에서 상품과 매출을 관리하세요.</p>
+                <h2 className="text-xl font-semibold mb-2">상품 정보 요약</h2>
+                <p className="text-gray-600">클릭하여 상세 정보를 확인하세요</p>
               </div>
+              <Button
+                onClick={() => setShowProductDetails(!showProductDetails)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                {showProductDetails ? "숨기기" : "상세보기"}
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* 통계 카드들 */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">총 상품</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{dashboard.totalProducts}</div>
-              <p className="text-xs text-muted-foreground">등록된 상품 수</p>
-            </CardContent>
-          </Card>
+        {/* 상품 상세 정보 (버튼 클릭 시 표시) */}
+        {showProductDetails && (
+          <div className="space-y-6 mb-6">
+            {/* 통계 카드들 */}
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">총 상품</CardTitle>
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{dashboard.totalProducts}</div>
+                  <p className="text-xs text-muted-foreground">등록된 상품 수</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">승인된 상품</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{dashboard.approvedProducts}</div>
-              <p className="text-xs text-muted-foreground">판매 중인 상품</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">승인된 상품</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{dashboard.approvedProducts}</div>
+                  <p className="text-xs text-muted-foreground">판매 중인 상품</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">검토 중</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{dashboard.pendingProducts}</div>
-              <p className="text-xs text-muted-foreground">승인 대기 상품</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">검토 중</CardTitle>
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-yellow-600">{dashboard.pendingProducts}</div>
+                  <p className="text-xs text-muted-foreground">승인 대기 상품</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">이번 달 매출</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(dashboard.monthlyRevenue)}</div>
-              <p className="text-xs text-muted-foreground">월간 총 매출</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">거절된 상품</CardTitle>
+                  <XCircle className="h-4 w-4 text-red-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">{dashboard.rejectedProducts}</div>
+                  <p className="text-xs text-muted-foreground">거절된 상품</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">누적 조회수</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{(dashboard.totalViewCount || 0).toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">승인 상품 기준 합계</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">이번 달 매출</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(dashboard.monthlyRevenue)}</div>
+                  <p className="text-xs text-muted-foreground">월간 총 매출</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">실제 조회수(12h)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{(dashboard.totalActualViewCount || 0).toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">동일 사용자 12시간 1회</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* 상품 상태 분포 */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>상품 상태 분포</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">승인된 상품</span>
-                </div>
-                <span className="text-sm font-medium">{dashboard.approvedProducts}개</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm">검토 중인 상품</span>
-                </div>
-                <span className="text-sm font-medium">{dashboard.pendingProducts}개</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-sm">거절된 상품</span>
-                </div>
-                <span className="text-sm font-medium">{dashboard.rejectedProducts}개</span>
-              </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">누적 조회수</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{(dashboard.totalViewCount || 0).toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">승인 상품 기준 합계</p>
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* 상품별 조회수 */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>상품별 조회수</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!(dashboard.productViews && dashboard.productViews.length) ? (
-              <div className="text-center py-4 text-sm text-gray-500">표시할 데이터가 없습니다.</div>
-            ) : (
-              <div className="space-y-2">
-                {dashboard.productViews!.map((pv) => (
-                  <div key={pv.productId} className="flex items-center justify-between text-sm">
-                    <div className="truncate pr-4">{pv.productName}</div>
-                    <div className="flex items-center gap-4 whitespace-nowrap">
-                      <span>누적 조회수 {pv.viewCount.toLocaleString()}회</span>
-                      <span>실제 조회수(24h) {pv.actualViewCount.toLocaleString()}회</span>
-                    </div>
+            {/* 상품별 조회수 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>상품별 조회수</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!(dashboard.productViews && dashboard.productViews.length) ? (
+                  <div className="text-center py-4 text-sm text-gray-500">표시할 데이터가 없습니다.</div>
+                ) : (
+                  <div className="space-y-2">
+                    {dashboard.productViews!.map((pv) => (
+                      <div key={pv.productId} className="flex items-center justify-between text-sm">
+                        <div className="truncate pr-4">{pv.productName}</div>
+                        <div className="flex items-center gap-4 whitespace-nowrap">
+                          <span>누적 조회수 {pv.viewCount.toLocaleString()}회</span>
+                          <span>실제 조회수(24h) {pv.actualViewCount.toLocaleString()}회</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* 최근 활동 */}
         <Card className="mb-6">
