@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Heart, Search, Bell, User, Filter, ChevronDown, Home, Users, Bookmark } from "lucide-react"
+import { Heart, Search, Bell, User, Filter, ChevronDown, Home, Users, Bookmark, TrendingUp, Calendar, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
+import { useTrendingRanking, useDailyRanking, useWeeklyRanking, RankingPost } from "@/hooks/useRanking"
 
 interface Post {
   postId: number
@@ -43,6 +44,11 @@ export default function CommunityPage() {
     type: "전체",
     sort: "최신순",
   })
+
+  // 랭킹 시스템 훅
+  const trendingRanking = useTrendingRanking(20)
+  const dailyRanking = useDailyRanking(20)
+  const weeklyRanking = useWeeklyRanking(20)
 
   // 게시글 목록 가져오기
   const fetchPosts = async () => {
@@ -318,12 +324,18 @@ export default function CommunityPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Tab Navigation */}
           <div className="border-b bg-white">
-            <TabsList className="w-full grid grid-cols-3 bg-transparent h-12 p-0">
+            <TabsList className="w-full grid grid-cols-4 bg-transparent h-12 p-0">
               <TabsTrigger
                 value="home"
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none h-full"
               >
                 홈
+              </TabsTrigger>
+              <TabsTrigger
+                value="ranking"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none h-full"
+              >
+                랭킹
               </TabsTrigger>
               <TabsTrigger
                 value="following"
@@ -480,6 +492,55 @@ export default function CommunityPage() {
               </div>
             </TabsContent>
 
+            <TabsContent value="ranking" className="m-0">
+              <div className="p-4">
+                {/* 랭킹 탭 내부 탭 */}
+                <Tabs defaultValue="trending" className="w-full">
+                  <TabsList className="w-full grid grid-cols-3 bg-gray-100 h-10 p-1">
+                    <TabsTrigger value="trending" className="flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4" />
+                      트렌딩
+                    </TabsTrigger>
+                    <TabsTrigger value="daily" className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      일일
+                    </TabsTrigger>
+                    <TabsTrigger value="weekly" className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      주간
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* 트렌딩 랭킹 */}
+                  <TabsContent value="trending" className="mt-4">
+                    <RankingTabContent 
+                      ranking={trendingRanking}
+                      title="🔥 트렌딩 게시글"
+                      description="지금 가장 인기 있는 게시글을 확인해보세요!"
+                    />
+                  </TabsContent>
+
+                  {/* 일일 랭킹 */}
+                  <TabsContent value="daily" className="mt-4">
+                    <RankingTabContent 
+                      ranking={dailyRanking}
+                      title="📅 오늘의 인기 게시글"
+                      description="오늘 가장 많은 관심을 받은 게시글입니다"
+                    />
+                  </TabsContent>
+
+                  {/* 주간 랭킹 */}
+                  <TabsContent value="weekly" className="mt-4">
+                    <RankingTabContent 
+                      ranking={weeklyRanking}
+                      title="📊 이번 주 인기 게시글"
+                      description="이번 주 가장 인기 있었던 게시글입니다"
+                    />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </TabsContent>
+
             <TabsContent value="profile" className="m-0">
               <div className="p-4 text-center text-gray-500 flex flex-col items-center justify-center h-32">
                 <div className="w-20 h-20 rounded-full bg-gray-200 mb-4"></div>
@@ -490,6 +551,220 @@ export default function CommunityPage() {
           </div>
         </Tabs>
       </div>
+    </div>
+  )
+}
+
+/**
+ * 랭킹 탭 내용 컴포넌트
+ * 연매출 100억 서비스 수준의 UI/UX 구현
+ */
+interface RankingTabContentProps {
+  ranking: {
+    posts: RankingPost[]
+    loading: boolean
+    error: string | null
+    hasMore: boolean
+    loadMore: () => void
+    refresh: () => void
+    retry: () => void
+  }
+  title: string
+  description: string
+}
+
+function RankingTabContent({ ranking, title, description }: RankingTabContentProps) {
+  const { posts, loading, error, hasMore, loadMore, refresh, retry } = ranking
+
+  if (loading && posts.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <div className="text-gray-500">랭킹을 계산하는 중...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center text-gray-500 py-8">
+        <div className="mb-4">
+          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium mb-2">랭킹 로드 실패</h3>
+        <p className="mb-4">{error}</p>
+        <div className="flex gap-2 justify-center">
+          <Button onClick={retry} variant="outline">
+            다시 시도
+          </Button>
+          <Button onClick={refresh} variant="outline">
+            새로고침
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (posts.length === 0) {
+    return (
+      <div className="text-center text-gray-500 py-8">
+        <div className="mb-4">
+          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium mb-2">아직 랭킹 데이터가 없습니다</h3>
+        <p className="mb-4">{description}</p>
+        <Button onClick={refresh} variant="outline">
+          새로고침
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* 헤더 */}
+      <div className="mb-6 text-center">
+        <h2 className="text-2xl font-bold mb-2">{title}</h2>
+        <p className="text-gray-600">{description}</p>
+        <div className="mt-4 flex justify-center gap-2">
+          <Button onClick={refresh} variant="outline" size="sm">
+            새로고침
+          </Button>
+          <Badge variant="secondary" className="px-3 py-1">
+            총 {posts.length}개
+          </Badge>
+        </div>
+      </div>
+
+      {/* 랭킹 게시글 그리드 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {posts.map((post, index) => (
+          <Card key={post.postId} className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow">
+            <div className="relative">
+              {/* 랭킹 순위 배지 */}
+              <div className="absolute top-2 left-2 z-10">
+                <Badge 
+                  variant={index < 3 ? "default" : "secondary"}
+                  className={`px-2 py-1 text-xs font-bold ${
+                    index === 0 ? "bg-yellow-500 text-white" :
+                    index === 1 ? "bg-gray-400 text-white" :
+                    index === 2 ? "bg-orange-500 text-white" : ""
+                  }`}
+                >
+                  {index + 1}위
+                </Badge>
+              </div>
+
+              {/* 게시글 이미지 */}
+              <img
+                src={post.mediaUrls.length > 0 ? post.mediaUrls[0] : "/placeholder.svg"}
+                alt={post.content.substring(0, 20)}
+                className="w-full h-48 object-cover"
+              />
+
+              {/* 상호작용 버튼 */}
+              <div className="absolute top-2 right-2 flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-1 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    // TODO: 좋아요 토글 구현
+                  }}
+                >
+                  <Heart className={`w-4 h-4 ${post.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-1 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    // TODO: 스크랩 토글 구현
+                  }}
+                >
+                  <Bookmark className={`w-4 h-4 ${post.scraped ? "fill-blue-500 text-blue-500" : "text-white"}`} />
+                </Button>
+              </div>
+
+              {/* 게시글 통계 */}
+              <div className="absolute bottom-2 left-2 right-2 bg-black/50 backdrop-blur-sm rounded text-white text-xs p-2">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Heart className="w-3 h-3" />
+                    {post.likeCount}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    {post.commentCount}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Bookmark className="w-3 h-3" />
+                    {post.scrapCount}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 게시글 정보 */}
+            <div className="p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <img
+                  src={post.authorProfileImage || "/placeholder.svg"}
+                  alt={post.authorName}
+                  className="w-6 h-6 rounded-full"
+                />
+                <span className="text-sm font-medium text-gray-700">{post.authorName}</span>
+              </div>
+              
+              <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                {post.content}
+              </p>
+              
+              {/* 태그 */}
+              {post.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {post.tags.slice(0, 3).map((tag, tagIndex) => (
+                    <Badge key={tagIndex} variant="outline" className="text-xs px-2 py-1">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {post.tags.length > 3 && (
+                    <Badge variant="outline" className="text-xs px-2 py-1">
+                      +{post.tags.length - 3}
+                    </Badge>
+                  )}
+                </div>
+              )}
+              
+              <div className="text-xs text-gray-500">
+                {new Date(post.createdAt).toLocaleDateString('ko-KR')}
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {/* 더 보기 버튼 */}
+      {hasMore && (
+        <div className="mt-6 text-center">
+          <Button 
+            onClick={loadMore} 
+            variant="outline"
+            disabled={loading}
+            className="px-6"
+          >
+            {loading ? "로딩 중..." : "더 보기"}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
