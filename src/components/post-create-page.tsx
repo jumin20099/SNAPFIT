@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { ArrowLeft, Bold, Italic, Underline, Strikethrough, ImageIcon, Palette, Upload, X } from "lucide-react"
+import { ArrowLeft, Bold, Italic, Underline, Strikethrough, ImageIcon, Palette, Upload, X, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -18,6 +18,8 @@ interface PostCreatePageProps {
 interface UploadedImage {
   id: string
   url: string
+  file: File
+  uploading: boolean
 }
 
 export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps) {
@@ -31,9 +33,16 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
   const editorRef = useRef<HTMLDivElement>(null)
   const [isEmpty, setIsEmpty] = useState(true);
   const placeholder = "내용을 입력하세요...";
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   // 게시글 생성 훅 사용
   const { createPost, loading, error, resetError } = useCreatePost();
+
+  // 로그인 상태 확인
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  }, []);
 
   // 에디터 초기화
   useEffect(() => {
@@ -61,20 +70,70 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
     }
   }
 
+  // S3에 이미지 업로드
+  const uploadImageToS3 = async (file: File): Promise<string> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('purpose', 'post_image')
+    formData.append('refId', Date.now().toString()) // 임시 refId
+
+    // 인증 토큰 가져오기
+    const token = localStorage.getItem('token')
+    if (!token) {
+      throw new Error('로그인이 필요합니다.')
+    }
+
+    const response = await fetch('/api/media/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.')
+      }
+      throw new Error('이미지 업로드에 실패했습니다.')
+    }
+
+    const result = await response.json()
+    return result.url
+  }
+
   // 이미지 업로드 처리
-  const handleImageUpload = (files: FileList) => {
-    Array.from(files).forEach((file) => {
+  const handleImageUpload = async (files: FileList) => {
+    Array.from(files).forEach(async (file) => {
       if (file.type.startsWith("image/")) {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          const imageUrl = e.target?.result as string
-          const newImage = {
-            id: Date.now().toString(),
-            url: imageUrl,
-          }
-          setUploadedImages((prev) => [...prev, newImage])
+        // 임시 이미지 객체 생성 (업로드 중 상태)
+        const tempImage = {
+          id: Date.now().toString(),
+          url: "",
+          file: file,
+          uploading: true
         }
-        reader.readAsDataURL(file)
+        
+        setUploadedImages((prev) => [...prev, tempImage])
+
+        try {
+          // S3에 업로드
+          const imageUrl = await uploadImageToS3(file)
+          
+          // 업로드 성공 시 URL 업데이트
+          setUploadedImages((prev) => 
+            prev.map(img => 
+              img.id === tempImage.id 
+                ? { ...img, url: imageUrl, uploading: false }
+                : img
+            )
+          )
+        } catch (error) {
+          console.error('이미지 업로드 실패:', error)
+          // 업로드 실패 시 제거
+          setUploadedImages((prev) => prev.filter(img => img.id !== tempImage.id))
+          alert('이미지 업로드에 실패했습니다.')
+        }
       }
     })
   }
@@ -146,9 +205,18 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
       return
     }
 
+    // 업로드 중인 이미지가 있는지 확인
+    const hasUploadingImages = uploadedImages.some(img => img.uploading)
+    if (hasUploadingImages) {
+      alert("이미지 업로드가 완료될 때까지 기다려주세요.")
+      return
+    }
+
     try {
-      // 이미지 URL 추출 (현재는 base64, 실제로는 S3 등에 업로드 후 URL 사용)
-      const mediaUrls = uploadedImages.map(img => img.url);
+      // S3에 업로드된 이미지 URL들만 추출
+      const mediaUrls = uploadedImages
+        .filter(img => img.url && !img.uploading)
+        .map(img => img.url);
       
       const postData = {
         title: title.trim(),
@@ -174,6 +242,42 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
   }
 
   if (!isOpen) return null
+
+  // 로그인이 필요한 경우
+  if (!isLoggedIn) {
+    return (
+      <div className="fixed inset-0 bg-white z-50 flex flex-col h-screen">
+        {/* Header */}
+        <div className="bg-white border-b p-4 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={onClose} className="p-1 h-8 w-8">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h1 className="text-xl font-bold">글 작성</h1>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
+              <User className="w-8 h-8 text-gray-400" />
+            </div>
+            <h2 className="text-xl font-semibold">로그인이 필요합니다</h2>
+            <p className="text-gray-600">게시글을 작성하려면 로그인해주세요.</p>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={() => window.location.href = '/login'} className="bg-blue-600 hover:bg-blue-700">
+                로그인하기
+              </Button>
+              <Button variant="outline" onClick={onClose}>
+                취소
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col h-screen">
@@ -234,7 +338,7 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
                     className="h-4 w-4 p-0 hover:bg-red-100"
                     onClick={() => handleRemoveTag(tag)}
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3 w-3" />
                   </Button>
                 </Badge>
               ))}
@@ -352,11 +456,17 @@ export default function PostCreatePage({ isOpen, onClose }: PostCreatePageProps)
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {uploadedImages.map((image) => (
                   <div key={image.id} className="relative group">
-                    <img
-                      src={image.url || "/placeholder.svg"}
-                      alt="업로드된 이미지"
-                      className="w-full h-40 object-cover rounded-lg"
-                    />
+                    {image.uploading ? (
+                      <div className="w-full h-40 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <div className="text-gray-500">업로드 중...</div>
+                      </div>
+                    ) : (
+                      <img
+                        src={image.url || "/placeholder.svg"}
+                        alt="업로드된 이미지"
+                        className="w-full h-40 object-cover rounded-lg"
+                      />
+                    )}
                     <Button
                       variant="destructive"
                       size="sm"

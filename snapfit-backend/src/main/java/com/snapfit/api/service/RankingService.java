@@ -354,24 +354,35 @@ public class RankingService {
      */
     private RankingPostDto convertToDto(Post post, double rankingScore) {
         try {
-            // mediaUrls에서 첫 번째 이미지만 추출 (base64 데이터 길이 제한)
-            String thumbnailUrl = null;
-            if (post.getMediaUrls() != null && !post.getMediaUrls().isEmpty()) {
-                String firstImage = post.getMediaUrls().iterator().next();
-                // base64 데이터가 너무 길면 잘라내기
-                if (firstImage.length() > 1000) {
-                    thumbnailUrl = firstImage.substring(0, 1000) + "...";
-                } else {
-                    thumbnailUrl = firstImage;
-                }
-            }
+                           // mediaUrls에서 첫 번째 이미지 URL 추출 (S3 URL 또는 placeholder)
+               String thumbnailUrl = null;
+               if (post.getMediaUrls() != null && !post.getMediaUrls().isEmpty()) {
+                   String firstImage = post.getMediaUrls().iterator().next();
+                   // S3 URL인지 확인 (http:// 또는 https://로 시작)
+                   if (firstImage.startsWith("http://") || firstImage.startsWith("https://")) {
+                       thumbnailUrl = firstImage;
+                   } else {
+                       // 상대 경로인 경우 placeholder 사용
+                       thumbnailUrl = "/placeholder.svg";
+                   }
+               } else {
+                   thumbnailUrl = "/placeholder.svg";
+               }
 
-                           // mediaUrls 배열 생성 (base64 데이터 길이 제한)
+                           // mediaUrls 배열 생성 (S3 URL 우선, 상대 경로는 placeholder로 대체)
                String[] mediaUrlsArray = null;
                if (post.getMediaUrls() != null && !post.getMediaUrls().isEmpty()) {
                    mediaUrlsArray = post.getMediaUrls().stream()
-                       .map(url -> url.length() > 1000 ? url.substring(0, 1000) + "..." : url)
+                       .map(url -> {
+                           if (url.startsWith("http://") || url.startsWith("https://")) {
+                               return url; // S3 URL 그대로 사용
+                           } else {
+                               return "/placeholder.svg"; // 상대 경로는 placeholder로 대체
+                           }
+                       })
                        .toArray(String[]::new);
+               } else {
+                   mediaUrlsArray = new String[]{"/placeholder.svg"};
                }
 
                // tags 배열 생성

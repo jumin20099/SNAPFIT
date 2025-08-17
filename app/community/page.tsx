@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
 import { useTrendingRanking, useDailyRanking, useWeeklyRanking, RankingPost } from "@/hooks/useRanking"
+import PostCreatePage from "@/components/post-create-page"
 
 interface Post {
   postId: number
@@ -44,6 +45,7 @@ export default function CommunityPage() {
     type: "전체",
     sort: "최신순",
   })
+  const [isPostCreateOpen, setIsPostCreateOpen] = useState(false)
 
   // 랭킹 시스템 훅
   const trendingRanking = useTrendingRanking(20)
@@ -287,6 +289,12 @@ export default function CommunityPage() {
     setFilters((prev) => ({ ...prev, [filterType]: value }))
   }
 
+  const handlePostCreateClose = () => {
+    setIsPostCreateOpen(false)
+    // 게시글 작성 완료 후 목록 새로고침
+    fetchPosts()
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -295,7 +303,7 @@ export default function CommunityPage() {
           <div className="font-bold text-2xl">SNAP</div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/community/create')} className="text-blue-600">
+          <Button variant="ghost" size="sm" onClick={() => setIsPostCreateOpen(true)} className="text-blue-600">
             글쓰기
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setIsSearchMode(!isSearchMode)}>
@@ -551,6 +559,12 @@ export default function CommunityPage() {
           </div>
         </Tabs>
       </div>
+
+      {/* PostCreatePage 모달 */}
+      <PostCreatePage 
+        isOpen={isPostCreateOpen} 
+        onClose={handlePostCreateClose} 
+      />
     </div>
   )
 }

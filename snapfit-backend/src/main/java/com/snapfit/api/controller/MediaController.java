@@ -17,12 +17,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/media")
 @RequiredArgsConstructor
-@ConditionalOnBean(MediaUploadService.class)
 public class MediaController {
 
-    // MediaUploadService를 조건부로 주입
-    @Autowired(required = false)
-    private MediaUploadService mediaService;
+    private final MediaUploadService mediaService;
 
     @PostMapping("/upload")
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file,

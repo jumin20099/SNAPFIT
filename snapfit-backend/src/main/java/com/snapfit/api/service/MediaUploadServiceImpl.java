@@ -18,7 +18,6 @@ import java.util.UUID;
 
 @RequiredArgsConstructor
 @Service
-@ConditionalOnBean(AmazonS3.class)
 public class MediaUploadServiceImpl implements MediaUploadService {
     @Value("${cloud.aws.s3.user-bucket:default-bucket}")
     private String userBucket;
@@ -27,16 +26,11 @@ public class MediaUploadServiceImpl implements MediaUploadService {
 
     private final MediaRepository mediaRepository;
     
-    // AmazonS3를 조건부로 주입
-    @Autowired(required = false)
-    private AmazonS3 amazonS3;
+    // AmazonS3 주입
+    private final AmazonS3 amazonS3;
 
     @Override
     public Media uploadMedia(MultipartFile file, String purpose, Long refId) {
-        if (amazonS3 == null) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "S3 서비스가 설정되지 않았습니다.");
-        }
-        
         String bucket = null;
         String key = null;
         String ext = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.'));
@@ -60,36 +54,77 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 bucket = staticBucket;
                 key = "partner_logos/" + refId + "/" + uidName;
                 break;
+            case "post_image":
+                bucket = staticBucket;
+                key = "posts/" + refId + "/" + uidName;
+                break;
             default:
                 throw new IllegalArgumentException("Unknown purpose: " + purpose);
         }
         if (bucket == null || key == null) throw new IllegalStateException("bucket/key not set");
 
-        // 2) 메타데이터 세팅
-        ObjectMetadata meta = new ObjectMetadata();
-        meta.setContentLength(file.getSize());
-        meta.setContentType(file.getContentType());
+        // S3 업로드 시도
+        if (amazonS3 != null) {
+            try {
+                // 2) 메타데이터 세팅
+                ObjectMetadata meta = new ObjectMetadata();
+                meta.setContentLength(file.getSize());
+                meta.setContentType(file.getContentType());
 
-        // 3) S3 업로드
-        try (InputStream is = file.getInputStream()) {
-            PutObjectRequest req = new PutObjectRequest(bucket, key, is, meta);
-            amazonS3.putObject(req);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "S3 업로드 실패: " + e.getMessage(), e);
+                // 3) S3 업로드
+                try (InputStream is = file.getInputStream()) {
+                    PutObjectRequest req = new PutObjectRequest(bucket, key, is, meta);
+                    amazonS3.putObject(req);
+                }
+
+                // 4) public URL 얻기
+                String url = amazonS3.getUrl(bucket, key).toString();
+
+                // 5) DB 저장
+                Media media = Media.builder()
+                        .mediaRealName(file.getOriginalFilename())
+                        .mediaUidName(key)
+                        .mediaType(file.getContentType())
+                        .mediaUrl(url)
+                        .mediaPurpose(purpose)
+                        .build();
+                return mediaRepository.save(media);
+            } catch (Exception e) {
+                // S3 업로드 실패 시 로컬 저장으로 fallback
+                System.out.println("S3 업로드 실패, 로컬 저장으로 fallback: " + e.getMessage());
+            }
         }
 
-        // 4) public URL 얻기
-        String url = amazonS3.getUrl(bucket, key).toString();
+        // 로컬 파일 시스템에 저장 (fallback)
+        try {
+            String uploadDir = "./uploads/" + purpose + "/" + refId;
+            java.io.File dir = new java.io.File(uploadDir);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
 
-        // 5) DB 저장
-        Media media = Media.builder()
-                .mediaRealName(file.getOriginalFilename())
-                .mediaUidName(key)
-                .mediaType(file.getContentType())
-                .mediaUrl(url)
-                .mediaPurpose(purpose)
-                .build();
-        return mediaRepository.save(media);
+            String fileName = uidName;
+            java.io.File destFile = new java.io.File(dir, fileName);
+            
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(destFile)) {
+                fos.write(file.getBytes());
+            }
+
+            // 로컬 URL 생성
+            String localUrl = "/uploads/" + purpose + "/" + refId + "/" + fileName;
+
+            // DB 저장
+            Media media = Media.builder()
+                    .mediaRealName(file.getOriginalFilename())
+                    .mediaUidName(key)
+                    .mediaType(file.getContentType())
+                    .mediaUrl(localUrl)
+                    .mediaPurpose(purpose)
+                    .build();
+            return mediaRepository.save(media);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 실패: " + e.getMessage(), e);
+        }
     }
 
     @Override

@@ -114,7 +114,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
      * 특정 날짜 이후 게시글 조회 (생성일 기준 내림차순)
      * 성능: createdAt 인덱스 활용, User 정보 함께 조회
      */
-    @Query("SELECT p FROM Post p JOIN FETCH p.author WHERE p.createdAt > :createdAt ORDER BY p.createdAt DESC")
+    @Query("SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.tags WHERE p.createdAt > :createdAt ORDER BY p.createdAt DESC")
     List<Post> findByCreatedAtAfterOrderByCreatedAtDesc(@Param("createdAt") LocalDateTime createdAt);
 
     /**
