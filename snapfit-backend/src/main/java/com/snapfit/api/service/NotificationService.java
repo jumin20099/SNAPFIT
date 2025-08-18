@@ -210,6 +210,48 @@ public class NotificationService {
     }
 
     /**
+     * LikeService에서 사용할 알림 생성 메서드
+     */
+    @Transactional
+    public void createNotification(UUID toUserId, String type, UUID fromUserId, 
+                                 Long targetId, String actionType, String message) {
+        try {
+            // 수신자 정보 조회
+            User toUser = userRepository.findById(toUserId)
+                .orElseThrow(() -> new RuntimeException("수신자를 찾을 수 없습니다: " + toUserId));
+
+            // 메타데이터 생성
+            Map<String, Object> metadata = Map.of(
+                "fromUserId", fromUserId != null ? fromUserId.toString() : "",
+                "targetId", targetId,
+                "actionType", actionType,
+                "message", message
+            );
+
+            // 알림 생성
+            Notification notification = Notification.builder()
+                .user(toUser)
+                .type(Notification.NotificationType.valueOf(type))
+                .refId(fromUserId != null ? fromUserId.getMostSignificantBits() : null)
+                .payloadJson(convertMetadataToJson(metadata))
+                .isRead(false)
+                .build();
+
+            // DB에 저장
+            Notification savedNotification = notificationRepository.save(notification);
+
+            // 캐시 업데이트
+            updateNotificationCache(toUserId);
+
+            log.info("알림 생성 완료: toUserId={}, type={}, actionType={}", toUserId, type, actionType);
+
+        } catch (Exception e) {
+            log.error("알림 생성 실패: toUserId={}, type={}, actionType={}", toUserId, type, actionType, e);
+            throw new RuntimeException("알림 생성 중 오류가 발생했습니다", e);
+        }
+    }
+
+    /**
      * 메타데이터를 JSON 문자열로 변환
      */
     private String convertMetadataToJson(Map<String, Object> metadata) {

@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Bell, Check, Trash2 } from "lucide-react"
+import { X, Bell, Check, Trash2, Heart } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -13,6 +14,7 @@ interface NotificationPageProps {
 }
 
 export default function NotificationPage({ isOpen, onClose }: NotificationPageProps) {
+  const router = useRouter()
   const { notifications, loading, error, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
   const [selectedNotification, setSelectedNotification] = useState<any>(null)
 
@@ -20,7 +22,33 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
     if (!notification.isRead) {
       markAsRead(notification.notificationId)
     }
-    setSelectedNotification(notification)
+    
+    // 알림 타입에 따른 처리
+    if (notification.type === 'LIKE') {
+      handleLikeNotificationClick(notification)
+    } else {
+      setSelectedNotification(notification)
+    }
+  }
+
+  const handleLikeNotificationClick = (notification: any) => {
+    try {
+      // 페이로드에서 게시글 ID 추출
+      const payload = notification.payloadJson ? JSON.parse(notification.payloadJson) : {}
+      const targetId = payload.targetId
+      
+      if (targetId) {
+        // 게시글 상세 페이지로 이동
+        router.push(`/community/${targetId}`)
+        onClose() // 알림 모달 닫기
+      } else {
+        console.error('게시글 ID를 찾을 수 없습니다:', notification)
+        setSelectedNotification(notification)
+      }
+    } catch (error) {
+      console.error('좋아요 알림 처리 오류:', error)
+      setSelectedNotification(notification)
+    }
   }
 
   const handleClose = () => {
@@ -46,7 +74,7 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "LIKE":
-        return "❤️"
+        return <Heart className="w-5 h-5 text-red-500" />
       case "COMMENT":
         return "💬"
       case "FOLLOW":
@@ -70,6 +98,18 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
         return "시스템"
       default:
         return "알림"
+    }
+  }
+
+  const getNotificationMessage = (notification: any) => {
+    try {
+      if (notification.payloadJson) {
+        const payload = JSON.parse(notification.payloadJson)
+        return payload.message || "새로운 알림이 도착했습니다."
+      }
+      return "새로운 알림이 도착했습니다."
+    } catch (error) {
+      return "새로운 알림이 도착했습니다."
     }
   }
 
@@ -133,14 +173,14 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
               {notifications.map((notification) => (
                 <Card
                   key={notification.notificationId}
-                  className={`cursor-pointer transition-colors ${
+                  className={`cursor-pointer transition-colors hover:bg-gray-50 ${
                     !notification.isRead ? 'bg-blue-50 border-blue-200' : 'bg-white'
                   }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <CardContent className="p-3">
                     <div className="flex items-start gap-3">
-                      <div className="text-2xl">
+                      <div className="flex-shrink-0">
                         {getNotificationIcon(notification.type)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -153,7 +193,7 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                           </span>
                         </div>
                         <p className="text-sm text-gray-700 line-clamp-2">
-                          {notification.payload?.message || "새로운 알림이 도착했습니다."}
+                          {getNotificationMessage(notification)}
                         </p>
                         {!notification.isRead && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
@@ -191,7 +231,7 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                 </Button>
               </div>
               <div className="mb-4">
-                <p className="text-gray-700">{selectedNotification.payload?.message || "알림 내용"}</p>
+                <p className="text-gray-700">{getNotificationMessage(selectedNotification)}</p>
                 <p className="text-sm text-gray-500 mt-2">
                   {formatDate(selectedNotification.createdAt)}
                 </p>
@@ -200,12 +240,12 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                 <Button variant="outline" onClick={() => setSelectedNotification(null)}>
                   닫기
                 </Button>
-                {selectedNotification.payload?.actionUrl && (
+                {selectedNotification.type === 'LIKE' && (
                   <Button onClick={() => {
-                    window.open(selectedNotification.payload.actionUrl, '_blank')
+                    handleLikeNotificationClick(selectedNotification)
                     setSelectedNotification(null)
                   }}>
-                    보러가기
+                    게시글 보기
                   </Button>
                 )}
               </div>

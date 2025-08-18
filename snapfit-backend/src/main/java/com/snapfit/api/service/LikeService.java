@@ -13,6 +13,7 @@ import com.snapfit.api.entity.User;
 import com.snapfit.api.entity.Like.TargetType;
 import com.snapfit.api.repository.LikeRepository;
 import com.snapfit.api.repository.PostRepository;
+import com.snapfit.api.repository.UserRepository;
 
 /**
  * 좋아요 기능 서비스.
@@ -21,11 +22,16 @@ import com.snapfit.api.repository.PostRepository;
 public class LikeService {
     private final LikeRepository likeRepository;
     private final PostRepository postRepository;
+    private final NotificationService notificationService;
+    private final UserRepository userRepository;
 
     @Autowired
-    public LikeService(LikeRepository likeRepository, PostRepository postRepository) {
+    public LikeService(LikeRepository likeRepository, PostRepository postRepository, 
+                      NotificationService notificationService, UserRepository userRepository) {
         this.likeRepository = likeRepository;
         this.postRepository = postRepository;
+        this.notificationService = notificationService;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -43,7 +49,15 @@ public class LikeService {
                 .targetType(targetType)
                 .isLike(true)
                 .build();
-        return likeRepository.save(like);
+        
+        Like savedLike = likeRepository.save(like);
+        
+        // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만)
+        if (targetType == TargetType.OUTFIT_SHARE) {
+            createLikeNotification(user, targetIdx, savedLike);
+        }
+        
+        return savedLike;
     }
 
     /**
@@ -77,7 +91,44 @@ public class LikeService {
                 postRepository.incrementLikeCount(targetIdx);
             }
             
+            // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만)
+            if (targetType == TargetType.OUTFIT_SHARE) {
+                createLikeNotification(user, targetIdx, like);
+            }
+            
             return true; // 좋아요 등록
+        }
+    }
+
+    /**
+     * 좋아요 알림 생성
+     */
+    private void createLikeNotification(User liker, Long postIdx, Like like) {
+        try {
+            // 게시글 작성자 조회
+            Optional<com.snapfit.api.entity.Post> postOpt = postRepository.findById(postIdx);
+            if (postOpt.isPresent()) {
+                com.snapfit.api.entity.Post post = postOpt.get();
+                User postAuthor = post.getAuthor();
+                
+                // 자신의 게시글에 좋아요를 누른 경우 알림 생성하지 않음
+                if (postAuthor.getUserIdx().equals(liker.getUserIdx())) {
+                    return;
+                }
+                
+                // 알림 생성
+                notificationService.createNotification(
+                    postAuthor.getUserIdx(),
+                    "LIKE",
+                    liker.getUserIdx(),
+                    postIdx,
+                    "LIKE_POST",
+                    String.format("%s님이 회원님의 게시글을 좋아합니다.", liker.getNickname())
+                );
+            }
+        } catch (Exception e) {
+            // 알림 생성 실패는 좋아요 기능에 영향을 주지 않도록 로그만 남김
+            System.err.println("좋아요 알림 생성 실패: " + e.getMessage());
         }
     }
 

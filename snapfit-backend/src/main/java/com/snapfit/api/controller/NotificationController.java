@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import com.snapfit.api.security.CustomUserDetails;
+import com.snapfit.api.entity.User;
+import com.snapfit.api.service.UserService;
 
 /**
  * 알림 컨트롤러
@@ -30,9 +32,10 @@ public class NotificationController {
 
     private final NotificationService notificationService;
     private final JwtUtil jwtUtil;
+    private final UserService userService;
     
     // SSE 연결을 위한 사용자별 Emitter 저장
-    private final ConcurrentHashMap<String, SseEmitter> sseEmitters = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, SseEmitter> sseEmitters = new ConcurrentHashMap<>();
 
     /**
      * 사용자의 알림 목록을 가져옵니다
@@ -66,96 +69,99 @@ public class NotificationController {
     }
 
     /**
-     * SSE 스트림 연결
+     * SSE를 통한 실시간 알림 스트리밍
      */
-    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping("/stream")
     public SseEmitter streamNotifications(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(value = "token", required = false) String queryToken,
-            HttpServletRequest request) {
-        try {
-            log.info("=== SSE 스트림 연결 요청 시작 ===");
-            log.info("userDetails: {}", userDetails);
-            log.info("queryToken: {}", queryToken != null ? "제공됨" : "없음");
-            
-            String userId = null;
-            
-            // @AuthenticationPrincipal에서 사용자 정보 확인
-            if (userDetails != null) {
-                if (userDetails instanceof CustomUserDetails) {
-                    CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
-                    userId = customUserDetails.getUserId();
-                    log.info("CustomUserDetails에서 사용자 ID 추출: {}", userId);
-                } else {
-                    // fallback: username을 UUID로 변환 시도
-                    userId = userDetails.getUsername();
-                    log.info("일반 UserDetails에서 사용자 ID 추출: {}", userId);
-                }
+            @RequestParam(value = "token", required = false) String queryToken) {
+        
+        log.info("=== SSE 연결 요청 시작 ===");
+        log.info("userDetails: {}", userDetails);
+        log.info("queryToken: {}", queryToken != null ? queryToken.substring(0, 20) + "..." : "null");
+        
+        String userId = null;
+        
+        // @AuthenticationPrincipal에서 사용자 정보 확인
+        if (userDetails != null) {
+            if (userDetails instanceof CustomUserDetails) {
+                CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
+                userId = customUserDetails.getUserId();
+                log.info("CustomUserDetails에서 사용자 ID 추출: {}", userId);
             } else {
-                log.warn("AuthenticationPrincipal이 null입니다");
+                // fallback: username을 UUID로 변환 시도
+                userId = userDetails.getUsername();
+                log.info("일반 UserDetails에서 사용자 ID 추출: {}", userId);
             }
-            
-            // 쿼리 파라미터로 토큰이 전달된 경우 직접 검증
-            if (userId == null && queryToken != null) {
-                try {
-                    log.info("쿼리 파라미터 토큰으로 사용자 ID 추출 시도");
-                    if (jwtUtil.validateToken(queryToken)) {
-                        userId = jwtUtil.getSubjectFromToken(queryToken);
-                        log.info("쿼리 파라미터 토큰에서 사용자 ID 추출: {}", userId);
-                    }
-                } catch (Exception e) {
-                    log.error("쿼리 파라미터 토큰 검증 실패: {}", e.getMessage());
+        } else {
+            log.warn("AuthenticationPrincipal이 null입니다");
+        }
+        
+        // queryToken이 있으면 JWT 검증
+        if (userId == null && queryToken != null) {
+            try {
+                String subject = jwtUtil.getSubjectFromToken(queryToken);
+                String role = jwtUtil.getRoleFromToken(queryToken);
+                
+                // 사용자 정보 조회
+                User user = userService.findByEmail(subject);
+                if (user != null) {
+                    userId = user.getUserIdx().toString();
+                    log.info("JWT 토큰에서 사용자 ID 추출: {}", userId);
                 }
+            } catch (Exception e) {
+                log.error("JWT 토큰 검증 실패: {}", e.getMessage());
+                return new SseEmitter(0L);
             }
+        }
+        
+        if (userId == null) {
+            log.error("사용자 ID를 추출할 수 없습니다");
+            return new SseEmitter(0L);
+        }
+        
+        final String finalUserId = userId;
+        
+        try {
+            UUID userUuid = UUID.fromString(finalUserId);
+            SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
             
-            if (userId == null || userId.isEmpty()) {
-                log.error("사용자 ID를 찾을 수 없습니다. 인증이 필요합니다.");
-                throw new RuntimeException("인증이 필요합니다");
-            }
+            // 사용자별 SSE 에미터 저장
+            sseEmitters.put(userUuid, emitter);
             
-            log.info("최종 사용자 ID: {}", userId);
-            
-            // final 변수로 복사
-            final String finalUserId = userId;
-            
-            // 기존 연결이 있다면 정리
-            SseEmitter existingEmitter = sseEmitters.get(finalUserId);
-            if (existingEmitter != null) {
-                existingEmitter.complete();
-                sseEmitters.remove(finalUserId);
-            }
-
-            // 새로운 SSE 연결 생성
-            SseEmitter emitter = new SseEmitter(1800000L); // 30분
-            sseEmitters.put(finalUserId, emitter);
-
-            // 연결 완료 이벤트 전송
+            // 연결 성공 이벤트 전송
             emitter.send(SseEmitter.event()
                 .name("connect")
                 .data("SSE 연결이 설정되었습니다"));
-
-            // 연결 종료 시 정리
+            
+            // 읽지 않은 알림 개수 전송
+            long unreadCount = notificationService.getUnreadNotificationCount(userUuid);
+            emitter.send(SseEmitter.event()
+                .name("unread_count")
+                .data(unreadCount));
+            
+            // 연결 해제 시 정리
             emitter.onCompletion(() -> {
-                sseEmitters.remove(finalUserId);
                 log.info("SSE 연결 완료: 사용자={}", finalUserId);
+                sseEmitters.remove(userUuid);
             });
-
+            
             emitter.onTimeout(() -> {
-                sseEmitters.remove(finalUserId);
                 log.info("SSE 연결 타임아웃: 사용자={}", finalUserId);
+                sseEmitters.remove(userUuid);
             });
-
+            
             emitter.onError((ex) -> {
-                sseEmitters.remove(finalUserId);
                 log.error("SSE 연결 오류: 사용자={}, 오류={}", finalUserId, ex.getMessage());
+                sseEmitters.remove(userUuid);
             });
-
-            log.info("SSE 연결 생성: 사용자={}", finalUserId);
+            
+            log.info("SSE 연결 생성 완료: 사용자={}", finalUserId);
             return emitter;
-
+            
         } catch (Exception e) {
-            log.error("SSE 연결 생성 실패: {}", e.getMessage(), e);
-            throw new RuntimeException("SSE 연결에 실패했습니다: " + e.getMessage());
+            log.error("SSE 연결 생성 실패: 사용자={}, 오류={}", finalUserId, e.getMessage(), e);
+            return new SseEmitter(0L);
         }
     }
 
@@ -314,6 +320,42 @@ public class NotificationController {
         } catch (Exception e) {
             log.error("테스트 알림 생성 실패: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 테스트용 좋아요 알림 생성 (개발 환경에서만 사용)
+     */
+    @PostMapping("/test/like")
+    public ResponseEntity<String> createTestLikeNotification(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam Long postId,
+            @RequestParam String message) {
+        
+        try {
+            if (userDetails instanceof CustomUserDetails) {
+                CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
+                String userId = customUserDetails.getUserId();
+                UUID userUuid = UUID.fromString(userId);
+                
+                // 테스트 알림 생성
+                notificationService.createNotification(
+                    userUuid,
+                    "LIKE",
+                    userUuid, // 자신에게 알림
+                    postId,
+                    "LIKE_POST",
+                    message
+                );
+                
+                log.info("테스트 좋아요 알림 생성 완료: 사용자={}, 게시글={}", userId, postId);
+                return ResponseEntity.ok("테스트 알림이 생성되었습니다");
+            } else {
+                return ResponseEntity.badRequest().body("사용자 정보를 찾을 수 없습니다");
+            }
+        } catch (Exception e) {
+            log.error("테스트 알림 생성 실패: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body("테스트 알림 생성에 실패했습니다");
         }
     }
 }
