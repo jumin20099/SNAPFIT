@@ -825,7 +825,7 @@ export default function SnapFitMobile() {
             }`} />
           </Button>
           {/* 연결 오류 시 재연결 버튼 */}
-          {notificationError && (
+          {notificationError && !isConnected && (
             <button
               onClick={reconnect}
               className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 transition-colors whitespace-nowrap"

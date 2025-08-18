@@ -34,20 +34,26 @@ export function useSSENotifications(options: UseSSENotificationsOptions = {}) {
   // JWT 토큰 가져오기
   const getToken = useCallback(async () => {
     try {
-      // 쿠키에서 JWT 토큰 추출
+      // 로컬 스토리지에서 토큰 우선 확인
+      const storedToken = localStorage.getItem('token')
+      if (storedToken) {
+        console.log('로컬 스토리지에서 JWT 토큰 확인됨')
+        return storedToken
+      }
+      
+      // 쿠키에서 JWT 토큰 확인
       const cookies = document.cookie.split(';')
       const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('token='))
       
       if (jwtCookie) {
-        return jwtCookie.split('=')[1]
-      }
-      
-      // 로컬 스토리지에서 토큰 확인
-      const token = localStorage.getItem('token')
-      if (token) {
+        const token = jwtCookie.split('=')[1]
+        console.log('쿠키에서 JWT 토큰 확인됨')
+        // 로컬 스토리지에도 저장
+        localStorage.setItem('token', token)
         return token
       }
       
+      console.log('JWT 토큰을 찾을 수 없습니다')
       return null
     } catch (error) {
       console.error('JWT 토큰 가져오기 실패:', error)
@@ -95,68 +101,50 @@ export function useSSENotifications(options: UseSSENotificationsOptions = {}) {
       
       // 토큰이 없으면 연결 시도하지 않음
       if (!token) {
-        console.error('JWT 토큰이 필요합니다. 로그인 후 다시 시도해주세요.')
-        setError('JWT 토큰이 필요합니다. 로그인 후 다시 시도해주세요.')
+        console.log('JWT 토큰이 없습니다. 로그인 후 자동 연결됩니다.')
+        setError(null) // 에러 상태 초기화
         setIsConnected(false)
         return
       }
 
-      // 기존 연결이 있다면 정리
+      // 기존 연결이 있으면 정리
       if (eventSourceRef.current) {
         eventSourceRef.current.close()
         eventSourceRef.current = null
       }
 
-      // 토큰을 쿼리 파라미터로 전달
-      const sseUrl = `/api/notifications/stream?token=${encodeURIComponent(token)}`
-      console.log('SSE 연결 시도:', sseUrl)
+      console.log('SSE 연결 시도:', `/api/notifications/stream?token=${token.substring(0, 20)}...`)
       
-      const eventSource = new EventSource(sseUrl)
-
-      // 연결 성공 시
+      const eventSource = new EventSource(`/api/notifications/stream?token=${token}`)
+      
+      // 연결 성공
       eventSource.onopen = () => {
         console.log('SSE 연결 성공')
         setIsConnected(true)
-        setError(null)
+        setError(null) // 에러 상태 초기화
+        reconnectAttemptsRef.current = 0 // 재연결 시도 횟수 초기화
         setReconnectAttempts(0)
-        reconnectAttemptsRef.current = 0
       }
 
-      // 연결 완료 이벤트
-      eventSource.addEventListener('connect', (event) => {
-        console.log('SSE 연결 설정 완료:', event.data)
-      })
-
-      // 새로운 알림 이벤트
-      eventSource.addEventListener('notification', (event) => {
+      // 메시지 수신
+      eventSource.onmessage = (event) => {
         try {
-          const notification = JSON.parse(event.data) as NotificationEvent
-          console.log('새로운 알림 수신:', notification)
+          const data = JSON.parse(event.data)
+          console.log('SSE 메시지 수신:', data)
           
-          // 읽지 않은 알림 개수 증가
-          setUnreadCount(prev => prev + 1)
-          
-          // 토스트 알림 표시 (선택사항)
-          showToastNotification(notification)
-        } catch (err) {
-          console.error('알림 데이터 파싱 오류:', err)
-        }
-      })
-
-      // 읽지 않은 알림 개수 업데이트
-      eventSource.addEventListener('unread_count', (event) => {
-        try {
-          const count = parseInt(event.data, 10)
-          console.log('읽지 않은 알림 개수 업데이트:', count)
-          setUnreadCount(count)
+          if (data.type === 'NOTIFICATION_COUNT') {
+            const count = parseInt(data.count)
+            console.log('읽지 않은 알림 개수 업데이트:', count)
+            setUnreadCount(count)
+          }
         } catch (err) {
           console.error('알림 개수 파싱 오류:', err)
         }
-      })
+      }
 
       // 오류 처리
       eventSource.onerror = (error) => {
-        console.error('SSE 연결 오류:', error)
+        console.log('SSE 연결 오류 발생, 자동 재연결 시도 중...')
         setIsConnected(false)
         
         // 자동 재연결 시도
@@ -176,15 +164,16 @@ export function useSSENotifications(options: UseSSENotificationsOptions = {}) {
             connect()
           }, reconnectInterval)
         } else {
-          setError(`SSE 재연결 실패 (${maxReconnectAttempts}회 시도). 서버 연결을 확인해주세요.`)
+          console.log('SSE 재연결 최대 시도 횟수 초과')
+          setError('연결이 불안정합니다. 새로고침 후 다시 시도해주세요.')
         }
       }
 
       eventSourceRef.current = eventSource
 
     } catch (err) {
-      console.error('SSE 연결 오류:', err)
-      setError('SSE 연결에 실패했습니다')
+      console.error('SSE 연결 초기화 오류:', err)
+      setError(null) // 초기화 오류는 사용자에게 보여주지 않음
       setIsConnected(false)
     }
   }, [getToken, maxReconnectAttempts, reconnectInterval])
@@ -201,26 +190,23 @@ export function useSSENotifications(options: UseSSENotificationsOptions = {}) {
 
   // 재연결 시도
   const reconnect = useCallback(() => {
-    if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-      setError(`SSE 재연결 실패 (${maxReconnectAttempts}회 시도). 서버 연결을 확인해주세요.`)
-      return
-    }
-
-    reconnectAttemptsRef.current++
-    setReconnectAttempts(reconnectAttemptsRef.current)
+    console.log('사용자 수동 재연결 시도')
     
-    console.log(`SSE 재연결 시도 ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`)
+    // 에러 상태 초기화
+    setError(null)
+    
+    // 재연결 시도 횟수 초기화
+    reconnectAttemptsRef.current = 0
+    setReconnectAttempts(0)
     
     // 기존 타임아웃 정리
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
     }
     
-    // 재연결 시도
-    reconnectTimeoutRef.current = setTimeout(() => {
-      connect()
-    }, reconnectInterval)
-  }, [connect, maxReconnectAttempts, reconnectInterval])
+    // 즉시 재연결 시도
+    connect()
+  }, [connect])
 
   // 실시간 알림 카운트 업데이트
   const updateUnreadCount = useCallback((count: number) => {
@@ -248,13 +234,24 @@ export function useSSENotifications(options: UseSSENotificationsOptions = {}) {
     // URL에서 JWT 토큰 저장
     const token = saveTokenFromUrl()
     
-    if (autoConnect && token) {
-      // 토큰이 있으면 자동 연결
-      connect()
-    } else if (autoConnect) {
-      // 토큰이 없으면 에러 상태로 설정
-      setError('JWT 토큰이 필요합니다. 로그인 후 다시 시도해주세요.')
-      setIsConnected(false)
+    if (autoConnect) {
+      if (token) {
+        // URL에서 토큰을 받았으면 즉시 연결
+        console.log('URL에서 토큰을 받아 즉시 연결 시도')
+        connect()
+      } else {
+        // URL에 토큰이 없으면 로컬 스토리지에서 확인
+        const storedToken = localStorage.getItem('token')
+        if (storedToken) {
+          console.log('로컬 스토리지에서 토큰을 찾아 연결 시도')
+          connect()
+        } else {
+          // 토큰이 전혀 없으면 연결하지 않음 (로그인 전 상태)
+          console.log('JWT 토큰이 없습니다. 로그인 후 자동 연결됩니다.')
+          setError(null)
+          setIsConnected(false)
+        }
+      }
     }
 
     return () => {
