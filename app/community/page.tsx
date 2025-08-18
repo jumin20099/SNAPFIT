@@ -12,7 +12,7 @@ import { useTrendingRanking, useDailyRanking, useWeeklyRanking, RankingPost } fr
 import { useFollowingPosts } from "@/hooks/useFollowingPosts"
 import { useSSENotifications } from "@/hooks/useSSENotifications"
 import PostCreatePage from "@/components/post-create-page"
-import { SSETest } from "@/components/SSETest"
+import NotificationPage from "@/components/notification-page"
 
 interface Post {
   postId: number
@@ -49,6 +49,7 @@ export default function CommunityPage() {
     sort: "최신순",
   })
   const [isPostCreateOpen, setIsPostCreateOpen] = useState(false)
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false)
 
   // 랭킹 시스템 훅
   const trendingRanking = useTrendingRanking(20)
@@ -319,7 +320,12 @@ export default function CommunityPage() {
             <Search className="w-5 h-5" />
           </Button>
           <div className="relative">
-            <Button variant="ghost" size="sm" className="relative">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="relative"
+              onClick={() => setIsNotificationOpen(true)}
+            >
               <Bell className="w-5 h-5" />
               {/* 실시간 알림 배지 */}
               {unreadCount > 0 && (
@@ -435,10 +441,6 @@ export default function CommunityPage() {
           <div className="w-full">
             <TabsContent value="home" className="m-0">
               <div className="p-3">
-                {/* WebSocket 테스트 */}
-                <div className="mb-4">
-                  <SSETest />
-                </div>
                 
                 {loading ? (
                   <div className="flex items-center justify-center h-32">
@@ -657,6 +659,12 @@ export default function CommunityPage() {
       <PostCreatePage 
         isOpen={isPostCreateOpen} 
         onClose={handlePostCreateClose} 
+      />
+
+      {/* Notification Modal */}
+      <NotificationPage
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
       />
     </div>
   )

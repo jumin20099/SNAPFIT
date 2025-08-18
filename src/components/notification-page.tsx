@@ -1,11 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { ArrowLeft, X, Heart, MessageSquare, UserPlus, Bell, Trash2, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { X, Bell, Check, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useNotifications } from "@/hooks/useNotifications"
 
 interface NotificationPageProps {
@@ -14,217 +13,206 @@ interface NotificationPageProps {
 }
 
 export default function NotificationPage({ isOpen, onClose }: NotificationPageProps) {
-  const {
-    notifications,
-    loading,
-    error,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    deleteAllNotifications
-  } = useNotifications()
+  const { notifications, loading, error, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
+  const [selectedNotification, setSelectedNotification] = useState<any>(null)
 
-  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const handleNotificationClick = (notification: any) => {
+    if (!notification.isRead) {
+      markAsRead(notification.notificationId)
+    }
+    setSelectedNotification(notification)
+  }
 
-  const getTimeAgo = (timestamp: string) => {
+  const handleClose = () => {
+    setSelectedNotification(null)
+    onClose()
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
     const now = new Date()
-    const notificationTime = new Date(timestamp)
-    const diffInMinutes = Math.floor((now.getTime() - notificationTime.getTime()) / (1000 * 60))
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffMinutes = Math.floor(diffTime / (1000 * 60))
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
 
-    if (diffInMinutes < 1) return "방금 전"
-    if (diffInMinutes < 60) return `${diffInMinutes}분 전`
-
-    const diffInHours = Math.floor(diffInMinutes / 60)
-    if (diffInHours < 24) return `${diffInHours}시간 전`
-
-    const diffInDays = Math.floor(diffInHours / 24)
-    if (diffInDays < 7) return `${diffInDays}일 전`
-
-    const diffInWeeks = Math.floor(diffInDays / 7)
-    if (diffInWeeks < 4) return `${diffInWeeks}주 전`
-
-    const diffInMonths = Math.floor(diffInDays / 30)
-    return `${diffInMonths}개월 전`
+    if (diffMinutes < 1) return "방금 전"
+    if (diffMinutes < 60) return `${diffMinutes}분 전`
+    if (diffHours < 24) return `${diffHours}시간 전`
+    if (diffDays < 7) return `${diffDays}일 전`
+    return date.toLocaleDateString()
   }
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "like":
-        return <Heart className="w-5 h-5 text-red-500" />
-      case "comment":
-        return <MessageSquare className="w-5 h-5 text-blue-500" />
-      case "follow":
-        return <UserPlus className="w-5 h-5 text-green-500" />
-      case "system":
-        return <Bell className="w-5 h-5 text-gray-500" />
+      case "LIKE":
+        return "❤️"
+      case "COMMENT":
+        return "💬"
+      case "FOLLOW":
+        return "👥"
+      case "SYSTEM":
+        return "🔔"
       default:
-        return <Bell className="w-5 h-5 text-gray-500" />
+        return "📢"
     }
   }
 
-  const handleDeleteNotification = async (notificationId: number) => {
-    setDeletingId(notificationId)
-    try {
-      await deleteNotification(notificationId)
-    } finally {
-      setDeletingId(null)
+  const getNotificationTitle = (type: string) => {
+    switch (type) {
+      case "LIKE":
+        return "좋아요"
+      case "COMMENT":
+        return "댓글"
+      case "FOLLOW":
+        return "팔로우"
+      case "SYSTEM":
+        return "시스템"
+      default:
+        return "알림"
     }
   }
-
-  const handleDeleteAll = async () => {
-    if (window.confirm('모든 알림을 삭제하시겠습니까?')) {
-      await deleteAllNotifications()
-    }
-  }
-
-  if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col h-screen">
-      {/* Header */}
-      <div className="bg-white border-b p-4 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onClose} className="p-1 h-8 w-8">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">알림</h1>
-            {unreadCount > 0 && (
-              <Badge variant="destructive" className="text-xs">
-                {unreadCount}
-              </Badge>
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent className="w-full sm:max-w-md" side="right">
+        <SheetHeader className="pb-4 border-b">
+          <SheetTitle className="flex items-center gap-2">
+            <Bell className="w-5 h-5" />
+            알림
+            {notifications.length > 0 && (
+              <span className="text-sm text-gray-500">({notifications.length})</span>
             )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={markAllAsRead} 
-              className="text-blue-600 text-sm"
-            >
-              모두 읽음
-            </Button>
-          )}
-          {notifications.length > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleDeleteAll} 
-              className="text-red-600"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-      </div>
+          </SheetTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="absolute right-4 top-4"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </SheetHeader>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400 mb-4" />
-            <p className="text-gray-500">알림을 불러오는 중...</p>
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center h-full text-red-500">
-            <Bell className="w-16 h-16 mb-4 text-red-300" />
-            <h3 className="text-lg font-medium mb-2">오류가 발생했습니다</h3>
-            <p className="text-sm mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()} variant="outline">
-              다시 시도
-            </Button>
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500">
-            <Bell className="w-16 h-16 mb-4 text-gray-300" />
-            <h3 className="text-lg font-medium mb-2">알림이 없습니다</h3>
-            <p className="text-sm">새로운 알림이 오면 여기에 표시됩니다.</p>
-          </div>
-        ) : (
-          <div className="divide-y">
-            {notifications.map((notification) => (
-              <Card
-                key={notification.id}
-                className={`border-0 rounded-none ${!notification.read ? "bg-blue-50" : "bg-white"}`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    {/* Avatar or Icon */}
-                    <div className="flex-shrink-0">
-                      {notification.avatar ? (
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={notification.avatar} alt={notification.userName} />
-                          <AvatarFallback>{notification.userName?.charAt(0).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                          {getNotificationIcon(notification.type)}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500 py-8">
+              <p>알림을 불러오는데 실패했습니다.</p>
+              <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="mt-2">
+                다시 시도
+              </Button>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              <Bell className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>새로운 알림이 없습니다.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* 전체 읽음 처리 버튼 */}
+              <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                <span className="text-sm text-gray-600">
+                  읽지 않은 알림: {notifications.filter(n => !n.isRead).length}개
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={markAllAsRead}
+                  disabled={!notifications.some(n => !n.isRead)}
+                >
+                  <Check className="w-4 h-4 mr-1" />
+                  모두 읽음
+                </Button>
+              </div>
+
+              {/* 알림 목록 */}
+              {notifications.map((notification) => (
+                <Card
+                  key={notification.notificationId}
+                  className={`cursor-pointer transition-colors ${
+                    !notification.isRead ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                  }`}
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="text-2xl">
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-900">
+                            {getNotificationTitle(notification.type)}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {formatDate(notification.createdAt)}
+                          </span>
                         </div>
-                      )}
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            {getNotificationIcon(notification.type)}
-                            <span className="text-sm font-medium text-gray-900">{notification.title}</span>
-                            {!notification.read && <div className="w-2 h-2 bg-blue-500 rounded-full"></div>}
-                          </div>
-                          <p className="text-sm text-gray-700 mb-2">{notification.message}</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-500">{getTimeAgo(notification.timestamp)}</span>
-                            {!notification.read && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => markAsRead(notification.id)}
-                                className="text-blue-600 text-xs h-6 px-2"
-                              >
-                                읽음 처리
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Image if exists */}
-                        {notification.image && (
-                          <div className="ml-3 flex-shrink-0">
-                            <img
-                              src={notification.image}
-                              alt="알림 이미지"
-                              className="w-12 h-12 rounded object-cover"
-                            />
-                          </div>
+                        <p className="text-sm text-gray-700 line-clamp-2">
+                          {notification.payload?.message || "새로운 알림이 도착했습니다."}
+                        </p>
+                        {!notification.isRead && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                         )}
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteNotification(notification.notificationId)
+                        }}
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
 
-                    {/* Delete Button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteNotification(notification.id)}
-                      disabled={deletingId === notification.id}
-                      className="p-1 h-6 w-6 text-gray-400 hover:text-red-500 flex-shrink-0"
-                    >
-                      {deletingId === notification.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <X className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        {/* 알림 상세 모달 */}
+        {selectedNotification && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  {getNotificationTitle(selectedNotification.type)}
+                </h3>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedNotification(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="mb-4">
+                <p className="text-gray-700">{selectedNotification.payload?.message || "알림 내용"}</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  {formatDate(selectedNotification.createdAt)}
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setSelectedNotification(null)}>
+                  닫기
+                </Button>
+                {selectedNotification.payload?.actionUrl && (
+                  <Button onClick={() => {
+                    window.open(selectedNotification.payload.actionUrl, '_blank')
+                    setSelectedNotification(null)
+                  }}>
+                    보러가기
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         )}
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   )
 }
