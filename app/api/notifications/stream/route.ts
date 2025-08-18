@@ -1,91 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080'
+// 절대 경로로 변경
+const BACKEND = process.env.BACKEND_ORIGIN ?? 'http://localhost:8080'
 
-export async function GET(request: NextRequest) {
-  try {
-    // Authorization 헤더에서 JWT 토큰 추출
-    const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    
-    // 쿼리 파라미터에서 토큰 확인
-    const queryToken = request.nextUrl.searchParams.get('token')
-    
-    const authToken = token || queryToken
-    
-    // 토큰이 없으면 401 오류 반환
-    if (!authToken) {
-      return NextResponse.json({ error: '인증 토큰이 필요합니다' }, { status: 401 })
-    }
+export const dynamic = 'force-dynamic'
 
-    // 백엔드 SSE 엔드포인트로 연결
-    const backendUrl = `${BACKEND_URL}/api/notifications/stream`
-    
-    // SSE 응답 헤더 설정
-    const response = new NextResponse(
-      new ReadableStream({
-        start(controller) {
-          // 백엔드와 연결
-          const backendResponse = fetch(backendUrl, {
-            headers: {
-              'Authorization': `Bearer ${authToken}`,
-              'Accept': 'text/event-stream',
-              'Cache-Control': 'no-cache',
-              'Connection': 'keep-alive'
-            }
-          })
-
-          backendResponse.then(async (res) => {
-            if (!res.ok) {
-              controller.error(new Error(`백엔드 연결 실패: ${res.status}`))
-              return
-            }
-
-            const reader = res.body?.getReader()
-            if (!reader) {
-              controller.error(new Error('백엔드 응답 스트림을 읽을 수 없습니다'))
-              return
-            }
-
-            try {
-              while (true) {
-                const { done, value } = await reader.read()
-                if (done) break
-                
-                // 백엔드에서 받은 데이터를 클라이언트로 전달
-                controller.enqueue(value)
-              }
-            } catch (error) {
-              console.error('SSE 스트림 읽기 오류:', error)
-              controller.error(error)
-            } finally {
-              reader.releaseLock()
-              controller.close()
-            }
-          }).catch(error => {
-            console.error('백엔드 연결 오류:', error)
-            controller.error(error)
-          })
-        }
-      }),
-      {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Cache-Control'
-        }
-      }
-    )
-
-    return response
-
-  } catch (error) {
-    console.error('SSE 스트림 연결 오류:', error)
-    return NextResponse.json(
-      { error: 'SSE 연결에 실패했습니다' }, 
-      { status: 500 }
-    )
+export async function GET(req: NextRequest) {
+  // EventSource는 헤더를 못 보내므로 쿠키/쿼리에서 추출 후 서버→백엔드로 Authorization으로 변환
+  const token = extractTokenFromRequest(req)
+  if (!token) {
+    return new Response('Unauthorized', { status: 401 })
   }
+
+  const backendResp = await fetch(`${BACKEND}/api/notifications/stream`, {
+    headers: {
+      Accept: 'text/event-stream',
+      Authorization: `Bearer ${token}`,
+      // Last-Event-ID 전달 필요 시:
+      ...(req.headers.get('last-event-id') ? { 'Last-Event-ID': req.headers.get('last-event-id')! } : {}),
+    },
+    // Node의 fetch는 기본적으로 스트림을 지원
+  })
+
+  if (!backendResp.ok || !backendResp.body) {
+    return new Response('Upstream error', { status: backendResp.status })
+  }
+
+  const headers = new Headers()
+  headers.set('Content-Type', 'text/event-stream')
+  headers.set('Cache-Control', 'no-cache, no-transform')
+  headers.set('Connection', 'keep-alive')
+  headers.set('X-Accel-Buffering', 'no')
+
+  return new Response(backendResp.body, { status: 200, headers })
+}
+
+// 임시로 여기에 토큰 추출 함수 정의
+function extractTokenFromRequest(req: NextRequest): string | null {
+  // 1) 클라이언트가 보낸 Authorization
+  const h = req.headers.get('authorization')
+  if (h?.startsWith('Bearer ')) return h.slice(7)
+
+  // 2) 서버측 쿠키(권장: HTTP-Only로 세팅)
+  const fromCookie = req.cookies.get('token')?.value // 'access_token'에서 'token'으로 변경
+  if (fromCookie) return fromCookie
+
+  // 3) (임시) 쿼리파라미터 토큰 - SSE 등
+  const fromQuery = req.nextUrl.searchParams.get('token')
+  return fromQuery
 }

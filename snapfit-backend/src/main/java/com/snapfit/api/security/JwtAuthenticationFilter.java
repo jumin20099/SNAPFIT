@@ -21,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.security.CustomOAuth2User;
+import com.snapfit.api.security.CustomUserDetails;
 
 /**
  * 모든 요청마다 헤더의 Authorization: Bearer <token> 을 체크하여
@@ -39,11 +41,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         String path = request.getRequestURI();
-        // OAuth2 로그인 콜백, 에러 처리, swagger, SSE 등 필요시 여기에 추가
+        // OAuth2 로그인 콜백, 에러 처리, swagger 등 필요시 여기에 추가
         return path.startsWith("/login/oauth2/")
             || path.startsWith("/oauth2/")
             || path.startsWith("/error")
-            || path.startsWith("/api/notifications/stream")
             || path.startsWith("/sse/");
     }
 
@@ -75,10 +76,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 System.out.println("쿠키 배열: " + (cookies != null ? cookies.length : "null"));
                 if (cookies != null) {
                     for (jakarta.servlet.http.Cookie cookie : cookies) {
-                        System.out.println("쿠키 이름: " + cookie.getName() + ", 값: " + cookie.getValue().substring(0, Math.min(20, cookie.getValue().length())) + "...");
-                        if ("auth_token".equals(cookie.getName())) {
+                        if ("token".equals(cookie.getName())) {
                             token = cookie.getValue();
-                            System.out.println("쿠키에서 토큰 읽기 성공: " + token.substring(0, Math.min(20, token.length())) + "...");
+                            System.out.println("쿠키에서 토큰 읽기 성공");
                             break;
                         }
                     }
@@ -107,25 +107,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + subject));
 
                 
-                // CustomOAuth2User 생성
-                CustomOAuth2User customOAuth2User = new CustomOAuth2User(user, Map.of());
-
+                // CustomUserDetails 생성 (UserDetails 구현체)
+                CustomUserDetails userDetails = new CustomUserDetails(user);
                 
                 // SecurityContext에 설정
                 UsernamePasswordAuthenticationToken auth = 
                     new UsernamePasswordAuthenticationToken(
-                        customOAuth2User,
+                        userDetails,
                         null,
-                        customOAuth2User.getAuthorities()
+                        userDetails.getAuthorities()
                     );
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                
+                System.out.println("=== JWT 인증 성공: 사용자=" + subject + ", 역할=" + role + " ===");
 
             } else {
-
+                System.out.println("=== JWT 토큰 검증 실패 ===");
             }
         } catch (Exception e) {
-
+            System.out.println("=== JWT 처리 중 오류 발생: " + e.getMessage() + " ===");
             e.printStackTrace();
         }
         filterChain.doFilter(request, response);

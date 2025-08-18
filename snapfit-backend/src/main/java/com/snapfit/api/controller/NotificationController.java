@@ -12,9 +12,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import com.snapfit.api.security.CustomUserDetails;
 
 /**
  * 알림 컨트롤러
@@ -39,8 +41,23 @@ public class NotificationController {
     public ResponseEntity<List<NotificationResponseDto>> getNotifications(
             @AuthenticationPrincipal UserDetails userDetails) {
         try {
-            UUID userId = UUID.fromString(userDetails.getUsername());
-            List<NotificationResponseDto> notifications = notificationService.getUserNotifications(userId);
+            log.info("=== 알림 목록 조회 요청 시작 ===");
+            log.info("userDetails: {}", userDetails);
+            
+            String userId;
+            if (userDetails instanceof CustomUserDetails) {
+                CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
+                userId = customUserDetails.getUserId();
+                log.info("CustomUserDetails에서 사용자 ID 추출: {}", userId);
+            } else {
+                // fallback: username을 UUID로 변환 시도
+                userId = userDetails.getUsername();
+                log.info("일반 UserDetails에서 사용자 ID 추출: {}", userId);
+            }
+            
+            UUID userUuid = UUID.fromString(userId);
+            List<NotificationResponseDto> notifications = notificationService.getUserNotifications(userUuid);
+            log.info("알림 목록 조회 성공: {}개", notifications.size());
             return ResponseEntity.ok(notifications);
         } catch (Exception e) {
             log.error("알림 목록 조회 실패: {}", e.getMessage(), e);
@@ -49,104 +66,96 @@ public class NotificationController {
     }
 
     /**
-     * SSE를 통한 실시간 알림 스트림
+     * SSE 스트림 연결
      */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamNotifications(
-            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
-            @RequestParam(value = "token", required = false) String tokenParam) {
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(value = "token", required = false) String queryToken,
+            HttpServletRequest request) {
         try {
-            String token = null;
+            log.info("=== SSE 스트림 연결 요청 시작 ===");
+            log.info("userDetails: {}", userDetails);
+            log.info("queryToken: {}", queryToken != null ? "제공됨" : "없음");
             
-            // Authorization 헤더에서 토큰 추출
-            if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-                token = authorizationHeader.substring(7);
+            String userId = null;
+            
+            // @AuthenticationPrincipal에서 사용자 정보 확인
+            if (userDetails != null) {
+                if (userDetails instanceof CustomUserDetails) {
+                    CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
+                    userId = customUserDetails.getUserId();
+                    log.info("CustomUserDetails에서 사용자 ID 추출: {}", userId);
+                } else {
+                    // fallback: username을 UUID로 변환 시도
+                    userId = userDetails.getUsername();
+                    log.info("일반 UserDetails에서 사용자 ID 추출: {}", userId);
+                }
+            } else {
+                log.warn("AuthenticationPrincipal이 null입니다");
             }
             
-            // 헤더에 토큰이 없으면 쿼리 파라미터에서 추출
-            if (token == null && tokenParam != null) {
-                token = tokenParam;
+            // 쿼리 파라미터로 토큰이 전달된 경우 직접 검증
+            if (userId == null && queryToken != null) {
+                try {
+                    log.info("쿼리 파라미터 토큰으로 사용자 ID 추출 시도");
+                    if (jwtUtil.validateToken(queryToken)) {
+                        userId = jwtUtil.getSubjectFromToken(queryToken);
+                        log.info("쿼리 파라미터 토큰에서 사용자 ID 추출: {}", userId);
+                    }
+                } catch (Exception e) {
+                    log.error("쿼리 파라미터 토큰 검증 실패: {}", e.getMessage());
+                }
             }
             
-            // 토큰이 없으면 오류 반환
-            if (token == null) {
-                log.error("SSE 연결 시도: 토큰이 없음");
-                throw new RuntimeException("인증 토큰이 필요합니다");
+            if (userId == null || userId.isEmpty()) {
+                log.error("사용자 ID를 찾을 수 없습니다. 인증이 필요합니다.");
+                throw new RuntimeException("인증이 필요합니다");
             }
             
-            // JWT 토큰 검증 및 사용자 ID 추출
-            String userId = validateTokenAndExtractUserId(token);
+            log.info("최종 사용자 ID: {}", userId);
             
-            String userKey = userId;
+            // final 변수로 복사
+            final String finalUserId = userId;
             
-            // 기존 연결이 있다면 제거
-            SseEmitter existingEmitter = sseEmitters.get(userKey);
+            // 기존 연결이 있다면 정리
+            SseEmitter existingEmitter = sseEmitters.get(finalUserId);
             if (existingEmitter != null) {
                 existingEmitter.complete();
-                sseEmitters.remove(userKey);
+                sseEmitters.remove(finalUserId);
             }
-            
-            // 새로운 SSE Emitter 생성
-            SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
-            sseEmitters.put(userKey, emitter);
-            
+
+            // 새로운 SSE 연결 생성
+            SseEmitter emitter = new SseEmitter(1800000L); // 30분
+            sseEmitters.put(finalUserId, emitter);
+
             // 연결 완료 이벤트 전송
             emitter.send(SseEmitter.event()
                 .name("connect")
                 .data("SSE 연결이 설정되었습니다"));
-            
-            // 연결 해제 시 정리
+
+            // 연결 종료 시 정리
             emitter.onCompletion(() -> {
-                log.info("SSE 연결 완료: 사용자={}", userKey);
-                sseEmitters.remove(userKey);
+                sseEmitters.remove(finalUserId);
+                log.info("SSE 연결 완료: 사용자={}", finalUserId);
             });
-            
+
             emitter.onTimeout(() -> {
-                log.info("SSE 연결 타임아웃: 사용자={}", userKey);
-                sseEmitters.remove(userKey);
+                sseEmitters.remove(finalUserId);
+                log.info("SSE 연결 타임아웃: 사용자={}", finalUserId);
             });
-            
+
             emitter.onError((ex) -> {
-                log.error("SSE 연결 오류: 사용자={}, 오류={}", userKey, ex.getMessage());
-                sseEmitters.remove(userKey);
+                sseEmitters.remove(finalUserId);
+                log.error("SSE 연결 오류: 사용자={}, 오류={}", finalUserId, ex.getMessage());
             });
-            
-            log.info("SSE 연결 생성: 사용자={}", userKey);
+
+            log.info("SSE 연결 생성: 사용자={}", finalUserId);
             return emitter;
-            
+
         } catch (Exception e) {
             log.error("SSE 연결 생성 실패: {}", e.getMessage(), e);
-            throw new RuntimeException("SSE 연결을 생성할 수 없습니다", e);
-        }
-    }
-
-    /**
-     * JWT 토큰 검증 및 사용자 ID 추출
-     */
-    private String validateTokenAndExtractUserId(String token) {
-        try {
-            log.info("JWT 토큰 검증 시작: 토큰 길이={}", token != null ? token.length() : 0);
-            
-            // JWT 토큰 검증
-            if (!jwtUtil.validateToken(token)) {
-                log.error("JWT 토큰 검증 실패: 토큰이 유효하지 않음");
-                throw new RuntimeException("유효하지 않은 토큰입니다");
-            }
-            
-            log.info("JWT 토큰 검증 성공");
-            
-            // JWT에서 사용자 ID 추출 (Subject에서 추출)
-            String userId = jwtUtil.getSubjectFromToken(token);
-            if (userId == null || userId.isEmpty()) {
-                log.error("JWT에서 사용자 ID 추출 실패: userId={}", userId);
-                throw new RuntimeException("토큰에서 사용자 ID를 추출할 수 없습니다");
-            }
-            
-            log.info("JWT에서 사용자 ID 추출 성공: userId={}", userId);
-            return userId;
-        } catch (Exception e) {
-            log.error("JWT 토큰 검증 실패: {}", e.getMessage(), e);
-            throw new RuntimeException("토큰 검증에 실패했습니다: " + e.getMessage());
+            throw new RuntimeException("SSE 연결에 실패했습니다: " + e.getMessage());
         }
     }
 

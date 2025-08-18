@@ -15,6 +15,23 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * JWT 관련 예외를 401로 매핑
+     */
+    @ExceptionHandler({ 
+        io.jsonwebtoken.JwtException.class, 
+        IllegalArgumentException.class,
+        RuntimeException.class 
+    })
+    public ResponseEntity<Map<String, Object>> handleJwt(Exception e) {
+        var body = new LinkedHashMap<String, Object>();
+        body.put("code", "UNAUTHORIZED");
+        body.put("message", e.getMessage());
+        body.put("timestamp", System.currentTimeMillis());
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handle(Exception e) {
         // 운영에선 상세 메시지/스택노출 금지

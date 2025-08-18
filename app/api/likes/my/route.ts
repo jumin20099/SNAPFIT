@@ -1,36 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { NextRequest } from 'next/server'
 
-export async function GET(request: NextRequest) {
-  try {
-    // 쿠키에서 토큰 읽기 (SSR에서 사용)
-    const cookieStore = cookies()
-    const cookieToken = cookieStore.get('auth_token')?.value
-    
-    // 헤더에서 토큰 읽기 (클라이언트에서 사용)
-    const headerToken = request.headers.get('authorization') || request.headers.get('Authorization') || ''
-    
-    // 쿠키 토큰이 있으면 사용, 없으면 헤더 토큰 사용
-    const authToken = cookieToken || headerToken.replace('Bearer ', '')
+// 절대 경로로 변경
+const BACKEND = process.env.BACKEND_ORIGIN ?? 'http://localhost:8080'
 
-    // 백엔드 API 호출
-    const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/api/likes/my`, {
-      method: 'GET',
-      headers: {
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-      },
-      credentials: 'include', // 쿠키 전달을 위해 필요
-    })
+export const dynamic = 'force-dynamic'
 
-    if (!response.ok) {
-      return NextResponse.json({ error: '좋아요 목록을 가져오는데 실패했습니다.' }, { status: response.status })
-    }
-
-    const data = await response.json()
-    // Like 엔티티 전체를 그대로 반환 (백엔드와 일관성 유지)
-    return NextResponse.json(data)
-  } catch (error) {
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+export async function GET(req: NextRequest) {
+  const token = extractTokenFromRequest(req)
+  if (!token) {
+    return new Response(JSON.stringify({ code: 'UNAUTHORIZED', message: 'Missing access token' }), { status: 401 })
   }
+  
+  const res = await fetch(`${BACKEND}/api/likes/my`, {
+    method: 'GET',
+    headers: { 
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}` 
+    },
+    cache: 'no-store',
+  })
+  
+  const body = await res.text()
+  return new Response(body, { 
+    status: res.status, 
+    headers: { 'Content-Type': res.headers.get('content-type') ?? 'application/json' } 
+  })
+}
+
+// 임시로 여기에 토큰 추출 함수 정의
+function extractTokenFromRequest(req: NextRequest): string | null {
+  // 1) 클라이언트가 보낸 Authorization
+  const h = req.headers.get('authorization')
+  if (h?.startsWith('Bearer ')) return h.slice(7)
+
+  // 2) 서버측 쿠키(권장: HTTP-Only로 세팅)
+  const fromCookie = req.cookies.get('token')?.value // 'access_token'에서 'token'으로 변경
+  if (fromCookie) return fromCookie
+
+  // 3) (임시) 쿼리파라미터 토큰 - SSE 등
+  const fromQuery = req.nextUrl.searchParams.get('token')
+  return fromQuery
 } 

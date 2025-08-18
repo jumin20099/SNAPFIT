@@ -31,7 +31,17 @@ export function useNotifications() {
       setLoading(true)
       setError(null)
       
+      // JWT 토큰 가져오기
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('인증 토큰이 필요합니다')
+      }
+      
       const response = await fetch('/api/notifications', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         credentials: 'include'
       })
       
@@ -55,8 +65,17 @@ export function useNotifications() {
   // 알림 읽음 처리
   const markAsRead = useCallback(async (notificationId: number) => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('인증 토큰이 필요합니다')
+      }
+      
       const response = await fetch(`/api/notifications/${notificationId}/read`, {
         method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         credentials: 'include'
       })
       
@@ -82,8 +101,17 @@ export function useNotifications() {
   // 모든 알림 읽음 처리
   const markAllAsRead = useCallback(async () => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('인증 토큰이 필요합니다')
+      }
+      
       const response = await fetch('/api/notifications/read-all', {
         method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         credentials: 'include'
       })
       

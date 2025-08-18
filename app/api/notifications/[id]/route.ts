@@ -1,69 +1,73 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import { BACKEND, passThroughHeaders } from '../../_utils/proxy'
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080'
+export const dynamic = 'force-dynamic'
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+// 임시로 여기에 토큰 추출 함수 정의
+function extractTokenFromRequest(req: NextRequest): string | null {
+  // 1) 클라이언트가 보낸 Authorization
+  const h = req.headers.get('authorization')
+  if (h?.startsWith('Bearer ')) return h.slice(7)
+
+  // 2) 서버측 쿠키(권장: HTTP-Only로 세팅)
+  const fromCookie = req.cookies.get('token')?.value // 'access_token'에서 'token'으로 변경
+  if (fromCookie) return fromCookie
+
+  // 3) (임시) 쿼리파라미터 토큰 - SSE 등
+  const fromQuery = req.nextUrl.searchParams.get('token')
+  return fromQuery
+}
+
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const token = request.cookies.get('token')?.value
-    
+    const token = extractTokenFromRequest(req)
     if (!token) {
-      return NextResponse.json({ error: '인증 토큰이 필요합니다' }, { status: 401 })
+      return new Response(JSON.stringify({ code: 'UNAUTHORIZED', message: 'Missing access token' }), { status: 401 })
     }
 
-    const response = await fetch(`${BACKEND_URL}/api/notifications/${params.id}/read`, {
+    const response = await fetch(`${BACKEND}/api/notifications/${params.id}/read`, {
       method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+      headers: { ...passThroughHeaders(), Authorization: `Bearer ${token}` },
+      cache: 'no-store',
     })
 
     if (!response.ok) {
-      throw new Error(`백엔드 API 오류: ${response.status}`)
+      return new Response(JSON.stringify({ error: '알림 읽음 처리에 실패했습니다' }), { status: response.status })
     }
 
-    return NextResponse.json({ message: '알림이 읽음 처리되었습니다' })
+    return new Response(JSON.stringify({ message: '알림을 읽음 처리했습니다' }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
   } catch (error) {
     console.error('알림 읽음 처리 오류:', error)
-    return NextResponse.json(
-      { error: '알림 읽음 처리에 실패했습니다' }, 
-      { status: 500 }
-    )
+    return new Response(JSON.stringify({ error: '서버 오류가 발생했습니다' }), { status: 500 })
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const token = request.cookies.get('token')?.value
-    
+    const token = extractTokenFromRequest(req)
     if (!token) {
-      return NextResponse.json({ error: '인증 토큰이 필요합니다' }, { status: 401 })
+      return new Response(JSON.stringify({ code: 'UNAUTHORIZED', message: 'Missing access token' }), { status: 401 })
     }
 
-    const response = await fetch(`${BACKEND_URL}/api/notifications/${params.id}`, {
+    const response = await fetch(`${BACKEND}/api/notifications/${params.id}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
+      headers: { ...passThroughHeaders(), Authorization: `Bearer ${token}` },
+      cache: 'no-store',
     })
 
     if (!response.ok) {
-      throw new Error(`백엔드 API 오류: ${response.status}`)
+      return new Response(JSON.stringify({ error: '알림 삭제에 실패했습니다' }), { status: response.status })
     }
 
-    return NextResponse.json({ message: '알림이 삭제되었습니다' })
+    return new Response(JSON.stringify({ message: '알림이 삭제되었습니다' }), { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
   } catch (error) {
     console.error('알림 삭제 오류:', error)
-    return NextResponse.json(
-      { error: '알림 삭제에 실패했습니다' }, 
-      { status: 500 }
-    )
+    return new Response(JSON.stringify({ error: '서버 오류가 발생했습니다' }), { status: 500 })
   }
 }

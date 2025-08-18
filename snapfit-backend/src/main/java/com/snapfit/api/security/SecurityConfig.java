@@ -58,10 +58,10 @@ public class SecurityConfig {
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
                     "/api/auth/**", "/api/partner/**", "/api/admin/**", "/api/products/**", 
                     "/api/posts/**", "/api/comments/**", "/api/follows/**", "/api/search/**", 
-                    "/api/ranking/**", "/api/health/**", "/api/notifications/stream", 
-                    "/api/notifications/sse/status", "/error",
+                    "/api/ranking/**", "/api/health/**", "/api/notifications/stream", "/error",
                     "/ws/**", "/sse/**"
                 ).permitAll()
+                .requestMatchers("/api/**").authenticated() // 모든 비즈니스 API 인증 필수
                 .anyRequest().authenticated()
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
@@ -132,9 +132,9 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:3000"));
         config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Last-Event-ID", "*"));
         config.setAllowCredentials(true);
-        config.setExposedHeaders(List.of("Set-Cookie", "Authorization"));
+        config.setExposedHeaders(List.of("Set-Cookie", "Authorization", "Content-Type"));
         config.setMaxAge(3600L); // 1시간
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

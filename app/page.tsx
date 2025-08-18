@@ -13,6 +13,7 @@ import NotificationPage from "@/components/notification-page"
 import { useModals } from "@/contexts/ModalContext"
 import { useRouter } from "next/navigation"
 import { useSSENotifications } from "@/hooks/useSSENotifications"
+import { NotificationTest } from '@/components/NotificationTest'
 
 const categories = ["전체", "남성복", "여성복"]
 const majorCategories = ["좋아요", "상의", "하의", "아우터", "신발", "가방", "패션소품"]
@@ -1167,6 +1168,9 @@ export default function SnapFitMobile() {
         isOpen={isNotificationOpen}
         onClose={() => setIsNotificationOpen(false)}
       />
+
+      {/* Notification Test */}
+      <NotificationTest />
 
     </div>
   )
