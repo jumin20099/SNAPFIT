@@ -39,10 +39,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         String path = request.getRequestURI();
-        // OAuth2 로그인 콜백, 에러 처리, swagger 등 필요시 여기에 추가
+        // OAuth2 로그인 콜백, 에러 처리, swagger, SSE 등 필요시 여기에 추가
         return path.startsWith("/login/oauth2/")
             || path.startsWith("/oauth2/")
-            || path.startsWith("/error");
+            || path.startsWith("/error")
+            || path.startsWith("/api/notifications/stream")
+            || path.startsWith("/sse/");
     }
 
     @Override
@@ -62,21 +64,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             token = header.substring(7);
             System.out.println("헤더에서 토큰 읽기 성공");
         } else {
-            // 헤더에 토큰이 없으면 쿠키에서 확인
-            jakarta.servlet.http.Cookie[] cookies = request.getCookies();
-            System.out.println("쿠키 배열: " + (cookies != null ? cookies.length : "null"));
-            if (cookies != null) {
-                for (jakarta.servlet.http.Cookie cookie : cookies) {
-                    System.out.println("쿠키 이름: " + cookie.getName() + ", 값: " + cookie.getValue().substring(0, Math.min(20, cookie.getValue().length())) + "...");
-                    if ("auth_token".equals(cookie.getName())) {
-                        token = cookie.getValue();
-                        System.out.println("쿠키에서 토큰 읽기 성공: " + token.substring(0, Math.min(20, token.length())) + "...");
-                        break;
+            // 헤더에 토큰이 없으면 쿼리 파라미터에서 확인 (WebSocket 연결용)
+            String queryToken = request.getParameter("token");
+            if (queryToken != null && !queryToken.trim().isEmpty()) {
+                token = queryToken.trim();
+                System.out.println("쿼리 파라미터에서 토큰 읽기 성공");
+            } else {
+                // 쿼리 파라미터에도 토큰이 없으면 쿠키에서 확인
+                jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+                System.out.println("쿠키 배열: " + (cookies != null ? cookies.length : "null"));
+                if (cookies != null) {
+                    for (jakarta.servlet.http.Cookie cookie : cookies) {
+                        System.out.println("쿠키 이름: " + cookie.getName() + ", 값: " + cookie.getValue().substring(0, Math.min(20, cookie.getValue().length())) + "...");
+                        if ("auth_token".equals(cookie.getName())) {
+                            token = cookie.getValue();
+                            System.out.println("쿠키에서 토큰 읽기 성공: " + token.substring(0, Math.min(20, token.length())) + "...");
+                            break;
+                        }
                     }
                 }
-            }
-            if (token == null) {
-                System.out.println("쿠키에서 토큰을 찾을 수 없음");
+                if (token == null) {
+                    System.out.println("쿠키에서 토큰을 찾을 수 없음");
+                }
             }
         }
         

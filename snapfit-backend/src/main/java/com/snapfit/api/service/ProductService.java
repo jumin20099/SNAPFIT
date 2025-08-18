@@ -154,15 +154,16 @@ public class ProductService {
         Product product = productRepository.findById(productIdx)
             .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
 
-        // 실시간 시청자 수 처리 (Redis) - live 키 사용
+        // 실시간 시청자 수 처리 (Redis) - live 키 사용 (임시로 비활성화)
         String liveKey = "product:" + productIdx + ":live";
         long liveViewers = 0L;
         
-        if (viewCounterService != null) {
-            liveViewers = skipIncrement
-                ? viewCounterService.getCount(liveKey)
-                : viewCounterService.increment(liveKey);
-        }
+        // 임시로 ViewCounterService 사용 비활성화 (SSE 전환 중)
+        // if (viewCounterService != null) {
+        //     liveViewers = skipIncrement
+        //         ? viewCounterService.getCount(liveKey)
+        //         : viewCounterService.increment(liveKey);
+        // }
 
         // 누적 조회수 (DB) 즉시 증가
         long cumulativeViews = product.getViewCount() != null ? product.getViewCount() : 0L;

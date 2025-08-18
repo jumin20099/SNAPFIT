@@ -26,6 +26,15 @@ interface PartnerProduct {
   updateRequestDate?: string
   viewCount?: number
   actualViewCount?: number
+  // 수정 요청 관련 필드들
+  requestedProductName?: string
+  requestedProductContent?: string
+  requestedProductImage?: string
+  requestedProductLink?: string
+  requestedGenderCategory?: string
+  requestedMajorCategory?: string
+  requestedSubCategory?: string
+  requestedProductPrice?: number
 }
 
 export default function PartnerProductsPage() {

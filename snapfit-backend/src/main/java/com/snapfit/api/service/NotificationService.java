@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +30,7 @@ import java.util.concurrent.TimeUnit;
  * - 스팸 방지
  * 
  * 최적화 고려사항:
- * - WebSocket 실시간 전송
+ * - SSE 실시간 전송
  * - Redis 캐싱
  * - 배치 처리
  * - 비동기 처리
@@ -43,7 +42,6 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    private final SimpMessagingTemplate messagingTemplate;
     // private final RedisTemplate<String, Object> redisTemplate; // Redis 의존성 일시 제거
 
     // Redis 키 상수
@@ -75,13 +73,8 @@ public class NotificationService {
                 Map.of("postId", postId, "type", "post")
             );
 
-            // 실시간 알림 전송
-            sendRealTimeNotification(toUserId, notification);
-
-            // Rate limiting 업데이트
-            updateRateLimit(fromUserId, "like");
-
-            log.info("좋아요 알림 전송 완료: from={}, to={}, postId={}", fromUserId, toUserId, postId);
+            // SSE를 통한 실시간 알림 전송은 NotificationController에서 처리
+            log.info("좋아요 알림 생성 완료: from={}, to={}, postId={}", fromUserId, toUserId, postId);
 
         } catch (Exception e) {
             log.error("좋아요 알림 전송 실패: from={}, to={}, postId={}", fromUserId, toUserId, postId, e);
@@ -103,22 +96,15 @@ public class NotificationService {
             // 알림 생성
             Notification notification = createNotification(
                 fromUserId, toUserId, "COMMENT", 
-                "댓글을 남겼습니다", 
+                "댓글을 달았습니다", 
                 Map.of("postId", postId, "commentId", commentId, "type", "post")
             );
 
-            // 실시간 알림 전송
-            sendRealTimeNotification(toUserId, notification);
-
-            // Rate limiting 업데이트
-            updateRateLimit(fromUserId, "comment");
-
-            log.info("댓글 알림 전송 완료: from={}, to={}, postId={}, commentId={}", 
-                fromUserId, toUserId, postId, commentId);
+            // SSE를 통한 실시간 알림 전송은 NotificationController에서 처리
+            log.info("댓글 알림 생성 완료: from={}, to={}, postId={}, commentId={}", fromUserId, toUserId, postId, commentId);
 
         } catch (Exception e) {
-            log.error("댓글 알림 전송 실패: from={}, to={}, postId={}, commentId={}", 
-                fromUserId, toUserId, postId, commentId, e);
+            log.error("댓글 알림 전송 실패: from={}, to={}, postId={}, commentId={}", fromUserId, toUserId, postId, commentId, e);
         }
     }
 
@@ -141,13 +127,8 @@ public class NotificationService {
                 Map.of("type", "user")
             );
 
-            // 실시간 알림 전송
-            sendRealTimeNotification(toUserId, notification);
-
-            // Rate limiting 업데이트
-            updateRateLimit(fromUserId, "follow");
-
-            log.info("팔로우 알림 전송 완료: from={}, to={}", fromUserId, toUserId);
+            // SSE를 통한 실시간 알림 전송은 NotificationController에서 처리
+            log.info("팔로우 알림 생성 완료: from={}, to={}", fromUserId, toUserId);
 
         } catch (Exception e) {
             log.error("팔로우 알림 전송 실패: from={}, to={}", fromUserId, toUserId, e);
@@ -173,13 +154,8 @@ public class NotificationService {
                 Map.of("postId", postId, "type", "post")
             );
 
-            // 실시간 알림 전송
-            sendRealTimeNotification(toUserId, notification);
-
-            // Rate limiting 업데이트
-            updateRateLimit(fromUserId, "scrap");
-
-            log.info("스크랩 알림 전송 완료: from={}, to={}, postId={}", fromUserId, toUserId, postId);
+            // SSE를 통한 실시간 알림 전송은 NotificationController에서 처리
+            log.info("스크랩 알림 생성 완료: from={}, to={}, postId={}", fromUserId, toUserId, postId);
 
         } catch (Exception e) {
             log.error("스크랩 알림 전송 실패: from={}, to={}, postId={}", fromUserId, toUserId, postId, e);
@@ -197,10 +173,8 @@ public class NotificationService {
                 null, toUserId, "SYSTEM", title, metadata
             );
 
-            // 실시간 알림 전송
-            sendRealTimeNotification(toUserId, notification);
-
-            log.info("시스템 알림 전송 완료: to={}, title={}", toUserId, title);
+            // SSE를 통한 실시간 알림 전송은 NotificationController에서 처리
+            log.info("시스템 알림 생성 완료: to={}, title={}", toUserId, title);
 
         } catch (Exception e) {
             log.error("시스템 알림 전송 실패: to={}, title={}", toUserId, title, e);
@@ -267,36 +241,7 @@ public class NotificationService {
         }
     }
 
-    /**
-     * 실시간 알림 전송 (WebSocket)
-     */
-    private void sendRealTimeNotification(UUID userId, Notification notification) {
-        try {
-            // WebSocket을 통해 실시간 알림 전송
-            String destination = "/user/" + userId + "/queue/notifications";
-            
-            // 알림 DTO 생성
-            Map<String, Object> notificationDto = Map.of(
-                "id", notification.getNotificationId(),
-                "type", notification.getType().toString(),
-                "refId", notification.getRefId(),
-                "payloadJson", notification.getPayloadJson(),
-                "createdAt", notification.getCreatedAt(),
-                "isRead", notification.getIsRead()
-            );
 
-            messagingTemplate.convertAndSendToUser(
-                userId.toString(), 
-                "/queue/notifications", 
-                notificationDto
-            );
-
-            log.debug("실시간 알림 전송 완료: userId={}, destination={}", userId, destination);
-
-        } catch (Exception e) {
-            log.error("실시간 알림 전송 실패: userId={}", userId, e);
-        }
-    }
 
     /**
      * 사용자별 알림 목록 조회

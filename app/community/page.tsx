@@ -10,7 +10,9 @@ import { Card } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
 import { useTrendingRanking, useDailyRanking, useWeeklyRanking, RankingPost } from "@/hooks/useRanking"
 import { useFollowingPosts } from "@/hooks/useFollowingPosts"
+import { useSSENotifications } from "@/hooks/useSSENotifications"
 import PostCreatePage from "@/components/post-create-page"
+import { SSETest } from "@/components/SSETest"
 
 interface Post {
   postId: number
@@ -55,6 +57,9 @@ export default function CommunityPage() {
   
   // 팔로잉 게시글 훅
   const followingPosts = useFollowingPosts()
+
+  // 실시간 알림 훅
+  const { unreadCount, isConnected, error: notificationError, reconnect } = useSSENotifications()
 
   // 게시글 목록 가져오기
   const fetchPosts = async () => {
@@ -313,9 +318,30 @@ export default function CommunityPage() {
           <Button variant="ghost" size="sm" onClick={() => setIsSearchMode(!isSearchMode)}>
             <Search className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="sm">
-            <Bell className="w-5 h-5" />
-          </Button>
+          <div className="relative">
+            <Button variant="ghost" size="sm" className="relative">
+              <Bell className="w-5 h-5" />
+              {/* 실시간 알림 배지 */}
+              {unreadCount > 0 && (
+                <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </div>
+              )}
+              {/* 연결 상태 표시 */}
+              <div className={`absolute -bottom-1 -right-1 w-2 h-2 rounded-full ${
+                isConnected ? 'bg-green-500' : 'bg-red-500'
+              }`} />
+            </Button>
+            {/* 연결 오류 시 재연결 버튼 */}
+            {notificationError && (
+              <button
+                onClick={reconnect}
+                className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 transition-colors whitespace-nowrap"
+              >
+                재연결
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -409,6 +435,11 @@ export default function CommunityPage() {
           <div className="w-full">
             <TabsContent value="home" className="m-0">
               <div className="p-3">
+                {/* WebSocket 테스트 */}
+                <div className="mb-4">
+                  <SSETest />
+                </div>
+                
                 {loading ? (
                   <div className="flex items-center justify-center h-32">
                     <div className="text-gray-500">게시글을 불러오는 중...</div>

@@ -449,4 +449,29 @@ public class PostService {
             "viewCount", post.getViewCount()
         );
     }
+
+    /**
+     * 팔로우한 사용자들의 게시글 조회
+     * @param userId 현재 사용자 ID
+     * @param pageable 페이징 정보
+     * @return 팔로우한 사용자들의 게시글 목록
+     */
+    public List<Post> getFollowingPosts(UUID userId, Pageable pageable) {
+        log.info("팔로잉 게시글 조회 시작: 사용자={}", userId);
+        
+        try {
+            // 팔로우한 사용자들의 게시글 조회 (기존 메서드 사용)
+            Page<Post> followingPostsPage = postRepository.findFollowedUsersPosts(userId, pageable);
+            List<Post> followingPosts = followingPostsPage.getContent();
+            
+            log.info("팔로잉 게시글 조회 완료: 사용자={}, 게시글 수={}", 
+                userId, followingPosts.size());
+            
+            return followingPosts;
+            
+        } catch (Exception e) {
+            log.error("팔로잉 게시글 조회 실패: 사용자={}", userId, e);
+            throw new RuntimeException("팔로잉 게시글 조회 중 오류가 발생했습니다", e);
+        }
+    }
 }

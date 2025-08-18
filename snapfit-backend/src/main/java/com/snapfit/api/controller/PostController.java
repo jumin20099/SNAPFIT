@@ -13,6 +13,7 @@ import com.snapfit.api.repository.ScrapRepository;
 import com.snapfit.api.security.JwtUtil;
 import com.snapfit.api.service.PostService;
 import com.snapfit.api.service.TagService;
+import com.snapfit.api.service.FollowService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -48,6 +49,7 @@ public class PostController {
     private final LikeRepository likeRepository;
     private final ScrapRepository scrapRepository;
     private final JwtUtil jwtUtil;
+    private final FollowService followService;
 
     /**
      * 게시글 생성
@@ -114,6 +116,45 @@ public class PostController {
         } catch (Exception e) {
             log.error("게시글 생성 실패", e);
             throw new RuntimeException("게시글 생성 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 팔로우한 사용자들의 게시글 조회
+     * @param token JWT 토큰
+     * @param pageable 페이징 정보
+     * @return 팔로우한 사용자들의 게시글 목록
+     */
+    @GetMapping("/following")
+    public ResponseEntity<List<PostResponseDto>> getFollowingPosts(
+            @RequestHeader("Authorization") String token,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        
+        try {
+            // JWT 토큰에서 이메일 추출
+            String email = jwtUtil.getSubjectFromToken(token.replace("Bearer ", ""));
+            if (email == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            
+            // 이메일로 사용자 찾기
+            User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+            
+            // 팔로우한 사용자들의 게시글 조회
+            List<Post> followingPosts = postService.getFollowingPosts(currentUser.getUserIdx(), pageable);
+            
+            // DTO로 변환
+            List<PostResponseDto> response = followingPosts.stream()
+                .map(post -> convertToDtoWithUserStatus(post, token))
+                .collect(Collectors.toList());
+            
+            log.info("팔로잉 게시글 조회 완료: 사용자={}, 게시글 수={}", email, response.size());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("팔로잉 게시글 조회 실패: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

@@ -19,7 +19,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-@ConditionalOnBean(ViewCounterService.class)
 public class PublicProductController {
 
     private final ProductService productService;
@@ -69,9 +68,10 @@ public class PublicProductController {
             @AuthenticationPrincipal User user,
             @RequestHeader(value = "X-Anon-Id", required = false) String anonId
     ) {
-        if (viewCounterService == null) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "조회수 서비스가 설정되지 않았습니다.");
-        }
+        // 임시로 ViewCounterService 의존성 제거 (SSE 전환 중)
+        // if (viewCounterService == null) {
+        //     throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "조회수 서비스가 설정되지 않았습니다.");
+        // }
         
         String userKey;
         if (user != null && user.getUserIdx() != null) {
@@ -85,9 +85,8 @@ public class PublicProductController {
             ));
         }
 
-        // 24시간 롤링 윈도우(캘린더 경계 영향 없음)
-        String seenKey = "view:seen24:" + id + ":" + userKey;
-        long updated = viewCounterService.addSeenRollingIfNew(seenKey, 24L * 3600); // 24시간 TTL (실제 조회수)
+        // 임시로 중복 체크 없이 조회수 증가 (SSE 전환 중)
+        long updated = 1; // 항상 1로 설정하여 조회수 증가
         if (updated == 1) {
             // 중복이 아닌 경우에만 DB 누적 +1
             ProductDetailDto dto = productService.getProductDetail(id, user, true);
@@ -95,8 +94,6 @@ public class PublicProductController {
             p.setViewCount((p.getViewCount() == null ? 0L : p.getViewCount()) + 1);
             p.setActualViewCount((p.getActualViewCount() == null ? 0L : p.getActualViewCount()) + 1);
             productService.saveProduct(p);
-            // 실시간 방송도 함께 갱신
-            viewCounterService.increment("product:" + id + ":live");
         }
 
         return ResponseEntity.ok(java.util.Map.of(

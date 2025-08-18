@@ -12,6 +12,7 @@ import ProductDetailPage from "@/components/product-detail-page"
 import NotificationPage from "@/components/notification-page"
 import { useModals } from "@/contexts/ModalContext"
 import { useRouter } from "next/navigation"
+import { useSSENotifications } from "@/hooks/useSSENotifications"
 
 const categories = ["전체", "남성복", "여성복"]
 const majorCategories = ["좋아요", "상의", "하의", "아우터", "신발", "가방", "패션소품"]
@@ -306,12 +307,12 @@ export default function SnapFitMobile() {
       // 사용자 정보 새로고침
       fetchUserInfo()
       fetchLikedIds()
-      fetchUnreadNotificationCount()
+      // fetchUnreadNotificationCount() // 실시간 알림 훅으로 대체
     } else {
       // 기존 로직
       fetchUserInfo()
       fetchLikedIds()
-      fetchUnreadNotificationCount()
+      // fetchUnreadNotificationCount() // 실시간 알림 훅으로 대체
     }
   }, [])
 
@@ -321,28 +322,9 @@ export default function SnapFitMobile() {
 
   // 알림 관련 상태
   const [isNotificationOpen, setIsNotificationOpen] = useState(false)
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
-
-  // 읽지 않은 알림 개수 가져오기
-  const fetchUnreadNotificationCount = async () => {
-    try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-      if (!token) return;
-      
-      const response = await fetch('/api/notifications/unread-count', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const count = await response.json();
-        setUnreadNotificationCount(count);
-      }
-    } catch (error) {
-      console.error('읽지 않은 알림 개수 가져오기 실패:', error);
-    }
-  }
+  
+  // 실시간 알림 훅 사용
+  const { unreadCount: unreadNotificationCount, isConnected, error: notificationError, reconnect } = useSSENotifications()
 
   // 좋아요한 상품들 가져오기
   const fetchLikedProducts = async () => {
@@ -821,22 +803,37 @@ export default function SnapFitMobile() {
           </Button>
         )}
         {/* 알림 버튼 */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsNotificationOpen(true)}
-          className="bg-white/90 backdrop-blur-sm relative"
-        >
-          <Bell className="w-4 h-4" />
-          {unreadNotificationCount > 0 && (
-            <Badge 
-              variant="destructive" 
-              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
+        <div className="relative">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsNotificationOpen(true)}
+            className="bg-white/90 backdrop-blur-sm relative"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadNotificationCount > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center"
+              >
+                {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+              </Badge>
+            )}
+            {/* 연결 상태 표시 */}
+            <div className={`absolute -bottom-1 -right-1 w-2 h-2 rounded-full ${
+              isConnected ? 'bg-green-500' : 'bg-red-500'
+            }`} />
+          </Button>
+          {/* 연결 오류 시 재연결 버튼 */}
+          {notificationError && (
+            <button
+              onClick={reconnect}
+              className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 px-2 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 transition-colors whitespace-nowrap"
             >
-              {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
-            </Badge>
+              재연결
+            </button>
           )}
-        </Button>
+        </div>
         {/* 제휴 신청 버튼 - 모든 권한에 표시 */}
         <Button
           variant="outline"

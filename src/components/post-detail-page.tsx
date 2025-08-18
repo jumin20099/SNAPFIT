@@ -52,7 +52,7 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
   const [isScraped, setIsScraped] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
   const [currentPost, setCurrentPost] = useState<Post | null>(null)
-  const observer = useRef<IntersectionObserver>()
+  const observer = useRef<IntersectionObserver | null>(null)
 
   // 게시글 목록 가져오기
   const fetchPosts = useCallback(async (page: number = 0) => {
@@ -94,7 +94,7 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
         
         // 현재 게시글 찾기
         if (page === 0) {
-          const targetPost = transformedPosts.find(p => p.postId === postId)
+          const targetPost = transformedPosts.find((p: Post) => p.postId === postId)
           if (targetPost) {
             setCurrentPost(targetPost)
             setIsLiked(targetPost.liked || false)

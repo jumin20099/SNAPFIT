@@ -25,11 +25,16 @@ import com.snapfit.api.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import jakarta.servlet.http.Cookie;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final JwtUtil jwtUtil;
     private final CustomOAuth2UserService customOAuth2UserService;
@@ -53,8 +58,9 @@ public class SecurityConfig {
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
                     "/api/auth/**", "/api/partner/**", "/api/admin/**", "/api/products/**", 
                     "/api/posts/**", "/api/comments/**", "/api/follows/**", "/api/search/**", 
-                    "/api/ranking/**", "/api/health/**", "/error",
-                    "/ws/**"
+                    "/api/ranking/**", "/api/health/**", "/api/notifications/stream", 
+                    "/api/notifications/sse/status", "/error",
+                    "/ws/**", "/sse/**"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
@@ -70,12 +76,39 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService))
                 .successHandler((request, response, authentication) -> {
-                    // OAuth2 로그인 성공 후 프론트엔드로 리다이렉트
-                    OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
-                    String token = (String) oauth2User.getAttributes().get("token");
-                    
-                    // URL 파라미터로 토큰 전달
-                    String redirectUrl = "http://localhost:3000?token=" + token + "&login=success";
+                    try {
+                        // OAuth2 로그인 성공 후 프론트엔드로 리다이렉트
+                        OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+                        String token = (String) oauth2User.getAttributes().get("token");
+                        String userIdx = oauth2User.getAttributes().get("userIdx").toString();
+                        
+                        if (token != null) {
+                            // JWT 토큰을 쿠키에 설정
+                            Cookie jwtCookie = new Cookie("token", token);
+                            jwtCookie.setHttpOnly(true);
+                            jwtCookie.setSecure(false); // 개발환경에서는 false
+                            jwtCookie.setPath("/");
+                            jwtCookie.setMaxAge(86400); // 24시간
+                            response.addCookie(jwtCookie);
+                            
+                            // URL 파라미터로 토큰과 사용자 정보 전달
+                            String redirectUrl = "http://localhost:3000?token=" + token + "&userIdx=" + userIdx + "&login=success";
+                            response.sendRedirect(redirectUrl);
+                        } else {
+                            // 토큰이 없는 경우 기본 성공 페이지로
+                            response.sendRedirect("http://localhost:3000?login=success");
+                        }
+                    } catch (Exception e) {
+                        log.error("OAuth2 로그인 성공 처리 실패", e);
+                        // 오류 발생 시 기본 성공 페이지로
+                        response.sendRedirect("http://localhost:3000?login=success");
+                    }
+                })
+                .failureHandler((request, response, exception) -> {
+                    log.error("OAuth2 로그인 실패", exception);
+                    // OAuth2 로그인 실패 시 프론트엔드로 리다이렉트
+                    String errorMessage = exception.getMessage();
+                    String redirectUrl = "http://localhost:3000?login=error&error=" + errorMessage;
                     response.sendRedirect(redirectUrl);
                 })
             );

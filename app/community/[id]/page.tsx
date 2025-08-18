@@ -53,7 +53,7 @@ export default function PostDetailPage() {
   const [currentPost, setCurrentPost] = useState<Post | null>(null)
   const [userInteractionsLoaded, setUserInteractionsLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const observer = useRef<IntersectionObserver>()
+  const observer = useRef<IntersectionObserver | null>(null)
 
   // 사용자 상호작용 상태 가져오기 (좋아요, 스크랩) - 백엔드 API만 사용
   const fetchUserInteractions = useCallback(async () => {
@@ -246,7 +246,7 @@ export default function PostDetailPage() {
         setHasMore(!data.last)
         setCurrentPage(page)
         
-        console.log('게시글 로드 성공:', transformedPosts.map(p => ({ 
+        console.log('게시글 로드 성공:', transformedPosts.map((p: Post) => ({ 
           postId: p.postId, 
           likeCount: p.likeCount, 
           scrapCount: p.scrapCount 

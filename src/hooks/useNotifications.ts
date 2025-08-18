@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useSSENotifications } from './useSSENotifications'
 
-interface Notification {
+export interface Notification {
   id: number
-  type: "like" | "comment" | "follow" | "system"
+  type: string
   title: string
   message: string
   timestamp: string
@@ -16,6 +17,13 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // SSE를 사용한 실시간 알림
+  const { 
+    unreadCount: realtimeUnreadCount, 
+    markAsReadRealtime,
+    updateUnreadCount 
+  } = useSSENotifications()
 
   // 알림 목록 가져오기
   const fetchNotifications = useCallback(async () => {
@@ -33,12 +41,16 @@ export function useNotifications() {
       
       const data = await response.json()
       setNotifications(data)
+      
+      // 실시간 알림 카운트와 동기화
+      const unreadCount = data.filter((n: Notification) => !n.read).length
+      updateUnreadCount(unreadCount)
     } catch (err) {
       setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [updateUnreadCount])
 
   // 알림 읽음 처리
   const markAsRead = useCallback(async (notificationId: number) => {
@@ -59,10 +71,13 @@ export function useNotifications() {
             : notification
         )
       )
+      
+      // 실시간 알림 카운트 감소
+      markAsReadRealtime()
     } catch (err) {
       setError(err instanceof Error ? err.message : '읽음 처리에 실패했습니다')
     }
-  }, [])
+  }, [markAsReadRealtime])
 
   // 모든 알림 읽음 처리
   const markAllAsRead = useCallback(async () => {
@@ -79,10 +94,13 @@ export function useNotifications() {
       setNotifications(prev => 
         prev.map(notification => ({ ...notification, read: true }))
       )
+      
+      // 실시간 알림 카운트를 0으로 설정
+      updateUnreadCount(0)
     } catch (err) {
       setError(err instanceof Error ? err.message : '모든 알림 읽음 처리에 실패했습니다')
     }
-  }, [])
+  }, [updateUnreadCount])
 
   // 알림 삭제
   const deleteNotification = useCallback(async (notificationId: number) => {
@@ -96,13 +114,19 @@ export function useNotifications() {
         throw new Error('알림 삭제에 실패했습니다')
       }
       
+      const deletedNotification = notifications.find(n => n.id === notificationId)
       setNotifications(prev => 
         prev.filter(notification => notification.id !== notificationId)
       )
+      
+      // 삭제된 알림이 읽지 않은 상태였다면 카운트 감소
+      if (deletedNotification && !deletedNotification.read) {
+        markAsReadRealtime()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '알림 삭제에 실패했습니다')
     }
-  }, [])
+  }, [notifications, markAsReadRealtime])
 
   // 모든 알림 삭제
   const deleteAllNotifications = useCallback(async () => {
@@ -117,14 +141,15 @@ export function useNotifications() {
       }
       
       setNotifications([])
+      
+      // 실시간 알림 카운트를 0으로 설정
+      updateUnreadCount(0)
     } catch (err) {
       setError(err instanceof Error ? err.message : '모든 알림 삭제에 실패했습니다')
     }
-  }, [])
+  }, [updateUnreadCount])
 
-  // 읽지 않은 알림 개수
-  const unreadCount = notifications.filter(n => !n.read).length
-
+  // 컴포넌트 마운트 시 알림 목록 가져오기
   useEffect(() => {
     fetchNotifications()
   }, [fetchNotifications])
@@ -133,7 +158,7 @@ export function useNotifications() {
     notifications,
     loading,
     error,
-    unreadCount,
+    unreadCount: realtimeUnreadCount,
     fetchNotifications,
     markAsRead,
     markAllAsRead,
