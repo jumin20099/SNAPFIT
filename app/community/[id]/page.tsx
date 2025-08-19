@@ -324,7 +324,10 @@ export default function PostDetailPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ postId })
+        body: JSON.stringify({ 
+          targetIdx: postId,
+          targetType: 'POST'
+        })
       })
       
       if (response.ok) {

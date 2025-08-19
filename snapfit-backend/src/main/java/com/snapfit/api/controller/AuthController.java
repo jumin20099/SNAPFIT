@@ -115,4 +115,20 @@ public class AuthController {
             .header(HttpHeaders.SET_COOKIE, cookie.toString())
             .body(Map.of("message", "로그아웃되었습니다."));
     }
+
+    @GetMapping("/test-token")
+    public ResponseEntity<?> generateTestToken() {
+        // 테스트용 이메일과 역할로 토큰 생성
+        String testEmail = "test@example.com";
+        String testRole = "USER";
+        
+        String token = jwtUtil.generateToken(testEmail, testRole);
+        
+        return ResponseEntity.ok().body(Map.of(
+            "token", token,
+            "email", testEmail,
+            "role", testRole,
+            "message", "테스트용 토큰이 생성되었습니다."
+        ));
+    }
 }

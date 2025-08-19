@@ -122,7 +122,12 @@ export default function CommunityPage() {
   useEffect(() => {
     const fetchUserInteractions = async () => {
       const token = localStorage.getItem('token')
-      if (!token) return
+      if (!token) {
+        console.log('토큰이 없습니다. 로그인이 필요합니다.')
+        return
+      }
+
+      console.log('토큰 확인:', token.substring(0, 20) + '...')
 
       try {
         // 좋아요 상태 가져오기
@@ -148,6 +153,12 @@ export default function CommunityPage() {
             ...post,
             liked: likedPostIds.has(post.postId)
           })))
+        } else {
+          console.error('좋아요 API 오류:', likesResponse.status, likesResponse.statusText)
+          if (likesResponse.status === 401) {
+            console.error('인증 실패. 토큰을 확인해주세요.')
+            // 토큰이 유효하지 않아도 삭제하지 않고 계속 진행
+          }
         }
 
         // 스크랩 상태 가져오기
@@ -166,6 +177,12 @@ export default function CommunityPage() {
             ...post,
             scraped: scrapedPostIds.has(post.postId)
           })))
+        } else {
+          console.error('스크랩 API 오류:', scrapsResponse.status, scrapsResponse.statusText)
+          if (scrapsResponse.status === 401) {
+            console.error('인증 실패. 토큰을 확인해주세요.')
+            // 토큰이 유효하지 않아도 삭제하지 않고 계속 진행
+          }
         }
       } catch (error) {
         console.error('사용자 상호작용 상태 가져오기 실패:', error)
@@ -185,15 +202,23 @@ export default function CommunityPage() {
         return
       }
 
-      const response = await fetch(`http://localhost:8080/api/likes/toggle?targetIdx=${postId}&targetType=POST`, {
+      console.log('좋아요 토글 시도:', postId, '토큰:', token.substring(0, 20) + '...')
+
+      const response = await fetch('http://localhost:8080/api/likes/toggle', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          targetIdx: postId,
+          targetType: 'POST'
+        })
       })
 
       if (response.ok) {
         const data = await response.json()
+        console.log('좋아요 토글 성공:', data)
         setPosts(
           posts.map((post) =>
             post.postId === postId
@@ -202,10 +227,17 @@ export default function CommunityPage() {
           ),
         )
       } else {
-        console.error('좋아요 토글 실패:', response.status)
+        console.error('좋아요 토글 실패:', response.status, response.statusText)
+        if (response.status === 401) {
+          console.error('인증 실패. 토큰을 확인해주세요.')
+          alert('로그인이 만료되었습니다. 다시 로그인해주세요.')
+        } else {
+          alert('좋아요 토글에 실패했습니다.')
+        }
       }
     } catch (error) {
       console.error('좋아요 토글 중 오류:', error)
+      alert('좋아요 토글 중 오류가 발생했습니다.')
     }
   }
 
@@ -217,15 +249,22 @@ export default function CommunityPage() {
         return
       }
 
-      const response = await fetch(`http://localhost:8080/api/scraps/toggle?postId=${postId}`, {
+      console.log('스크랩 토글 시도:', postId, '토큰:', token.substring(0, 20) + '...')
+
+      const response = await fetch('http://localhost:8080/api/scraps/toggle', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          postId: postId
+        })
       })
 
       if (response.ok) {
         const data = await response.json()
+        console.log('스크랩 토글 성공:', data)
         setPosts(
           posts.map((post) =>
             post.postId === postId
@@ -234,10 +273,17 @@ export default function CommunityPage() {
           ),
         )
       } else {
-        console.error('스크랩 토글 실패:', response.status)
+        console.error('스크랩 토글 실패:', response.status, response.statusText)
+        if (response.status === 401) {
+          console.error('인증 실패. 토큰을 확인해주세요.')
+          alert('로그인이 만료되었습니다. 다시 로그인해주세요.')
+        } else {
+          alert('스크랩 토글에 실패했습니다.')
+        }
       }
     } catch (error) {
       console.error('스크랩 토글 중 오류:', error)
+      alert('스크랩 토글 중 오류가 발생했습니다.')
     }
   }
 
@@ -305,6 +351,40 @@ export default function CommunityPage() {
     fetchPosts()
   }
 
+  // 토큰 디버깅 함수
+  const debugToken = () => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.log('토큰이 없습니다')
+      return
+    }
+    
+    console.log('=== 토큰 디버깅 정보 ===')
+    console.log('토큰 길이:', token.length)
+    console.log('토큰 시작 부분:', token.substring(0, 50) + '...')
+    console.log('토큰 끝 부분:', '...' + token.substring(token.length - 50))
+    
+    try {
+      // JWT 토큰을 디코딩 (페이로드 부분만)
+      const parts = token.split('.')
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]))
+        console.log('토큰 페이로드:', payload)
+        console.log('토큰 만료 시간:', new Date(payload.exp * 1000))
+        console.log('현재 시간:', new Date())
+        console.log('토큰 만료 여부:', new Date() > new Date(payload.exp * 1000))
+      }
+    } catch (error) {
+      console.error('토큰 디코딩 실패:', error)
+    }
+    console.log('========================')
+  }
+
+  // 컴포넌트 마운트 시 토큰 디버깅
+  useEffect(() => {
+    debugToken()
+  }, [])
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -313,6 +393,19 @@ export default function CommunityPage() {
           <div className="font-bold text-2xl">SNAP</div>
         </div>
         <div className="flex items-center gap-2">
+          {/* 테스트용 토큰 설정 버튼 */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              const testToken = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NTU2MjAyNjksImV4cCI6MTc1NTcwODY2OX0.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8";
+              localStorage.setItem('token', testToken);
+              alert('테스트 토큰이 설정되었습니다. 페이지를 새로고침하세요.');
+            }}
+            className="text-red-600"
+          >
+            테스트 토큰 설정
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setIsPostCreateOpen(true)} className="text-blue-600">
             글쓰기
           </Button>

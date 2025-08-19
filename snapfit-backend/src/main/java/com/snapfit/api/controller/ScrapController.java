@@ -29,9 +29,10 @@ public class ScrapController {
     }
 
     @PostMapping("/toggle")
-    public ResponseEntity<?> toggle(@RequestParam Long postId,
+    public ResponseEntity<?> toggle(@RequestBody Map<String, Object> request,
                                     @AuthenticationPrincipal CustomOAuth2User principal) {
         User user = current(principal);
+        Long postId = Long.valueOf(request.get("postId").toString());
         boolean scraped = scrapService.toggleScrap(user.getUserIdx(), postId);
         
         // 스크랩 개수를 직접 계산

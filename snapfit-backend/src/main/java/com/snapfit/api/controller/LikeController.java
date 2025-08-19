@@ -29,10 +29,12 @@ public class LikeController {
     }
 
     @PostMapping("/toggle")
-    public ResponseEntity<?> toggle(@RequestParam Long targetIdx,
-                                    @RequestParam String targetType,
+    public ResponseEntity<?> toggle(@RequestBody Map<String, Object> request,
                                     @AuthenticationPrincipal CustomOAuth2User principal) {
         try {
+            Long targetIdx = Long.valueOf(request.get("targetIdx").toString());
+            String targetType = request.get("targetType").toString();
+            
             // POST 타입을 OUTFIT_SHARE로 매핑 (게시글용)
             TargetType type;
             if ("POST".equalsIgnoreCase(targetType)) {

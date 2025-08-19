@@ -58,7 +58,7 @@ public class SecurityConfig {
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
                     "/api/auth/**", "/api/partner/**", "/api/admin/**", "/api/products/**", 
                     "/api/posts/**", "/api/comments/**", "/api/follows/**", "/api/search/**", 
-                    "/api/ranking/**", "/api/health/**", "/api/notifications/stream", "/error",
+                    "/api/ranking/**", "/api/health/**", "/api/notifications/stream", "/api/likes/**", "/api/scraps/**", "/error",
                     "/ws/**", "/sse/**"
                 ).permitAll()
                 .requestMatchers("/api/**").authenticated() // 모든 비즈니스 API 인증 필수
