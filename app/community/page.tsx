@@ -565,6 +565,8 @@ export default function CommunityPage() {
                               e.stopPropagation()
                               toggleLike(post.postId)
                             }}
+                            data-testid="like-button"
+                            data-liked={post.liked || false}
                           >
                             <Heart className={`w-3 h-3 ${post.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
                           </Button>
@@ -578,6 +580,8 @@ export default function CommunityPage() {
                               e.stopPropagation()
                               toggleScrap(post.postId)
                             }}
+                            data-testid="scrap-button"
+                            data-scraped={post.scraped || false}
                           >
                             <Bookmark className={`w-3 h-3 ${post.scraped ? "fill-blue-500 text-blue-500" : "text-white"}`} />
                           </Button>
@@ -585,9 +589,9 @@ export default function CommunityPage() {
                           {/* Post Stats */}
                           <div className="absolute bottom-2 left-2 right-2 bg-black/50 backdrop-blur-sm rounded text-white text-xs p-1">
                             <div className="flex items-center justify-between">
-                              <span>❤️ {post.likeCount}</span>
+                              <span data-testid="like-count">❤️ {post.likeCount}</span>
                               <span>💬 {post.commentCount}</span>
-                              <span>🔖 {post.scrapCount}</span>
+                              <span data-testid="scrap-count">🔖 {post.scrapCount}</span>
                             </div>
                           </div>
                         </div>
@@ -725,6 +729,8 @@ export default function CommunityPage() {
                               e.stopPropagation()
                               toggleScrap(post.postId)
                             }}
+                            data-testid="scrap-button"
+                            data-scraped={post.scraped || false}
                           >
                             <Bookmark className={`w-3 h-3 ${post.scraped ? "fill-blue-500 text-blue-500" : "text-white"}`} />
                           </Button>
@@ -734,7 +740,7 @@ export default function CommunityPage() {
                             <div className="flex items-center justify-between">
                               <span>❤️ {post.likeCount}</span>
                               <span>💬 {post.commentCount}</span>
-                              <span>🔖 {post.scrapCount}</span>
+                              <span data-testid="scrap-count">🔖 {post.scrapCount}</span>
                             </div>
                           </div>
                         </div>

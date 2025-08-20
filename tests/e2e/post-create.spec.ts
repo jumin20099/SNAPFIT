@@ -11,10 +11,10 @@ test.describe('Post Create', () => {
     await page.getByRole('button', { name: '커뮤니티' }).click();
     
     // 커뮤니티 페이지로 이동 확인
-    await expect(page.getByText('SNAP')).toBeVisible();
+    await expect(page.getByText('커뮤니티')).toBeVisible();
     
     // 글쓰기 버튼이 있는지 확인
-    const writeButton = page.getByRole('button', { name: '글쓰기' });
+    const writeButton = page.getByRole('button', { name: '글쓰기' }).first();
     expect(writeButton).toBeVisible();
   });
 
@@ -23,7 +23,7 @@ test.describe('Post Create', () => {
     await page.goto('/community');
     
     // 글쓰기 버튼 클릭
-    const writeButton = page.getByRole('button', { name: '글쓰기' });
+    const writeButton = page.getByRole('button', { name: '글쓰기' }).first();
     await writeButton.click();
     
     // 로그인 필요 화면이 표시되는지 확인
@@ -42,7 +42,7 @@ test.describe('Post Create', () => {
     await page.goto('/community');
     
     // 글쓰기 버튼 클릭
-    const writeButton = page.getByRole('button', { name: '글쓰기' });
+    const writeButton = page.getByRole('button', { name: '글쓰기' }).first();
     await writeButton.click();
     
     // 게시글 작성 폼이 표시되는지 확인

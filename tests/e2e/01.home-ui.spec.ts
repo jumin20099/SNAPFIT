@@ -54,14 +54,17 @@ test.describe('Home UI smoke', () => {
   });
 
   test('community button navigates to community page', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('button', { name: /커뮤니티/ })).toBeVisible();
-    await page.getByRole('button', { name: /커뮤니티/ }).click();
+    await page.goto('http://localhost:3000');
+    
+    // 커뮤니티 버튼 클릭
+    const communityButton = page.getByRole('button', { name: '커뮤니티' });
+    await expect(communityButton).toBeVisible();
+    await communityButton.click();
     
     // 커뮤니티 페이지로 이동했는지 확인
     await expect(page).toHaveURL('/community');
     await expect(page.getByText('SNAP')).toBeVisible();
-    await expect(page.getByRole('button', { name: '글쓰기' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '글쓰기' }).first()).toBeVisible();
   });
 
   test('my page button navigates to my page', async ({ page }) => {
