@@ -256,14 +256,17 @@ public class NotificationService {
      */
     private String convertMetadataToJson(Map<String, Object> metadata) {
         try {
-            // ObjectMapper를 사용하여 JSONB 타입으로 변환
+            // SQL CAST를 사용하여 JSONB 타입으로 변환
             if (metadata == null || metadata.isEmpty()) {
                 return "{}";
             }
             
             // Jackson ObjectMapper 사용
             com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            return objectMapper.writeValueAsString(metadata);
+            String jsonString = objectMapper.writeValueAsString(metadata);
+            
+            // SQL CAST를 사용하여 JSONB로 변환
+            return "CAST('" + jsonString + "' AS jsonb)";
             
         } catch (Exception e) {
             log.error("메타데이터 JSON 변환 실패: {}", metadata, e);

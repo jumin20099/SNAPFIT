@@ -52,10 +52,10 @@ public class LikeService {
         
         Like savedLike = likeRepository.save(like);
         
-        // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만)
-        if (targetType == TargetType.OUTFIT_SHARE) {
-            createLikeNotification(user, targetIdx, savedLike);
-        }
+        // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만) - 완전히 비활성화
+        // if (targetType == TargetType.OUTFIT_SHARE) {
+        //     createLikeNotification(user, targetIdx, savedLike);
+        // }
         
         return savedLike;
     }
@@ -91,9 +91,14 @@ public class LikeService {
                 postRepository.incrementLikeCount(targetIdx);
             }
             
-            // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만) - 일시적으로 비활성화
+            // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만) - 완전히 비활성화
             // if (targetType == TargetType.OUTFIT_SHARE) {
-            //     createLikeNotification(user, targetIdx, like);
+            //     try {
+            //         createLikeNotification(user, targetIdx, like);
+            //     } catch (Exception e) {
+            //         // 알림 생성 실패는 좋아요 기능에 영향을 주지 않도록 로그만 남김
+            //         System.err.println("좋아요 알림 생성 실패 (좋아요 기능은 정상): " + e.getMessage());
+            //     }
             // }
             
             return true; // 좋아요 등록
