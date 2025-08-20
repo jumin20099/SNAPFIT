@@ -241,62 +241,51 @@ export default function CommunityPage() {
 
   const toggleLike = async (postId: number) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token');
       if (!token) {
-        alert('로그인이 필요합니다')
-        return
+        alert('로그인이 필요합니다.');
+        return;
       }
 
-      console.log('좋아요 토글 시도:', postId, '토큰:', token.substring(0, 20) + '...')
+      console.log('좋아요 토글 시도:', postId, '토큰:', token.substring(0, 20) + '...');
 
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          targetIdx: postId,
-          targetType: 'POST'
+          targetIdx: postId,  // postId를 targetIdx로 변경
+          targetType: 'POST'  // targetType 추가
         })
-      })
+      });
 
-      console.log('좋아요 토글 응답 상태:', response.status, response.statusText)
-      
+      console.log('좋아요 토글 응답 상태:', response.status, response.statusText);
+
       if (response.ok) {
-        const data = await response.json()
-        console.log('좋아요 토글 성공:', data)
+        const result = await response.json();
+        console.log('좋아요 토글 성공:', result);
         
-        // 응답 데이터 검증
-        if (data.liked !== undefined && data.count !== undefined) {
-          setPosts(prevPosts => 
-            prevPosts.map((post) =>
-              post.postId === postId
-                ? { ...post, likeCount: data.count, liked: data.liked }
-                : post,
-            )
+        // 게시글 상태 업데이트
+        setPosts(prevPosts => 
+          prevPosts.map(post => 
+            post.postId === postId 
+              ? { ...post, liked: result.liked, likeCount: result.count }
+              : post
           )
-          console.log('좋아요 상태 업데이트 완료:', { postId, liked: data.liked, count: data.count })
-        } else {
-          console.error('좋아요 응답 데이터 형식 오류:', data)
-          alert('좋아요 응답 데이터 형식이 올바르지 않습니다.')
-        }
-      } else {
-        const errorText = await response.text()
-        console.error('좋아요 토글 실패:', response.status, response.statusText, errorText)
+        );
         
-        if (response.status === 401) {
-          console.error('인증 실패. 토큰을 확인해주세요.')
-          alert('로그인이 만료되었습니다. 다시 로그인해주세요.')
-        } else {
-          alert(`좋아요 토글에 실패했습니다. (${response.status}: ${response.statusText})`)
-        }
+        console.log('좋아요 상태 업데이트 완료:', { postId, liked: result.liked, count: result.count });
+      } else {
+        console.error('좋아요 토글 실패:', response.status, response.statusText);
+        alert('좋아요 토글에 실패했습니다.');
       }
     } catch (error) {
-      console.error('좋아요 토글 중 오류:', error)
-      alert('좋아요 토글 중 오류가 발생했습니다.')
+      console.error('좋아요 토글 오류:', error);
+      alert('좋아요 토글 중 오류가 발생했습니다.');
     }
-  }
+  };
 
   const toggleScrap = async (postId: number) => {
     try {

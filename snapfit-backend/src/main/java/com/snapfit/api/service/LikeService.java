@@ -91,10 +91,10 @@ public class LikeService {
                 postRepository.incrementLikeCount(targetIdx);
             }
             
-            // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만)
-            if (targetType == TargetType.OUTFIT_SHARE) {
-                createLikeNotification(user, targetIdx, like);
-            }
+            // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만) - 일시적으로 비활성화
+            // if (targetType == TargetType.OUTFIT_SHARE) {
+            //     createLikeNotification(user, targetIdx, like);
+            // }
             
             return true; // 좋아요 등록
         }

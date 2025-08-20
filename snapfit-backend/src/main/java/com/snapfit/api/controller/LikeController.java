@@ -32,8 +32,23 @@ public class LikeController {
     public ResponseEntity<?> toggle(@RequestBody Map<String, Object> request,
                                     @AuthenticationPrincipal CustomOAuth2User principal) {
         try {
-            Long targetIdx = Long.valueOf(request.get("targetIdx").toString());
-            String targetType = request.get("targetType").toString();
+            // postId 또는 targetIdx 중 하나를 사용
+            Long targetIdx = null;
+            if (request.containsKey("targetIdx")) {
+                targetIdx = Long.valueOf(request.get("targetIdx").toString());
+            } else if (request.containsKey("postId")) {
+                targetIdx = Long.valueOf(request.get("postId").toString());
+            } else {
+                throw new IllegalArgumentException("targetIdx 또는 postId가 필요합니다.");
+            }
+            
+            // targetType이 없으면 기본값으로 POST 사용
+            String targetType = "POST";
+            if (request.containsKey("targetType")) {
+                targetType = request.get("targetType").toString();
+            }
+            
+            System.out.println("좋아요 토글 요청 - targetIdx: " + targetIdx + ", targetType: " + targetType);
             
             // POST 타입을 OUTFIT_SHARE로 매핑 (게시글용)
             TargetType type;
@@ -45,8 +60,13 @@ public class LikeController {
             
             boolean liked = likeService.toggleLike(current(principal), targetIdx, type);
             long count = likeService.countLikes(targetIdx, type);
+            
+            System.out.println("좋아요 토글 결과 - liked: " + liked + ", count: " + count);
+            
             return ResponseEntity.ok().body(java.util.Map.of("liked", liked, "count", count));
         } catch (Exception e) {
+            System.err.println("좋아요 토글 오류: " + e.getMessage());
+            e.printStackTrace();
             // 오류 발생 시 기본값 반환
             return ResponseEntity.ok().body(java.util.Map.of("liked", false, "count", 0L));
         }

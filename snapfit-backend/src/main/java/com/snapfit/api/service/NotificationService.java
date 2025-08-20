@@ -256,27 +256,15 @@ public class NotificationService {
      */
     private String convertMetadataToJson(Map<String, Object> metadata) {
         try {
-            // 간단한 JSON 변환 (실제로는 ObjectMapper 사용 권장)
+            // ObjectMapper를 사용하여 JSONB 타입으로 변환
             if (metadata == null || metadata.isEmpty()) {
                 return "{}";
             }
             
-            StringBuilder json = new StringBuilder("{");
-            boolean first = true;
-            for (Map.Entry<String, Object> entry : metadata.entrySet()) {
-                if (!first) json.append(",");
-                json.append("\"").append(entry.getKey()).append("\":");
-                
-                if (entry.getValue() instanceof String) {
-                    json.append("\"").append(entry.getValue()).append("\"");
-                } else {
-                    json.append(entry.getValue());
-                }
-                first = false;
-            }
-            json.append("}");
+            // Jackson ObjectMapper 사용
+            com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return objectMapper.writeValueAsString(metadata);
             
-            return json.toString();
         } catch (Exception e) {
             log.error("메타데이터 JSON 변환 실패: {}", metadata, e);
             return "{}";
