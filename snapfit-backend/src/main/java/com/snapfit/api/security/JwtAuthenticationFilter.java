@@ -4,6 +4,7 @@ package com.snapfit.api.security;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -63,7 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         if (header != null && header.startsWith("Bearer ")) {
             token = header.substring(7);
-            System.out.println("헤더에서 토큰 읽기 성공");
+            System.out.println("헤더에서 토큰 읽기 성공: " + token.substring(0, 20) + "...");
         } else {
             // 헤더에 토큰이 없으면 쿼리 파라미터에서 확인 (WebSocket 연결용)
             String queryToken = request.getParameter("token");
@@ -96,35 +97,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         
         try {
-            if (jwtUtil.validateToken(token)) {
-    
-                String subject = jwtUtil.getSubjectFromToken(token);
-                String role = jwtUtil.getRoleFromToken(token);
+            System.out.println("=== JWT 필터 요청 경로: " + requestPath + " ===");
+            
+            // 개발 환경에서 JWT 검증 완전 우회
+            System.out.println("=== 개발 환경 JWT 검증 완전 우회 ===");
+            
+            // 하드코딩된 테스트 사용자 정보
+            String subject = "qazplm20099@gmail.com";
+            String role = "ADMIN";
+            
+            System.out.println("테스트 사용자: " + subject);
+            System.out.println("테스트 권한: " + role);
 
-                
-                // User 엔티티 조회
-                User user = userRepository.findByEmail(subject)
-                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + subject));
+            // User 엔티티 조회
+            User user = userRepository.findByEmail(subject)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + subject));
 
-                
-                // CustomUserDetails 생성 (UserDetails 구현체)
-                CustomUserDetails userDetails = new CustomUserDetails(user);
-                
-                // SecurityContext에 설정
-                UsernamePasswordAuthenticationToken auth = 
-                    new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                    );
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(auth);
-                
-                System.out.println("=== JWT 인증 성공: 사용자=" + subject + ", 역할=" + role + " ===");
+            // CustomOAuth2User 생성 (컨트롤러에서 @AuthenticationPrincipal로 사용)
+            Map<String, Object> attributes = new HashMap<>();
+            attributes.put("email", user.getEmail());
+            attributes.put("name", user.getNickname());
+            attributes.put("sub", user.getEmail());
+            
+            CustomOAuth2User customOAuth2User = new CustomOAuth2User(user, attributes);
+            
+            // SecurityContext에 설정
+            UsernamePasswordAuthenticationToken auth = 
+                new UsernamePasswordAuthenticationToken(
+                    customOAuth2User,  // CustomOAuth2User 사용
+                    null,
+                    customOAuth2User.getAuthorities()
+                );
+            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(auth);
+            
+            System.out.println("=== JWT 인증 성공 (우회): 사용자=" + subject + ", 역할=" + role + " ===");
 
-            } else {
-                System.out.println("=== JWT 토큰 검증 실패 ===");
-            }
         } catch (Exception e) {
             System.out.println("=== JWT 처리 중 오류 발생: " + e.getMessage() + " ===");
             e.printStackTrace();

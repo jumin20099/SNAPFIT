@@ -13,6 +13,7 @@ import { useFollowingPosts } from "@/hooks/useFollowingPosts"
 import { useSSENotifications } from "@/hooks/useSSENotifications"
 import PostCreatePage from "@/components/post-create-page"
 import NotificationPage from "@/components/notification-page"
+import * as jose from 'jose'
 
 interface Post {
   postId: number
@@ -61,6 +62,50 @@ export default function CommunityPage() {
 
   // 실시간 알림 훅
   const { unreadCount, isConnected, error: notificationError, reconnect } = useSSENotifications()
+
+  // JWT 토큰 생성 함수 (개발용)
+  const generateTestToken = async () => {
+    try {
+      const payload = {
+        sub: 'qazplm20099@gmail.com',
+        role: 'ADMIN',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24시간 후 만료
+      };
+      
+      // 백엔드의 JWT 시크릿 키와 일치하는 서명
+      const secret = new TextEncoder().encode('SnapFitJWTSecretKey2024DevelopmentEnvironment');
+      
+      // jose 라이브러리로 JWT 토큰 생성
+      const token = await new jose.SignJWT(payload)
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('24h')
+        .sign(secret);
+      
+      console.log('생성된 JWT 토큰:', token);
+      console.log('토큰 페이로드:', payload);
+      
+      return token;
+    } catch (error) {
+      console.error('JWT 토큰 생성 실패:', error);
+      // 폴백: 간단한 테스트 토큰
+      return 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NTU3MDgzMzYsImV4cCI6MTc1NTcwODMzNn0.7pB7MdWDsQKVZK_IG-5vWuSS1LNZmu6JWM_WgBVNPRA';
+    }
+  };
+
+  // 테스트 토큰 설정
+  const setTestToken = async () => {
+    try {
+      const token = await generateTestToken();
+      localStorage.setItem('token', token);
+      console.log('테스트 토큰 설정됨:', token);
+      alert('테스트 토큰이 설정되었습니다. 페이지를 새로고침하세요.');
+    } catch (error) {
+      console.error('테스트 토큰 설정 실패:', error);
+      alert('테스트 토큰 설정에 실패했습니다.');
+    }
+  };
 
   // 게시글 목록 가져오기
   const fetchPosts = async () => {
@@ -216,23 +261,35 @@ export default function CommunityPage() {
         })
       })
 
+      console.log('좋아요 토글 응답 상태:', response.status, response.statusText)
+      
       if (response.ok) {
         const data = await response.json()
         console.log('좋아요 토글 성공:', data)
-        setPosts(
-          posts.map((post) =>
-            post.postId === postId
-              ? { ...post, likeCount: data.count, liked: data.liked }
-              : post,
-          ),
-        )
+        
+        // 응답 데이터 검증
+        if (data.liked !== undefined && data.count !== undefined) {
+          setPosts(prevPosts => 
+            prevPosts.map((post) =>
+              post.postId === postId
+                ? { ...post, likeCount: data.count, liked: data.liked }
+                : post,
+            )
+          )
+          console.log('좋아요 상태 업데이트 완료:', { postId, liked: data.liked, count: data.count })
+        } else {
+          console.error('좋아요 응답 데이터 형식 오류:', data)
+          alert('좋아요 응답 데이터 형식이 올바르지 않습니다.')
+        }
       } else {
-        console.error('좋아요 토글 실패:', response.status, response.statusText)
+        const errorText = await response.text()
+        console.error('좋아요 토글 실패:', response.status, response.statusText, errorText)
+        
         if (response.status === 401) {
           console.error('인증 실패. 토큰을 확인해주세요.')
           alert('로그인이 만료되었습니다. 다시 로그인해주세요.')
         } else {
-          alert('좋아요 토글에 실패했습니다.')
+          alert(`좋아요 토글에 실패했습니다. (${response.status}: ${response.statusText})`)
         }
       }
     } catch (error) {
@@ -262,23 +319,35 @@ export default function CommunityPage() {
         })
       })
 
+      console.log('스크랩 토글 응답 상태:', response.status, response.statusText)
+      
       if (response.ok) {
         const data = await response.json()
         console.log('스크랩 토글 성공:', data)
-        setPosts(
-          posts.map((post) =>
-            post.postId === postId
-              ? { ...post, scrapCount: data.count, scraped: data.scraped }
-              : post,
-          ),
-        )
+        
+        // 응답 데이터 검증
+        if (data.scraped !== undefined && data.count !== undefined) {
+          setPosts(prevPosts => 
+            prevPosts.map((post) =>
+              post.postId === postId
+                ? { ...post, scrapCount: data.count, scraped: data.scraped }
+                : post,
+            )
+          )
+          console.log('스크랩 상태 업데이트 완료:', { postId, scraped: data.scraped, count: data.count })
+        } else {
+          console.error('스크랩 응답 데이터 형식 오류:', data)
+          alert('스크랩 응답 데이터 형식이 올바르지 않습니다.')
+        }
       } else {
-        console.error('스크랩 토글 실패:', response.status, response.statusText)
+        const errorText = await response.text()
+        console.error('스크랩 토글 실패:', response.status, response.statusText, errorText)
+        
         if (response.status === 401) {
           console.error('인증 실패. 토큰을 확인해주세요.')
           alert('로그인이 만료되었습니다. 다시 로그인해주세요.')
         } else {
-          alert('스크랩 토글에 실패했습니다.')
+          alert(`스크랩 토글에 실패했습니다. (${response.status}: ${response.statusText})`)
         }
       }
     } catch (error) {
@@ -397,11 +466,7 @@ export default function CommunityPage() {
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => {
-              const testToken = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwicm9sZSI6IlVTRVIiLCJpYXQiOjE3NTU2MjAyNjksImV4cCI6MTc1NTcwODY2OX0.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8";
-              localStorage.setItem('token', testToken);
-              alert('테스트 토큰이 설정되었습니다. 페이지를 새로고침하세요.');
-            }}
+            onClick={setTestToken}
             className="text-red-600"
           >
             테스트 토큰 설정
