@@ -5,12 +5,17 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "concurrently \"npm:backend\" \"npm:frontend\"",
-    "start:e2e": "bash ./scripts/start-e2e.sh",
-    "backend": "cd snapfit-backend && ./gradlew bootRun",
-    "frontend": "npm run dev",
+    "start": "next start",
     "lint": "next lint",
-    "test:e2e": "playwright test"
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "generate:api": "openapi-generator-cli generate -i http://localhost:8080/v3/api-docs -g typescript-fetch -o src/generated/api --additional-properties=supportsES6=true,typescriptThreePlus=true",
+    "generate:api:local": "openapi-generator-cli generate -i http://localhost:8080/v3/api-docs -g typescript-fetch -o src/generated/api --additional-properties=supportsES6=true,typescriptThreePlus=true",
+    "generate:api:prod": "openapi-generator-cli generate -i https://api.snapfit.app/v3/api-docs -g typescript-fetch -o src/generated/api --additional-properties=supportsES6=true,typescriptThreePlus=true",
+    "dev:start": "./scripts/dev-start.sh",
+    "dev:full": "concurrently \"npm run dev:start\" \"npm run test:watch\""
   },
   "proxy": "http://localhost:8080",
   "dependencies": {
@@ -22,6 +27,7 @@
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-tabs": "^1.1.12",
+    "@stomp/stompjs": "^7.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.511.0",
@@ -30,6 +36,7 @@
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^18.2.0",
+    "sockjs-client": "^1.6.1",
     "tailwind-merge": "^3.3.0"
   },
   "devDependencies": {
@@ -41,6 +48,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sockjs-client": "^1.5.4",
     "autoprefixer": "^10.4.17",
     "concurrently": "^9.1.2",
     "eslint": "^9",

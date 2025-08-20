@@ -72,6 +72,15 @@ const nextConfig = {
       {
         source: '/api/auth/logout',
         destination: 'http://localhost:8080/api/auth/logout'
+      },
+      // 좋아요/스크랩 API 프록시 (백업용)
+      {
+        source: '/api/likes/:path*',
+        destination: 'http://localhost:8080/api/likes/:path*'
+      },
+      {
+        source: '/api/scraps/:path*',
+        destination: 'http://localhost:8080/api/scraps/:path*'
       }
     ]
   }

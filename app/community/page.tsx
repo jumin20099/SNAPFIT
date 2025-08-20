@@ -204,7 +204,7 @@ export default function CommunityPage() {
 
       console.log('좋아요 토글 시도:', postId, '토큰:', token.substring(0, 20) + '...')
 
-      const response = await fetch('http://localhost:8080/api/likes/toggle', {
+      const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -251,7 +251,7 @@ export default function CommunityPage() {
 
       console.log('스크랩 토글 시도:', postId, '토큰:', token.substring(0, 20) + '...')
 
-      const response = await fetch('http://localhost:8080/api/scraps/toggle', {
+      const response = await fetch('/api/scraps/toggle', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -27,7 +27,7 @@ export async function PUT(request: NextRequest) {
 
     const response = await fetch(`${BACKEND}/api/notifications/read-all`, {
       method: 'PUT',
-      headers: { ...passThroughHeaders(), Authorization: `Bearer ${token}` },
+      headers: { ...passThroughHeaders(request), Authorization: `Bearer ${token}` },
       cache: 'no-store',
     })
 

@@ -1,45 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 
-export async function POST(request: NextRequest) {
+const BE = process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://localhost:8080'
+
+export async function POST(req: NextRequest) {
   try {
-    // 쿠키에서 토큰 읽기 (SSR에서 사용)
-    const cookieStore = cookies()
-    const cookieToken = cookieStore.get('auth_token')?.value
+    // 디버깅 로그 추가
+    console.log('=== 스크랩 토글 API 라우트 시작 ===')
+    console.log('요청 헤더:', Object.fromEntries(req.headers.entries()))
     
-    // 헤더에서 토큰 읽기 (클라이언트에서 사용)
-    const headerToken = request.headers.get('authorization') || request.headers.get('Authorization') || ''
+    // JSON 바디 그대로 전달
+    const raw = await req.text()
+    console.log('요청 바디:', raw)
     
-    // 쿠키 토큰이 있으면 사용, 없으면 헤더 토큰 사용
-    const authToken = cookieToken || headerToken.replace('Bearer ', '')
+    // 클라가 준 Authorization/Content-Type 그대로 전달
+    const auth = req.headers.get('authorization') ?? ''
+    const ct = req.headers.get('content-type') ?? 'application/json'
+    
+    console.log('백엔드로 전달할 헤더:', { 'Content-Type': ct, 'Authorization': auth })
+    console.log('백엔드 URL:', `${BE}/api/scraps/toggle`)
 
-    // 요청 본문에서 postId 추출
-    const body = await request.json()
-    const { postId } = body
-
-    if (!postId) {
-      return NextResponse.json({ error: 'postId가 필요합니다.' }, { status: 400 })
-    }
-
-    // 백엔드 API 호출
-    const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080'
-    const response = await fetch(`${API_BASE_URL}/api/scraps/toggle?postId=${postId}`, {
+    const res = await fetch(`${BE}/api/scraps/toggle`, {
       method: 'POST',
       headers: {
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        'Content-Type': 'application/json',
+        'Content-Type': ct,
+        ...(auth && { 'Authorization': auth }),
       },
-      credentials: 'include', // 쿠키 전달을 위해 필요
+      body: raw,
     })
 
-    if (!response.ok) {
-      return NextResponse.json({ error: '스크랩 토글에 실패했습니다.' }, { status: response.status })
+    const text = await res.text()
+    console.log('백엔드 응답 상태:', res.status)
+    console.log('백엔드 응답 헤더:', Object.fromEntries(res.headers.entries()))
+    console.log('백엔드 응답 바디:', text)
+    
+    // 백엔드가 JSON이면 JSON으로, 아니면 원문 그대로 반환
+    try {
+      return NextResponse.json(JSON.parse(text), { status: res.status })
+    } catch {
+      return new NextResponse(text, { status: res.status })
     }
-
-    const data = await response.json()
-    // 백엔드 응답을 그대로 반환
-    return NextResponse.json(data)
   } catch (error) {
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    console.error('스크랩 토글 프록시 오류:', error)
+    return NextResponse.json({ error: '서버 오류' }, { status: 500 })
   }
 }

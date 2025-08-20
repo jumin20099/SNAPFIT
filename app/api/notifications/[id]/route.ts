@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const response = await fetch(`${BACKEND}/api/notifications/${params.id}/read`, {
       method: 'PUT',
-      headers: { ...passThroughHeaders(), Authorization: `Bearer ${token}` },
+      headers: { ...passThroughHeaders(req), Authorization: `Bearer ${token}` },
       cache: 'no-store',
     })
 
@@ -54,7 +54,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     const response = await fetch(`${BACKEND}/api/notifications/${params.id}`, {
       method: 'DELETE',
-      headers: { ...passThroughHeaders(), Authorization: `Bearer ${token}` },
+      headers: { ...passThroughHeaders(req), Authorization: `Bearer ${token}` },
       cache: 'no-store',
     })
 

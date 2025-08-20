@@ -61,7 +61,6 @@ public class SecurityConfig {
                     "/api/ranking/**", "/api/health/**", "/api/notifications/stream", "/api/likes/**", "/api/scraps/**", "/error",
                     "/ws/**", "/sse/**"
                 ).permitAll()
-                .requestMatchers("/api/**").authenticated() // 모든 비즈니스 API 인증 필수
                 .anyRequest().authenticated()
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

@@ -156,13 +156,13 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
               {/* 전체 읽음 처리 버튼 */}
               <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
                 <span className="text-sm text-gray-600">
-                  읽지 않은 알림: {notifications.filter(n => !n.isRead).length}개
+                  읽지 않은 알림: {notifications.filter(n => !n.read).length}개
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={markAllAsRead}
-                  disabled={!notifications.some(n => !n.isRead)}
+                  disabled={!notifications.some(n => !n.read)}
                 >
                   <Check className="w-4 h-4 mr-1" />
                   모두 읽음
@@ -172,9 +172,9 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
               {/* 알림 목록 */}
               {notifications.map((notification) => (
                 <Card
-                  key={notification.notificationId}
+                  key={notification.id}
                   className={`cursor-pointer transition-colors hover:bg-gray-50 ${
-                    !notification.isRead ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                    !notification.read ? 'bg-blue-50 border-blue-200' : 'bg-white'
                   }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
@@ -189,13 +189,13 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                             {getNotificationTitle(notification.type)}
                           </span>
                           <span className="text-xs text-gray-500">
-                            {formatDate(notification.createdAt)}
+                            {formatDate(notification.timestamp)}
                           </span>
                         </div>
                         <p className="text-sm text-gray-700 line-clamp-2">
                           {getNotificationMessage(notification)}
                         </p>
-                        {!notification.isRead && (
+                        {!notification.read && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                         )}
                       </div>
@@ -204,7 +204,7 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
-                          deleteNotification(notification.notificationId)
+                          deleteNotification(notification.id)
                         }}
                         className="text-gray-400 hover:text-red-500"
                       >
