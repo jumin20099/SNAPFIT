@@ -14,6 +14,8 @@ import com.snapfit.api.entity.Like.TargetType;
 import com.snapfit.api.repository.LikeRepository;
 import com.snapfit.api.repository.PostRepository;
 import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.controller.NotificationController;
+import com.snapfit.api.dto.notification.NotificationResponseDto;
 
 /**
  * 좋아요 기능 서비스.
@@ -24,14 +26,17 @@ public class LikeService {
     private final PostRepository postRepository;
     private final NotificationService notificationService;
     private final UserRepository userRepository;
+    private final NotificationController notificationController;
 
     @Autowired
     public LikeService(LikeRepository likeRepository, PostRepository postRepository, 
-                      NotificationService notificationService, UserRepository userRepository) {
+                      NotificationService notificationService, UserRepository userRepository,
+                      NotificationController notificationController) {
         this.likeRepository = likeRepository;
         this.postRepository = postRepository;
         this.notificationService = notificationService;
         this.userRepository = userRepository;
+        this.notificationController = notificationController;
     }
 
     /**
@@ -91,15 +96,10 @@ public class LikeService {
                 postRepository.incrementLikeCount(targetIdx);
             }
             
-            // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만) - 완전히 비활성화
-            // if (targetType == TargetType.OUTFIT_SHARE) {
-            //     try {
-            //         createLikeNotification(user, targetIdx, like);
-            //     } catch (Exception e) {
-            //         // 알림 생성 실패는 좋아요 기능에 영향을 주지 않도록 로그만 남김
-            //         System.err.println("좋아요 알림 생성 실패 (좋아요 기능은 정상): " + e.getMessage());
-            //     }
-            // }
+            // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만)
+            if (targetType == TargetType.OUTFIT_SHARE) {
+                createLikeNotification(user, targetIdx, like);
+            }
             
             return true; // 좋아요 등록
         }
@@ -121,15 +121,23 @@ public class LikeService {
                     return;
                 }
                 
-                // 알림 생성
-                notificationService.createNotification(
-                    postAuthor.getUserIdx(),
-                    "LIKE",
-                    liker.getUserIdx(),
-                    postIdx,
-                    "LIKE_POST",
-                    String.format("%s님이 회원님의 게시글을 좋아합니다.", liker.getNickname())
+                // SSE로 실시간 알림 전송
+                notificationController.sendNotificationToUser(
+                    postAuthor.getUserIdx().toString(),
+                    NotificationResponseDto.builder()
+                        .id(like.getLikeIdx())
+                        .type("LIKE")
+                        .title("좋아요")
+                        .message(liker.getNickname() + "님이 회원님의 게시글을 좋아합니다.")
+                        .timestamp(like.getCreatedAt().toString())
+                        .read(false)
+                        .build()
                 );
+                
+                // 읽지 않은 알림 개수 업데이트
+                long unreadCount = notificationService.getUnreadNotificationCount(postAuthor.getUserIdx());
+                notificationController.sendUnreadCountToUser(postAuthor.getUserIdx().toString(), (int) unreadCount);
+                
             }
         } catch (Exception e) {
             // 알림 생성 실패는 좋아요 기능에 영향을 주지 않도록 로그만 남김

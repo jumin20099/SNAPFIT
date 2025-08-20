@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -42,20 +43,52 @@ public class NotificationController {
      */
     @GetMapping
     public ResponseEntity<List<NotificationResponseDto>> getNotifications(
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @AuthenticationPrincipal UserDetails userDetails,
+            HttpServletRequest request) {
         try {
             log.info("=== 알림 목록 조회 요청 시작 ===");
             log.info("userDetails: {}", userDetails);
             
-            String userId;
-            if (userDetails instanceof CustomUserDetails) {
-                CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
-                userId = customUserDetails.getUserId();
-                log.info("CustomUserDetails에서 사용자 ID 추출: {}", userId);
-            } else {
-                // fallback: username을 UUID로 변환 시도
-                userId = userDetails.getUsername();
-                log.info("일반 UserDetails에서 사용자 ID 추출: {}", userId);
+            String userId = null;
+            
+            // 1. @AuthenticationPrincipal에서 사용자 정보 확인
+            if (userDetails != null) {
+                if (userDetails instanceof CustomUserDetails) {
+                    CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
+                    userId = customUserDetails.getUserId();
+                    log.info("CustomUserDetails에서 사용자 ID 추출: {}", userId);
+                } else {
+                    // fallback: username을 UUID로 변환 시도
+                    userId = userDetails.getUsername();
+                    log.info("일반 UserDetails에서 사용자 ID 추출: {}", userId);
+                }
+            }
+            
+            // 2. @AuthenticationPrincipal이 null이면 JWT 토큰에서 직접 추출
+            if (userId == null) {
+                String header = request.getHeader("Authorization");
+                if (header != null && header.startsWith("Bearer ")) {
+                    String token = header.substring(7);
+                    try {
+                        String subject = jwtUtil.getSubjectFromToken(token);
+                        String role = jwtUtil.getRoleFromToken(token);
+                        
+                        // 사용자 정보 조회
+                        User user = userService.findByEmail(subject);
+                        if (user != null) {
+                            userId = user.getUserIdx().toString();
+                            log.info("JWT 토큰에서 사용자 ID 추출: {}", userId);
+                        }
+                    } catch (Exception e) {
+                        log.error("JWT 토큰 검증 실패: {}", e.getMessage());
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                    }
+                }
+            }
+            
+            if (userId == null) {
+                log.error("사용자 ID를 추출할 수 없습니다");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
             
             UUID userUuid = UUID.fromString(userId);
@@ -74,7 +107,8 @@ public class NotificationController {
     @GetMapping("/stream")
     public SseEmitter streamNotifications(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(value = "token", required = false) String queryToken) {
+            @RequestParam(value = "token", required = false) String queryToken,
+            HttpServletRequest request) {
         
         log.info("=== SSE 연결 요청 시작 ===");
         log.info("userDetails: {}", userDetails);
@@ -82,7 +116,7 @@ public class NotificationController {
         
         String userId = null;
         
-        // @AuthenticationPrincipal에서 사용자 정보 확인
+        // 1. @AuthenticationPrincipal에서 사용자 정보 확인
         if (userDetails != null) {
             if (userDetails instanceof CustomUserDetails) {
                 CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
@@ -93,11 +127,31 @@ public class NotificationController {
                 userId = userDetails.getUsername();
                 log.info("일반 UserDetails에서 사용자 ID 추출: {}", userId);
             }
-        } else {
-            log.warn("AuthenticationPrincipal이 null입니다");
         }
         
-        // queryToken이 있으면 JWT 검증
+        // 2. @AuthenticationPrincipal이 null이면 JWT 토큰에서 직접 추출
+        if (userId == null) {
+            String header = request.getHeader("Authorization");
+            if (header != null && header.startsWith("Bearer ")) {
+                String token = header.substring(7);
+                try {
+                    String subject = jwtUtil.getSubjectFromToken(token);
+                    String role = jwtUtil.getRoleFromToken(token);
+                    
+                    // 사용자 정보 조회
+                    User user = userService.findByEmail(subject);
+                    if (user != null) {
+                        userId = user.getUserIdx().toString();
+                        log.info("JWT 토큰에서 사용자 ID 추출: {}", userId);
+                    }
+                } catch (Exception e) {
+                    log.error("JWT 토큰 검증 실패: {}", e.getMessage());
+                    return new SseEmitter(0L);
+                }
+            }
+        }
+        
+        // 3. queryToken이 있으면 JWT 검증 (기존 로직 유지)
         if (userId == null && queryToken != null) {
             try {
                 String subject = jwtUtil.getSubjectFromToken(queryToken);
@@ -107,10 +161,10 @@ public class NotificationController {
                 User user = userService.findByEmail(subject);
                 if (user != null) {
                     userId = user.getUserIdx().toString();
-                    log.info("JWT 토큰에서 사용자 ID 추출: {}", userId);
+                    log.info("queryToken에서 사용자 ID 추출: {}", userId);
                 }
             } catch (Exception e) {
-                log.error("JWT 토큰 검증 실패: {}", e.getMessage());
+                log.error("queryToken JWT 검증 실패: {}", e.getMessage());
                 return new SseEmitter(0L);
             }
         }
