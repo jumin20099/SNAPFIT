@@ -57,10 +57,10 @@ public class LikeService {
         
         Like savedLike = likeRepository.save(like);
         
-        // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만) - 완전히 비활성화
-        // if (targetType == TargetType.OUTFIT_SHARE) {
-        //     createLikeNotification(user, targetIdx, savedLike);
-        // }
+        // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만)
+        if (targetType == TargetType.OUTFIT_SHARE) {
+            createLikeNotification(user, targetIdx, savedLike);
+        }
         
         return savedLike;
     }
@@ -110,16 +110,25 @@ public class LikeService {
      */
     private void createLikeNotification(User liker, Long postIdx, Like like) {
         try {
+            System.out.println("=== 좋아요 알림 생성 시작 ===");
+            System.out.println("좋아요한 사용자: " + liker.getNickname() + " (ID: " + liker.getUserIdx() + ")");
+            System.out.println("게시글 ID: " + postIdx);
+            
             // 게시글 작성자 조회
             Optional<com.snapfit.api.entity.Post> postOpt = postRepository.findById(postIdx);
             if (postOpt.isPresent()) {
                 com.snapfit.api.entity.Post post = postOpt.get();
                 User postAuthor = post.getAuthor();
                 
+                System.out.println("게시글 작성자: " + postAuthor.getNickname() + " (ID: " + postAuthor.getUserIdx() + ")");
+                
                 // 자신의 게시글에 좋아요를 누른 경우 알림 생성하지 않음
                 if (postAuthor.getUserIdx().equals(liker.getUserIdx())) {
+                    System.out.println("자신의 게시글이므로 알림 생성하지 않음");
                     return;
                 }
+                
+                System.out.println("SSE로 실시간 알림 전송 시작...");
                 
                 // SSE로 실시간 알림 전송
                 notificationController.sendNotificationToUser(
@@ -134,14 +143,22 @@ public class LikeService {
                         .build()
                 );
                 
+                System.out.println("알림 전송 완료!");
+                
                 // 읽지 않은 알림 개수 업데이트
                 long unreadCount = notificationService.getUnreadNotificationCount(postAuthor.getUserIdx());
-                notificationController.sendUnreadCountToUser(postAuthor.getUserIdx().toString(), (int) unreadCount);
+                System.out.println("읽지 않은 알림 개수: " + unreadCount);
                 
+                notificationController.sendUnreadCountToUser(postAuthor.getUserIdx().toString(), (int) unreadCount);
+                System.out.println("알림 개수 업데이트 완료!");
+                
+            } else {
+                System.out.println("게시글을 찾을 수 없음: " + postIdx);
             }
         } catch (Exception e) {
             // 알림 생성 실패는 좋아요 기능에 영향을 주지 않도록 로그만 남김
             System.err.println("좋아요 알림 생성 실패: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

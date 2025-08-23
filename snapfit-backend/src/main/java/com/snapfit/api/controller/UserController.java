@@ -39,6 +39,7 @@ public class UserController {
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
                 Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("userIdx", user.getUserIdx().toString()); // userIdx 필드 추가
                 userInfo.put("email", user.getEmail());
                 userInfo.put("role", user.getRole().name());
                 userInfo.put("nickname", user.getNickname());

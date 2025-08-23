@@ -20,6 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.snapfit.api.security.CustomUserDetails;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.service.UserService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 알림 컨트롤러
@@ -73,15 +76,17 @@ public class NotificationController {
                         String subject = jwtUtil.getSubjectFromToken(token);
                         String role = jwtUtil.getRoleFromToken(token);
                         
-                        // 사용자 정보 조회
+                        // 사용자 정보 조회 (새로 생성하지 않음)
                         User user = userService.findByEmail(subject);
                         if (user != null) {
                             userId = user.getUserIdx().toString();
                             log.info("JWT 토큰에서 사용자 ID 추출: {}", userId);
+                        } else {
+                            log.warn("사용자를 찾을 수 없음: {}", subject);
                         }
                     } catch (Exception e) {
                         log.error("JWT 토큰 검증 실패: {}", e.getMessage());
-                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                        throw new RuntimeException("JWT 토큰 검증 실패");
                     }
                 }
             }
@@ -104,137 +109,172 @@ public class NotificationController {
     /**
      * SSE를 통한 실시간 알림 스트리밍
      */
-    @GetMapping("/stream")
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamNotifications(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(value = "token", required = false) String queryToken,
+            @RequestParam(value = "userIdx", required = false) String userIdxParam,
             HttpServletRequest request) {
-        
-        log.info("=== SSE 연결 요청 시작 ===");
-        log.info("userDetails: {}", userDetails);
-        log.info("queryToken: {}", queryToken != null ? queryToken.substring(0, 20) + "..." : "null");
         
         String userId = null;
         
-        // 1. @AuthenticationPrincipal에서 사용자 정보 확인
-        if (userDetails != null) {
-            if (userDetails instanceof CustomUserDetails) {
-                CustomUserDetails customUserDetails = (CustomUserDetails) userDetails;
-                userId = customUserDetails.getUserId();
-                log.info("CustomUserDetails에서 사용자 ID 추출: {}", userId);
-            } else {
-                // fallback: username을 UUID로 변환 시도
-                userId = userDetails.getUsername();
-                log.info("일반 UserDetails에서 사용자 ID 추출: {}", userId);
-            }
-        }
-        
-        // 2. @AuthenticationPrincipal이 null이면 JWT 토큰에서 직접 추출
+        // 1. Authorization 헤더에서 JWT 토큰 우선 확인
         if (userId == null) {
             String header = request.getHeader("Authorization");
             if (header != null && header.startsWith("Bearer ")) {
                 String token = header.substring(7);
                 try {
                     String subject = jwtUtil.getSubjectFromToken(token);
-                    String role = jwtUtil.getRoleFromToken(token);
-                    
-                    // 사용자 정보 조회
                     User user = userService.findByEmail(subject);
                     if (user != null) {
                         userId = user.getUserIdx().toString();
-                        log.info("JWT 토큰에서 사용자 ID 추출: {}", userId);
+                        log.info("Authorization 헤더에서 사용자 ID 추출: {}", userId);
                     }
                 } catch (Exception e) {
-                    log.error("JWT 토큰 검증 실패: {}", e.getMessage());
-                    return new SseEmitter(0L);
+                    log.error("Authorization 헤더 JWT 토큰 검증 실패: {}", e.getMessage());
                 }
             }
         }
         
-        // 3. queryToken이 있으면 JWT 검증 (기존 로직 유지)
+        // 2. userIdx 파라미터 확인
+        if (userId == null && userIdxParam != null && !userIdxParam.trim().isEmpty()) {
+            userId = userIdxParam;
+            log.info("userIdx 파라미터에서 사용자 ID 추출: {}", userId);
+        }
+        
+        // 3. @AuthenticationPrincipal에서 사용자 정보 확인
+        if (userId == null && userDetails != null) {
+            userId = userDetails.getUsername();
+            log.info("@AuthenticationPrincipal에서 사용자 ID 추출: {}", userId);
+        }
+        
+        // 4. queryToken이 있으면 JWT 검증 (기존 로직 유지 for SSE)
         if (userId == null && queryToken != null) {
             try {
                 String subject = jwtUtil.getSubjectFromToken(queryToken);
-                String role = jwtUtil.getRoleFromToken(queryToken);
-                
-                // 사용자 정보 조회
                 User user = userService.findByEmail(subject);
                 if (user != null) {
                     userId = user.getUserIdx().toString();
                     log.info("queryToken에서 사용자 ID 추출: {}", userId);
                 }
             } catch (Exception e) {
-                log.error("queryToken JWT 검증 실패: {}", e.getMessage());
-                return new SseEmitter(0L);
+                log.error("queryToken 검증 실패: {}", e.getMessage());
             }
         }
         
         if (userId == null) {
-            log.error("사용자 ID를 추출할 수 없습니다");
-            return new SseEmitter(0L);
+            log.error("사용자 ID를 추출할 수 없음");
+            throw new RuntimeException("사용자 ID를 추출할 수 없음");
         }
         
         final String finalUserId = userId;
         
-        try {
-            UUID userUuid = UUID.fromString(finalUserId);
-            SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
-            
-            // 사용자별 SSE 에미터 저장
-            sseEmitters.put(userUuid, emitter);
-            
-            // 연결 성공 이벤트 전송
-            emitter.send(SseEmitter.event()
-                .name("connect")
-                .data("SSE 연결이 설정되었습니다"));
-            
-            // 읽지 않은 알림 개수 전송
-            long unreadCount = notificationService.getUnreadNotificationCount(userUuid);
-            emitter.send(SseEmitter.event()
-                .name("unread_count")
-                .data(unreadCount));
-            
-            // 연결 해제 시 정리
-            emitter.onCompletion(() -> {
-                log.info("SSE 연결 완료: 사용자={}", finalUserId);
-                sseEmitters.remove(userUuid);
-            });
-            
-            emitter.onTimeout(() -> {
-                log.info("SSE 연결 타임아웃: 사용자={}", finalUserId);
-                sseEmitters.remove(userUuid);
-            });
-            
-            emitter.onError((ex) -> {
-                log.error("SSE 연결 오류: 사용자={}, 오류={}", finalUserId, ex.getMessage());
-                sseEmitters.remove(userUuid);
-            });
-            
-            log.info("SSE 연결 생성 완료: 사용자={}", finalUserId);
-            return emitter;
-            
-        } catch (Exception e) {
-            log.error("SSE 연결 생성 실패: 사용자={}, 오류={}", finalUserId, e.getMessage(), e);
-            return new SseEmitter(0L);
+        log.info("=== SSE 연결 시작 ===");
+        log.info("연결 요청 사용자 ID: {}", finalUserId);
+        log.info("현재 연결된 SSE 에미터 수: {}", sseEmitters.size());
+        log.info("연결된 사용자 ID들: {}", sseEmitters.keySet());
+        
+        // 기존 연결이 있으면 제거
+        UUID userUuid = UUID.fromString(finalUserId);
+        SseEmitter existingEmitter = sseEmitters.remove(userUuid);
+        if (existingEmitter != null) {
+            log.info("기존 SSE 연결 제거: {}", finalUserId);
+            existingEmitter.complete();
         }
+        
+        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
+        sseEmitters.put(userUuid, emitter);
+        
+        log.info("새로운 SSE 연결 생성 완료: {}", finalUserId);
+        log.info("업데이트된 연결된 SSE 에미터 수: {}", sseEmitters.size());
+        log.info("업데이트된 연결된 사용자 ID들: {}", sseEmitters.keySet());
+        
+        // 연결 유지를 위한 하트비트 설정
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                if (sseEmitters.containsKey(userUuid)) {
+                    emitter.send(SseEmitter.event()
+                        .name("heartbeat")
+                        .data("ping"));
+                    log.debug("하트비트 전송: {}", finalUserId);
+                } else {
+                    scheduler.shutdown();
+                }
+            } catch (Exception e) {
+                log.debug("하트비트 전송 실패: {}", e.getMessage());
+                scheduler.shutdown();
+            }
+        }, 30, 30, TimeUnit.SECONDS);
+        
+        emitter.onCompletion(() -> {
+            log.info("SSE 연결 완료: {}", finalUserId);
+            sseEmitters.remove(userUuid);
+            scheduler.shutdown();
+            log.info("SSE 에미터 제거됨 (완료): {}, 현재 에미터 수: {}", finalUserId, sseEmitters.size());
+        });
+        
+        emitter.onTimeout(() -> {
+            log.info("SSE 연결 타임아웃: {}", finalUserId);
+            sseEmitters.remove(userUuid);
+            scheduler.shutdown();
+            log.info("SSE 에미터 제거됨 (타임아웃): {}, 현재 에미터 수: {}", finalUserId, sseEmitters.size());
+        });
+        
+        emitter.onError((ex) -> {
+            log.error("SSE 연결 오류: 사용자={}, 오류={}", finalUserId, ex.getMessage());
+            sseEmitters.remove(userUuid);
+            scheduler.shutdown();
+            log.info("SSE 에미터 제거됨 (오류): {}, 현재 에미터 수: {}", finalUserId, sseEmitters.size());
+        });
+        
+        // 연결 확인 메시지 전송
+        try {
+            emitter.send(SseEmitter.event()
+                .name("connected")
+                .data("SSE 연결 성공: " + finalUserId));
+            log.info("연결 확인 메시지 전송 완료: {}", finalUserId);
+        } catch (Exception e) {
+            log.error("연결 확인 메시지 전송 실패: {}", e.getMessage());
+        }
+        
+        return emitter;
     }
 
     /**
      * 특정 사용자에게 알림 전송 (SSE)
      */
     public void sendNotificationToUser(String userId, NotificationResponseDto notification) {
-        SseEmitter emitter = sseEmitters.get(userId);
+        System.out.println("=== SSE 알림 전송 시작 ===");
+        System.out.println("사용자 ID: " + userId);
+        System.out.println("알림 내용: " + notification.getMessage());
+        
+        // SSE 에미터 상태 확인 로그 추가
+        System.out.println("=== SSE 에미터 상태 확인 ===");
+        System.out.println("현재 연결된 SSE 에미터 수: " + sseEmitters.size());
+        System.out.println("연결된 사용자 ID들: " + sseEmitters.keySet());
+        System.out.println("찾으려는 사용자 ID: " + userId);
+        
+        UUID userUuid = UUID.fromString(userId);
+        SseEmitter emitter = sseEmitters.get(userUuid);
         if (emitter != null) {
             try {
+                System.out.println("SSE 에미터 발견, 알림 전송 중...");
                 emitter.send(SseEmitter.event()
                     .name("notification")
                     .data(notification));
-                log.info("SSE를 통해 사용자 {}에게 알림 전송: {}", userId, notification.getId());
+                System.out.println("SSE를 통해 사용자 " + userId + "에게 알림 전송 성공: " + notification.getId());
             } catch (Exception e) {
-                log.error("SSE 알림 전송 실패: 사용자={}, 오류={}", userId, e.getMessage());
+                System.err.println("SSE 알림 전송 실패: 사용자=" + userId + ", 오류=" + e.getMessage());
+                e.printStackTrace();
                 // 전송 실패 시 연결 제거
-                sseEmitters.remove(userId);
+                sseEmitters.remove(userUuid);
+                System.out.println("전송 실패로 인한 SSE 에미터 제거: " + userId);
             }
+        } else {
+            System.out.println("사용자 " + userId + "에 대한 SSE 에미터를 찾을 수 없음");
+            System.out.println("현재 연결된 SSE 에미터 수: " + sseEmitters.size());
+            System.out.println("연결된 사용자 ID들: " + sseEmitters.keySet());
         }
     }
 
@@ -242,17 +282,26 @@ public class NotificationController {
      * 특정 사용자에게 읽지 않은 알림 개수 전송 (SSE)
      */
     public void sendUnreadCountToUser(String userId, int count) {
-        SseEmitter emitter = sseEmitters.get(userId);
+        System.out.println("=== SSE 알림 개수 업데이트 시작 ===");
+        System.out.println("사용자 ID: " + userId);
+        System.out.println("읽지 않은 알림 개수: " + count);
+        
+        UUID userUuid = UUID.fromString(userId);
+        SseEmitter emitter = sseEmitters.get(userUuid);
         if (emitter != null) {
             try {
                 emitter.send(SseEmitter.event()
-                    .name("unread_count")
+                    .name("notification_count")
                     .data(count));
-                log.debug("SSE를 통해 사용자 {}에게 읽지 않은 알림 개수 전송: {}", userId, count);
+                System.out.println("SSE를 통해 사용자 " + userId + "에게 알림 개수 업데이트 성공: " + count);
             } catch (Exception e) {
-                log.error("SSE 알림 개수 전송 실패: 사용자={}, 오류={}", userId, e.getMessage());
-                sseEmitters.remove(userId);
+                System.err.println("SSE 알림 개수 업데이트 실패: 사용자=" + userId + ", 오류=" + e.getMessage());
+                e.printStackTrace();
+                // 전송 실패 시 연결 제거
+                sseEmitters.remove(userUuid);
             }
+        } else {
+            System.out.println("사용자 " + userId + "에 대한 SSE 에미터를 찾을 수 없음");
         }
     }
 
@@ -413,3 +462,4 @@ public class NotificationController {
         }
     }
 }
+

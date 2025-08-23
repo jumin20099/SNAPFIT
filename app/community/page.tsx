@@ -94,6 +94,36 @@ export default function CommunityPage() {
     }
   };
 
+  // 임시사용자 토큰 생성 함수
+  const generateTempUserToken = async () => {
+    try {
+      const payload = {
+        sub: 'temp@example.com',
+        role: 'USER',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24시간 후 만료
+      };
+      
+      // 백엔드의 JWT 시크릿 키와 일치하는 서명
+      const secret = new TextEncoder().encode('SnapFitJWTSecretKey2024DevelopmentEnvironment');
+      
+      // jose 라이브러리로 JWT 토큰 생성
+      const token = await new jose.SignJWT(payload)
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('24h')
+        .sign(secret);
+      
+      console.log('생성된 임시사용자 JWT 토큰:', token);
+      console.log('토큰 페이로드:', payload);
+      
+      return token;
+    } catch (error) {
+      console.error('임시사용자 JWT 토큰 생성 실패:', error);
+      return null;
+    }
+  };
+
   // 테스트 토큰 설정
   const setTestToken = async () => {
     try {
@@ -104,6 +134,23 @@ export default function CommunityPage() {
     } catch (error) {
       console.error('테스트 토큰 설정 실패:', error);
       alert('테스트 토큰 설정에 실패했습니다.');
+    }
+  };
+
+  // 임시사용자 토큰 설정
+  const setTempUserToken = async () => {
+    try {
+      const token = await generateTempUserToken();
+      if (token) {
+        localStorage.setItem('token', token);
+        console.log('임시사용자 토큰 설정됨:', token);
+        alert('임시사용자 토큰이 설정되었습니다. 페이지를 새로고침하세요.');
+      } else {
+        alert('임시사용자 토큰 생성에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('임시사용자 토큰 설정 실패:', error);
+      alert('임시사용자 토큰 설정에 실패했습니다.');
     }
   };
 
@@ -458,7 +505,15 @@ export default function CommunityPage() {
             onClick={setTestToken}
             className="text-red-600"
           >
-            테스트 토큰 설정
+            김주민 토큰
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={setTempUserToken}
+            className="text-blue-600"
+          >
+            임시사용자 토큰
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setIsPostCreateOpen(true)} className="text-blue-600">
             글쓰기

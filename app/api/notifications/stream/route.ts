@@ -12,27 +12,59 @@ export async function GET(req: NextRequest) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const backendResp = await fetch(`${BACKEND}/api/notifications/stream`, {
-    headers: {
-      Accept: 'text/event-stream',
-      Authorization: `Bearer ${token}`,
-      // Last-Event-ID 전달 필요 시:
-      ...(req.headers.get('last-event-id') ? { 'Last-Event-ID': req.headers.get('last-event-id')! } : {}),
-    },
-    // Node의 fetch는 기본적으로 스트림을 지원
-  })
+  try {
+    const backendResp = await fetch(`${BACKEND}/api/notifications/stream`, {
+      headers: {
+        Accept: 'text/event-stream',
+        Authorization: `Bearer ${token}`,
+        // Last-Event-ID 전달 필요 시:
+        ...(req.headers.get('last-event-id') ? { 'Last-Event-ID': req.headers.get('last-event-id')! } : {}),
+      },
+    })
 
-  if (!backendResp.ok || !backendResp.body) {
-    return new Response('Upstream error', { status: backendResp.status })
+    if (!backendResp.ok) {
+      console.error('백엔드 SSE 연결 실패:', backendResp.status, backendResp.statusText)
+      return new Response('Upstream error', { status: backendResp.status })
+    }
+
+    if (!backendResp.body) {
+      console.error('백엔드 SSE 응답 본체가 없음')
+      return new Response('No response body', { status: 500 })
+    }
+
+    const headers = new Headers()
+    headers.set('Content-Type', 'text/event-stream')
+    headers.set('Cache-Control', 'no-cache, no-transform')
+    headers.set('Connection', 'keep-alive')
+    headers.set('X-Accel-Buffering', 'no')
+
+    // 백엔드에서 오는 SSE 스트림을 그대로 전달
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = backendResp.body!.getReader()
+        const decoder = new TextDecoder()
+        
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            
+            const chunk = decoder.decode(value, { stream: true })
+            controller.enqueue(new TextEncoder().encode(chunk))
+          }
+        } catch (error) {
+          console.error('SSE 스트림 읽기 오류:', error)
+        } finally {
+          controller.close()
+        }
+      }
+    })
+
+    return new Response(stream, { status: 200, headers })
+  } catch (error) {
+    console.error('SSE 연결 오류:', error)
+    return new Response('Internal Server Error', { status: 500 })
   }
-
-  const headers = new Headers()
-  headers.set('Content-Type', 'text/event-stream')
-  headers.set('Cache-Control', 'no-cache, no-transform')
-  headers.set('Connection', 'keep-alive')
-  headers.set('X-Accel-Buffering', 'no')
-
-  return new Response(backendResp.body, { status: 200, headers })
 }
 
 // 임시로 여기에 토큰 추출 함수 정의
