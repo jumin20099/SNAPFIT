@@ -1,83 +1,89 @@
-import { NextRequest } from 'next/server'
+// app/api/notifications/stream/route.ts
+import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
 
-// 절대 경로로 변경
-const BACKEND = process.env.BACKEND_ORIGIN ?? 'http://localhost:8080'
-
-export const dynamic = 'force-dynamic'
+export const runtime = "nodejs"; // ❗Edge 금지
+export const dynamic = "force-dynamic"; // ❗정적 캐시 금지
+export const fetchCache = "force-no-store"; // ❗Fetch 캐시 금지
 
 export async function GET(req: NextRequest) {
-  // EventSource는 헤더를 못 보내므로 쿠키/쿼리에서 추출 후 서버→백엔드로 Authorization으로 변환
-  const token = extractTokenFromRequest(req)
+  // JWT 토큰을 URL 파라미터에서 추출 (EventSource는 헤더를 보낼 수 없음)
+  const token = req.nextUrl.searchParams.get("token");
+  
   if (!token) {
-    return new Response('Unauthorized', { status: 401 })
+    console.log("=== SSE 인증 실패: 토큰 파라미터 없음 ===");
+    return new Response("Unauthorized", { status: 401 });
   }
 
-  try {
-    const backendResp = await fetch(`${BACKEND}/api/notifications/stream`, {
-      headers: {
-        Accept: 'text/event-stream',
-        Authorization: `Bearer ${token}`,
-        // Last-Event-ID 전달 필요 시:
-        ...(req.headers.get('last-event-id') ? { 'Last-Event-ID': req.headers.get('last-event-id')! } : {}),
-      },
-    })
+  console.log("=== SSE 인증 성공: 토큰 파라미터 있음 ===");
+  console.log("토큰 길이:", token.length);
 
-    if (!backendResp.ok) {
-      console.error('백엔드 SSE 연결 실패:', backendResp.status, backendResp.statusText)
-      return new Response('Upstream error', { status: backendResp.status })
-    }
+  const controller = new AbortController();
+  req.signal?.addEventListener("abort", () => controller.abort());
 
-    if (!backendResp.body) {
-      console.error('백엔드 SSE 응답 본체가 없음')
-      return new Response('No response body', { status: 500 })
-    }
+  const backendUrl = `${process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080"}/api/notifications/stream`;
 
-    const headers = new Headers()
-    headers.set('Content-Type', 'text/event-stream')
-    headers.set('Cache-Control', 'no-cache, no-transform')
-    headers.set('Connection', 'keep-alive')
-    headers.set('X-Accel-Buffering', 'no')
+  // 백엔드로 SSE 업스트림 연결
+  const upstream = await fetch(backendUrl, {
+    method: "GET",
+    headers: {
+      Accept: "text/event-stream",
+      Authorization: `Bearer ${token}`,
+    },
+    signal: controller.signal,
+    cache: "no-store",
+  });
 
-    // 백엔드에서 오는 SSE 스트림을 그대로 전달
-    const stream = new ReadableStream({
-      async start(controller) {
-        const reader = backendResp.body!.getReader()
-        const decoder = new TextDecoder()
-        
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            
-            const chunk = decoder.decode(value, { stream: true })
-            controller.enqueue(new TextEncoder().encode(chunk))
-          }
-        } catch (error) {
-          console.error('SSE 스트림 읽기 오류:', error)
-        } finally {
-          controller.close()
-        }
+  if (!upstream.ok || !upstream.body) {
+    console.log("=== 백엔드 연결 실패:", upstream.status, upstream.statusText, "===");
+    return new Response(`Upstream error: ${upstream.status}`, { status: 502 });
+  }
+
+  console.log("=== 백엔드 연결 성공: SSE 스트림 시작 ===");
+
+  // Web Streams로 바이트 단위 파이핑
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const reader = upstream.body.getReader();
+
+  // 클라이언트가 끊으면 업스트림/다운스트림 모두 정리
+  const abortAll = (err?: unknown) => {
+    try {
+      reader.cancel().catch(() => {});
+    } catch {}
+    try {
+      writer.close().catch(() => {});
+    } catch {}
+    controller.abort();
+  };
+
+  req.signal?.addEventListener("abort", () => abortAll());
+
+  (async () => {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        await writer.write(value); // 그대로 전달
       }
-    })
+      await writer.close();
+    } catch (e) {
+      await writer.abort(e);
+    } finally {
+      controller.abort();
+    }
+  })();
 
-    return new Response(stream, { status: 200, headers })
-  } catch (error) {
-    console.error('SSE 연결 오류:', error)
-    return new Response('Internal Server Error', { status: 500 })
-  }
-}
-
-// 임시로 여기에 토큰 추출 함수 정의
-function extractTokenFromRequest(req: NextRequest): string | null {
-  // 1) 클라이언트가 보낸 Authorization
-  const h = req.headers.get('authorization')
-  if (h?.startsWith('Bearer ')) return h.slice(7)
-
-  // 2) 서버측 쿠키(권장: HTTP-Only로 세팅)
-  const fromCookie = req.cookies.get('token')?.value // 'access_token'에서 'token'으로 변경
-  if (fromCookie) return fromCookie
-
-  // 3) (임시) 쿼리파라미터 토큰 - SSE 등
-  const fromQuery = req.nextUrl.searchParams.get('token')
-  return fromQuery
+  return new Response(readable, {
+    status: 200,
+    headers: {
+      // ❗버퍼링/압축/변형 방지
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no", // nginx 등 프록시 버퍼링 방지
+      // CORS가 필요하면 아래 사용 (동일 오리진이면 불필요)
+      // "Access-Control-Allow-Origin": process.env.NEXT_PUBLIC_APP_ORIGIN ?? "http://localhost:3000",
+    },
+  });
 }

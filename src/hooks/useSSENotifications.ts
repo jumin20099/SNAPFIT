@@ -1,397 +1,111 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from "react";
 
-interface UseSSENotificationsOptions {
-  autoConnect?: boolean
-  reconnectAttempts?: number
-  reconnectInterval?: number
-}
+export function useSSENotifications() {
+  const [connected, setConnected] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const retryRef = useRef(0);
+  const stopRef = useRef(false);
+  const esRef = useRef<EventSource | null>(null);
+  const lastBeat = useRef<number>(Date.now());
 
-interface NotificationEvent {
-  id: number
-  type: string
-  title: string
-  message: string
-  timestamp: string
-  read: boolean
-}
+  const reconnect = () => {
+    if (esRef.current) {
+      esRef.current.close();
+    }
+    setConnected(false);
+    setError(null);
+    retryRef.current = 0;
+    // 즉시 재연결
+    setTimeout(() => {
+      if (!stopRef.current) {
+        connect();
+      }
+    }, 100);
+  };
 
-export function useSSENotifications(options: UseSSENotificationsOptions = {}) {
-  const {
-    autoConnect = true,
-    reconnectAttempts: maxReconnectAttempts = 5,
-    reconnectInterval = 3000
-  } = options
+  const connect = () => {
+    // JWT 토큰을 localStorage에서 가져오기 (키 이름: "token")
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.log("=== SSE 연결 실패: 토큰 없음 ===");
+      setError("토큰이 없습니다");
+      return;
+    }
 
-  const [isConnected, setIsConnected] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [error, setError] = useState<string | null>(null)
-  const [reconnectAttempts, setReconnectAttempts] = useState(0)
-  
-  const eventSourceRef = useRef<EventSource | null>(null)
-  const reconnectAttemptsRef = useRef(0)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    console.log("=== SSE 연결 시도: 토큰 있음 ===");
+    console.log("토큰 길이:", token.length);
 
-  // JWT 토큰에서 사용자 ID 추출
-  const extractUserIdFromToken = useCallback(async (token: string) => {
-    try {
-      const base64 = token.split('.')[1]
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-      }).join(''))
-      
-      const payload = JSON.parse(jsonPayload)
-      console.log('JWT 토큰 페이로드:', payload)
-      
-      // 백엔드에서 실제 userIdx 가져오기
+    // ❗EventSource는 Authorization 헤더를 직접 보낼 수 없음
+    // Next.js API 라우트에서 토큰을 쿠키로 설정하거나
+    // URL 파라미터로 전달해야 함
+    const es = new EventSource(`/api/notifications/stream?token=${encodeURIComponent(token)}`);
+    esRef.current = es;
+
+    es.addEventListener("open", () => {
+      console.log("=== SSE 연결 성공 ===");
+      setConnected(true);
+      setError(null);
+      retryRef.current = 0;
+    });
+
+    es.addEventListener("heartbeat", () => {
+      lastBeat.current = Date.now();
+    });
+
+    es.addEventListener("notification", (ev) => {
+      console.log("=== SSE 알림 수신 ===", ev.data);
+      // TODO: 상태 업데이트/토스트 등
+      // const payload = JSON.parse(ev.data);
+    });
+
+    es.addEventListener("notification-count", (ev) => {
       try {
-        const response = await fetch('/api/user/info', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
-        
-        if (response.ok) {
-          const userInfo = await response.json()
-          console.log('백엔드에서 가져온 사용자 정보:', userInfo)
-          return userInfo.userIdx || userInfo.id
-        }
-      } catch (error) {
-        console.warn('백엔드에서 사용자 정보 가져오기 실패, 임시 ID 사용:', error)
+        const count = parseInt(ev.data);
+        setUnreadCount(count);
+      } catch (e) {
+        console.error("알림 개수 파싱 오류:", e);
       }
-      
-      // 백엔드에서 가져오기 실패 시 임시 ID 생성
-      if (!payload.userIdx) {
-        const emailHash = btoa(payload.sub || 'default').replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)
-        const userIdx = `${emailHash}-${Date.now().toString(36)}`
-        console.log('생성된 임시 userIdx:', userIdx)
-        return userIdx
-      }
-      
-      return payload.userIdx
-    } catch (error) {
-      console.error('JWT 토큰에서 사용자 ID 추출 실패:', error)
-      return null
-    }
-  }, [])
+    });
 
-  // JWT 토큰 가져오기
-  const getToken = useCallback(async () => {
-    try {
-      // 로컬 스토리지에서 토큰 우선 확인
-      const storedToken = localStorage.getItem('token')
-      if (storedToken) {
-        console.log('로컬 스토리지에서 JWT 토큰 확인됨')
-        
-        // 토큰에서 userIdx 추출하여 저장
-        const userIdx = await extractUserIdFromToken(storedToken)
-        if (userIdx && !localStorage.getItem('userIdx')) {
-          localStorage.setItem('userIdx', userIdx)
-          console.log('토큰에서 사용자 ID 추출하여 저장:', userIdx)
-        }
-        
-        return storedToken
-      }
-      
-      // 쿠키에서 JWT 토큰 확인
-      const cookies = document.cookie.split(';')
-      const jwtCookie = cookies.find(cookie => cookie.trim().startsWith('token='))
-      
-      if (jwtCookie) {
-        const token = jwtCookie.split('=')[1]
-        console.log('쿠키에서 JWT 토큰 확인됨')
-        
-        // 토큰에서 userIdx 추출하여 저장
-        const userIdx = await extractUserIdFromToken(token)
-        if (userIdx && !localStorage.getItem('userIdx')) {
-          localStorage.setItem('userIdx', userIdx)
-          console.log('토큰에서 사용자 ID 추출하여 저장:', userIdx)
-        }
-        
-        // 로컬 스토리지에도 저장
-        localStorage.setItem('token', token)
-        return token
-      }
-      
-      console.log('JWT 토큰을 찾을 수 없습니다')
-      return null
-    } catch (error) {
-      console.error('JWT 토큰 가져오기 실패:', error)
-      return null
-    }
-  }, [extractUserIdFromToken])
+    es.onerror = (error) => {
+      console.log("=== SSE 연결 오류 ===", error);
+      setConnected(false);
+      setError("연결 오류가 발생했습니다");
+      es.close();
+      if (stopRef.current) return;
+      const delay = Math.min(30_000, 1000 * 2 ** (retryRef.current++));
+      setTimeout(connect, delay);
+    };
+  };
 
-  // URL 파라미터에서 JWT 토큰 저장
-  const saveTokenFromUrl = useCallback(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search)
-      const token = urlParams.get('token')
-      const userIdx = urlParams.get('userIdx')
-      
-      if (token) {
-        // 로컬 스토리지에 토큰 저장
-        localStorage.setItem('token', token)
-        console.log('URL에서 JWT 토큰 저장 완료')
-        
-        // userIdx도 저장
-        if (userIdx) {
-          localStorage.setItem('userIdx', userIdx)
-          console.log('사용자 ID 저장 완료:', userIdx)
-        }
-        
-        // URL에서 토큰 파라미터 제거 (보안상)
-        const newUrl = new URL(window.location.href)
-        newUrl.searchParams.delete('token')
-        newUrl.searchParams.delete('userIdx')
-        window.history.replaceState({}, '', newUrl.toString())
-        
-        return token
-      }
-      return null
-    } catch (error) {
-      console.error('URL에서 토큰 저장 실패:', error)
-      return null
-    }
-  }, [])
-
-  // 토스트 알림 표시 (선택사항)
-  const showToastNotification = useCallback((notification: NotificationEvent) => {
-    // 브라우저 알림 API 사용
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(notification.title || '새로운 알림', {
-        body: notification.message,
-        icon: '/favicon.ico'
-      })
-    }
-  }, [])
-
-  // SSE 연결
-  const connect = useCallback(async () => {
-    try {
-      const token = await getToken()
-      
-      // 토큰이 없으면 연결 시도하지 않음
-      if (!token) {
-        console.log('JWT 토큰이 없습니다. 로그인 후 자동 연결됩니다.')
-        setError(null) // 에러 상태 초기화
-        setIsConnected(false)
-        return
-      }
-
-      // 사용자 ID 가져오기 (백엔드에서 직접 가져오기)
-      const userIdx = await extractUserIdFromToken(token)
-      if (!userIdx) {
-        console.log('사용자 ID를 가져올 수 없습니다. 로그인 후 자동 연결됩니다.')
-        setError(null)
-        setIsConnected(false)
-        return
-      }
-
-      // 기존 연결이 있으면 정리
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close()
-        eventSourceRef.current = null
-      }
-
-      console.log('SSE 연결 시도:', `/api/notifications/stream?token=${token.substring(0, 20)}...`)
-      
-      const eventSource = new EventSource(`/api/notifications/stream?token=${token}`)
-      
-      // 연결 성공
-      eventSource.onopen = () => {
-        console.log('=== SSE 연결 성공 ===')
-        console.log('연결된 URL:', `/api/notifications/stream?token=${token.substring(0, 20)}...`)
-        console.log('사용자 ID:', userIdx)
-        console.log('토큰:', token.substring(0, 20) + '...')
-        setIsConnected(true)
-        setError(null) // 에러 상태 초기화
-        reconnectAttemptsRef.current = 0 // 재연결 시도 횟수 초기화
-        setReconnectAttempts(0)
-      }
-
-      // 메시지 수신
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data)
-          console.log('SSE 메시지 수신:', data)
-          
-          if (data.type === 'NOTIFICATION_COUNT') {
-            const count = parseInt(data.count)
-            console.log('읽지 않은 알림 개수 업데이트:', count)
-            setUnreadCount(count)
-          }
-        } catch (err) {
-          console.error('알림 개수 파싱 오류:', err)
-        }
-      }
-
-      // 특정 이벤트 수신
-      eventSource.addEventListener('notification', (event) => {
-        console.log('=== 알림 이벤트 수신 ===')
-        console.log('이벤트 데이터:', event.data)
-        try {
-          const data = JSON.parse(event.data)
-          console.log('파싱된 알림 데이터:', data)
-          
-          // 토스트 알림 표시
-          showToastNotification(data)
-          
-          // 읽지 않은 알림 개수 증가
-          setUnreadCount(prev => {
-            const newCount = prev + 1
-            console.log('알림 개수 업데이트:', newCount)
-            return newCount
-          })
-        } catch (err) {
-          console.error('알림 이벤트 파싱 오류:', err)
-        }
-      })
-
-      eventSource.addEventListener('notification_count', (event) => {
-        console.log('=== 알림 개수 이벤트 수신 ===')
-        console.log('이벤트 데이터:', event.data)
-        try {
-          const count = parseInt(event.data)
-          console.log('파싱된 알림 개수:', count)
-          setUnreadCount(count)
-        } catch (err) {
-          console.error('알림 개수 이벤트 파싱 오류:', err)
-        }
-      })
-
-      eventSource.addEventListener('connected', (event) => {
-        console.log('=== SSE 연결 확인 이벤트 수신 ===')
-        console.log('이벤트 데이터:', event.data)
-      })
-
-      // 오류 처리
-      eventSource.onerror = (error) => {
-        console.log('SSE 연결 오류 발생, 자동 재연결 시도 중...')
-        setIsConnected(false)
-        
-        // 자동 재연결 시도
-        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-          reconnectAttemptsRef.current++
-          setReconnectAttempts(reconnectAttemptsRef.current)
-          
-          console.log(`SSE 재연결 시도 ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`)
-          
-          // 기존 타임아웃 정리
-          if (reconnectTimeoutRef.current) {
-            clearTimeout(reconnectTimeoutRef.current)
-          }
-          
-          // 재연결 시도
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect()
-          }, reconnectInterval)
-        } else {
-          console.log('SSE 재연결 최대 시도 횟수 초과')
-          setError('연결이 불안정합니다. 새로고침 후 다시 시도해주세요.')
-        }
-      }
-
-      eventSourceRef.current = eventSource
-
-    } catch (err) {
-      console.error('SSE 연결 초기화 오류:', err)
-      setError(null) // 초기화 오류는 사용자에게 보여주지 않음
-      setIsConnected(false)
-    }
-  }, [getToken, maxReconnectAttempts, reconnectInterval, showToastNotification])
-
-  // SSE 연결 해제
-  const disconnect = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close()
-      eventSourceRef.current = null
-    }
-    setIsConnected(false)
-    setError(null)
-  }, [])
-
-  // 재연결 시도
-  const reconnect = useCallback(() => {
-    console.log('사용자 수동 재연결 시도')
-    
-    // 에러 상태 초기화
-    setError(null)
-    
-    // 재연결 시도 횟수 초기화
-    reconnectAttemptsRef.current = 0
-    setReconnectAttempts(0)
-    
-    // 기존 타임아웃 정리
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current)
-    }
-    
-    // 즉시 재연결 시도
-    connect()
-  }, [connect])
-
-  // 실시간 알림 카운트 업데이트
-  const updateUnreadCount = useCallback((count: number) => {
-    setUnreadCount(count)
-  }, [])
-
-  // 알림 읽음 처리 시 카운트 감소
-  const markAsReadRealtime = useCallback(() => {
-    setUnreadCount(prev => Math.max(0, prev - 1))
-  }, [])
-
-  // 컴포넌트 마운트 시 자동 연결
   useEffect(() => {
-    // URL에서 JWT 토큰 저장
-    const token = saveTokenFromUrl()
-    
-    if (autoConnect) {
-      if (token) {
-        // URL에서 토큰을 받았으면 즉시 연결
-        console.log('URL에서 토큰을 받아 즉시 연결 시도')
-        connect()
-      } else {
-        // URL에 토큰이 없으면 로컬 스토리지에서 확인
-        const storedToken = localStorage.getItem('token')
-        if (storedToken) {
-          console.log('로컬 스토리지에서 토큰을 찾아 연결 시도')
-          connect()
-        } else {
-          // 토큰이 전혀 없으면 연결하지 않음 (로그인 전 상태)
-          console.log('JWT 토큰이 없습니다. 로그인 후 자동 연결됩니다.')
-          setError(null)
-          setIsConnected(false)
-        }
+    connect();
+
+    // heartbeat 와치독(선택): 40s 동안 심박 없으면 재연결
+    const watchdog = setInterval(() => {
+      if (Date.now() - lastBeat.current > 40_000) {
+        console.log("=== SSE 하트비트 타임아웃: 재연결 시도 ===");
+        esRef.current?.close();
+        setConnected(false);
+        setError("하트비트 타임아웃");
+        retryRef.current = 0;
+        connect();
       }
-    }
+    }, 10_000);
 
     return () => {
-      disconnect()
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current)
-      }
-    }
-  }, [autoConnect, connect, disconnect, saveTokenFromUrl])
+      stopRef.current = true;
+      clearInterval(watchdog);
+      esRef.current?.close();
+    };
+  }, []);
 
-  // 재연결 시도 정리
-  useEffect(() => {
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  return {
-    isConnected,
-    unreadCount,
-    error,
-    reconnectAttempts,
-    connect,
-    disconnect,
+  return { 
+    connected, 
+    unreadCount, 
+    error, 
     reconnect,
-    updateUnreadCount,
-    markAsReadRealtime,
-    showToastNotification
-  }
+    isConnected: connected // 별칭으로 제공
+  };
 }

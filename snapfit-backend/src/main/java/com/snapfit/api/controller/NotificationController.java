@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,6 +26,7 @@ import com.snapfit.api.service.UserService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * 알림 컨트롤러
@@ -40,6 +44,19 @@ public class NotificationController {
     
     // SSE 연결을 위한 사용자별 Emitter 저장
     private final ConcurrentHashMap<UUID, SseEmitter> sseEmitters = new ConcurrentHashMap<>();
+
+    // Heartbeat(서버→클라 유지용) 전역 스케줄러가 emitters를 순회하며 15~25초마다 전송
+    @Scheduled(fixedDelay = 20000)
+    public void heartbeat() {
+        sseEmitters.forEach((userId, em) -> {
+            try {
+                em.send(SseEmitter.event().name("heartbeat").data(System.currentTimeMillis()));
+            } catch (IOException e) {
+                em.complete();
+                sseEmitters.remove(userId, em);
+            }
+        });
+    }
 
     /**
      * 사용자의 알림 목록을 가져옵니다
@@ -110,134 +127,88 @@ public class NotificationController {
      * SSE를 통한 실시간 알림 스트리밍
      */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamNotifications(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(value = "token", required = false) String queryToken,
-            @RequestParam(value = "userIdx", required = false) String userIdxParam,
-            HttpServletRequest request) {
-        
+    public SseEmitter stream(@AuthenticationPrincipal CustomUserDetails user, 
+                           HttpServletRequest request, 
+                           HttpServletResponse resp) throws IOException {
+        // JWT 토큰에서 사용자 정보 추출 (Authentication Principal이 null인 경우 대비)
         String userId = null;
-        
-        // 1. Authorization 헤더에서 JWT 토큰 우선 확인
-        if (userId == null) {
-            String header = request.getHeader("Authorization");
-            if (header != null && header.startsWith("Bearer ")) {
-                String token = header.substring(7);
+        if (user != null) {
+            userId = user.getUserId();
+            System.out.println("=== SSE 인증: @AuthenticationPrincipal 사용 ===");
+            System.out.println("사용자 ID: " + userId);
+        } else {
+            System.out.println("=== SSE 인증: Authorization 헤더에서 직접 추출 ===");
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
                 try {
-                    String subject = jwtUtil.getSubjectFromToken(token);
-                    User user = userService.findByEmail(subject);
-                    if (user != null) {
-                        userId = user.getUserIdx().toString();
-                        log.info("Authorization 헤더에서 사용자 ID 추출: {}", userId);
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    System.out.println("토큰에서 추출한 이메일: " + email);
+                    
+                    User foundUser = userService.findByEmail(email);
+                    if (foundUser == null) {
+                        throw new RuntimeException("사용자를 찾을 수 없습니다: " + email);
                     }
+                    userId = foundUser.getUserIdx().toString();
+                    System.out.println("사용자 ID: " + userId);
                 } catch (Exception e) {
-                    log.error("Authorization 헤더 JWT 토큰 검증 실패: {}", e.getMessage());
+                    System.err.println("토큰 검증 실패: " + e.getMessage());
+                    throw new RuntimeException("인증 실패", e);
                 }
+            } else {
+                throw new RuntimeException("Authorization 헤더가 없습니다");
             }
         }
-        
-        // 2. userIdx 파라미터 확인
-        if (userId == null && userIdxParam != null && !userIdxParam.trim().isEmpty()) {
-            userId = userIdxParam;
-            log.info("userIdx 파라미터에서 사용자 ID 추출: {}", userId);
-        }
-        
-        // 3. @AuthenticationPrincipal에서 사용자 정보 확인
-        if (userId == null && userDetails != null) {
-            userId = userDetails.getUsername();
-            log.info("@AuthenticationPrincipal에서 사용자 ID 추출: {}", userId);
-        }
-        
-        // 4. queryToken이 있으면 JWT 검증 (기존 로직 유지 for SSE)
-        if (userId == null && queryToken != null) {
-            try {
-                String subject = jwtUtil.getSubjectFromToken(queryToken);
-                User user = userService.findByEmail(subject);
-                if (user != null) {
-                    userId = user.getUserIdx().toString();
-                    log.info("queryToken에서 사용자 ID 추출: {}", userId);
-                }
-            } catch (Exception e) {
-                log.error("queryToken 검증 실패: {}", e.getMessage());
-            }
-        }
-        
+
         if (userId == null) {
-            log.error("사용자 ID를 추출할 수 없음");
-            throw new RuntimeException("사용자 ID를 추출할 수 없음");
+            throw new RuntimeException("사용자 ID를 확인할 수 없습니다");
         }
-        
+
+        System.out.println("=== SSE 연결 시작 ===");
+        System.out.println("사용자 ID: " + userId);
+
+        // 중간계층 버퍼/압축 방지
+        resp.setHeader("Cache-Control", "no-cache, no-transform");
+        resp.setHeader("X-Accel-Buffering", "no");
+
+        // 30분 유지 (환경에 맞게)
+        final SseEmitter emitter = new SseEmitter(Duration.ofMinutes(30).toMillis());
         final String finalUserId = userId;
-        
-        log.info("=== SSE 연결 시작 ===");
-        log.info("연결 요청 사용자 ID: {}", finalUserId);
-        log.info("현재 연결된 SSE 에미터 수: {}", sseEmitters.size());
-        log.info("연결된 사용자 ID들: {}", sseEmitters.keySet());
-        
-        // 기존 연결이 있으면 제거
-        UUID userUuid = UUID.fromString(finalUserId);
-        SseEmitter existingEmitter = sseEmitters.remove(userUuid);
-        if (existingEmitter != null) {
-            log.info("기존 SSE 연결 제거: {}", finalUserId);
-            existingEmitter.complete();
+
+        // 동일 사용자 중복 연결 시 이전 연결 종료 (메모리/리소스 보호)
+        UUID userUuid = UUID.fromString(userId);
+        SseEmitter prev = sseEmitters.put(userUuid, emitter);
+        if (prev != null) {
+            System.out.println("기존 SSE 연결 종료: " + userId);
+            prev.complete();
         }
-        
-        SseEmitter emitter = new SseEmitter(Long.MAX_VALUE);
-        sseEmitters.put(userUuid, emitter);
-        
-        log.info("새로운 SSE 연결 생성 완료: {}", finalUserId);
-        log.info("업데이트된 연결된 SSE 에미터 수: {}", sseEmitters.size());
-        log.info("업데이트된 연결된 사용자 ID들: {}", sseEmitters.keySet());
-        
-        // 연결 유지를 위한 하트비트 설정
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleAtFixedRate(() -> {
-            try {
-                if (sseEmitters.containsKey(userUuid)) {
-                    emitter.send(SseEmitter.event()
-                        .name("heartbeat")
-                        .data("ping"));
-                    log.debug("하트비트 전송: {}", finalUserId);
-                } else {
-                    scheduler.shutdown();
-                }
-            } catch (Exception e) {
-                log.debug("하트비트 전송 실패: {}", e.getMessage());
-                scheduler.shutdown();
-            }
-        }, 30, 30, TimeUnit.SECONDS);
-        
+
         emitter.onCompletion(() -> {
-            log.info("SSE 연결 완료: {}", finalUserId);
-            sseEmitters.remove(userUuid);
-            scheduler.shutdown();
-            log.info("SSE 에미터 제거됨 (완료): {}, 현재 에미터 수: {}", finalUserId, sseEmitters.size());
+            System.out.println("SSE 연결 완료: " + finalUserId);
+            sseEmitters.remove(userUuid, emitter);
         });
-        
         emitter.onTimeout(() -> {
-            log.info("SSE 연결 타임아웃: {}", finalUserId);
-            sseEmitters.remove(userUuid);
-            scheduler.shutdown();
-            log.info("SSE 에미터 제거됨 (타임아웃): {}, 현재 에미터 수: {}", finalUserId, sseEmitters.size());
+            System.out.println("SSE 연결 타임아웃: " + finalUserId);
+            emitter.complete();
+            sseEmitters.remove(userUuid, emitter);
         });
-        
         emitter.onError((ex) -> {
-            log.error("SSE 연결 오류: 사용자={}, 오류={}", finalUserId, ex.getMessage());
-            sseEmitters.remove(userUuid);
-            scheduler.shutdown();
-            log.info("SSE 에미터 제거됨 (오류): {}, 현재 에미터 수: {}", finalUserId, sseEmitters.size());
+            System.err.println("SSE 연결 오류: " + finalUserId + ", 오류=" + ex.getMessage());
+            emitter.complete();
+            sseEmitters.remove(userUuid, emitter);
         });
-        
-        // 연결 확인 메시지 전송
+
+        // 초기 이벤트 + 재연결 간격 제안(10s). Spring은 reconnectTime 지원.
         try {
-            emitter.send(SseEmitter.event()
-                .name("connected")
-                .data("SSE 연결 성공: " + finalUserId));
-            log.info("연결 확인 메시지 전송 완료: {}", finalUserId);
-        } catch (Exception e) {
-            log.error("연결 확인 메시지 전송 실패: {}", e.getMessage());
+            emitter.send(SseEmitter.event().name("open").data("ok").reconnectTime(10_000));
+            System.out.println("SSE 초기 이벤트 전송 성공: " + userId);
+        } catch (IOException e) {
+            System.err.println("SSE 초기 이벤트 전송 실패: " + userId + ", 오류=" + e.getMessage());
+            emitter.completeWithError(e);
         }
-        
+
+        System.out.println("=== SSE 연결 설정 완료 ===");
+        System.out.println("현재 연결된 SSE 에미터 수: " + sseEmitters.size());
         return emitter;
     }
 

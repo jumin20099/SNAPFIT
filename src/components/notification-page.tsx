@@ -15,7 +15,7 @@ interface NotificationPageProps {
 
 export default function NotificationPage({ isOpen, onClose }: NotificationPageProps) {
   const router = useRouter()
-  const { notifications, loading, error, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
+  const { notifications, loading, error, markAsRead, markAllAsRead } = useNotifications()
   const [selectedNotification, setSelectedNotification] = useState<any>(null)
 
   const handleNotificationClick = (notification: any) => {
@@ -204,7 +204,7 @@ export default function NotificationPage({ isOpen, onClose }: NotificationPagePr
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
-                          deleteNotification(notification.id)
+                          // deleteNotification(notification.id) // This line was removed
                         }}
                         className="text-gray-400 hover:text-red-500"
                       >
