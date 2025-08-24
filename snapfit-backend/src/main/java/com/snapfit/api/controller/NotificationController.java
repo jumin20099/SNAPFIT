@@ -296,17 +296,39 @@ public class NotificationController {
     @PutMapping("/{notificationId}")
     public ResponseEntity<?> markAsRead(@PathVariable Long notificationId, 
                                       @AuthenticationPrincipal CustomUserDetails user) {
+        System.out.println("=== 알림 읽음 처리 API 호출됨 ===");
+        System.out.println("요청된 알림 ID: " + notificationId);
+        System.out.println("요청 사용자: " + (user != null ? user.getUserId() : "null"));
+        
+        if (user == null) {
+            System.err.println("=== 인증되지 않은 요청 ===");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "인증이 필요합니다"));
+        }
+        
         try {
             System.out.println("=== 알림 읽음 처리 시작 ===");
             System.out.println("알림 ID: " + notificationId);
             System.out.println("사용자: " + user.getUserId());
             
+            // 알림 존재 여부 먼저 확인
+            System.out.println("=== 알림 존재 여부 확인 중 ===");
+            
             notificationService.markAsRead(notificationId, UUID.fromString(user.getUserId()));
             
             System.out.println("=== 알림 읽음 처리 완료 ===");
             return ResponseEntity.ok().body(Map.of("message", "알림이 읽음으로 표시되었습니다"));
+        } catch (IllegalArgumentException e) {
+            System.err.println("=== 알림 찾기 실패 ===");
+            System.err.println("알림 ID: " + notificationId);
+            System.err.println("사용자 ID: " + user.getUserId());
+            System.err.println("오류: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "알림을 찾을 수 없습니다", "notificationId", notificationId));
         } catch (Exception e) {
             System.err.println("=== 알림 읽음 처리 실패 ===");
+            System.err.println("알림 ID: " + notificationId);
+            System.err.println("사용자 ID: " + user.getUserId());
             System.err.println("오류: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
