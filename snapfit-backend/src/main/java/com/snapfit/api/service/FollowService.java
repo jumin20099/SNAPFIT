@@ -3,6 +3,7 @@ package com.snapfit.api.service;
 import com.snapfit.api.entity.Follow;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.FollowRepository;
+import com.snapfit.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -28,6 +29,7 @@ import java.util.UUID;
 public class FollowService {
 
     private final FollowRepository followRepository;
+    private final UserRepository userRepository;
 
     /**
      * 팔로우 토글 (팔로우/언팔로우)
@@ -83,12 +85,20 @@ public class FollowService {
                 throw new RuntimeException("이미 팔로우한 사용자입니다");
             }
             
+            // 사용자 엔티티 조회
+            User follower = userRepository.findById(followerId)
+                .orElseThrow(() -> new RuntimeException("팔로워 사용자를 찾을 수 없습니다"));
+            User followee = userRepository.findById(followeeId)
+                .orElseThrow(() -> new RuntimeException("팔로우할 사용자를 찾을 수 없습니다"));
+            
             // 팔로우 관계 생성
             Follow follow = Follow.builder()
                 .id(Follow.FollowId.builder()
                     .followerId(followerId)
                     .followeeId(followeeId)
                     .build())
+                .follower(follower)
+                .followee(followee)
                 .createdAt(java.time.LocalDateTime.now())
                 .build();
             

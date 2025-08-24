@@ -64,19 +64,33 @@ public class FollowController {
                     .body(Map.of("error", "자기 자신을 팔로우할 수 없습니다"));
             }
             
-            // 실제 DB에 팔로우 저장
-            followService.follow(currentUUID, userId);
+            // 팔로우 상태 확인 및 토글 처리
+            boolean isCurrentlyFollowing = followService.isFollowing(currentUUID, userId);
             
-            // 팔로워 수 조회
-            long followerCount = followRepository.countFollowersByFolloweeId(userId);
-            
-            log.info("팔로우 성공 (DB 저장): {} -> {}, 팔로워 수: {}", currentUUID, userId, followerCount);
-            
-            return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of(
-                    "following", true,
-                    "followerCount", followerCount
-                ));
+            if (isCurrentlyFollowing) {
+                // 이미 팔로우 중인 경우 - 팔로워 수만 반환
+                long followerCount = followRepository.countFollowersByFolloweeId(userId);
+                log.info("이미 팔로우 중: {} -> {}, 팔로워 수: {}", currentUUID, userId, followerCount);
+                
+                return ResponseEntity.ok()
+                    .body(Map.of(
+                        "following", true,
+                        "followerCount", followerCount,
+                        "message", "이미 팔로우 중입니다"
+                    ));
+            } else {
+                // 팔로우하지 않은 경우 - 새로 팔로우
+                followService.follow(currentUUID, userId);
+                long followerCount = followRepository.countFollowersByFolloweeId(userId);
+                
+                log.info("팔로우 성공 (DB 저장): {} -> {}, 팔로워 수: {}", currentUUID, userId, followerCount);
+                
+                return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(Map.of(
+                        "following", true,
+                        "followerCount", followerCount
+                    ));
+            }
                 
         } catch (Exception e) {
             log.error("팔로우 실패: {} -> {}, 오류: {}", currentUserId, userId, e.getMessage());
