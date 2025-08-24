@@ -74,6 +74,7 @@ export default function LoginPage() {
             <Button
               onClick={handleKakaoLogin}
               disabled={isLoading}
+              data-testid="kakao-login-button"
               className="w-full h-14 bg-yellow-400 hover:bg-yellow-500 text-black font-medium rounded-xl shadow-md hover:shadow-lg transition-all duration-200 border-0"
             >
               {isLoading ? (

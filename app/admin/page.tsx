@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Plus, Edit, Trash2, Store, Package, BarChart3, FileText, Users, CheckCircle, XCircle, Clock } from "lucide-react"
+import { ArrowLeft, Plus, Edit, Trash2, Store, Package, BarChart3, FileText, Users, CheckCircle, XCircle, Clock, Shield, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -69,6 +69,22 @@ export default function AdminPage() {
   const [selectedPartnerName, setSelectedPartnerName] = useState<string>('전체')
   const [partnerProducts, setPartnerProducts] = useState<Product[]>([])
   const [updateRequests, setUpdateRequests] = useState<Product[]>([])
+  const [reports, setReports] = useState<Array<{
+    reportId: number
+    reporterId: string
+    targetType: string
+    targetId: number
+    reason: string
+    status: string
+    createdAt: string
+    adminNotes?: string
+  }>>([])
+  const [reportStats, setReportStats] = useState({
+    pending: 0,
+    processing: 0,
+    resolved: 0,
+    rejected: 0
+  })
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -155,6 +171,22 @@ export default function AdminPage() {
       if (updateRequestsRes.ok) {
         const data = await updateRequestsRes.json()
         setUpdateRequests(data)
+      }
+
+      // 신고 목록 로드
+      const reportsRes = await fetch("/api/reports", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (reportsRes.ok) {
+        const reportsData = await reportsRes.json()
+        setReports(reportsData)
+        
+        // 신고 상태별 통계 계산
+        const stats = reportsData.reduce((acc: any, report: any) => {
+          acc[report.status.toLowerCase()] = (acc[report.status.toLowerCase()] || 0) + 1
+          return acc
+        }, { pending: 0, processing: 0, resolved: 0, rejected: 0 })
+        setReportStats(stats)
       }
     } catch (error) {
       console.error("데이터 로드 실패:", error)
@@ -314,6 +346,45 @@ export default function AdminPage() {
     }
   }
 
+  const handleReportAction = async (reportId: number, action: 'PROCESSING' | 'RESOLVED' | 'REJECTED', adminNotes?: string) => {
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`/api/reports/${reportId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          status: action,
+          adminNotes: adminNotes || ''
+        }),
+      })
+      
+      if (res.ok) {
+        alert(`신고가 ${action === 'PROCESSING' ? '처리 중으로' : action === 'RESOLVED' ? '승인' : '거절'}되었습니다.`)
+        loadData()
+      } else {
+        alert("처리 실패")
+      }
+    } catch (error) {
+      console.error("신고 처리 중 오류:", error)
+      alert("처리 중 오류가 발생했습니다.")
+    }
+  }
+
+  const handleApproveReport = (reportId: number) => {
+    const adminNotes = prompt("처리 사유를 입력해주세요 (선택사항):")
+    handleReportAction(reportId, 'RESOLVED', adminNotes || undefined)
+  }
+
+  const handleRejectReport = (reportId: number) => {
+    const adminNotes = prompt("거절 사유를 입력해주세요:")
+    if (adminNotes) {
+      handleReportAction(reportId, 'REJECTED', adminNotes)
+    }
+  }
+
   if (!userInfo || userInfo.role !== 'ADMIN') {
     return null
   }
@@ -339,7 +410,7 @@ export default function AdminPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           {/* Tab Navigation */}
           <div className="border-b bg-white flex-shrink-0">
-            <TabsList className="w-full grid grid-cols-5 bg-transparent h-12 p-0">
+            <TabsList className="w-full grid grid-cols-6 bg-transparent h-12 p-0">
               <TabsTrigger
                 value="dashboard"
                 className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
@@ -375,6 +446,18 @@ export default function AdminPage() {
                 <Edit className="w-4 h-4" />
                 <span className="hidden sm:inline">수정 요청</span>
               </TabsTrigger>
+              <TabsTrigger
+                value="reports"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span className="hidden sm:inline">신고 관리</span>
+                {reportStats.pending > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 text-xs">
+                    {reportStats.pending}
+                  </Badge>
+                )}
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -385,7 +468,7 @@ export default function AdminPage() {
                 <h2 className="text-2xl font-bold">대시보드</h2>
 
                 {/* 통계 카드들 */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-gray-600">총 상품</CardTitle>
@@ -421,6 +504,15 @@ export default function AdminPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{updateRequests.length}</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-gray-600">신고 처리 대기</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-red-600">{reportStats.pending}</div>
                     </CardContent>
                   </Card>
                 </div>
@@ -697,6 +789,136 @@ export default function AdminPage() {
                                   거절
                                 </Button>
                               </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="reports" className="h-full m-0 p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">신고 관리</h2>
+                  <div className="flex gap-2">
+                    <Badge variant="outline">전체 {reports.length}</Badge>
+                    <Badge variant="destructive">대기 {reportStats.pending}</Badge>
+                    <Badge variant="secondary">처리중 {reportStats.processing}</Badge>
+                    <Badge variant="default">완료 {reportStats.resolved}</Badge>
+                  </div>
+                </div>
+                
+                {loading ? (
+                  <div className="text-center py-8">로딩 중...</div>
+                ) : (
+                  <div className="grid gap-4">
+                    {reports.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600">신고가 없습니다.</p>
+                      </div>
+                    ) : (
+                      reports.map((report) => (
+                        <Card key={report.reportId}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge 
+                                    variant={
+                                      report.status === 'PENDING' ? 'destructive' :
+                                      report.status === 'PROCESSING' ? 'secondary' :
+                                      report.status === 'RESOLVED' ? 'default' : 'outline'
+                                    }
+                                  >
+                                    {report.status === 'PENDING' ? '대기' :
+                                     report.status === 'PROCESSING' ? '처리중' :
+                                     report.status === 'RESOLVED' ? '완료' : '거절'}
+                                  </Badge>
+                                  <Badge variant="outline">
+                                    {report.targetType === 'POST' ? '게시글' :
+                                     report.targetType === 'COMMENT' ? '댓글' : '사용자'} 신고
+                                  </Badge>
+                                  <span className="text-sm text-gray-500">
+                                    #{report.reportId}
+                                  </span>
+                                </div>
+                                
+                                <h3 className="font-medium mb-1">신고 사유: {report.reason}</h3>
+                                <p className="text-sm text-gray-600 mb-2">
+                                  대상: {report.targetType} ID {report.targetId}
+                                </p>
+                                <p className="text-sm text-gray-600 mb-2">
+                                  신고자: {report.reporterId}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  신고일: {new Date(report.createdAt).toLocaleDateString('ko-KR')}
+                                </p>
+                                
+                                {report.adminNotes && (
+                                  <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                                    <strong>관리자 메모:</strong> {report.adminNotes}
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {report.status === 'PENDING' && (
+                                <div className="flex flex-col gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleReportAction(report.reportId, 'PROCESSING')}
+                                    className="text-blue-600 hover:text-blue-700"
+                                  >
+                                    <Clock className="w-4 h-4 mr-1" />
+                                    처리 시작
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleApproveReport(report.reportId)}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    승인
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleRejectReport(report.reportId)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    거절
+                                  </Button>
+                                </div>
+                              )}
+                              
+                              {report.status === 'PROCESSING' && (
+                                <div className="flex flex-col gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleApproveReport(report.reportId)}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    승인
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleRejectReport(report.reportId)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    거절
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>

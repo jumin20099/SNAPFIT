@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, User, Settings, Heart, Bookmark, ShoppingBag, LogOut, Edit, UserX } from "lucide-react"
+import { ArrowLeft, User, Settings, Heart, Bookmark, ShoppingBag, LogOut, Edit, UserX, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
@@ -204,37 +204,65 @@ export default function MyPage() {
             </div>
             
             {blockedUsers.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                차단한 사용자가 없습니다.
+              <div className="text-center py-12">
+                <UserX className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">차단한 사용자가 없습니다</h3>
+                <p className="text-gray-500">차단한 사용자가 있으면 여기에 표시됩니다.</p>
               </div>
             ) : (
               <div className="space-y-3">
+                <div className="text-sm text-gray-600 mb-4">
+                  총 {blockedUsers.length}명의 사용자를 차단했습니다.
+                </div>
                 {blockedUsers.map((user) => (
                   <div 
                     key={user.blockedUserId} 
-                    className="flex items-center justify-between p-3 border rounded-lg"
+                    className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
                     data-testid="blocked-user-item"
                   >
-                    <div>
-                      <div className="font-medium">{user.blockedUserNickname}</div>
-                      {user.reason && (
-                        <div className="text-sm text-gray-500">사유: {user.reason}</div>
-                      )}
-                      <div className="text-xs text-gray-400">
-                        {new Date(user.createdAt).toLocaleDateString()}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-gray-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{user.blockedUserNickname}</div>
+                        {user.reason && (
+                          <div className="text-sm text-gray-600 mt-1">
+                            <span className="inline-flex items-center gap-1">
+                              <Shield className="w-3 h-3" />
+                              차단 사유: {user.reason}
+                            </span>
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-500 mt-1">
+                          차단일: {new Date(user.createdAt).toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </div>
                       </div>
                     </div>
-                    <div data-testid="unblock-confirm-modal">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleUnblockUser(user.blockedUserId, user.blockedUserNickname)}
-                        disabled={isLoading}
-                        data-testid="unblock-user-button"
-                      >
-                        {isLoading ? "처리중..." : "차단해제"}
-                      </Button>
-                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleUnblockUser(user.blockedUserId, user.blockedUserNickname)}
+                      disabled={isLoading}
+                      data-testid="unblock-user-button"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                          처리중...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <UserX className="w-4 h-4" />
+                          차단해제
+                        </div>
+                      )}
+                    </Button>
                   </div>
                 ))}
               </div>
