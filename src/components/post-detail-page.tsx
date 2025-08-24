@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { useFollow } from "@/hooks/useFollow"
+import { useComments } from "@/hooks/useComments"
 
 interface Comment {
   id: number
@@ -47,11 +49,28 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
   const [hasMore, setHasMore] = useState(true)
   const [currentPage, setCurrentPage] = useState(0)
   const [commentText, setCommentText] = useState("")
-  const [comments, setComments] = useState<Comment[]>([])
   const [isLiked, setIsLiked] = useState(false)
   const [isScraped, setIsScraped] = useState(false)
-  const [isFollowing, setIsFollowing] = useState(false)
   const [currentPost, setCurrentPost] = useState<Post | null>(null)
+  
+  // 첫 번째 게시글 작성자의 팔로우 기능
+  const firstPost = posts[0]
+  const { isFollowing, followerCount, isLoading: followLoading, toggleFollow } = useFollow(
+    firstPost?.authorName || '' // 실제로는 authorId를 사용해야 함
+  )
+  
+  // 댓글 기능
+  const { 
+    comments, 
+    isLoading: commentsLoading, 
+    error: commentsError,
+    hasMore: hasMoreComments,
+    createComment, 
+    updateComment,
+    deleteComment,
+    toggleCommentLike,
+    loadMoreComments
+  } = useComments(postId)
   const observer = useRef<IntersectionObserver | null>(null)
 
   // 게시글 목록 가져오기
@@ -163,23 +182,17 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
     }
   }
 
-  const toggleFollow = () => {
-    setIsFollowing(!isFollowing)
-  }
 
-  const handleCommentSubmit = () => {
-    if (commentText.trim()) {
-      const newComment: Comment = {
-        id: Date.now(),
-        author: "나",
-        authorImage: "/placeholder.svg",
-        content: commentText,
-        date: new Date().toISOString(),
-        likes: 0,
-        liked: false
+
+  const handleCommentSubmit = async () => {
+    if (commentText.trim() && !commentsLoading) {
+      try {
+        await createComment(commentText.trim());
+        setCommentText("");
+      } catch (error) {
+        console.error('댓글 작성 실패:', error);
+        // 에러 처리는 useComments에서 관리
       }
-      setComments([...comments, newComment])
-      setCommentText("")
     }
   }
 
@@ -226,15 +239,19 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
                   <AvatarFallback>{post.authorName?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <div className="font-medium">{post.authorName}</div>
-                  <div className="text-sm text-gray-500">171cm/63kg · 봄 원돈</div>
+                  <div className="font-medium" data-testid="post-author">{post.authorName}</div>
+                  <div className="text-sm text-gray-500">
+                    <span data-testid="follower-count">팔로워 {followerCount}명</span> · 171cm/63kg · 봄 원돈
+                  </div>
                 </div>
                 <Button 
                   variant={isFollowing ? "outline" : "default"} 
                   size="sm"
                   onClick={toggleFollow}
+                  disabled={followLoading}
+                  data-testid="follow-button"
                 >
-                  {isFollowing ? "팔로잉" : "+ 팔로우"}
+                  {followLoading ? "처리중..." : (isFollowing ? "팔로잉" : "+ 팔로우")}
                 </Button>
               </div>
             </div>
@@ -293,10 +310,62 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
             )}
 
             {/* Comments */}
-            <div className="p-4 border-b">
+            <div className="p-4 border-b" data-testid="comments-list">
               <div className="text-sm text-gray-500 mb-4">
-                {post.commentCount === 0 ? "첫 댓글을 남겨주세요." : `댓글 ${post.commentCount}개`}
+                {comments.length === 0 ? "첫 댓글을 남겨주세요." : `댓글 ${comments.length}개`}
               </div>
+              
+              {/* Comments List */}
+              {comments.length > 0 && (
+                <div className="space-y-3">
+                  {comments.map((comment) => (
+                    <div key={comment.commentId} className="flex gap-3" data-testid="comment-item">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={comment.author.profileImage} />
+                        <AvatarFallback>{comment.author.nickname?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="bg-gray-100 rounded-lg p-3">
+                          <div className="font-medium text-sm">{comment.author.nickname}</div>
+                          <div className="text-sm">{comment.content}</div>
+                        </div>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                          <span>{formatDate(comment.createdAt)}</span>
+                          <button 
+                            onClick={() => toggleCommentLike(comment.commentId)}
+                            className="flex items-center gap-1 hover:text-red-500"
+                            data-testid="comment-like-btn"
+                          >
+                            <Heart className={`w-3 h-3 ${comment.liked ? 'fill-red-500 text-red-500' : ''}`} />
+                            <span data-testid="comment-like-count">{comment.likeCount}</span>
+                          </button>
+                          <button className="hover:text-gray-700" data-testid="comment-edit-btn">답글</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Load More Comments */}
+              {hasMoreComments && (
+                <Button 
+                  variant="ghost" 
+                  onClick={loadMoreComments}
+                  disabled={commentsLoading}
+                  className="w-full mt-4"
+                  data-testid="load-more-comments"
+                >
+                  {commentsLoading ? "로딩 중..." : "댓글 더 보기"}
+                </Button>
+              )}
+              
+              {/* Comments Error */}
+              {commentsError && (
+                <div className="text-red-500 text-sm mt-2">
+                  {commentsError}
+                </div>
+              )}
             </div>
 
             {/* Post Time */}
@@ -328,11 +397,17 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
             placeholder="댓글을 입력하세요..."
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleCommentSubmit()}
+            onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleCommentSubmit()}
             className="flex-1"
+            data-testid="comment-input"
+            disabled={commentsLoading}
           />
-          <Button onClick={handleCommentSubmit} disabled={!commentText.trim()}>
-            <Send className="w-4 h-4" />
+          <Button 
+            onClick={handleCommentSubmit} 
+            disabled={!commentText.trim() || commentsLoading}
+            data-testid="comment-submit"
+          >
+            {commentsLoading ? "전송중..." : <Send className="w-4 h-4" />}
           </Button>
         </div>
       </div>

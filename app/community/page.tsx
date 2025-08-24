@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Heart, Search, Bell, User, Filter, ChevronDown, Home, Users, Bookmark, TrendingUp, Calendar, Clock } from "lucide-react"
+import { Heart, Search, Bell, User, Filter, ChevronDown, Home, Users, Bookmark, TrendingUp, Calendar, Clock, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation"
 import { useTrendingRanking, useDailyRanking, useWeeklyRanking, RankingPost } from "@/hooks/useRanking"
 import { useFollowingPosts } from "@/hooks/useFollowingPosts"
 import { useSSENotifications } from "@/hooks/useSSENotifications"
+import { useFollow } from "@/hooks/useFollow"
+import { useComments } from "@/hooks/useComments"
 import PostCreatePage from "@/components/post-create-page"
 import NotificationPage from "@/components/notification-page"
 import * as jose from 'jose'
@@ -515,7 +517,13 @@ export default function CommunityPage() {
           >
             임시사용자 토큰
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => setIsPostCreateOpen(true)} className="text-blue-600">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setIsPostCreateOpen(true)} 
+            className="text-blue-600"
+            data-testid="post-create-button"
+          >
             글쓰기
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setIsSearchMode(!isSearchMode)}>
@@ -654,57 +662,16 @@ export default function CommunityPage() {
                     <p>첫 번째 게시글을 작성해보세요!</p>
                   </div>
                 ) : (
-                  /* 3열 고정 그리드 레이아웃 */
-                  <div className="grid grid-cols-3 gap-2">
+                  /* 피드 스타일 레이아웃 */
+                  <div className="space-y-4">
                     {getFilteredAndSortedPosts().map((post) => (
-                      <Card key={post.postId} className="overflow-hidden cursor-pointer" onClick={() => handlePostClick(post.postId)}>
-                        <div className="relative">
-                          <img
-                            src={post.mediaUrls.length > 0 ? post.mediaUrls[0] : "/file.svg"}
-                            alt={post.content.substring(0, 20)}
-                            className="w-full h-48 object-cover"
-                          />
-
-                          {/* Like Button */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="absolute top-2 right-2 p-1 bg-white/20 backdrop-blur-sm rounded-full"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleLike(post.postId)
-                            }}
-                            data-testid="like-button"
-                            data-liked={post.liked || false}
-                          >
-                            <Heart className={`w-3 h-3 ${post.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
-                          </Button>
-                          
-                          {/* Scrap Button */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="absolute top-2 right-12 p-1 bg-white/20 backdrop-blur-sm rounded-full"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleScrap(post.postId)
-                            }}
-                            data-testid="scrap-button"
-                            data-scraped={post.scraped || false}
-                          >
-                            <Bookmark className={`w-3 h-3 ${post.scraped ? "fill-blue-500 text-blue-500" : "text-white"}`} />
-                          </Button>
-                          
-                          {/* Post Stats */}
-                          <div className="absolute bottom-2 left-2 right-2 bg-black/50 backdrop-blur-sm rounded text-white text-xs p-1">
-                            <div className="flex items-center justify-between">
-                              <span data-testid="like-count">❤️ {post.likeCount}</span>
-                              <span>💬 {post.commentCount}</span>
-                              <span data-testid="scrap-count">🔖 {post.scrapCount}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
+                      <PostCard 
+                        key={post.postId} 
+                        post={post}
+                        onLike={() => toggleLike(post.postId)}
+                        onScrap={() => toggleScrap(post.postId)}
+                        onPostClick={() => handlePostClick(post.postId)}
+                      />
                     ))}
                   </div>
                 )}
@@ -1089,5 +1056,209 @@ function RankingTabContent({ ranking, title, description }: RankingTabContentPro
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * 개별 게시글 카드 컴포넌트 (팔로우/댓글 기능 포함)
+ */
+interface PostCardProps {
+  post: Post
+  onLike: () => void
+  onScrap: () => void
+  onPostClick: () => void
+}
+
+function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
+  const [showComments, setShowComments] = useState(false)
+  const [commentText, setCommentText] = useState("")
+  
+  // 팔로우 기능
+  const { isFollowing, followerCount, isLoading: followLoading, toggleFollow } = useFollow(post.authorName)
+  
+  // 댓글 기능
+  const { 
+    comments, 
+    isLoading: commentsLoading, 
+    createComment,
+    toggleCommentLike
+  } = useComments(post.postId)
+
+  const handleCommentSubmit = async () => {
+    if (commentText.trim() && !commentsLoading) {
+      try {
+        await createComment(commentText.trim())
+        setCommentText("")
+      } catch (error) {
+        console.error('댓글 작성 실패:', error)
+      }
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 1) return "오늘"
+    if (diffDays === 2) return "어제"
+    if (diffDays <= 7) return `${diffDays - 1}일 전`
+    return `${date.getMonth() + 1}월 ${date.getDate()}일`
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      {/* 작성자 정보 및 팔로우 버튼 */}
+      <div className="p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <img
+            src={post.authorProfileImage || "/placeholder.svg"}
+            alt={post.authorName}
+            className="w-10 h-10 rounded-full"
+          />
+          <div>
+            <div className="font-medium">{post.authorName}</div>
+            <div className="text-sm text-gray-500">팔로워 {followerCount}명</div>
+          </div>
+        </div>
+        <Button 
+          variant={isFollowing ? "outline" : "default"} 
+          size="sm"
+          onClick={toggleFollow}
+          disabled={followLoading}
+          data-testid="follow-button"
+        >
+          {followLoading ? "처리중..." : (isFollowing ? "팔로잉" : "+ 팔로우")}
+        </Button>
+      </div>
+
+      {/* 게시글 이미지 */}
+      <div className="relative cursor-pointer" onClick={onPostClick}>
+        <img
+          src={post.mediaUrls.length > 0 ? post.mediaUrls[0] : "/file.svg"}
+          alt={post.content.substring(0, 20)}
+          className="w-full h-64 object-cover"
+        />
+        
+        {/* Like/Scrap 버튼 */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-2 right-2 p-1 bg-white/20 backdrop-blur-sm rounded-full"
+          onClick={(e) => {
+            e.stopPropagation()
+            onLike()
+          }}
+          data-testid="like-button"
+          data-liked={post.liked || false}
+        >
+          <Heart className={`w-4 h-4 ${post.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-2 right-12 p-1 bg-white/20 backdrop-blur-sm rounded-full"
+          onClick={(e) => {
+            e.stopPropagation()
+            onScrap()
+          }}
+          data-testid="scrap-button"
+          data-scraped={post.scraped || false}
+        >
+          <Bookmark className={`w-4 h-4 ${post.scraped ? "fill-blue-500 text-blue-500" : "text-white"}`} />
+        </Button>
+      </div>
+
+      {/* 게시글 정보 */}
+      <div className="p-4">
+        <div className="flex items-center gap-4 mb-3">
+          <button 
+            onClick={onLike}
+            className="flex items-center gap-1"
+            data-testid="like-count"
+          >
+            <Heart className={`w-5 h-5 ${post.liked ? "fill-red-500 text-red-500" : ""}`} />
+            <span>{post.likeCount}</span>
+          </button>
+          <button 
+            onClick={() => setShowComments(!showComments)}
+            className="flex items-center gap-1"
+          >
+            <MessageSquare className="w-5 h-5" />
+            <span>{post.commentCount}</span>
+          </button>
+          <button 
+            onClick={onScrap}
+            className="flex items-center gap-1"
+            data-testid="scrap-count"
+          >
+            <Bookmark className={`w-5 h-5 ${post.scraped ? "fill-blue-500 text-blue-500" : ""}`} />
+            <span>{post.scrapCount}</span>
+          </button>
+        </div>
+        
+        <p className="text-sm mb-2">{post.content}</p>
+        <div className="text-xs text-gray-500">{formatDate(post.createdAt)}</div>
+      </div>
+
+      {/* 댓글 섹션 */}
+      {showComments && (
+        <div className="border-t bg-gray-50">
+          {/* 댓글 입력 */}
+          <div className="p-4 border-b">
+            <div className="flex gap-2">
+              <Input
+                placeholder="댓글을 입력하세요..."
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleCommentSubmit()}
+                className="flex-1"
+                data-testid="comment-input"
+                disabled={commentsLoading}
+              />
+              <Button 
+                onClick={handleCommentSubmit} 
+                disabled={!commentText.trim() || commentsLoading}
+                data-testid="comment-submit"
+              >
+                {commentsLoading ? "전송중..." : "전송"}
+              </Button>
+            </div>
+          </div>
+          
+          {/* 댓글 목록 */}
+          <div className="max-h-60 overflow-y-auto">
+            {comments.map((comment) => (
+              <div key={comment.commentId} className="p-4 border-b last:border-b-0">
+                <div className="flex items-start gap-3">
+                  <img
+                    src={comment.author?.profileImage || "/placeholder.svg"}
+                    alt={comment.author?.nickname || "익명"}
+                    className="w-8 h-8 rounded-full"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{comment.author?.nickname || "익명"}</div>
+                    <div className="text-sm mt-1">{comment.content}</div>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                      <span>{formatDate(comment.createdAt)}</span>
+                      <button 
+                        onClick={() => toggleCommentLike(comment.commentId)}
+                        className="flex items-center gap-1 hover:text-red-500"
+                        data-testid="comment-like-btn"
+                      >
+                        <Heart className={`w-3 h-3 ${comment.liked ? 'fill-red-500 text-red-500' : ''}`} />
+                        <span data-testid="comment-like-count">{comment.likeCount}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
   )
 }

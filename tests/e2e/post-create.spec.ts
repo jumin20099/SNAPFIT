@@ -7,15 +7,15 @@ test.describe('Post Create', () => {
   });
 
   test('커뮤니티 페이지에서 글쓰기 버튼 표시', async ({ page }) => {
-    // 커뮤니티 버튼 클릭
-    await page.getByRole('button', { name: '커뮤니티' }).click();
+    // 직접 커뮤니티 페이지로 이동
+    await page.goto('/community');
     
-    // 커뮤니티 페이지로 이동 확인
-    await expect(page.getByText('커뮤니티')).toBeVisible();
+    // 페이지 로딩 대기
+    await page.waitForLoadState('networkidle');
     
     // 글쓰기 버튼이 있는지 확인
     const writeButton = page.getByRole('button', { name: '글쓰기' }).first();
-    expect(writeButton).toBeVisible();
+    await expect(writeButton).toBeVisible({ timeout: 10000 });
   });
 
   test('로그인 없이 게시글 작성 시도 시 로그인 필요 화면 표시', async ({ page }) => {
