@@ -409,49 +409,49 @@ export default function AdminPage() {
       <div className="flex-1 overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           {/* Tab Navigation */}
-          <div className="border-b bg-white flex-shrink-0">
-            <TabsList className="w-full grid grid-cols-6 bg-transparent h-12 p-0">
+          <div className="border-b bg-white flex-shrink-0 overflow-x-auto">
+            <TabsList className="w-full flex bg-transparent h-12 p-0 min-w-max">
               <TabsTrigger
                 value="dashboard"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2 px-4 whitespace-nowrap"
               >
                 <BarChart3 className="w-4 h-4" />
-                <span className="hidden sm:inline">대시보드</span>
+                <span>대시보드</span>
               </TabsTrigger>
               <TabsTrigger
                 value="products"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2 px-4 whitespace-nowrap"
               >
                 <Package className="w-4 h-4" />
-                <span className="hidden sm:inline">상품 관리</span>
+                <span>상품 관리</span>
               </TabsTrigger>
               <TabsTrigger
                 value="stores"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2 px-4 whitespace-nowrap"
               >
                 <Store className="w-4 h-4" />
-                <span className="hidden sm:inline">제휴몰</span>
+                <span>제휴몰</span>
               </TabsTrigger>
               <TabsTrigger
                 value="applications"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2 px-4 whitespace-nowrap"
               >
                 <FileText className="w-4 h-4" />
-                <span className="hidden sm:inline">제휴 신청</span>
+                <span>제휴 신청</span>
               </TabsTrigger>
               <TabsTrigger
                 value="update-requests"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2 px-4 whitespace-nowrap"
               >
                 <Edit className="w-4 h-4" />
-                <span className="hidden sm:inline">수정 요청</span>
+                <span>수정 요청</span>
               </TabsTrigger>
               <TabsTrigger
                 value="reports"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2"
+                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full flex items-center gap-2 px-4 whitespace-nowrap"
               >
                 <AlertTriangle className="w-4 h-4" />
-                <span className="hidden sm:inline">신고 관리</span>
+                <span>신고 관리</span>
                 {reportStats.pending > 0 && (
                   <Badge variant="destructive" className="ml-1 h-5 text-xs">
                     {reportStats.pending}
@@ -761,8 +761,8 @@ export default function AdminPage() {
                                       { label: "카테고리", before: [product.originalGenderCategory, product.originalMajorCategory, product.originalSubCategory].filter(Boolean).join(" / "), after: [product.requestedGenderCategory, product.requestedMajorCategory, product.requestedSubCategory].filter(Boolean).join(" / ") },
                                       { label: "가격", before: product.originalProductPrice, after: product.requestedProductPrice },
                                       { label: "링크", before: product.originalProductLink, after: product.requestedProductLink },
-                                    ].map(({ label, before, after }) => (
-                                      <tr key={label}>
+                                    ].map(({ label, before, after }, index) => (
+                                      <tr key={`${product.id}-${label}-${index}`}>
                                         <td className="font-medium text-gray-700 bg-gray-50">{label}</td>
                                         <td className="px-2 py-1 border-r">{before}</td>
                                         <td className={`px-2 py-1 ${before !== after ? "bg-green-100 font-semibold" : ""}`}>{after}</td>
