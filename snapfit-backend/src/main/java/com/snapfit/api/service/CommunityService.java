@@ -33,8 +33,8 @@ public class CommunityService {
     private final ScrapRepository scrapRepository;
     private final FollowRepository followRepository;
     private final NotificationRepository notificationRepository;
-    private final ReportRepository reportRepository;
-    private final BlockRepository blockRepository;
+    // private final ReportRepository reportRepository; // 임시 비활성화
+    // private final BlockRepository blockRepository; // 임시 비활성화
 
     /**
      * 커뮤니티 대시보드 통계 조회
@@ -53,8 +53,8 @@ public class CommunityService {
             // 댓글 통계
             Object[] commentStats = commentRepository.getCommentStatistics();
             
-            // 신고 통계
-            List<Object[]> reportStats = reportRepository.getReportStatistics();
+            // 신고 통계 (임시 비활성화)
+            // List<Object[]> reportStats = reportRepository.getReportStatistics();
             
             Map<String, Object> dashboard = Map.of(
                 "posts", Map.of(
@@ -66,7 +66,7 @@ public class CommunityService {
                 ),
                 "tags", tagStats,
                 "comments", commentStats,
-                "reports", reportStats,
+                // "reports", reportStats, // 임시 비활성화
                 "lastUpdated", LocalDateTime.now()
             );
             
@@ -203,17 +203,17 @@ public class CommunityService {
         
         try {
             // 신고 처리 시간
-            List<Object[]> reportProcessingTimes = reportRepository.getReportProcessingTimeStatistics();
+            // List<Object[]> reportProcessingTimes = reportRepository.getReportProcessingTimeStatistics(); // 임시 비활성화
             
             // 차단 영향도
-            List<Object[]> blockImpactStats = blockRepository.getBlockImpactStatistics();
+            // List<Object[]> blockImpactStats = blockRepository.getBlockImpactStatistics(); // 임시 비활성화
             
             // 태그 인기도 분포
             List<Object[]> tagPopularityStats = tagRepository.getTagStatisticsByPopularity();
             
             Map<String, Object> qualityMetrics = Map.of(
-                "reportProcessingTimes", reportProcessingTimes,
-                "blockImpactStats", blockImpactStats,
+                // "reportProcessingTimes", reportProcessingTimes, // 임시 비활성화
+                // "blockImpactStats", blockImpactStats, // 임시 비활성화
                 "tagPopularityStats", tagPopularityStats,
                 "lastUpdated", LocalDateTime.now()
             );
@@ -241,22 +241,22 @@ public class CommunityService {
                 LocalDateTime.now().minusDays(30)
             );
             
-            // 처리된 신고 정리
-            List<Report> processedReports = reportRepository.findByStatusOrderByCreatedAtDesc(
-                Report.ReportStatus.RESOLVED, Pageable.unpaged()
-            ).getContent();
+            // 처리된 신고 정리 (임시 비활성화)
+            // List<Report> processedReports = reportRepository.findByStatusOrderByCreatedAtDesc(
+            //     Report.Status.RESOLVED, Pageable.unpaged()
+            // ).getContent();
             
-            // 오래된 차단 기록 정리 (1년 이상)
-            List<Block> oldBlocks = blockRepository.findBlocksOrderByPriorityAndCreatedAtDesc(
-                Pageable.unpaged()
-            ).stream()
-                .filter(block -> block.getCreatedAt().isBefore(LocalDateTime.now().minusYears(1)))
-                .toList();
+            // 오래된 차단 기록 정리 (1년 이상) - 임시 비활성화
+            // List<Block> oldBlocks = blockRepository.findBlocksOrderByPriorityAndCreatedAtDesc(
+            //     Pageable.unpaged()
+            // ).stream()
+            //     .filter(block -> block.getCreatedAt().isBefore(LocalDateTime.now().minusYears(1)))
+            //     .toList();
             
             Map<String, Object> cleanupResults = Map.of(
                 "expiredNotifications", expiredNotifications.size(),
-                "processedReports", processedReports.size(),
-                "oldBlocks", oldBlocks.size(),
+                "processedReports", 0, // processedReports.size(), // 임시 비활성화
+                "oldBlocks", 0, // oldBlocks.size(), // 임시 비활성화
                 "cleanupTime", LocalDateTime.now()
             );
             

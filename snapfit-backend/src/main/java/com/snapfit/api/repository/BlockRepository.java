@@ -8,106 +8,73 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * 차단 리포지토리 인터페이스
- * 보안과 성능을 고려한 커스텀 쿼리 메서드
+ * 차단 리포지토리
  * 
- * @author Snapfit Team
+ * @author SnapFit Team
  * @version 1.0
  */
 @Repository
 public interface BlockRepository extends JpaRepository<Block, Block.BlockId> {
 
     /**
-     * 차단자별 차단 목록 조회 (페이징)
-     * 성능: blocker_id 인덱스 활용
+     * 특정 사용자가 차단한 사용자 목록 조회
      */
-    @Query("SELECT b FROM Block b WHERE b.blocker.userIdx = :blockerId ORDER BY b.createdAt DESC")
+    @Query("SELECT b FROM Block b WHERE b.blockerId = :blockerId ORDER BY b.createdAt DESC")
+    List<Block> findByBlockerId(@Param("blockerId") UUID blockerId);
+
+    /**
+     * 특정 사용자가 차단한 사용자 목록 (페이징)
+     */
+    @Query("SELECT b FROM Block b WHERE b.blockerId = :blockerId ORDER BY b.createdAt DESC")
     Page<Block> findByBlockerIdOrderByCreatedAtDesc(@Param("blockerId") UUID blockerId, Pageable pageable);
 
     /**
-     * 차단된 사용자별 차단 목록 조회 (페이징)
-     * 성능: blocked_user_id 인덱스 활용
+     * 특정 사용자를 차단한 사용자 목록 조회
      */
-    @Query("SELECT b FROM Block b WHERE b.blockedUser.userIdx = :blockedUserId ORDER BY b.createdAt DESC")
-    Page<Block> findByBlockedUserIdOrderByCreatedAtDesc(@Param("blockedUserId") UUID blockedUserId, Pageable pageable);
+    @Query("SELECT b FROM Block b WHERE b.blockedUserId = :blockedUserId ORDER BY b.createdAt DESC")
+    List<Block> findByBlockedUserId(@Param("blockedUserId") UUID blockedUserId);
 
     /**
-     * 특정 사용자 간 차단 관계 확인
-     * 성능: 복합 기본키 활용
+     * 차단 관계 존재 여부 확인
      */
-    @Query("SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END FROM Block b WHERE b.blocker.userIdx = :blockerId AND b.blockedUser.userIdx = :blockedUserId")
-    boolean existsByBlockerIdAndBlockedUserId(@Param("blockerId") UUID blockerId, @Param("blockedUserId") UUID blockedUserId);
+    boolean existsByBlockerIdAndBlockedUserId(UUID blockerId, UUID blockedUserId);
 
     /**
-     * 사용자별 차단한 사용자 수 조회
-     * 성능: COUNT 쿼리 최적화
+     * 특정 사용자가 차단한 사용자들의 ID 목록
      */
-    @Query("SELECT COUNT(b) FROM Block b WHERE b.blocker.userIdx = :blockerId")
-    long countByBlockerId(@Param("blockerId") UUID blockerId);
+    @Query("SELECT b.blockedUserId FROM Block b WHERE b.blockerId = :blockerId")
+    List<UUID> findBlockedUserIdsByBlockerId(@Param("blockerId") UUID blockerId);
 
     /**
-     * 사용자별 차단된 사용자 수 조회
-     * 성능: COUNT 쿼리 최적화
+     * 특정 사용자들이 차단되어 있는지 확인
      */
-    @Query("SELECT COUNT(b) FROM Block b WHERE b.blockedUser.userIdx = :blockedUserId")
-    long countByBlockedUserId(@Param("blockedUserId") UUID blockedUserId);
+    @Query("SELECT b.blockedUserId FROM Block b WHERE b.blockerId = :blockerId AND b.blockedUserId IN :userIds")
+    List<UUID> findBlockedUserIdsInList(@Param("blockerId") UUID blockerId, @Param("userIds") List<UUID> userIds);
 
     /**
-     * 차단 통계 조회 (전체)
-     * 성능: 집계 쿼리 최적화
+     * 차단 해제
      */
-    @Query("SELECT COUNT(b) as totalBlocks, " +
-           "COUNT(DISTINCT b.blocker.userIdx) as uniqueBlockers, " +
-           "COUNT(DISTINCT b.blockedUser.userIdx) as uniqueBlockedUsers " +
-           "FROM Block b")
-    Object[] getBlockStatistics();
+    void deleteByBlockerIdAndBlockedUserId(UUID blockerId, UUID blockedUserId);
 
     /**
-     * 차단 통계 조회 (차단자별)
-     * 성능: 집계 쿼리 최적화
+     * 특정 사용자의 총 차단 수
      */
-    @Query("SELECT b.blocker.userIdx as blockerId, COUNT(b) as blockCount " +
-           "FROM Block b " +
-           "GROUP BY b.blocker.userIdx " +
-           "ORDER BY blockCount DESC")
-    List<Object[]> getBlockStatisticsByBlocker();
+    long countByBlockerId(UUID blockerId);
 
     /**
-     * 차단 통계 조회 (차단된 사용자별)
-     * 성능: 집계 쿼리 최적화
+     * 특정 사용자를 차단한 총 수
      */
-    @Query("SELECT b.blockedUser.userIdx as blockedUserId, COUNT(b) as blockCount " +
-           "FROM Block b " +
-           "GROUP BY b.blockedUser.userIdx " +
-           "ORDER BY blockCount DESC")
-    List<Object[]> getBlockStatisticsByBlockedUser();
+    long countByBlockedUserId(UUID blockedUserId);
 
     /**
-     * 차단 영향도 통계 조회
-     * 성능: 차단 기간 계산 최적화
+     * 서로 차단 여부 확인 (A가 B를 차단했거나 B가 A를 차단한 경우)
      */
-    @Query("SELECT " +
-           "b.reason as blockReason, " +
-           "COUNT(b) as blockCount " +
-           "FROM Block b " +
-           "WHERE b.reason IS NOT NULL " +
-           "GROUP BY b.reason " +
-           "ORDER BY blockCount DESC")
-    List<Object[]> getBlockImpactStatistics();
-
-    /**
-     * 차단 우선순위별 목록 조회 (페이징)
-     * 성능: 우선순위 계산 최적화
-     */
-    @Query("SELECT b FROM Block b ORDER BY " +
-           "CASE " +
-           "  WHEN b.reason IS NOT NULL AND LENGTH(b.reason) > 0 THEN 1 " +
-           "  ELSE 2 " +
-           "END ASC, b.createdAt DESC")
-    Page<Block> findBlocksOrderByPriorityAndCreatedAtDesc(Pageable pageable);
+    @Query("SELECT COUNT(b) > 0 FROM Block b WHERE " +
+           "(b.blockerId = :userId1 AND b.blockedUserId = :userId2) OR " +
+           "(b.blockerId = :userId2 AND b.blockedUserId = :userId1)")
+    boolean existsMutualBlock(@Param("userId1") UUID userId1, @Param("userId2") UUID userId2);
 }

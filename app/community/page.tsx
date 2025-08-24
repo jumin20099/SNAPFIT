@@ -14,6 +14,8 @@ import { useSSENotifications } from "@/hooks/useSSENotifications"
 import { useFollow } from "@/hooks/useFollow"
 import { useComments } from "@/hooks/useComments"
 import { useDeletePost } from "@/hooks/useDeletePost"
+import { useBlock } from "@/hooks/useBlock"
+import { useReport } from "@/hooks/useReport"
 import { isCurrentUserPostAuthor } from "@/lib/auth-utils"
 import PostCreatePage from "@/components/post-create-page"
 import NotificationPage from "@/components/notification-page"
@@ -1074,6 +1076,9 @@ interface PostCardProps {
 function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
   const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState("")
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [reportReason, setReportReason] = useState("")
   
   // 팔로우 기능
   const { isFollowing, followerCount, isLoading: followLoading, toggleFollow } = useFollow(post.authorName)
@@ -1088,6 +1093,12 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
   
   // 게시글 삭제 기능
   const { isDeleting, deletePost } = useDeletePost()
+  
+  // 차단 기능
+  const { blockUser, isLoading: blockLoading } = useBlock()
+  
+  // 신고 기능
+  const { reportPost, isLoading: reportLoading } = useReport()
 
   const handleCommentSubmit = async () => {
     if (commentText.trim() && !commentsLoading) {
@@ -1110,6 +1121,41 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
     }
   }
 
+  const handleBlockUser = async () => {
+    // 사용자명을 UUID로 매핑 (임시)
+    const getUserUuid = (username: string): string => {
+      const userMap: { [key: string]: string } = {
+        '임시사용자': '4c12cfb2-c5b8-4ff6-96cc-afdb0168830d',
+        '김주민': '87b18a9c-d2ba-4318-b9aa-859e03c5aad7'
+      }
+      return userMap[username] || username
+    }
+
+    const userUuid = getUserUuid(post.authorName)
+    const success = await blockUser(userUuid, '게시글로부터 차단')
+    
+    if (success) {
+      alert('사용자를 차단했습니다')
+      // 차단 후 게시글이 즉시 숨겨지도록 페이지 새로고침
+      window.location.reload()
+    }
+  }
+
+  const handleReportPost = async () => {
+    if (!reportReason.trim()) {
+      alert('신고 사유를 입력해주세요')
+      return
+    }
+
+    const success = await reportPost(post.postId, reportReason.trim())
+    
+    if (success) {
+      alert('신고가 접수되었습니다')
+      setShowReportModal(false)
+      setReportReason("")
+    }
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -1123,7 +1169,7 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
   }
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden" data-testid="post-card">
       {/* 작성자 정보 및 팔로우/삭제 버튼 */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -1154,15 +1200,45 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
             <MoreVertical className="w-4 h-4 text-gray-600" />
           </Button>
         ) : (
-          <Button 
-            variant={isFollowing ? "outline" : "default"} 
-            size="sm"
-            onClick={toggleFollow}
-            disabled={followLoading}
-            data-testid="follow-button"
-          >
-            {followLoading ? "처리중..." : (isFollowing ? "팔로잉" : "+ 팔로우")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant={isFollowing ? "outline" : "default"} 
+              size="sm"
+              onClick={toggleFollow}
+              disabled={followLoading}
+              data-testid="follow-button"
+            >
+              {followLoading ? "처리중..." : (isFollowing ? "팔로잉" : "+ 팔로우")}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowBlockConfirm(true)
+              }}
+              disabled={blockLoading}
+              className="p-2 hover:bg-gray-100 text-red-600 hover:bg-red-50"
+              data-testid="block-user-button"
+              title="사용자 차단"
+            >
+              차단
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowReportModal(true)
+              }}
+              disabled={reportLoading}
+              className="p-2 hover:bg-gray-100 text-orange-600 hover:bg-orange-50"
+              data-testid="report-post-button"
+              title="게시글 신고"
+            >
+              신고
+            </Button>
+          </div>
         )}
       </div>
 
@@ -1293,6 +1369,92 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      
+      {/* 차단 확인 모달 */}
+      {showBlockConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="block-confirm-modal">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-semibold mb-4">사용자 차단</h3>
+            <p className="text-gray-600 mb-6">
+              '{post.authorName}'님을 차단하시겠습니까?<br/>
+              차단하면 이 사용자의 게시글과 댓글이 더 이상 보이지 않습니다.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowBlockConfirm(false)}
+                disabled={blockLoading}
+              >
+                취소
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={async () => {
+                  setShowBlockConfirm(false)
+                  await handleBlockUser()
+                }}
+                disabled={blockLoading}
+                data-testid="confirm-block-button"
+              >
+                {blockLoading ? "처리중..." : "차단"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 신고 모달 */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="report-modal">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-semibold mb-4">게시글 신고</h3>
+            <p className="text-gray-600 mb-4">
+              이 게시글을 신고하는 이유를 선택해주세요.
+            </p>
+            <div className="space-y-2 mb-6">
+              {[
+                "부적절한 콘텐츠",
+                "스팸 또는 광고",
+                "괴롭힘 또는 혐오 발언",
+                "저작권 침해", 
+                "기타"
+              ].map((reason) => (
+                <label key={reason} className="flex items-center">
+                  <input
+                    type="radio"
+                    name="reportReason"
+                    value={reason}
+                    checked={reportReason === reason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="mr-2"
+                  />
+                  {reason}
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowReportModal(false)
+                  setReportReason("")
+                }}
+                disabled={reportLoading}
+              >
+                취소
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={handleReportPost}
+                disabled={!reportReason || reportLoading}
+                data-testid="confirm-report-button"
+              >
+                {reportLoading ? "처리중..." : "신고"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
