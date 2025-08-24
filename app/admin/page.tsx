@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Plus, Edit, Trash2, Store, Package, BarChart3, FileText, Users, CheckCircle, XCircle, Clock, Shield, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Plus, Edit, Trash2, Store, Package, BarChart3, FileText, Users, CheckCircle, XCircle, Shield, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -865,60 +865,28 @@ export default function AdminPage() {
                                 )}
                               </div>
                               
-                              {report.status === 'PENDING' && (
-                                <div className="flex flex-col gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleReportAction(report.reportId, 'PROCESSING')}
-                                    className="text-blue-600 hover:text-blue-700"
-                                  >
-                                    <Clock className="w-4 h-4 mr-1" />
-                                    처리 시작
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleApproveReport(report.reportId)}
-                                    className="text-green-600 hover:text-green-700"
-                                  >
-                                    <CheckCircle className="w-4 h-4 mr-1" />
-                                    승인
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRejectReport(report.reportId)}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <XCircle className="w-4 h-4 mr-1" />
-                                    거절
-                                  </Button>
-                                </div>
-                              )}
-                              
-                              {report.status === 'PROCESSING' && (
-                                <div className="flex flex-col gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleApproveReport(report.reportId)}
-                                    className="text-green-600 hover:text-green-700"
-                                  >
-                                    <CheckCircle className="w-4 h-4 mr-1" />
-                                    승인
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleRejectReport(report.reportId)}
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <XCircle className="w-4 h-4 mr-1" />
-                                    거절
-                                  </Button>
-                                </div>
-                              )}
+                                                                {(report.status === 'PENDING' || report.status === 'PROCESSING') && (
+                                    <div className="flex flex-col gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleApproveReport(report.reportId)}
+                                        className="text-green-600 hover:text-green-700"
+                                      >
+                                        <CheckCircle className="w-4 h-4 mr-1" />
+                                        승인
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleRejectReport(report.reportId)}
+                                        className="text-red-600 hover:text-red-700"
+                                      >
+                                        <XCircle className="w-4 h-4 mr-1" />
+                                        거절
+                                      </Button>
+                                    </div>
+                                  )}
                             </div>
                           </CardContent>
                         </Card>

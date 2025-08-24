@@ -148,51 +148,23 @@ public class ReportController {
         log.info("전체 신고 목록 조회: status={}, page={}, size={}", status, page, size);
         
         try {
-            // 임시: 더미 데이터 반환 (테스트용)
-            log.info("임시 더미 신고 목록 반환");
+            Pageable pageable = PageRequest.of(page, size);
+            Page<Report> reports;
             
-            // 더미 신고 데이터 생성 (HashMap 사용으로 null 허용)
-            List<Map<String, Object>> dummyReports = new ArrayList<>();
+            if (status != null && !status.trim().isEmpty()) {
+                Report.Status reportStatus = Report.Status.valueOf(status.toUpperCase());
+                reports = reportService.getReportsByStatus(reportStatus, pageable);
+            } else {
+                reports = reportService.getAllReports(pageable);
+            }
             
-            Map<String, Object> report1 = new HashMap<>();
-            report1.put("reportId", 1L);
-            report1.put("targetType", "POST");
-            report1.put("targetId", 123L);
-            report1.put("reason", "부적절한 내용");
-            report1.put("status", "PENDING");
-            report1.put("reporterId", "4c12cfb2-c5b8-4ff6-96cc-afdb0168830d");
-            report1.put("createdAt", "2025-08-24T16:30:00");
-            report1.put("adminNotes", null);
-            dummyReports.add(report1);
-            
-            Map<String, Object> report2 = new HashMap<>();
-            report2.put("reportId", 2L);
-            report2.put("targetType", "COMMENT");
-            report2.put("targetId", 456L);
-            report2.put("reason", "스팸 댓글");
-            report2.put("status", "PROCESSING");
-            report2.put("reporterId", "87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
-            report2.put("createdAt", "2025-08-24T15:45:00");
-            report2.put("adminNotes", "검토 중입니다");
-            dummyReports.add(report2);
-            
-            Map<String, Object> report3 = new HashMap<>();
-            report3.put("reportId", 3L);
-            report3.put("targetType", "USER");
-            report3.put("targetId", 789L);
-            report3.put("reason", "악성 사용자");
-            report3.put("status", "RESOLVED");
-            report3.put("reporterId", "4c12cfb2-c5b8-4ff6-96cc-afdb0168830d");
-            report3.put("createdAt", "2025-08-24T14:20:00");
-            report3.put("adminNotes", "처리 완료됨");
-            dummyReports.add(report3);
-            
-            return ResponseEntity.ok(dummyReports);
+            return ResponseEntity.ok(reports.getContent());
             
         } catch (Exception e) {
             log.error("신고 목록 조회 실패: ", e);
-            return ResponseEntity.internalServerError()
-                .body(Map.of("error", "신고 목록 조회 중 오류가 발생했습니다"));
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "신고 목록 조회 중 오류가 발생했습니다");
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 
@@ -251,16 +223,16 @@ public class ReportController {
         log.info("신고 상태 변경: reportId={}, status={}, adminNotes={}", reportId, status, adminNotes);
         
         try {
-            // 임시: 더미 응답 반환 (테스트용)
-            log.info("임시 신고 상태 변경 처리 - reportId: {}, 새 상태: {}", reportId, status);
+            Report.Status reportStatus = Report.Status.valueOf(status.toUpperCase());
+            Report updatedReport = reportService.updateReportStatus(reportId, reportStatus, adminNotes);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("reportId", reportId);
-            response.put("status", status.toUpperCase());
-            response.put("adminNotes", adminNotes != null ? adminNotes : "상태가 " + status + "로 변경됨");
-            response.put("resolvedAt", status.equals("RESOLVED") || status.equals("REJECTED") ? "2025-08-25T02:00:00" : null);
-            response.put("message", "신고 상태가 " + status + "로 변경되었습니다");
+            response.put("reportId", updatedReport.getReportId());
+            response.put("status", updatedReport.getStatus().toString());
+            response.put("adminNotes", updatedReport.getAdminNotes());
+            response.put("resolvedAt", updatedReport.getResolvedAt());
+            response.put("message", "신고 상태가 변경되었습니다");
             
             return ResponseEntity.ok(response);
             
