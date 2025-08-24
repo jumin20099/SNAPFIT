@@ -1,15 +1,34 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
-export function useSSENotifications() {
+interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  avatar?: string;
+  image?: string;
+  userName?: string;
+  refId?: string;
+}
+
+interface UseSSENotificationsProps {
+  onNotificationReceived?: (notification: Notification) => void;
+  onUnreadCountUpdate?: (count: number) => void;
+}
+
+export function useSSENotifications(props?: UseSSENotificationsProps) {
   const [connected, setConnected] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [error, setError] = useState<string | null>(null);
   const retryRef = useRef(0);
   const stopRef = useRef(false);
   const esRef = useRef<EventSource | null>(null);
   const lastBeat = useRef<number>(Date.now());
 
-  const reconnect = () => {
+  const reconnect = useCallback(() => {
     if (esRef.current) {
       esRef.current.close();
     }
@@ -22,9 +41,9 @@ export function useSSENotifications() {
         connect();
       }
     }, 100);
-  };
+  }, []);
 
-  const connect = () => {
+  const connect = useCallback(() => {
     // JWT 토큰을 localStorage에서 가져오기 (키 이름: "token")
     const token = localStorage.getItem("token");
     if (!token) {
@@ -54,15 +73,44 @@ export function useSSENotifications() {
     });
 
     es.addEventListener("notification", (ev) => {
-      console.log("=== SSE 알림 수신 ===", ev.data);
-      // TODO: 상태 업데이트/토스트 등
-      // const payload = JSON.parse(ev.data);
+      try {
+        console.log("=== SSE 알림 수신 ===", ev.data);
+        const notification: Notification = JSON.parse(ev.data);
+        
+        // 알림 목록에 추가
+        setNotifications(prev => [notification, ...prev]);
+        
+        // 읽지 않은 알림 개수 증가
+        setUnreadCount(prev => prev + 1);
+        
+        // 부모 컴포넌트에 알림 전달
+        if (props?.onNotificationReceived) {
+          props.onNotificationReceived(notification);
+        }
+        
+        // 부모 컴포넌트에 읽지 않은 알림 개수 전달
+        if (props?.onUnreadCountUpdate) {
+          props.onUnreadCountUpdate(unreadCount + 1);
+        }
+        
+        console.log("=== 알림 상태 업데이트 완료 ===");
+        console.log("새 알림:", notification);
+        console.log("읽지 않은 알림 개수:", unreadCount + 1);
+      } catch (e) {
+        console.error("알림 파싱 오류:", e);
+      }
     });
 
     es.addEventListener("notification-count", (ev) => {
       try {
         const count = parseInt(ev.data);
         setUnreadCount(count);
+        console.log("=== SSE 알림 개수 업데이트 ===", count);
+        
+        // 부모 컴포넌트에 읽지 않은 알림 개수 전달
+        if (props?.onUnreadCountUpdate) {
+          props.onUnreadCountUpdate(count);
+        }
       } catch (e) {
         console.error("알림 개수 파싱 오류:", e);
       }
@@ -77,7 +125,7 @@ export function useSSENotifications() {
       const delay = Math.min(30_000, 1000 * 2 ** (retryRef.current++));
       setTimeout(connect, delay);
     };
-  };
+  }, [props]);
 
   useEffect(() => {
     connect();
@@ -99,11 +147,12 @@ export function useSSENotifications() {
       clearInterval(watchdog);
       esRef.current?.close();
     };
-  }, []);
+  }, [connect]);
 
   return { 
     connected, 
     unreadCount, 
+    notifications,
     error, 
     reconnect,
     isConnected: connected // 별칭으로 제공

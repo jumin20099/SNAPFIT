@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.springframework.scheduling.annotation.Scheduled;
+import java.util.Map;
 
 /**
  * 알림 컨트롤러
@@ -246,6 +247,19 @@ public class NotificationController {
             System.out.println("사용자 " + userId + "에 대한 SSE 에미터를 찾을 수 없음");
             System.out.println("현재 연결된 SSE 에미터 수: " + sseEmitters.size());
             System.out.println("연결된 사용자 ID들: " + sseEmitters.keySet());
+            System.out.println("=== SSE 연결 상태 상세 분석 ===");
+            System.out.println("현재 연결된 모든 사용자:");
+            sseEmitters.forEach((id, em) -> {
+                System.out.println("  - " + id + " (활성: " + (em != null) + ")");
+            });
+            System.out.println("=== UUID 변환 확인 ===");
+            try {
+                UUID targetUuid = UUID.fromString(userId);
+                System.out.println("대상 사용자 UUID 변환 성공: " + targetUuid);
+                System.out.println("UUID 타입 일치 여부: " + sseEmitters.keySet().contains(targetUuid));
+            } catch (IllegalArgumentException e) {
+                System.err.println("UUID 변환 실패: " + e.getMessage());
+            }
         }
     }
 
@@ -277,44 +291,48 @@ public class NotificationController {
     }
 
     /**
-     * 특정 알림을 읽음 처리합니다
+     * 특정 알림을 읽음으로 표시
      */
-    @PutMapping("/{notificationId}/read")
-    public ResponseEntity<Void> markAsRead(
-            @PathVariable Long notificationId,
-            @AuthenticationPrincipal UserDetails userDetails) {
+    @PutMapping("/{notificationId}")
+    public ResponseEntity<?> markAsRead(@PathVariable Long notificationId, 
+                                      @AuthenticationPrincipal CustomUserDetails user) {
         try {
-            UUID userId = UUID.fromString(userDetails.getUsername());
-            notificationService.markAsRead(notificationId, userId);
+            System.out.println("=== 알림 읽음 처리 시작 ===");
+            System.out.println("알림 ID: " + notificationId);
+            System.out.println("사용자: " + user.getUserId());
             
-            // SSE를 통해 실시간 알림 개수 업데이트
-            int unreadCount = notificationService.getUnreadCount(userId).intValue();
-            sendUnreadCountToUser(userId.toString(), unreadCount);
+            notificationService.markAsRead(notificationId, UUID.fromString(user.getUserId()));
             
-            return ResponseEntity.ok().build();
+            System.out.println("=== 알림 읽음 처리 완료 ===");
+            return ResponseEntity.ok().body(Map.of("message", "알림이 읽음으로 표시되었습니다"));
         } catch (Exception e) {
-            log.error("알림 읽음 처리 실패: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().build();
+            System.err.println("=== 알림 읽음 처리 실패 ===");
+            System.err.println("오류: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "알림 읽음 처리에 실패했습니다: " + e.getMessage()));
         }
     }
 
     /**
-     * 모든 알림을 읽음 처리합니다
+     * 모든 알림을 읽음으로 표시
      */
-    @PutMapping("/read-all")
-    public ResponseEntity<Void> markAllAsRead(
-            @AuthenticationPrincipal UserDetails userDetails) {
+    @PostMapping("/read-all")
+    public ResponseEntity<?> markAllAsRead(@AuthenticationPrincipal CustomUserDetails user) {
         try {
-            UUID userId = UUID.fromString(userDetails.getUsername());
-            notificationService.markAllAsRead(userId);
+            System.out.println("=== 모든 알림 읽음 처리 시작 ===");
+            System.out.println("사용자: " + user.getUserId());
             
-            // SSE를 통해 실시간 알림 개수 업데이트
-            sendUnreadCountToUser(userId.toString(), 0);
+            notificationService.markAllAsRead(UUID.fromString(user.getUserId()));
             
-            return ResponseEntity.ok().build();
+            System.out.println("=== 모든 알림 읽음 처리 완료 ===");
+            return ResponseEntity.ok().body(Map.of("message", "모든 알림이 읽음으로 표시되었습니다"));
         } catch (Exception e) {
-            log.error("모든 알림 읽음 처리 실패: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError().build();
+            System.err.println("=== 모든 알림 읽음 처리 실패 ===");
+            System.err.println("오류: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "모든 알림 읽음 처리에 실패했습니다: " + e.getMessage()));
         }
     }
 
