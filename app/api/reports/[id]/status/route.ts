@@ -16,6 +16,7 @@ export async function PUT(
     const body = await request.json()
     const reportId = params.id
 
+    // 백엔드로 상태 변경 요청 전달
     const response = await fetch(`${BACKEND_URL}/api/reports/${reportId}/status`, {
       method: 'PUT',
       headers: {
