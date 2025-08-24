@@ -13,6 +13,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -149,39 +151,41 @@ public class ReportController {
             // 임시: 더미 데이터 반환 (테스트용)
             log.info("임시 더미 신고 목록 반환");
             
-            // 더미 신고 데이터 생성
-            List<Map<String, Object>> dummyReports = List.of(
-                Map.of(
-                    "reportId", 1L,
-                    "targetType", "POST",
-                    "targetId", 123L,
-                    "reason", "부적절한 내용",
-                    "status", "PENDING",
-                    "reporterId", "4c12cfb2-c5b8-4ff6-96cc-afdb0168830d",
-                    "createdAt", "2025-08-24T16:30:00",
-                    "adminNotes", null
-                ),
-                Map.of(
-                    "reportId", 2L,
-                    "targetType", "COMMENT", 
-                    "targetId", 456L,
-                    "reason", "스팸 댓글",
-                    "status", "PROCESSING",
-                    "reporterId", "87b18a9c-d2ba-4318-b9aa-859e03c5aad7",
-                    "createdAt", "2025-08-24T15:45:00",
-                    "adminNotes", "검토 중입니다"
-                ),
-                Map.of(
-                    "reportId", 3L,
-                    "targetType", "USER",
-                    "targetId", 789L,
-                    "reason", "악성 사용자",
-                    "status", "RESOLVED",
-                    "reporterId", "4c12cfb2-c5b8-4ff6-96cc-afdb0168830d",
-                    "createdAt", "2025-08-24T14:20:00",
-                    "adminNotes", "처리 완료됨"
-                )
-            );
+            // 더미 신고 데이터 생성 (HashMap 사용으로 null 허용)
+            List<Map<String, Object>> dummyReports = new ArrayList<>();
+            
+            Map<String, Object> report1 = new HashMap<>();
+            report1.put("reportId", 1L);
+            report1.put("targetType", "POST");
+            report1.put("targetId", 123L);
+            report1.put("reason", "부적절한 내용");
+            report1.put("status", "PENDING");
+            report1.put("reporterId", "4c12cfb2-c5b8-4ff6-96cc-afdb0168830d");
+            report1.put("createdAt", "2025-08-24T16:30:00");
+            report1.put("adminNotes", null);
+            dummyReports.add(report1);
+            
+            Map<String, Object> report2 = new HashMap<>();
+            report2.put("reportId", 2L);
+            report2.put("targetType", "COMMENT");
+            report2.put("targetId", 456L);
+            report2.put("reason", "스팸 댓글");
+            report2.put("status", "PROCESSING");
+            report2.put("reporterId", "87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
+            report2.put("createdAt", "2025-08-24T15:45:00");
+            report2.put("adminNotes", "검토 중입니다");
+            dummyReports.add(report2);
+            
+            Map<String, Object> report3 = new HashMap<>();
+            report3.put("reportId", 3L);
+            report3.put("targetType", "USER");
+            report3.put("targetId", 789L);
+            report3.put("reason", "악성 사용자");
+            report3.put("status", "RESOLVED");
+            report3.put("reporterId", "4c12cfb2-c5b8-4ff6-96cc-afdb0168830d");
+            report3.put("createdAt", "2025-08-24T14:20:00");
+            report3.put("adminNotes", "처리 완료됨");
+            dummyReports.add(report3);
             
             return ResponseEntity.ok(dummyReports);
             
