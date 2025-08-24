@@ -188,6 +188,20 @@ public class Report {
     }
 
     /**
+     * 신고 상태 변경 (통합 메소드)
+     */
+    public void updateStatus(Status newStatus, String adminNotes) {
+        this.status = newStatus;
+        this.adminNotes = adminNotes;
+        this.updatedAt = LocalDateTime.now();
+        
+        // RESOLVED나 REJECTED 상태일 때 처리 완료 시간 설정
+        if (newStatus == Status.RESOLVED || newStatus == Status.REJECTED) {
+            this.resolvedAt = LocalDateTime.now();
+        }
+    }
+
+    /**
      * 처리 가능 여부 확인
      */
     public boolean canBeProcessed() {

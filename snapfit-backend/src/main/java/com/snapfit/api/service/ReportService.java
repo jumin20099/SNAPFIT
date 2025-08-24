@@ -242,22 +242,56 @@ public class ReportService {
         return reportRepository.findByReporterId(reporterId);
     }
 
+        /**
+     * 전체 신고 목록 조회 (페이징)
+     */
+    public Page<Report> getAllReports(Pageable pageable) {
+        log.info("전체 신고 목록 조회: 페이지={}, 크기={}", pageable.getPageNumber(), pageable.getPageSize());
+        return reportRepository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+
+    /**
+     * 상태별 신고 목록 조회 (페이징)
+     */
+    public Page<Report> getReportsByStatus(Report.Status status, Pageable pageable) {
+        log.info("상태별 신고 목록 조회: 상태={}, 페이지={}, 크기={}", status, pageable.getPageNumber(), pageable.getPageSize());
+        return reportRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+    }
+
+    /**
+     * 신고 상태 변경
+     */
+    @Transactional
+    public Report updateReportStatus(Long reportId, Report.Status status, String adminNotes) {
+        log.info("신고 상태 변경: 신고ID={}, 새상태={}, 메모={}", reportId, status, adminNotes);
+        
+        Report report = reportRepository.findById(reportId)
+            .orElseThrow(() -> new IllegalArgumentException("신고를 찾을 수 없습니다: " + reportId));
+            
+        report.updateStatus(status, adminNotes);
+        
+        Report updatedReport = reportRepository.save(report);
+        log.info("신고 상태 변경 완료: 신고ID={}, 상태={}", reportId, status);
+        
+        return updatedReport;
+    }
+
     /**
      * 통합 신고 생성 메서드
      */
     @Transactional
     public Report createReport(UUID reporterId, Report.TargetType targetType, Long targetId, String reason) {
         log.info("신고 생성: 신고자={}, 타입={}, 대상ID={}, 사유={}", reporterId, targetType, targetId, reason);
-        
+
         // 중복 신고 확인
         if (reportRepository.existsByReporterIdAndTargetTypeAndTargetId(reporterId, targetType, targetId)) {
             throw new IllegalArgumentException("이미 신고한 대상입니다");
         }
-        
+
         // 신고자 존재 확인
         User reporter = userRepository.findById(reporterId)
             .orElseThrow(() -> new IllegalArgumentException("신고자를 찾을 수 없습니다"));
-        
+
         // 신고 생성
         Report report;
         switch (targetType) {
@@ -273,12 +307,12 @@ public class ReportService {
             default:
                 throw new IllegalArgumentException("지원하지 않는 신고 대상 타입입니다: " + targetType);
         }
-        
+
         Report savedReport = reportRepository.save(report);
-        
-        log.info("신고 생성 완료: 신고ID={}, 신고자={}, 타입={}", 
+
+        log.info("신고 생성 완료: 신고ID={}, 신고자={}, 타입={}",
             savedReport.getReportId(), reporterId, targetType);
-        
+
         return savedReport;
     }
 }
