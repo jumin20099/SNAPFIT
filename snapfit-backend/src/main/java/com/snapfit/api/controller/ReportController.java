@@ -146,9 +146,44 @@ public class ReportController {
         log.info("전체 신고 목록 조회: status={}, page={}, size={}", status, page, size);
         
         try {
-            // 임시: 빈 리스트 반환 (테스트용)
-            log.info("임시 빈 신고 목록 반환");
-            return ResponseEntity.ok(List.of());
+            // 임시: 더미 데이터 반환 (테스트용)
+            log.info("임시 더미 신고 목록 반환");
+            
+            // 더미 신고 데이터 생성
+            List<Map<String, Object>> dummyReports = List.of(
+                Map.of(
+                    "reportId", 1L,
+                    "targetType", "POST",
+                    "targetId", 123L,
+                    "reason", "부적절한 내용",
+                    "status", "PENDING",
+                    "reporterId", "4c12cfb2-c5b8-4ff6-96cc-afdb0168830d",
+                    "createdAt", "2025-08-24T16:30:00",
+                    "adminNotes", null
+                ),
+                Map.of(
+                    "reportId", 2L,
+                    "targetType", "COMMENT", 
+                    "targetId", 456L,
+                    "reason", "스팸 댓글",
+                    "status", "PROCESSING",
+                    "reporterId", "87b18a9c-d2ba-4318-b9aa-859e03c5aad7",
+                    "createdAt", "2025-08-24T15:45:00",
+                    "adminNotes", "검토 중입니다"
+                ),
+                Map.of(
+                    "reportId", 3L,
+                    "targetType", "USER",
+                    "targetId", 789L,
+                    "reason", "악성 사용자",
+                    "status", "RESOLVED",
+                    "reporterId", "4c12cfb2-c5b8-4ff6-96cc-afdb0168830d",
+                    "createdAt", "2025-08-24T14:20:00",
+                    "adminNotes", "처리 완료됨"
+                )
+            );
+            
+            return ResponseEntity.ok(dummyReports);
             
         } catch (Exception e) {
             log.error("신고 목록 조회 실패: ", e);
