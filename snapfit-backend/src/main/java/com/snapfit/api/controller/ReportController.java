@@ -133,6 +133,31 @@ public class ReportController {
     }
 
     /**
+     * 전체 신고 목록 조회 (어드민용)
+     * GET /api/reports
+     */
+    @GetMapping
+    public ResponseEntity<?> getAllReports(
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        log.info("전체 신고 목록 조회: status={}, page={}, size={}", status, page, size);
+        
+        try {
+            // 임시: 빈 리스트 반환 (테스트용)
+            log.info("임시 빈 신고 목록 반환");
+            return ResponseEntity.ok(List.of());
+            
+        } catch (Exception e) {
+            log.error("신고 목록 조회 실패: ", e);
+            return ResponseEntity.internalServerError()
+                .body(Map.of("error", "신고 목록 조회 중 오류가 발생했습니다"));
+        }
+    }
+
+    /**
      * 관리자: 신고 목록 조회 (상태별)
      * GET /api/reports/admin
      */
