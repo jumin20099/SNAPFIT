@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Heart, Search, Bell, User, Filter, ChevronDown, Home, Users, Bookmark, TrendingUp, Calendar, Clock, MessageSquare } from "lucide-react"
+import { Heart, Search, Bell, User, Filter, ChevronDown, Home, Users, Bookmark, TrendingUp, Calendar, Clock, MessageSquare, MoreVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -13,6 +13,8 @@ import { useFollowingPosts } from "@/hooks/useFollowingPosts"
 import { useSSENotifications } from "@/hooks/useSSENotifications"
 import { useFollow } from "@/hooks/useFollow"
 import { useComments } from "@/hooks/useComments"
+import { useDeletePost } from "@/hooks/useDeletePost"
+import { isCurrentUserPostAuthor } from "@/lib/auth-utils"
 import PostCreatePage from "@/components/post-create-page"
 import NotificationPage from "@/components/notification-page"
 import * as jose from 'jose'
@@ -1083,6 +1085,9 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
     createComment,
     toggleCommentLike
   } = useComments(post.postId)
+  
+  // 게시글 삭제 기능
+  const { isDeleting, deletePost } = useDeletePost()
 
   const handleCommentSubmit = async () => {
     if (commentText.trim() && !commentsLoading) {
@@ -1091,6 +1096,16 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
         setCommentText("")
       } catch (error) {
         console.error('댓글 작성 실패:', error)
+      }
+    }
+  }
+
+  const handleDeletePost = async () => {
+    if (confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+      const success = await deletePost(post.postId)
+      if (success) {
+        // 게시글 삭제 성공 시 페이지 새로고침 또는 목록에서 제거
+        window.location.reload()
       }
     }
   }
@@ -1109,7 +1124,7 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
 
   return (
     <Card className="overflow-hidden">
-      {/* 작성자 정보 및 팔로우 버튼 */}
+      {/* 작성자 정보 및 팔로우/삭제 버튼 */}
       <div className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img
@@ -1122,15 +1137,33 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
             <div className="text-sm text-gray-500">팔로워 {followerCount}명</div>
           </div>
         </div>
-        <Button 
-          variant={isFollowing ? "outline" : "default"} 
-          size="sm"
-          onClick={toggleFollow}
-          disabled={followLoading}
-          data-testid="follow-button"
-        >
-          {followLoading ? "처리중..." : (isFollowing ? "팔로잉" : "+ 팔로우")}
-        </Button>
+        
+        {/* 자신의 게시글인지 확인 후 버튼 선택 */}
+        {isCurrentUserPostAuthor(post.authorName) ? (
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleDeletePost()
+            }}
+            disabled={isDeleting}
+            className="p-2 hover:bg-gray-100"
+            data-testid="delete-post-button"
+          >
+            <MoreVertical className="w-4 h-4 text-gray-600" />
+          </Button>
+        ) : (
+          <Button 
+            variant={isFollowing ? "outline" : "default"} 
+            size="sm"
+            onClick={toggleFollow}
+            disabled={followLoading}
+            data-testid="follow-button"
+          >
+            {followLoading ? "처리중..." : (isFollowing ? "팔로잉" : "+ 팔로우")}
+          </Button>
+        )}
       </div>
 
       {/* 게시글 이미지 */}
@@ -1141,34 +1174,38 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
           className="w-full h-64 object-cover"
         />
         
-        {/* Like/Scrap 버튼 */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-2 right-2 p-1 bg-white/20 backdrop-blur-sm rounded-full"
-          onClick={(e) => {
-            e.stopPropagation()
-            onLike()
-          }}
-          data-testid="like-button"
-          data-liked={post.liked || false}
-        >
-          <Heart className={`w-4 h-4 ${post.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
-        </Button>
-        
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-2 right-12 p-1 bg-white/20 backdrop-blur-sm rounded-full"
-          onClick={(e) => {
-            e.stopPropagation()
-            onScrap()
-          }}
-          data-testid="scrap-button"
-          data-scraped={post.scraped || false}
-        >
-          <Bookmark className={`w-4 h-4 ${post.scraped ? "fill-blue-500 text-blue-500" : "text-white"}`} />
-        </Button>
+        {/* Like/Scrap 버튼 - 자신의 게시글이 아닐 때만 표시 */}
+        {!isCurrentUserPostAuthor(post.authorName) && (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-2 right-2 p-1 bg-white/20 backdrop-blur-sm rounded-full"
+              onClick={(e) => {
+                e.stopPropagation()
+                onLike()
+              }}
+              data-testid="like-button"
+              data-liked={post.liked || false}
+            >
+              <Heart className={`w-4 h-4 ${post.liked ? "fill-red-500 text-red-500" : "text-white"}`} />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-2 right-12 p-1 bg-white/20 backdrop-blur-sm rounded-full"
+              onClick={(e) => {
+                e.stopPropagation()
+                onScrap()
+              }}
+              data-testid="scrap-button"
+              data-scraped={post.scraped || false}
+            >
+              <Bookmark className={`w-4 h-4 ${post.scraped ? "fill-blue-500 text-blue-500" : "text-white"}`} />
+            </Button>
+          </>
+        )}
       </div>
 
       {/* 게시글 정보 */}

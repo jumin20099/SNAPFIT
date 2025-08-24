@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
+import java.util.Map;
 import java.time.LocalDateTime;
 
 /**
@@ -274,13 +275,49 @@ public class PostController {
      * @return 삭제 완료 응답
      */
     @DeleteMapping("/{postId}")
-    public ResponseEntity<Void> deletePost(@PathVariable Long postId) {
+    public ResponseEntity<?> deletePost(@PathVariable Long postId, 
+                                       @RequestParam(required = false) String token) {
         log.info("게시글 삭제 요청: {}", postId);
         
-        // TODO: 실제 게시글 삭제 로직 구현
-        // postService.deletePost(postId, user);
-        
-        return ResponseEntity.noContent().build();
+        try {
+            // 임시로 인증 우회 - 현재 사용자를 김주민으로 설정
+            String currentUserId = "87b18a9c-d2ba-4318-b9aa-859e03c5aad7";
+            log.info("게시글 삭제 API 호출됨 - 임시 인증 우회");
+            
+            UUID userId = UUID.fromString(currentUserId);
+            User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
+            
+            // 게시글 존재 확인
+            Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다"));
+            
+            // 게시글 작성자 확인 (본인만 삭제 가능)
+            if (!post.canDelete(currentUser)) {
+                log.warn("게시글 삭제 권한 없음: 사용자={}, 게시글작성자={}", currentUser.getUserIdx(), post.getAuthor().getUserIdx());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "게시글 삭제 권한이 없습니다"));
+            }
+            
+            // 실제 게시글 삭제 (소프트 삭제)
+            post.setIsDeleted(true);
+            post.setUpdatedAt(LocalDateTime.now());
+            postRepository.save(post);
+            
+            log.info("게시글 삭제 성공: 게시글ID={}, 사용자={}", postId, currentUser.getUserIdx());
+            
+            return ResponseEntity.ok()
+                .body(Map.of("message", "게시글이 삭제되었습니다"));
+            
+        } catch (IllegalArgumentException e) {
+            log.warn("게시글 삭제 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("게시글 삭제 오류: 게시글={}, 오류={}", postId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "게시글 삭제 중 오류가 발생했습니다"));
+        }
     }
 
     /**

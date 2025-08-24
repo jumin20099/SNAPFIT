@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, Send, Plus } from "lucide-react"
+import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, Send, Plus, MoreVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { useRouter, useParams } from "next/navigation"
+import { isCurrentUserPostAuthor } from "@/lib/auth-utils"
+import { useDeletePost } from "@/hooks/useDeletePost"
 
 interface Comment {
   id: number
@@ -54,6 +56,9 @@ export default function PostDetailPage() {
   const [userInteractionsLoaded, setUserInteractionsLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const observer = useRef<IntersectionObserver | null>(null)
+  
+  // 게시글 삭제 기능
+  const { isDeleting, deletePost } = useDeletePost()
 
   // 사용자 상호작용 상태 가져오기 (좋아요, 스크랩) - 백엔드 API만 사용
   const fetchUserInteractions = useCallback(async () => {
@@ -447,6 +452,16 @@ export default function PostDetailPage() {
     }
   }
 
+  const handleDeletePost = async () => {
+    if (confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+      const success = await deletePost(postId)
+      if (success) {
+        // 게시글 삭제 성공 시 커뮤니티 메인으로 이동
+        router.push('/community')
+      }
+    }
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -508,13 +523,30 @@ export default function PostDetailPage() {
                   <div className="font-medium">{post.authorName}</div>
                   <div className="text-sm text-gray-500">171cm/63kg · 봄 원돈</div>
                 </div>
-                <Button 
-                  variant={isFollowing ? "outline" : "default"} 
-                  size="sm"
-                  onClick={toggleFollow}
-                >
-                  {isFollowing ? "팔로잉" : "+ 팔로우"}
-                </Button>
+                {/* 자신의 게시글인지 확인 후 버튼 선택 */}
+                {isCurrentUserPostAuthor(post.authorName) ? (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleDeletePost()
+                    }}
+                    disabled={isDeleting}
+                    className="p-2 hover:bg-gray-100"
+                    data-testid="delete-post-button"
+                  >
+                    <MoreVertical className="w-4 h-4 text-gray-600" />
+                  </Button>
+                ) : (
+                  <Button 
+                    variant={isFollowing ? "outline" : "default"} 
+                    size="sm"
+                    onClick={toggleFollow}
+                  >
+                    {isFollowing ? "팔로잉" : "+ 팔로우"}
+                  </Button>
+                )}
               </div>
             </div>
 
