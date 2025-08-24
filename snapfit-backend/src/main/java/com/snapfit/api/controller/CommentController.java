@@ -1,10 +1,12 @@
 package com.snapfit.api.controller;
 
 import com.snapfit.api.entity.Comment;
+import com.snapfit.api.entity.Like;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.security.CustomUserDetails;
 import com.snapfit.api.service.CommentService;
+import com.snapfit.api.service.LikeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,6 +39,7 @@ import java.util.UUID;
 public class CommentController {
 
     private final CommentService commentService;
+    private final LikeService likeService;
     private final UserRepository userRepository;
 
     @Operation(summary = "댓글 작성", description = "게시글에 새 댓글을 작성합니다")
@@ -67,21 +70,24 @@ public class CommentController {
             User author = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
             
-            // 임시로 mock 댓글 응답 생성
+            // 실제 DB에 댓글 저장
+            Comment savedComment = commentService.createComment(postId, content.trim(), author, null);
+            
+            // 응답 데이터 생성
             Map<String, Object> commentResponse = Map.of(
-                "commentId", System.currentTimeMillis(), // 임시 ID
-                "content", content.trim(),
+                "commentId", savedComment.getCommentId(),
+                "content", savedComment.getContent(),
                 "author", Map.of(
-                    "userId", userId.toString(),
+                    "userId", author.getUserIdx().toString(),
                     "nickname", author.getNickname(),
                     "profileImage", author.getProfileImage() != null ? author.getProfileImage() : "/placeholder.svg"
                 ),
-                "createdAt", java.time.LocalDateTime.now().toString(),
-                "likeCount", 0,
-                "liked", false
+                "createdAt", savedComment.getCreatedAt().toString(),
+                "likeCount", 0, // 새 댓글이므로 0
+                "liked", false  // 새 댓글이므로 false
             );
             
-            log.info("댓글 작성 성공 (임시 구현): 게시글={}, 댓글ID={}", postId, commentResponse.get("commentId"));
+            log.info("댓글 작성 성공 (DB 저장): 게시글={}, 댓글ID={}", postId, savedComment.getCommentId());
             
             return ResponseEntity.status(HttpStatus.CREATED).body(commentResponse);
                 
@@ -106,8 +112,10 @@ public class CommentController {
         try {
             log.info("댓글 목록 조회: 게시글={}", postId);
             
-            // 임시로 빈 페이지 반환 (실제 구현 필요)
-            Page<Comment> comments = Page.empty(pageable);
+            // 실제 DB에서 댓글 목록 조회
+            Page<Comment> comments = commentService.getTopLevelComments(postId, pageable);
+            
+            log.info("댓글 목록 조회 성공: 게시글={}, 댓글 수={}", postId, comments.getTotalElements());
             return ResponseEntity.ok(comments);
                 
         } catch (Exception e) {
@@ -224,16 +232,28 @@ public class CommentController {
             log.info("댓글 좋아요 토글: 댓글={}, 사용자={}", commentId, currentUserId);
             
             UUID userId = UUID.fromString(currentUserId);
-            User author = userRepository.findById(userId)
+            User currentUser = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
             
-            // 임시로 성공 응답 (실제 구현 대신)
+            // 댓글 존재 확인
+            Comment comment = commentService.getComment(commentId);
+            if (comment == null) {
+                throw new IllegalArgumentException("댓글을 찾을 수 없습니다");
+            }
+            
+            // 좋아요 토글 (실제 LikeService 메서드 사용)
+            boolean newLikedState = likeService.toggleLike(currentUser, commentId, Like.TargetType.COMMENT);
+            
+            // 댓글의 총 좋아요 수 조회
+            long likeCount = likeService.countLikes(commentId, Like.TargetType.COMMENT);
+            
             Map<String, Object> result = Map.of(
-                "liked", true, 
-                "likeCount", 1
+                "liked", newLikedState, 
+                "likeCount", likeCount
             );
             
-            log.info("댓글 좋아요 토글 성공 (임시 구현): 댓글={}", commentId);
+            log.info("댓글 좋아요 토글 성공 (DB 저장): 댓글={}, 좋아요 여부={}, 좋아요 수={}", 
+                    commentId, newLikedState, likeCount);
             
             return ResponseEntity.ok(result);
                 
