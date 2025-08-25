@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ArrowLeft, User, Settings, Heart, Bookmark, ShoppingBag, LogOut, Edit, UserX, Shield } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { ArrowLeft, User, Settings, Heart, Bookmark, ShoppingBag, LogOut, Edit, UserX, Shield, Camera, Check, X, Sun, Moon, Monitor } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
 import { useBlock } from "@/hooks/useBlock"
+import { useProfile } from "@/hooks/useProfile"
+import { useTheme } from "@/contexts/ThemeContext"
 
 interface BlockedUser {
   blockedUserId: string;
@@ -16,10 +18,18 @@ interface BlockedUser {
 
 export default function MyPage() {
   const router = useRouter()
-  const [userInfo, setUserInfo] = useState<{ name?: string; email?: string; role?: string } | null>(null)
+  const [userInfo, setUserInfo] = useState<{ userIdx?: string; nickname?: string; email?: string; role?: string; profileImage?: string } | null>(null)
   const [showBlockedUsers, setShowBlockedUsers] = useState(false)
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([])
-  const { getBlockedUsers, unblockUser, isLoading } = useBlock()
+  const [isEditingNickname, setIsEditingNickname] = useState(false)
+  const [tempNickname, setTempNickname] = useState('')
+  const [nicknameError, setNicknameError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  
+  const { getBlockedUsers, unblockUser, isLoading: blockLoading } = useBlock()
+  const { updateNickname, uploadProfileImage, updateProfileImageUrl, isLoading: profileLoading, uploadProgress } = useProfile()
+  const { theme, setTheme, actualTheme } = useTheme()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -71,6 +81,99 @@ export default function MyPage() {
     }
   }
 
+  // 프로필 사진 변경
+  const handleProfileImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      setSuccessMessage('')
+      const imageUrl = await uploadProfileImage(file)
+      const updatedUser = await updateProfileImageUrl(imageUrl)
+      
+      setUserInfo(prev => prev ? {
+        ...prev,
+        profileImage: updatedUser.profileImage
+      } : null)
+      
+      setSuccessMessage('프로필 사진이 변경되었습니다')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '프로필 사진 변경에 실패했습니다')
+    }
+  }
+
+  // 닉네임 편집 시작
+  const handleStartEditNickname = () => {
+    setTempNickname(userInfo?.nickname || '')
+    setIsEditingNickname(true)
+    setNicknameError('')
+  }
+
+  // 닉네임 편집 취소
+  const handleCancelEditNickname = () => {
+    setIsEditingNickname(false)
+    setTempNickname('')
+    setNicknameError('')
+  }
+
+  // 닉네임 저장
+  const handleSaveNickname = async () => {
+    try {
+      setNicknameError('')
+      setSuccessMessage('')
+
+      // 클라이언트 사이드 유효성 검사
+      if (tempNickname.length < 2 || tempNickname.length > 20) {
+        setNicknameError('닉네임은 2자 이상 20자 이하여야 합니다')
+        return
+      }
+
+      if (!/^[가-힣a-zA-Z0-9\s]+$/.test(tempNickname)) {
+        setNicknameError('한글, 영문, 숫자만 사용할 수 있습니다')
+        return
+      }
+
+      const updatedUser = await updateNickname(tempNickname)
+      
+      setUserInfo(prev => prev ? {
+        ...prev,
+        nickname: updatedUser.nickname
+      } : null)
+      
+      setIsEditingNickname(false)
+      setSuccessMessage('닉네임이 변경되었습니다')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('중복')) {
+          setNicknameError('이미 사용 중인 닉네임입니다')
+        } else {
+          setNicknameError(error.message)
+        }
+      } else {
+        setNicknameError('닉네임 변경에 실패했습니다')
+      }
+    }
+  }
+
+  // 다크모드 토글 아이콘
+  const getThemeIcon = () => {
+    switch (theme) {
+      case 'light': return <Sun className="w-5 h-5" />
+      case 'dark': return <Moon className="w-5 h-5" />
+      case 'system': return <Monitor className="w-5 h-5" />
+    }
+  }
+
+  // 다크모드 토글
+  const handleThemeToggle = () => {
+    const nextTheme: 'light' | 'dark' | 'system' = 
+      theme === 'light' ? 'dark' : 
+      theme === 'dark' ? 'system' : 'light'
+    setTheme(nextTheme)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -87,23 +190,154 @@ export default function MyPage() {
         <div className="w-10" />
       </div>
 
+      {/* Success Message */}
+      {successMessage && (
+        <div className="p-4">
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4" data-testid="profile-update-success">
+            {successMessage}
+          </div>
+        </div>
+      )}
+
       {/* User Profile */}
       <div className="p-4">
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
-                <User className="w-8 h-8 text-gray-600" />
+              {/* 프로필 이미지 */}
+              <div className="relative">
+                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden" data-testid="profile-image">
+                  {userInfo?.profileImage ? (
+                    <img 
+                      src={userInfo.profileImage} 
+                      alt="프로필 사진" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-8 h-8 text-gray-600" />
+                  )}
+                </div>
+                
+                {/* 프로필 사진 변경 버튼 */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={profileLoading}
+                  data-testid="change-profile-image-button"
+                  className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 disabled:opacity-50"
+                >
+                  {profileLoading ? (
+                    <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" data-testid="profile-upload-loading" />
+                  ) : (
+                    <Camera className="w-3 h-3" />
+                  )}
+                </button>
+                
+                {/* 업로드 진행률 */}
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs">{uploadProgress}%</span>
+                  </div>
+                )}
+                
+                {/* 숨겨진 파일 입력 */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleProfileImageChange}
+                  className="hidden"
+                  data-testid="profile-image-input"
+                />
               </div>
+              
+              {/* 사용자 정보 */}
               <div className="flex-1">
-                <h2 className="text-xl font-semibold">{userInfo?.name || '사용자'}</h2>
+                {/* 닉네임 */}
+                <div className="flex items-center gap-2 mb-2">
+                  {isEditingNickname ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="text"
+                        value={tempNickname}
+                        onChange={(e) => setTempNickname(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveNickname()}
+                        className="flex-1 px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="닉네임을 입력하세요"
+                        maxLength={20}
+                        autoFocus
+                        data-testid="nickname-input"
+                      />
+                      <Button
+                        size="sm"
+                        onClick={handleSaveNickname}
+                        disabled={profileLoading}
+                        data-testid="save-nickname-button"
+                        className="bg-blue-500 hover:bg-blue-600"
+                      >
+                        {profileLoading ? (
+                          <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin" data-testid="nickname-save-loading" />
+                        ) : (
+                          <Check className="w-4 h-4" />
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCancelEditNickname}
+                        data-testid="cancel-nickname-button"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <h2 className="text-xl font-semibold" data-testid="current-nickname">
+                        {userInfo?.nickname || '사용자'}
+                      </h2>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleStartEditNickname}
+                        data-testid="edit-nickname-button"
+                        className="p-1 h-auto"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+                
+                {/* 닉네임 에러 메시지 */}
+                {nicknameError && (
+                  <p className="text-red-500 text-sm mb-2" data-testid="nickname-error-message">
+                    {nicknameError}
+                  </p>
+                )}
+                
+                {/* 닉네임 유효성 검사 에러 */}
+                {isEditingNickname && tempNickname && (
+                  <>
+                    {tempNickname.length < 2 && (
+                      <p className="text-red-500 text-sm" data-testid="nickname-validation-error">
+                        닉네임은 2자 이상이어야 합니다
+                      </p>
+                    )}
+                    {tempNickname.length > 20 && (
+                      <p className="text-red-500 text-sm" data-testid="nickname-validation-error">
+                        닉네임은 20자 이하여야 합니다
+                      </p>
+                    )}
+                    {tempNickname.length >= 2 && tempNickname.length <= 20 && !/^[가-힣a-zA-Z0-9\s]+$/.test(tempNickname) && (
+                      <p className="text-red-500 text-sm" data-testid="nickname-validation-error">
+                        한글, 영문, 숫자만 사용할 수 있습니다
+                      </p>
+                    )}
+                  </>
+                )}
+                
                 <p className="text-gray-600">{userInfo?.email || '이메일 없음'}</p>
                 <p className="text-sm text-blue-600">{userInfo?.role || 'USER'}</p>
               </div>
-              <Button variant="outline" size="sm">
-                <Edit className="w-4 h-4 mr-2" />
-                편집
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -170,6 +404,41 @@ export default function MyPage() {
                 <Settings className="w-5 h-5 mr-3 text-gray-500" />
                 설정
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* 다크모드 토글 */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  {getThemeIcon()}
+                  <span className="ml-3">
+                    테마: {theme === 'light' ? '라이트' : theme === 'dark' ? '다크' : '시스템'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleThemeToggle}
+                    data-testid="dark-mode-toggle"
+                    className="flex items-center gap-2"
+                  >
+                    {getThemeIcon()}
+                    변경
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTheme('system')}
+                    data-testid="system-theme-option"
+                    className="text-xs"
+                  >
+                    <Monitor className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 

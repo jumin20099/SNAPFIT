@@ -17,4 +17,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     
     /** userIdx로 사용자 찾기 */
     Optional<User> findByUserIdx(UUID userIdx);
+    
+    /** 닉네임 중복 검사용 */
+    Optional<User> findByNickname(String nickname);
 }

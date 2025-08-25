@@ -97,3 +97,33 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* 다크모드 스타일 */
+.dark {
+  background-color: rgb(3 7 18);
+  color: rgb(248 250 252);
+}
+
+.dark .bg-gray-50 {
+  background-color: rgb(15 23 42);
+}
+
+.dark .bg-white {
+  background-color: rgb(30 41 59);
+}
+
+.dark .border-gray-200 {
+  border-color: rgb(51 65 85);
+}
+
+.dark .text-gray-600 {
+  color: rgb(148 163 184);
+}
+
+.dark .text-gray-500 {
+  color: rgb(100 116 139);
+}
+
+.dark .text-gray-900 {
+  color: rgb(248 250 252);
+}
