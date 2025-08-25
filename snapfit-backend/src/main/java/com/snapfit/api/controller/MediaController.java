@@ -25,8 +25,10 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.s3.model.*;
+import com.amazonaws.HttpMethod;
 import java.io.IOException;
+import java.util.Date;
 import org.springframework.beans.factory.annotation.Value;
 
 @RestController
@@ -124,11 +126,14 @@ public class MediaController {
             // 프로필 이미지 전용 purpose 사용
             Media saved = mediaService.uploadMedia(file, "profile", userId);
             
+            // 프록시 URL 생성하여 응답
+            String proxyUrl = "/api/media/image/" + saved.getId();
+            
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "data", Map.of(
                     "id", saved.getId(),
-                    "url", saved.getMediaUrl(),
+                    "url", proxyUrl, // 프록시 URL 반환
                     "mediaType", saved.getMediaType()
                 )
             ));
@@ -142,10 +147,10 @@ public class MediaController {
     }
     
     /**
-     * 이미지 프록시 엔드포인트 - S3에서 이미지를 가져와서 응답
+     * 이미지 프록시 엔드포인트 - 이미지 URL로 리다이렉트 또는 로컬 파일 제공
      */
     @GetMapping("/image/{mediaId}")
-    public ResponseEntity<Resource> getImage(@PathVariable Long mediaId) {
+    public ResponseEntity<?> getImage(@PathVariable Long mediaId) {
         try {
             // 미디어 정보 조회
             Optional<Media> mediaOpt = mediaRepository.findById(mediaId);
@@ -154,49 +159,59 @@ public class MediaController {
             }
             
             Media media = mediaOpt.get();
-            String key = media.getMediaUidName();
+            String mediaUrl = media.getMediaUrl();
             
-            // S3에서 이미지 가져오기
-            if (amazonS3 != null) {
+            // S3 URL인 경우 임시 접근 가능한 URL로 리다이렉트
+            if (mediaUrl.startsWith("https://") && amazonS3 != null) {
                 try {
-                    // 버킷 결정 (프로필 이미지는 userBucket 사용)
-                    String bucket = media.getMediaPurpose().equals("profile") ? 
-                        userBucket : staticBucket;
+                    // 버킷과 키 추출
+                    String bucket = media.getMediaPurpose().equals("profile") ? userBucket : staticBucket;
+                    String key = media.getMediaUidName();
                     
-                    S3Object s3Object = amazonS3.getObject(bucket, key);
-                    byte[] content = s3Object.getObjectContent().readAllBytes();
+                    // Pre-signed URL 생성 (1시간 유효)
+                    Date expiration = new Date();
+                    long expTimeMillis = expiration.getTime();
+                    expTimeMillis += 1000 * 60 * 60; // 1시간
+                    expiration.setTime(expTimeMillis);
                     
-                    ByteArrayResource resource = new ByteArrayResource(content);
+                    GeneratePresignedUrlRequest generatePresignedUrlRequest = 
+                        new GeneratePresignedUrlRequest(bucket, key)
+                            .withMethod(HttpMethod.GET)
+                            .withExpiration(expiration);
                     
-                    return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(media.getMediaType()))
-                        .header(HttpHeaders.CACHE_CONTROL, "max-age=3600") // 1시간 캐시
-                        .body(resource);
+                    String presignedUrl = amazonS3.generatePresignedUrl(generatePresignedUrlRequest).toString();
+                    
+                    // 리다이렉트 응답
+                    return ResponseEntity.status(302)
+                        .header("Location", presignedUrl)
+                        .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                        .build();
                         
                 } catch (Exception e) {
-                    // S3 실패 시 로컬 파일 시도
                     return ResponseEntity.status(404).build();
                 }
             }
             
-            // 로컬 파일 시스템에서 가져오기 (fallback)
-            try {
-                String localPath = "." + media.getMediaUrl(); // ./uploads/... 경로
-                java.io.File file = new java.io.File(localPath);
-                if (file.exists()) {
-                    byte[] content = java.nio.file.Files.readAllBytes(file.toPath());
-                    ByteArrayResource resource = new ByteArrayResource(content);
-                    
-                    return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(media.getMediaType()))
-                        .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
-                        .body(resource);
-                } else {
-                    return ResponseEntity.notFound().build();
+            // 로컬 파일인 경우 직접 제공
+            if (mediaUrl.startsWith("/uploads/")) {
+                try {
+                    String localPath = "." + mediaUrl; // ./uploads/... 경로
+                    java.io.File file = new java.io.File(localPath);
+                    if (file.exists()) {
+                        byte[] content = java.nio.file.Files.readAllBytes(file.toPath());
+                        ByteArrayResource resource = new ByteArrayResource(content);
+                        
+                        return ResponseEntity.ok()
+                            .contentType(MediaType.parseMediaType(media.getMediaType()))
+                            .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                            .body(resource);
+                    }
+                } catch (IOException e) {
+                    return ResponseEntity.internalServerError().build();
                 }
-            } catch (IOException e) {
-                return ResponseEntity.internalServerError().build();
             }
+            
+            return ResponseEntity.notFound().build();
             
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();

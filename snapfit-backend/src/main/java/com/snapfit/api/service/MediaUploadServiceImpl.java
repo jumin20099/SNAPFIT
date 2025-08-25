@@ -82,20 +82,18 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                     amazonS3.putObject(req);
                 }
 
-                // 4) DB에 먼저 저장 (ID를 얻기 위해)
+                // 4) S3 URL 생성 (원본 S3 URL을 DB에 저장)
+                String s3Url = amazonS3.getUrl(bucket, key).toString();
+
+                // 5) DB 저장
                 Media media = Media.builder()
                         .mediaRealName(file.getOriginalFilename())
                         .mediaUidName(key)
                         .mediaType(file.getContentType())
-                        .mediaUrl("") // 임시로 빈 값
+                        .mediaUrl(s3Url) // 원본 S3 URL 저장
                         .mediaPurpose(purpose)
                         .build();
-                Media savedMedia = mediaRepository.save(media);
-                
-                // 5) 프록시 URL 생성 및 업데이트
-                String proxyUrl = "/api/media/image/" + savedMedia.getId();
-                savedMedia.setMediaUrl(proxyUrl);
-                return mediaRepository.save(savedMedia);
+                return mediaRepository.save(media);
             } catch (Exception e) {
                 // S3 업로드 실패 시 로컬 저장으로 fallback
                 System.out.println("S3 업로드 실패, 로컬 저장으로 fallback: " + e.getMessage());
@@ -117,20 +115,18 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 fos.write(file.getBytes());
             }
 
-            // DB에 먼저 저장 (ID를 얻기 위해)
+            // 로컬 URL 생성
+            String localUrl = "/uploads/" + purpose + "/" + refId + "/" + fileName;
+
+            // DB 저장
             Media media = Media.builder()
                     .mediaRealName(file.getOriginalFilename())
                     .mediaUidName(key)
                     .mediaType(file.getContentType())
-                    .mediaUrl("") // 임시로 빈 값
+                    .mediaUrl(localUrl)
                     .mediaPurpose(purpose)
                     .build();
-            Media savedMedia = mediaRepository.save(media);
-            
-            // 프록시 URL 생성 및 업데이트
-            String proxyUrl = "/api/media/image/" + savedMedia.getId();
-            savedMedia.setMediaUrl(proxyUrl);
-            return mediaRepository.save(savedMedia);
+            return mediaRepository.save(media);
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "파일 업로드 실패: " + e.getMessage(), e);
         }
