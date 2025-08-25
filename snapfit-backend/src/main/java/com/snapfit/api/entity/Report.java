@@ -63,7 +63,7 @@ public class Report {
     /**
      * 신고하는 사용자 (지연 로딩)
      */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "reporter_id", insertable = false, updatable = false)
     private User reporter;
 
@@ -124,39 +124,39 @@ public class Report {
      * 게시글 신고 생성자
      */
     public static Report createPostReport(UUID reporterId, Long postId, String reason) {
-        return Report.builder()
-            .reporterId(reporterId)
-            .targetType(TargetType.POST)
-            .targetId(postId)
-            .reason(reason)
-            .status(Status.PENDING)
-            .build();
+        Report report = new Report();
+        report.reporterId = reporterId;
+        report.targetType = TargetType.POST;
+        report.targetId = postId;
+        report.reason = reason;
+        report.status = Status.PENDING;
+        return report;
     }
 
     /**
      * 댓글 신고 생성자
      */
     public static Report createCommentReport(UUID reporterId, Long commentId, String reason) {
-        return Report.builder()
-            .reporterId(reporterId)
-            .targetType(TargetType.COMMENT)
-            .targetId(commentId)
-            .reason(reason)
-            .status(Status.PENDING)
-            .build();
+        Report report = new Report();
+        report.reporterId = reporterId;
+        report.targetType = TargetType.COMMENT;
+        report.targetId = commentId;
+        report.reason = reason;
+        report.status = Status.PENDING;
+        return report;
     }
 
     /**
      * 사용자 신고 생성자
      */
     public static Report createUserReport(UUID reporterId, UUID targetUserId, String reason) {
-        return Report.builder()
-            .reporterId(reporterId)
-            .targetType(TargetType.USER)
-            .targetId(targetUserId.hashCode() + 0L) // UUID를 Long으로 변환 (임시)
-            .reason(reason)
-            .status(Status.PENDING)
-            .build();
+        Report report = new Report();
+        report.reporterId = reporterId;
+        report.targetType = TargetType.USER;
+        report.targetId = targetUserId.hashCode() + 0L; // UUID를 Long으로 변환 (임시)
+        report.reason = reason;
+        report.status = Status.PENDING;
+        return report;
     }
 
     /**

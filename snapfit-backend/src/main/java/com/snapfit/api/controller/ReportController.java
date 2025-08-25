@@ -29,7 +29,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/reports")
 @RequiredArgsConstructor
-@Slf4j
 public class ReportController {
 
     private final ReportService reportService;
