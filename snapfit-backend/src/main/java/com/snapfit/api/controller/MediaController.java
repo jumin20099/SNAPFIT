@@ -18,14 +18,31 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.entity.Media;
+import com.snapfit.api.repository.MediaRepository;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.S3Object;
+import java.io.IOException;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/media")
 @RequiredArgsConstructor
 public class MediaController {
 
+    @Value("${cloud.aws.s3.user-bucket:default-user-bucket}")
+    private String userBucket;
+    @Value("${cloud.aws.s3.static-bucket:default-bucket}")
+    private String staticBucket;
+
     private final MediaUploadService mediaService;
     private final UserRepository userRepository;
+    private final MediaRepository mediaRepository;
+    private final AmazonS3 amazonS3;
 
     @PostMapping("/upload")
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file,
@@ -121,6 +138,68 @@ public class MediaController {
                 "error", "파일 업로드 중 오류가 발생했습니다",
                 "code", "UPLOAD_ERROR"
             ));
+        }
+    }
+    
+    /**
+     * 이미지 프록시 엔드포인트 - S3에서 이미지를 가져와서 응답
+     */
+    @GetMapping("/image/{mediaId}")
+    public ResponseEntity<Resource> getImage(@PathVariable Long mediaId) {
+        try {
+            // 미디어 정보 조회
+            Optional<Media> mediaOpt = mediaRepository.findById(mediaId);
+            if (mediaOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Media media = mediaOpt.get();
+            String key = media.getMediaUidName();
+            
+            // S3에서 이미지 가져오기
+            if (amazonS3 != null) {
+                try {
+                    // 버킷 결정 (프로필 이미지는 userBucket 사용)
+                    String bucket = media.getMediaPurpose().equals("profile") ? 
+                        userBucket : staticBucket;
+                    
+                    S3Object s3Object = amazonS3.getObject(bucket, key);
+                    byte[] content = s3Object.getObjectContent().readAllBytes();
+                    
+                    ByteArrayResource resource = new ByteArrayResource(content);
+                    
+                    return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(media.getMediaType()))
+                        .header(HttpHeaders.CACHE_CONTROL, "max-age=3600") // 1시간 캐시
+                        .body(resource);
+                        
+                } catch (Exception e) {
+                    // S3 실패 시 로컬 파일 시도
+                    return ResponseEntity.status(404).build();
+                }
+            }
+            
+            // 로컬 파일 시스템에서 가져오기 (fallback)
+            try {
+                String localPath = "." + media.getMediaUrl(); // ./uploads/... 경로
+                java.io.File file = new java.io.File(localPath);
+                if (file.exists()) {
+                    byte[] content = java.nio.file.Files.readAllBytes(file.toPath());
+                    ByteArrayResource resource = new ByteArrayResource(content);
+                    
+                    return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(media.getMediaType()))
+                        .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                        .body(resource);
+                } else {
+                    return ResponseEntity.notFound().build();
+                }
+            } catch (IOException e) {
+                return ResponseEntity.internalServerError().build();
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 }
