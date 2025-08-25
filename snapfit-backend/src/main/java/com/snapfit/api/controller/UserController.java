@@ -63,15 +63,33 @@ public class UserController {
 
     @PatchMapping("/profile")
     public ResponseEntity<Map<String, Object>> updateProfile(
-            @RequestBody Map<String, Object> updateRequest,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
+            @RequestBody Map<String, Object> updateRequest) {
         
-        log.info("프로필 업데이트 요청: userId={}", userDetails.getUserId());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || 
+            "anonymousUser".equals(authentication.getName())) {
+            return ResponseEntity.status(401).body(Map.of(
+                "success", false,
+                "error", "인증이 필요합니다",
+                "code", "UNAUTHORIZED"
+            ));
+        }
+        
+        String email = authentication.getName();
+        log.info("프로필 업데이트 요청: email={}", email);
         
         try {
-            UUID userId = UUID.fromString(userDetails.getUserId());
-            User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "error", "사용자를 찾을 수 없습니다",
+                    "code", "USER_NOT_FOUND"
+                ));
+            }
+            
+            User user = userOpt.get();
+            UUID userId = user.getUserIdx();
 
             boolean updated = false;
             

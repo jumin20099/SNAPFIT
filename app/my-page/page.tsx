@@ -360,10 +360,10 @@ export default function MyPage() {
                 className="w-full justify-start h-12"
                 onClick={handleShowBlockedUsers}
                 data-testid="blocked-users-tab"
-                disabled={isLoading}
+                disabled={blockLoading}
               >
                 <UserX className="w-5 h-5 mr-3 text-gray-500" />
-                차단한 사용자 {isLoading && "(로딩중...)"}
+                차단한 사용자 {blockLoading && "(로딩중...)"}
               </Button>
             </CardContent>
           </Card>

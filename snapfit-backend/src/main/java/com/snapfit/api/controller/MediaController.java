@@ -13,8 +13,11 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
-import com.snapfit.api.security.CustomUserDetails;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import java.util.Optional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.snapfit.api.entity.User;
+import com.snapfit.api.repository.UserRepository;
 
 @RestController
 @RequestMapping("/api/media")
@@ -22,6 +25,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 public class MediaController {
 
     private final MediaUploadService mediaService;
+    private final UserRepository userRepository;
 
     @PostMapping("/upload")
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file,
@@ -39,8 +43,18 @@ public class MediaController {
     }
 
     @PostMapping("/upload/profile")
-    public ResponseEntity<?> uploadProfile(@RequestParam("file") MultipartFile file,
-                                         @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> uploadProfile(@RequestParam("file") MultipartFile file) {
+        // 인증 확인
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || 
+            "anonymousUser".equals(authentication.getName())) {
+            return ResponseEntity.status(401).body(Map.of(
+                "success", false,
+                "error", "인증이 필요합니다",
+                "code", "UNAUTHORIZED"
+            ));
+        }
+        
         if (mediaService == null) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "미디어 업로드 서비스가 설정되지 않았습니다.");
         }
@@ -76,8 +90,22 @@ public class MediaController {
         }
         
         try {
+            // 현재 사용자 정보 가져오기
+            String email = authentication.getName();
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "error", "사용자를 찾을 수 없습니다",
+                    "code", "USER_NOT_FOUND"
+                ));
+            }
+            
+            User user = userOpt.get();
+            Long userId = user.getUserIdx().getMostSignificantBits(); // UUID를 Long으로 변환 (간단한 방법)
+            
             // 프로필 이미지 전용 purpose 사용
-            Media saved = mediaService.uploadMedia(file, "profile", 0L); // refId는 0으로 설정
+            Media saved = mediaService.uploadMedia(file, "profile", userId);
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
