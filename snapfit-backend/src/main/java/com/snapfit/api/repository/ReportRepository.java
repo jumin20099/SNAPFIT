@@ -78,25 +78,10 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     @Query("SELECT r.targetType, COUNT(r) FROM Report r GROUP BY r.targetType")
     List<Object[]> getTargetTypeStatistics();
 
-        /**
+    /**
      * 전체 신고 목록 조회 (생성일 역순)
      */
     Page<Report> findAllByOrderByCreatedAtDesc(Pageable pageable);
-
-    /**
-     * 상태별 신고 목록 조회 (생성일 역순)
-     */
-    Page<Report> findByStatusOrderByCreatedAtDesc(Report.Status status, Pageable pageable);
-
-    /**
-     * 중복 신고 확인
-     */
-    boolean existsByReporterIdAndTargetTypeAndTargetId(UUID reporterId, Report.TargetType targetType, Long targetId);
-
-    /**
-     * 신고자별 신고 목록
-     */
-    List<Report> findByReporterId(UUID reporterId);
 
     /**
      * 최근 N일간의 신고 수

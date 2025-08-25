@@ -158,15 +158,19 @@ public class ReportService {
      * 전체 신고 목록 조회 (관리자용)
      */
     public Page<Report> getAllReports(Pageable pageable) {
-        return reportRepository.findAllOrderByCreatedAtDesc(pageable);
+        log.info("전체 신고 목록 조회: 페이지={}, 크기={}", pageable.getPageNumber(), pageable.getPageSize());
+        return reportRepository.findAllByOrderByCreatedAtDesc(pageable);
     }
 
     /**
-     * 상태별 신고 목록 조회
+     * 상태별 신고 목록 조회 (페이징)
      */
     public Page<Report> getReportsByStatus(Report.Status status, Pageable pageable) {
+        log.info("상태별 신고 목록 조회: 상태={}, 페이지={}, 크기={}", status, pageable.getPageNumber(), pageable.getPageSize());
         return reportRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
     }
+
+
 
     /**
      * 대상 타입별 신고 목록 조회
@@ -242,39 +246,7 @@ public class ReportService {
         return reportRepository.findByReporterId(reporterId);
     }
 
-        /**
-     * 전체 신고 목록 조회 (페이징)
-     */
-    public Page<Report> getAllReports(Pageable pageable) {
-        log.info("전체 신고 목록 조회: 페이지={}, 크기={}", pageable.getPageNumber(), pageable.getPageSize());
-        return reportRepository.findAllByOrderByCreatedAtDesc(pageable);
-    }
 
-    /**
-     * 상태별 신고 목록 조회 (페이징)
-     */
-    public Page<Report> getReportsByStatus(Report.Status status, Pageable pageable) {
-        log.info("상태별 신고 목록 조회: 상태={}, 페이지={}, 크기={}", status, pageable.getPageNumber(), pageable.getPageSize());
-        return reportRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
-    }
-
-    /**
-     * 신고 상태 변경
-     */
-    @Transactional
-    public Report updateReportStatus(Long reportId, Report.Status status, String adminNotes) {
-        log.info("신고 상태 변경: 신고ID={}, 새상태={}, 메모={}", reportId, status, adminNotes);
-        
-        Report report = reportRepository.findById(reportId)
-            .orElseThrow(() -> new IllegalArgumentException("신고를 찾을 수 없습니다: " + reportId));
-            
-        report.updateStatus(status, adminNotes);
-        
-        Report updatedReport = reportRepository.save(report);
-        log.info("신고 상태 변경 완료: 신고ID={}, 상태={}", reportId, status);
-        
-        return updatedReport;
-    }
 
     /**
      * 통합 신고 생성 메서드
