@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.snapfit.api.security.CustomUserDetails;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.entity.Media;
@@ -62,11 +64,10 @@ public class MediaController {
     }
 
     @PostMapping("/upload/profile")
-    public ResponseEntity<?> uploadProfile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> uploadProfile(@RequestParam("file") MultipartFile file,
+                                          @AuthenticationPrincipal CustomUserDetails userDetails) {
         // 인증 확인
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated() || 
-            "anonymousUser".equals(authentication.getName())) {
+        if (userDetails == null) {
             return ResponseEntity.status(401).body(Map.of(
                 "success", false,
                 "error", "인증이 필요합니다",
@@ -110,7 +111,7 @@ public class MediaController {
         
         try {
             // 현재 사용자 정보 가져오기
-            String email = authentication.getName();
+            String email = userDetails.getUsername();
             Optional<User> userOpt = userRepository.findByEmail(email);
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(404).body(Map.of(
