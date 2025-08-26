@@ -185,20 +185,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             System.out.println("email: " + user.getEmail());
             System.out.println("nickname: " + user.getNickname());
 
-            // CustomOAuth2User 생성 (컨트롤러에서 @AuthenticationPrincipal로 사용)
-            Map<String, Object> attributes = new HashMap<>();
-            attributes.put("email", user.getEmail());
-            attributes.put("name", user.getNickname());
-            attributes.put("sub", user.getEmail());
-            
-            CustomOAuth2User customOAuth2User = new CustomOAuth2User(user, attributes);
+            // CustomUserDetails 생성 (컨트롤러에서 @AuthenticationPrincipal로 사용)
+            CustomUserDetails customUserDetails = new CustomUserDetails(user);
             
             // SecurityContext에 설정
             UsernamePasswordAuthenticationToken auth = 
                 new UsernamePasswordAuthenticationToken(
-                    customOAuth2User,  // CustomOAuth2User 사용
+                    customUserDetails,  // CustomUserDetails 사용
                     null,
-                    customOAuth2User.getAuthorities()
+                    customUserDetails.getAuthorities()
                 );
             auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(auth);
