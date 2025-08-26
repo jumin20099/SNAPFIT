@@ -132,19 +132,17 @@ public class MediaController {
             // UUID를 문자열로 변환하여 사용 (음수 방지)
             String userId = user.getUserIdx().toString();
             
-            // 프로필 이미지 전용 purpose 사용
-            Media saved = mediaService.uploadMedia(file, "profile", 0L); // 임시로 0L 사용
+            // 프로필 이미지 업로드
+            Media saved = mediaService.uploadMedia(file, "profile", 0L);
             
-            // 프록시 URL과 S3 URL 모두 반환
-            String proxyUrl = "/api/media/image/" + saved.getId();
-            String s3Url = saved.getMediaUrl(); // S3 URL (DB에 저장된 실제 URL)
+            // S3 URL만 반환 (프록시 URL 제거)
+            String s3Url = saved.getMediaUrl();
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "data", Map.of(
                     "id", saved.getId(),
-                    "url", proxyUrl, // 프록시 URL (프론트 표시용)
-                    "s3Url", s3Url,  // S3 URL (실제 저장된 URL)
+                    "url", s3Url,  // S3 URL만 반환
                     "mediaType", saved.getMediaType()
                 )
             ));
@@ -172,69 +170,19 @@ public class MediaController {
             Media media = mediaOpt.get();
             String mediaUrl = media.getMediaUrl();
             
-            // S3 URL인 경우 임시 접근 가능한 URL로 리다이렉트
-            if (mediaUrl.startsWith("https://") && amazonS3 != null) {
-                try {
-                    // S3 URL에서 버킷과 키 추출
-                    String bucket = media.getMediaPurpose().equals("profile") ? userBucket : staticBucket;
-                    
-                    // S3 URL에서 키 추출 (https://bucket.s3.region.amazonaws.com/key)
-                    String key;
-                    if (mediaUrl.contains(".s3.")) {
-                        // S3 URL에서 키 부분만 추출
-                        String[] urlParts = mediaUrl.split("\\.s3\\.");
-                        if (urlParts.length > 1) {
-                            String afterS3 = urlParts[1];
-                            String[] keyParts = afterS3.split("/", 2);
-                            if (keyParts.length > 1) {
-                                key = keyParts[1]; // region.amazonaws.com/key 부분에서 key만 추출
-                            } else {
-                                key = media.getMediaUidName(); // fallback
-                            }
-                        } else {
-                            key = media.getMediaUidName(); // fallback
-                        }
-                    } else {
-                        key = media.getMediaUidName(); // fallback
-                    }
-                    
-                    System.out.println("=== S3 키 추출 ===");
-                    System.out.println("원본 URL: " + mediaUrl);
-                    System.out.println("추출된 키: " + key);
-                    System.out.println("버킷: " + bucket);
-                    
-                    // Pre-signed URL 생성 (1시간 유효)
-                    Date expiration = new Date();
-                    long expTimeMillis = expiration.getTime();
-                    expTimeMillis += 1000 * 60 * 60; // 1시간
-                    expiration.setTime(expTimeMillis);
-                    
-                    GeneratePresignedUrlRequest generatePresignedUrlRequest = 
-                        new GeneratePresignedUrlRequest(bucket, key)
-                            .withMethod(HttpMethod.GET)
-                            .withExpiration(expiration);
-                    
-                    String presignedUrl = amazonS3.generatePresignedUrl(generatePresignedUrlRequest).toString();
-                    
-                    System.out.println("생성된 Pre-signed URL: " + presignedUrl);
-                    
-                    // 리다이렉트 응답
-                    return ResponseEntity.status(302)
-                        .header("Location", presignedUrl)
-                        .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
-                        .build();
-                        
-                } catch (Exception e) {
-                    System.out.println("Pre-signed URL 생성 실패: " + e.getMessage());
-                    e.printStackTrace();
-                    return ResponseEntity.status(404).build();
-                }
+            // S3 URL인 경우 직접 리다이렉트 (Pre-signed URL 없이)
+            if (mediaUrl.startsWith("https://") && mediaUrl.contains(".s3.")) {
+                // User 버킷이 Public이므로 직접 S3 URL로 리다이렉트
+                return ResponseEntity.status(302)
+                    .header("Location", mediaUrl)
+                    .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                    .build();
             }
             
             // 로컬 파일인 경우 직접 제공
             if (mediaUrl.startsWith("/uploads/")) {
                 try {
-                    String localPath = "." + mediaUrl; // ./uploads/... 경로
+                    String localPath = "." + mediaUrl;
                     java.io.File file = new java.io.File(localPath);
                     if (file.exists()) {
                         byte[] content = java.nio.file.Files.readAllBytes(file.toPath());
