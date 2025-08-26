@@ -59,8 +59,9 @@ public class SecurityConfig {
                     "/api/auth/**", "/api/partner/**", "/api/admin/**", "/api/products/**", 
                     "/api/posts/**", "/api/comments/**", "/api/follows/**", "/api/search/**", 
                     "/api/ranking/**", "/api/health/**", "/api/notifications/stream", "/api/likes/**", "/api/scraps/**", "/error",
-                    "/ws/**", "/sse/**"
+                    "/ws/**", "/sse/**", "/api/media/image/**"
                 ).permitAll()
+                .requestMatchers("/api/media/upload/**").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
