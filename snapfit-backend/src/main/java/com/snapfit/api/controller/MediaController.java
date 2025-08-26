@@ -173,9 +173,33 @@ public class MediaController {
             // S3 URL인 경우 임시 접근 가능한 URL로 리다이렉트
             if (mediaUrl.startsWith("https://") && amazonS3 != null) {
                 try {
-                    // 버킷과 키 추출
+                    // S3 URL에서 버킷과 키 추출
                     String bucket = media.getMediaPurpose().equals("profile") ? userBucket : staticBucket;
-                    String key = media.getMediaUidName();
+                    
+                    // S3 URL에서 키 추출 (https://bucket.s3.region.amazonaws.com/key)
+                    String key;
+                    if (mediaUrl.contains(".s3.")) {
+                        // S3 URL에서 키 부분만 추출
+                        String[] urlParts = mediaUrl.split("\\.s3\\.");
+                        if (urlParts.length > 1) {
+                            String afterS3 = urlParts[1];
+                            String[] keyParts = afterS3.split("/", 2);
+                            if (keyParts.length > 1) {
+                                key = keyParts[1]; // region.amazonaws.com/key 부분에서 key만 추출
+                            } else {
+                                key = media.getMediaUidName(); // fallback
+                            }
+                        } else {
+                            key = media.getMediaUidName(); // fallback
+                        }
+                    } else {
+                        key = media.getMediaUidName(); // fallback
+                    }
+                    
+                    System.out.println("=== S3 키 추출 ===");
+                    System.out.println("원본 URL: " + mediaUrl);
+                    System.out.println("추출된 키: " + key);
+                    System.out.println("버킷: " + bucket);
                     
                     // Pre-signed URL 생성 (1시간 유효)
                     Date expiration = new Date();
@@ -190,6 +214,8 @@ public class MediaController {
                     
                     String presignedUrl = amazonS3.generatePresignedUrl(generatePresignedUrlRequest).toString();
                     
+                    System.out.println("생성된 Pre-signed URL: " + presignedUrl);
+                    
                     // 리다이렉트 응답
                     return ResponseEntity.status(302)
                         .header("Location", presignedUrl)
@@ -197,6 +223,8 @@ public class MediaController {
                         .build();
                         
                 } catch (Exception e) {
+                    System.out.println("Pre-signed URL 생성 실패: " + e.getMessage());
+                    e.printStackTrace();
                     return ResponseEntity.status(404).build();
                 }
             }
