@@ -133,14 +133,16 @@ public class MediaController {
             // 프로필 이미지 전용 purpose 사용
             Media saved = mediaService.uploadMedia(file, "profile", userId);
             
-            // 프록시 URL 생성하여 응답
+            // 프록시 URL과 S3 URL 모두 반환
             String proxyUrl = "/api/media/image/" + saved.getId();
+            String s3Url = saved.getMediaUrl(); // S3 URL (DB에 저장된 실제 URL)
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "data", Map.of(
                     "id", saved.getId(),
-                    "url", proxyUrl, // 프록시 URL 반환
+                    "url", proxyUrl, // 프록시 URL (프론트 표시용)
+                    "s3Url", s3Url,  // S3 URL (실제 저장된 URL)
                     "mediaType", saved.getMediaType()
                 )
             ));

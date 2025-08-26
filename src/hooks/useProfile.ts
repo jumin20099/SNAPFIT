@@ -114,7 +114,8 @@ export const useProfile = () => {
         throw new Error(data.error || '이미지 업로드에 실패했습니다');
       }
 
-      return data.data.url;
+      // S3 URL을 우선 사용, 없으면 프록시 URL 사용
+      return data.data.s3Url || data.data.url;
     } catch (error) {
       setUploadProgress(0);
       throw error;
