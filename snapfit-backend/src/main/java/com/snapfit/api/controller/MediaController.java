@@ -128,10 +128,12 @@ public class MediaController {
             }
             
             User user = userOpt.get();
-            Long userId = user.getUserIdx().getMostSignificantBits(); // UUID를 Long으로 변환 (간단한 방법)
+            
+            // UUID를 문자열로 변환하여 사용 (음수 방지)
+            String userId = user.getUserIdx().toString();
             
             // 프로필 이미지 전용 purpose 사용
-            Media saved = mediaService.uploadMedia(file, "profile", userId);
+            Media saved = mediaService.uploadMedia(file, "profile", 0L); // 임시로 0L 사용
             
             // 프록시 URL과 S3 URL 모두 반환
             String proxyUrl = "/api/media/image/" + saved.getId();

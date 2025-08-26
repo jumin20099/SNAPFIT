@@ -37,6 +37,11 @@ public class MediaUploadServiceImpl implements MediaUploadService {
         String ext = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.'));
         String originalName = file.getOriginalFilename();
         String uidName = UUID.randomUUID() + "_" + originalName; // UUID+원본이름 조합
+        
+        // refId가 0인 경우 (프로필 이미지) 고유한 키 생성
+        if (refId == 0L && "profile".equals(purpose)) {
+            refId = System.currentTimeMillis(); // 타임스탬프 사용
+        }
 
         switch (purpose) {
             case "store_logo":
