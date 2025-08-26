@@ -114,7 +114,7 @@ export const useProfile = () => {
         throw new Error(data.error || '이미지 업로드에 실패했습니다');
       }
 
-      // 프록시 URL 사용 (S3 Access Denied 방지)
+      // S3 URL 직접 사용 (프록시 URL 제거)
       return data.data.url;
     } catch (error) {
       setUploadProgress(0);

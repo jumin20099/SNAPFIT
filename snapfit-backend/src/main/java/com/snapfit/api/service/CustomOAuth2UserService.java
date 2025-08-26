@@ -74,6 +74,8 @@ public class CustomOAuth2UserService
             
             if (opt.isPresent()) {
                 user = opt.get();
+                // 기존 사용자의 경우 이메일만 업데이트 (닉네임은 유지)
+                user.setEmail(email);
             } else {
                 user = User.builder()
                         .email(email)
@@ -84,9 +86,7 @@ public class CustomOAuth2UserService
                         .build();
             }
 
-            // 6) 정보 최신화
-            user.setEmail(email);
-            user.setNickname(nickname);
+            // 6) 사용자 저장 (기존 사용자는 닉네임 유지, 새 사용자는 닉네임 설정)
             user = userRepo.save(user);
 
             // 저장 후 freshUser로 다시 조회해서 role 값 확인
