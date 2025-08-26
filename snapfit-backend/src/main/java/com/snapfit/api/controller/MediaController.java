@@ -17,6 +17,7 @@ import java.util.Optional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.snapfit.api.security.CustomUserDetails;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.entity.Media;
@@ -64,13 +65,13 @@ public class MediaController {
 
     @PostMapping("/upload/profile")
     public ResponseEntity<?> uploadProfile(@RequestParam("file") MultipartFile file,
-                                          @AuthenticationPrincipal User user) {
+                                          @AuthenticationPrincipal CustomUserDetails userDetails) {
         System.out.println("=== 프로필 업로드 인증 확인 ===");
-        System.out.println("user: " + user);
+        System.out.println("userDetails: " + userDetails);
         
         // 인증 확인
-        if (user == null) {
-            System.out.println("user가 null입니다!");
+        if (userDetails == null) {
+            System.out.println("userDetails가 null입니다!");
             return ResponseEntity.status(401).body(Map.of(
                 "success", false,
                 "error", "인증이 필요합니다",
@@ -78,7 +79,7 @@ public class MediaController {
             ));
         }
         
-        System.out.println("user 이메일: " + user.getEmail());
+        System.out.println("userDetails 사용자명: " + userDetails.getUsername());
         
         if (mediaService == null) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "미디어 업로드 서비스가 설정되지 않았습니다.");
@@ -115,7 +116,18 @@ public class MediaController {
         }
         
         try {
-            // 현재 사용자 정보 (이미 User 객체로 받음)
+            // 현재 사용자 정보 가져오기
+            String email = userDetails.getUsername();
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "error", "사용자를 찾을 수 없습니다",
+                    "code", "USER_NOT_FOUND"
+                ));
+            }
+            
+            User user = userOpt.get();
             Long userId = user.getUserIdx().getMostSignificantBits(); // UUID를 Long으로 변환 (간단한 방법)
             
             // 프로필 이미지 전용 purpose 사용
