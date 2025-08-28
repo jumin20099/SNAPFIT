@@ -3,7 +3,7 @@ package com.snapfit.api.controller;
 import com.snapfit.api.entity.Scrap;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.UserRepository;
-import com.snapfit.api.security.CustomOAuth2User;
+import com.snapfit.api.security.CustomUserDetails;
 import com.snapfit.api.service.ScrapService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +22,7 @@ public class ScrapController {
     private final ScrapService scrapService;
     private final UserRepository userRepository;
 
-    private User current(@AuthenticationPrincipal CustomOAuth2User principal) {
+    private User current(@AuthenticationPrincipal CustomUserDetails principal) {
         if (principal == null) throw new IllegalArgumentException("인증 필요");
         return userRepository.findById(principal.getUser().getUserIdx())
                 .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
@@ -30,7 +30,7 @@ public class ScrapController {
 
     @PostMapping("/toggle")
     public ResponseEntity<?> toggle(@RequestBody Map<String, Object> request,
-                                    @AuthenticationPrincipal CustomOAuth2User principal) {
+                                    @AuthenticationPrincipal CustomUserDetails principal) {
         User user = current(principal);
         Long postId = Long.valueOf(request.get("postId").toString());
         boolean scraped = scrapService.toggleScrap(user.getUserIdx(), postId);
@@ -48,7 +48,7 @@ public class ScrapController {
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<Long>> myScraps(@AuthenticationPrincipal CustomOAuth2User principal) {
+    public ResponseEntity<List<Long>> myScraps(@AuthenticationPrincipal CustomUserDetails principal) {
         try {
             User user = current(principal);
             List<Long> scrapedPostIds = scrapService.getUserScrapedPostIds(user.getUserIdx());
@@ -61,7 +61,7 @@ public class ScrapController {
 
     @GetMapping("/check")
     public ResponseEntity<Boolean> checkScrap(@RequestParam Long postId,
-                                             @AuthenticationPrincipal CustomOAuth2User principal) {
+                                             @AuthenticationPrincipal CustomUserDetails principal) {
         User user = current(principal);
         boolean scraped = scrapService.isScraped(user.getUserIdx(), postId);
         return ResponseEntity.ok(scraped);

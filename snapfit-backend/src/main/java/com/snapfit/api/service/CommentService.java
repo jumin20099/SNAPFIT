@@ -188,6 +188,17 @@ public class CommentService {
         
         try {
             Page<Comment> comments = commentRepository.findTopLevelCommentsByPostId(postId, pageable);
+            
+            // Hibernate 프록시 초기화 문제 방지를 위해 User 정보를 명시적으로 로딩
+            comments.getContent().forEach(comment -> {
+                if (comment.getAuthor() != null) {
+                    // User 엔티티의 기본 정보를 명시적으로 접근하여 프록시 초기화
+                    comment.getAuthor().getUserIdx();
+                    comment.getAuthor().getNickname();
+                    comment.getAuthor().getEmail();
+                }
+            });
+            
             log.info("게시글 최상위 댓글 조회 완료: 게시글={}, {}개", postId, comments.getNumberOfElements());
             return comments;
             

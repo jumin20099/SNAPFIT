@@ -4,7 +4,7 @@ import com.snapfit.api.entity.Like.TargetType;
 import com.snapfit.api.entity.Like;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.UserRepository;
-import com.snapfit.api.security.CustomOAuth2User;
+import com.snapfit.api.security.CustomUserDetails;
 import com.snapfit.api.service.LikeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +22,7 @@ public class LikeController {
     private final LikeService likeService;
     private final UserRepository userRepository;
 
-    private User current(@AuthenticationPrincipal CustomOAuth2User principal) {
+    private User current(@AuthenticationPrincipal CustomUserDetails principal) {
         if (principal == null) throw new IllegalArgumentException("인증 필요");
         return userRepository.findById(principal.getUser().getUserIdx())
                 .orElseThrow(() -> new IllegalArgumentException("사용자 없음"));
@@ -30,7 +30,7 @@ public class LikeController {
 
     @PostMapping("/toggle")
     public ResponseEntity<?> toggle(@RequestBody Map<String, Object> request,
-                                    @AuthenticationPrincipal CustomOAuth2User principal) {
+                                    @AuthenticationPrincipal CustomUserDetails principal) {
         try {
             // postId 또는 targetIdx 중 하나를 사용
             Long targetIdx = null;
@@ -79,7 +79,7 @@ public class LikeController {
     }
 
     @GetMapping("/my")
-    public ResponseEntity<List<Map<String, Object>>> myLikes(@AuthenticationPrincipal CustomOAuth2User principal) {
+    public ResponseEntity<List<Map<String, Object>>> myLikes(@AuthenticationPrincipal CustomUserDetails principal) {
         try {
             User user = current(principal);
             List<Like> userLikes = likeService.listUserLikes(user);
