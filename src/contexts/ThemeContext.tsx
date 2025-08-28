@@ -28,6 +28,7 @@ interface ThemeProviderProps {
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>('system');
   const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('light');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // 시스템 테마 감지
   useEffect(() => {
@@ -42,16 +43,28 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // localStorage에서 테마 불러오기
+  // localStorage에서 테마 불러오기 (초기 로드 시에만)
   useEffect(() => {
-    const stored = localStorage.getItem('theme') as Theme;
-    if (stored && ['light', 'dark', 'system'].includes(stored)) {
-      setTheme(stored);
+    if (!isInitialized) {
+      const stored = localStorage.getItem('theme') as Theme;
+      if (stored && ['light', 'dark', 'system'].includes(stored)) {
+        setTheme(stored);
+        console.log('초기 테마 로드:', stored);
+      }
+      setIsInitialized(true);
     }
-  }, []);
+  }, [isInitialized]);
 
   // 테마 변경 시 localStorage 저장 및 DOM 클래스 적용
   useEffect(() => {
+    if (!isInitialized) return; // 초기화 전에는 실행하지 않음
+    
+    console.log('=== ThemeContext 테마 변경 감지 ===', {
+      새테마: theme,
+      시스템테마: systemTheme,
+      실제적용테마: theme === 'system' ? systemTheme : theme
+    });
+    
     localStorage.setItem('theme', theme);
     
     const root = document.documentElement;
@@ -63,7 +76,13 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     // body 클래스도 업데이트 (일부 컴포넌트에서 사용)
     document.body.classList.remove('light', 'dark');
     document.body.classList.add(actualTheme);
-  }, [theme, systemTheme]);
+    
+    console.log('=== DOM 클래스 업데이트 완료 ===', {
+      root클래스: root.className,
+      body클래스: document.body.className,
+      localStorage저장값: localStorage.getItem('theme')
+    });
+  }, [theme, systemTheme, isInitialized]);
 
   const actualTheme = theme === 'system' ? systemTheme : theme;
 

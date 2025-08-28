@@ -25,11 +25,22 @@ export default function MyPage() {
   const [tempNickname, setTempNickname] = useState('')
   const [nicknameError, setNicknameError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [clientThemeInfo, setClientThemeInfo] = useState<{ localStorage: string; systemTheme: string } | null>(null)
   
   const { getBlockedUsers, unblockUser, isLoading: blockLoading } = useBlock()
   const { updateNickname, uploadProfileImage, updateProfileImageUrl, isLoading: profileLoading, uploadProgress } = useProfile()
   const { theme, setTheme, actualTheme } = useTheme()
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 클라이언트에서만 테마 정보 가져오기
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setClientThemeInfo({
+        localStorage: localStorage.getItem('theme') || 'N/A',
+        systemTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      })
+    }
+  }, [theme]) // theme이 변경될 때마다 업데이트
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -171,7 +182,52 @@ export default function MyPage() {
     const nextTheme: 'light' | 'dark' | 'system' = 
       theme === 'light' ? 'dark' : 
       theme === 'dark' ? 'system' : 'light'
+    
+    console.log('=== 테마 변경 시작 ===', {
+      현재테마: theme,
+      다음테마: nextTheme
+    })
+    
+    // ThemeContext의 setTheme 호출
     setTheme(nextTheme)
+    
+    // localStorage 직접 업데이트 (백업)
+    localStorage.setItem('theme', nextTheme)
+    
+    console.log('=== 테마 변경 완료 ===', {
+      설정된테마: nextTheme,
+      localStorage값: localStorage.getItem('theme'),
+      ThemeContext테마: theme
+    })
+    
+    // 강제로 DOM 클래스 업데이트 (ThemeContext와 동기화)
+    const root = document.documentElement
+    const body = document.body
+    
+    // 기존 클래스 제거
+    root.classList.remove('light', 'dark')
+    body.classList.remove('light', 'dark')
+    
+    // 새 클래스 추가
+    if (nextTheme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      root.classList.add(systemTheme)
+      body.classList.add(systemTheme)
+      console.log('시스템 테마 적용:', systemTheme)
+    } else {
+      root.classList.add(nextTheme)
+      body.classList.add(nextTheme)
+      console.log('직접 테마 적용:', nextTheme)
+    }
+    
+    // 페이지 새로고침 없이 테마 즉시 적용 확인
+    setTimeout(() => {
+      console.log('=== 테마 적용 확인 ===', {
+        root클래스: root.className,
+        body클래스: body.className,
+        localStorage최종값: localStorage.getItem('theme')
+      })
+    }, 100)
   }
 
   return (
@@ -431,13 +487,28 @@ export default function MyPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setTheme('system')}
+                    onClick={() => {
+                      console.log('시스템 테마 직접 설정');
+                      setTheme('system');
+                      localStorage.setItem('theme', 'system');
+                    }}
                     data-testid="system-theme-option"
                     className="text-xs"
                   >
                     <Monitor className="w-4 h-4" />
                   </Button>
                 </div>
+              </div>
+              {/* 디버깅 정보 */}
+              <div className="mt-2 text-xs text-gray-500">
+                <div>현재 테마: {theme}</div>
+                <div>실제 적용: {theme === 'system' ? '시스템' : theme}</div>
+                {clientThemeInfo && (
+                  <>
+                    <div>localStorage: {clientThemeInfo.localStorage}</div>
+                    <div>시스템 테마: {clientThemeInfo.systemTheme}</div>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -516,11 +587,11 @@ export default function MyPage() {
                       variant="outline" 
                       size="sm"
                       onClick={() => handleUnblockUser(user.blockedUserId, user.blockedUserNickname)}
-                      disabled={isLoading}
+                      disabled={blockLoading}
                       data-testid="unblock-user-button"
                       className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                     >
-                      {isLoading ? (
+                      {blockLoading ? (
                         <div className="flex items-center gap-2">
                           <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
                           처리중...
