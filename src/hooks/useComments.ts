@@ -48,6 +48,11 @@ export function useComments(postId: number): UseCommentsResult {
 
   const getAuthHeaders = useCallback(() => {
     const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
+    }
+    
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -61,11 +66,15 @@ export function useComments(postId: number): UseCommentsResult {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/posts/${postId}/comments?page=${page}&size=20`, {
-        headers: getAuthHeaders()
+      const headers = getAuthHeaders();
+      const response = await fetch(`/api/posts/${postId}/comments?page=${page}&size=20`, {
+        headers
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('인증이 필요합니다. 다시 로그인해주세요.');
+        }
         throw new Error('댓글 목록 조회 실패');
       }
 
@@ -80,7 +89,8 @@ export function useComments(postId: number): UseCommentsResult {
       setHasMore(!data.last);
       setCurrentPage(page);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '댓글 로딩 실패');
+      const errorMessage = err instanceof Error ? err.message : '댓글 로딩 실패';
+      setError(errorMessage);
       console.error('댓글 로딩 실패:', err);
     } finally {
       setIsLoading(false);
@@ -100,7 +110,7 @@ export function useComments(postId: number): UseCommentsResult {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/posts/${postId}/comments`, {
+      const response = await fetch(`/api/posts/${postId}/comments`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ content: content.trim() })
@@ -132,7 +142,7 @@ export function useComments(postId: number): UseCommentsResult {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/comments/${commentId}`, {
+      const response = await fetch(`/api/comments/${commentId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({ content: content.trim() })
@@ -147,7 +157,9 @@ export function useComments(postId: number): UseCommentsResult {
       // 댓글 목록에서 해당 댓글 업데이트
       setComments(prev => 
         prev.map(comment => 
-          comment.commentId === commentId ? updatedComment : comment
+          comment.commentId === commentId 
+            ? { ...comment, content: updatedComment.content }
+            : comment
         )
       );
       
@@ -166,7 +178,7 @@ export function useComments(postId: number): UseCommentsResult {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8080/api/comments/${commentId}`, {
+      const response = await fetch(`/api/comments/${commentId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });

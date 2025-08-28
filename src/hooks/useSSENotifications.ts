@@ -55,6 +55,11 @@ export function useSSENotifications(props?: UseSSENotificationsProps) {
     console.log("=== SSE 연결 시도: 토큰 있음 ===");
     console.log("토큰 길이:", token.length);
 
+    // 기존 연결이 있으면 먼저 닫기
+    if (esRef.current) {
+      esRef.current.close();
+    }
+
     // ❗EventSource는 Authorization 헤더를 직접 보낼 수 없음
     // Next.js API 라우트에서 토큰을 쿠키로 설정하거나
     // URL 파라미터로 전달해야 함
@@ -125,7 +130,7 @@ export function useSSENotifications(props?: UseSSENotificationsProps) {
       const delay = Math.min(30_000, 1000 * 2 ** (retryRef.current++));
       setTimeout(connect, delay);
     };
-  }, [props]);
+  }, []); // props 제거하여 무한 루프 방지
 
   useEffect(() => {
     connect();
