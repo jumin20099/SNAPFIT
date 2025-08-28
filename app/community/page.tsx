@@ -1074,11 +1074,12 @@ interface PostCardProps {
 }
 
 function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
-  const [showComments, setShowComments] = useState(false)
   const [commentText, setCommentText] = useState("")
   const [showBlockConfirm, setShowBlockConfirm] = useState(false)
   const [showReportModal, setShowReportModal] = useState(false)
   const [reportReason, setReportReason] = useState("")
+  const [showCommentModal, setShowCommentModal] = useState(false)
+  const [displayCommentCount, setDisplayCommentCount] = useState(1) // 초기에는 1개만 표시
   
   // 팔로우 기능
   const { isFollowing, followerCount, isLoading: followLoading, toggleFollow } = useFollow(post.authorName)
@@ -1087,6 +1088,8 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
   const { 
     comments, 
     isLoading: commentsLoading, 
+    hasMore: hasMoreComments,
+    loadMoreComments,
     createComment,
     toggleCommentLike
   } = useComments(post.postId)
@@ -1100,11 +1103,41 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
   // 신고 기능
   const { reportPost, isLoading: reportLoading } = useReport()
 
+  // 댓글 더보기 처리
+  const handleLoadMoreComments = async () => {
+    console.log('=== 댓글 더보기 클릭 ===', { 
+      hasMoreComments, 
+      commentsLoading, 
+      currentDisplayCount: displayCommentCount,
+      totalComments: comments.length 
+    });
+    
+    // 백엔드에서 20개씩 가져오므로, 현재 표시 개수를 20씩 증가
+    if (!commentsLoading) {
+      console.log('댓글 더보기 시작');
+      setDisplayCommentCount(prev => {
+        const newCount = prev + 20; // 백엔드 페이지 크기에 맞춤
+        console.log('댓글 표시 개수 업데이트:', { 이전: prev, 새로운: newCount });
+        return newCount;
+      });
+    } else {
+      console.log('댓글 로딩 중');
+    }
+  }
+
+  // 댓글 모달 열기
+  const handleCommentButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowCommentModal(true)
+  }
+
   const handleCommentSubmit = async () => {
     if (commentText.trim() && !commentsLoading) {
       try {
         await createComment(commentText.trim())
         setCommentText("")
+        // 댓글 작성 후 댓글 목록 새로고침
+        // 댓글이 항상 표시되므로 별도 처리 불필요
       } catch (error) {
         console.error('댓글 작성 실패:', error)
       }
@@ -1167,6 +1200,22 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
     if (diffDays <= 7) return `${diffDays - 1}일 전`
     return `${date.getMonth() + 1}월 ${date.getDate()}일`
   }
+
+  // 댓글 표시 로직
+  const visibleComments = comments.slice(0, displayCommentCount)
+  const hasMoreToShow = comments.length > displayCommentCount
+  const hasExpandedComments = displayCommentCount > 1
+  
+  // 댓글 렌더링 디버깅
+  console.log('=== PostCard 댓글 렌더링 ===', {
+    postId: post.postId,
+    전체댓글수: comments.length,
+    표시할댓글수: displayCommentCount,
+    visibleComments: visibleComments.length,
+    hasMoreToShow,
+    hasExpandedComments,
+    댓글데이터: comments
+  });
 
   return (
     <Card className="overflow-hidden" data-testid="post-card">
@@ -1295,13 +1344,16 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
             <Heart className={`w-5 h-5 ${post.liked ? "fill-red-500 text-red-500" : ""}`} />
             <span>{post.likeCount}</span>
           </button>
+          {/* 댓글 버튼 */}
           <button 
-            onClick={() => setShowComments(!showComments)}
+            onClick={handleCommentButtonClick} // Changed onClick
             className="flex items-center gap-1"
           >
             <MessageSquare className="w-5 h-5" />
             <span>{post.commentCount}</span>
           </button>
+          
+
           <button 
             onClick={onScrap}
             className="flex items-center gap-1"
@@ -1316,59 +1368,172 @@ function PostCard({ post, onLike, onScrap, onPostClick }: PostCardProps) {
         <div className="text-xs text-gray-500">{formatDate(post.createdAt)}</div>
       </div>
 
-      {/* 댓글 섹션 */}
-      {showComments && (
-        <div className="border-t bg-gray-50">
-          {/* 댓글 입력 */}
-          <div className="p-4 border-b">
-            <div className="flex gap-2">
-              <Input
-                placeholder="댓글을 입력하세요..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleCommentSubmit()}
-                className="flex-1"
-                data-testid="comment-input"
-                disabled={commentsLoading}
-              />
-              <Button 
-                onClick={handleCommentSubmit} 
-                disabled={!commentText.trim() || commentsLoading}
-                data-testid="comment-submit"
-              >
-                {commentsLoading ? "전송중..." : "전송"}
-              </Button>
-            </div>
+      {/* 댓글 섹션 - 항상 표시 */}
+      <div className="border-t bg-gray-50">
+        {/* 댓글 입력 */}
+        <div className="p-4 border-b">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="댓글을 입력하세요..."
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && commentText.trim()) {
+                  handleCommentSubmit();
+                }
+              }}
+            />
+            <button
+              onClick={handleCommentSubmit}
+              disabled={!commentText.trim()}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+            >
+              작성
+            </button>
           </div>
-          
-          {/* 댓글 목록 */}
-          <div className="max-h-60 overflow-y-auto">
-            {comments.map((comment) => (
-              <div key={comment.commentId} className="p-4 border-b last:border-b-0">
-                <div className="flex items-start gap-3">
-                  <img
-                    src={comment.author?.profileImage || "/placeholder.svg"}
-                    alt={comment.author?.nickname || "익명"}
-                    className="w-8 h-8 rounded-full"
-                  />
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{comment.author?.nickname || "익명"}</div>
-                    <div className="text-sm mt-1">{comment.content}</div>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                      <span>{formatDate(comment.createdAt)}</span>
-                      <button 
-                        onClick={() => toggleCommentLike(comment.commentId)}
-                        className="flex items-center gap-1 hover:text-red-500"
-                        data-testid="comment-like-btn"
-                      >
-                        <Heart className={`w-3 h-3 ${comment.liked ? 'fill-red-500 text-red-500' : ''}`} />
-                        <span data-testid="comment-like-count">{comment.likeCount}</span>
-                      </button>
-                    </div>
+        </div>
+        
+        {/* 댓글 목록 */}
+        <div className="max-h-60 overflow-y-auto">
+          {visibleComments.map((comment) => (
+            <div key={comment.commentId} className="p-4 border-b last:border-b-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gray-300 rounded-full flex-shrink-0"></div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm">{comment.author?.nickname || '사용자'}</span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(comment.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
+                  <p className="text-sm text-gray-700">{comment.content}</p>
                 </div>
               </div>
-            ))}
+            </div>
+          ))}
+          
+                      {/* 댓글 더보기/접기 버튼 */}
+            {comments.length > 0 && (
+              <div className="p-4 text-center">
+                {hasMoreToShow ? (
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => {
+                      console.log('=== 댓글 더보기 버튼 클릭 ===', {
+                        현재표시개수: displayCommentCount,
+                        전체댓글수: comments.length,
+                        더보기가능: hasMoreToShow
+                      });
+                      handleLoadMoreComments();
+                    }}
+                    disabled={commentsLoading}
+                    className="w-full"
+                  >
+                    {commentsLoading ? "로딩 중..." : `댓글 더보기 (${comments.length - displayCommentCount}개 더)`}
+                  </Button>
+                ) : hasExpandedComments ? (
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => {
+                      console.log('댓글 접기 클릭');
+                      setDisplayCommentCount(1);
+                    }}
+                    className="w-full"
+                  >
+                    댓글 접기
+                  </Button>
+                ) : null}
+              </div>
+            )}
+        </div>
+      </div>
+      
+      {/* 댓글 모달 */}
+      {showCommentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[80vh] mx-4 flex flex-col">
+            {/* 모달 헤더 */}
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold">댓글 {post.commentCount}개</h3>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowCommentModal(false)}
+              >
+                ✕
+              </Button>
+            </div>
+            
+            {/* 댓글 입력 */}
+            <div className="p-4 border-b">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="댓글을 입력하세요..."
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleCommentSubmit()}
+                  className="flex-1"
+                  disabled={commentsLoading}
+                />
+                <Button 
+                  onClick={handleCommentSubmit} 
+                  disabled={!commentText.trim() || commentsLoading}
+                >
+                  {commentsLoading ? "전송중..." : "전송"}
+                </Button>
+              </div>
+            </div>
+            
+            {/* 댓글 목록 */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {comments.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  첫 댓글을 남겨주세요.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {comments.map((comment) => (
+                    <div key={comment.commentId} className="flex items-start gap-3">
+                      <img
+                        src={comment.author?.profileImage || "/placeholder.svg"}
+                        alt={comment.author?.nickname || "익명"}
+                        className="w-8 h-8 rounded-full"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{comment.author?.nickname || "익명"}</div>
+                        <div className="text-sm mt-1">{comment.content}</div>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                          <span>{formatDate(comment.createdAt)}</span>
+                          <button 
+                            onClick={() => toggleCommentLike(comment.commentId)}
+                            className="flex items-center gap-1 hover:text-red-500"
+                          >
+                            <Heart className={`w-3 h-3 ${comment.liked ? 'fill-red-500 text-red-500' : ''}`} />
+                            <span>{comment.likeCount}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* 댓글 더보기 버튼 */}
+                  {hasMoreComments && (
+                    <div className="text-center pt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={handleLoadMoreComments}
+                        disabled={commentsLoading}
+                      >
+                        {commentsLoading ? "로딩 중..." : "댓글 더보기"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

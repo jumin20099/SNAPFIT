@@ -52,6 +52,7 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
   const [isLiked, setIsLiked] = useState(false)
   const [isScraped, setIsScraped] = useState(false)
   const [currentPost, setCurrentPost] = useState<Post | null>(null)
+  const [displayCommentCount, setDisplayCommentCount] = useState(10) // 초기에는 10개만 표시
   
   // 첫 번째 게시글 작성자의 팔로우 기능
   const firstPost = posts[0]
@@ -72,6 +73,18 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
     loadMoreComments
   } = useComments(postId)
   const observer = useRef<IntersectionObserver | null>(null)
+
+  // 댓글 더보기 처리
+  const handleLoadMoreComments = async () => {
+    if (hasMoreComments && !commentsLoading) {
+      await loadMoreComments()
+      setDisplayCommentCount(prev => prev + 10) // 10개씩 증가
+    }
+  }
+
+  // 표시할 댓글 수 계산
+  const visibleComments = comments.slice(0, displayCommentCount)
+  const hasMoreToShow = comments.length > displayCommentCount
 
   // 게시글 목록 가져오기
   const fetchPosts = useCallback(async (page: number = 0) => {
@@ -316,9 +329,9 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
               </div>
               
               {/* Comments List */}
-              {comments.length > 0 && (
+              {visibleComments.length > 0 && (
                 <div className="space-y-3">
-                  {comments.map((comment) => (
+                  {visibleComments.map((comment) => (
                     <div key={comment.commentId} className="flex gap-3" data-testid="comment-item">
                       <Avatar className="w-8 h-8">
                         <AvatarImage src={comment.author.profileImage} />
@@ -348,10 +361,10 @@ export default function PostDetailPage({ isOpen, onClose, postId }: PostDetailPr
               )}
               
               {/* Load More Comments */}
-              {hasMoreComments && (
+              {hasMoreToShow && (
                 <Button 
                   variant="ghost" 
-                  onClick={loadMoreComments}
+                  onClick={handleLoadMoreComments}
                   disabled={commentsLoading}
                   className="w-full mt-4"
                   data-testid="load-more-comments"
