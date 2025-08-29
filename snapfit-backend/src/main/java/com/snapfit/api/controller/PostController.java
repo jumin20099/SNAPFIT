@@ -165,16 +165,47 @@ public class PostController {
      * @return 게시글 상세 정보
      */
     @GetMapping("/{postId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<PostResponseDto> getPost(@PathVariable Long postId) {
         log.info("게시글 조회 요청: {}", postId);
         
-        // TODO: 실제 게시글 조회 로직 구현
-        PostResponseDto response = new PostResponseDto();
-        response.setPostId(postId);
-        response.setTitle("샘플 게시글");
-        response.setContent("샘플 내용");
-        
-        return ResponseEntity.ok(response);
+        try {
+            // 실제 게시글 조회
+            Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다: " + postId));
+            
+            // 삭제된 게시글 체크
+            if (post.getIsDeleted() != null && post.getIsDeleted()) {
+                throw new IllegalArgumentException("삭제된 게시글입니다: " + postId);
+            }
+            
+            // Hibernate 프록시 초기화 문제 방지를 위해 User 정보를 명시적으로 접근
+            if (post.getAuthor() != null) {
+                post.getAuthor().getUserIdx();
+                post.getAuthor().getNickname();
+                post.getAuthor().getEmail();
+                post.getAuthor().getProfileImage();
+            }
+            
+            // 실시간 개수 계산
+            setRealTimeCounts(post);
+            
+            // DTO로 변환
+            PostResponseDto response = convertToDto(post);
+            
+            log.info("게시글 조회 완료: postId={}, content={}, author={}", 
+                postId, post.getContent(), post.getAuthor() != null ? post.getAuthor().getNickname() : "null");
+            return ResponseEntity.ok(response);
+            
+        } catch (IllegalArgumentException e) {
+            log.warn("게시글 조회 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new PostResponseDto()); // 빈 DTO 반환
+        } catch (Exception e) {
+            log.error("게시글 조회 중 오류 발생: postId={}, 오류={}", postId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new PostResponseDto()); // 빈 DTO 반환
+        }
     }
 
     /**

@@ -55,83 +55,155 @@ export default function LikedItemsPage() {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const response = await fetch('/api/likes/my', {
+      // 1. 좋아요한 게시글 ID 목록 가져오기
+      const likesResponse = await fetch('/api/likes/my/posts', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+              if (likesResponse.ok) {
+          const likedItems = await likesResponse.json()
+          console.log('좋아요한 게시글 ID 목록:', likedItems)
+          const postIds = likedItems.map((item: any) => item.targetIdx)
+          console.log('추출된 게시글 ID들:', postIds)
+          
+          if (postIds.length === 0) {
+            setLikedPosts([])
+            return
+          }
+
+        // 2. 게시글 상세 정보 가져오기
+        const postsResponse = await fetch('/api/posts/liked', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ postIds })
+        })
+
+        console.log('게시글 API 응답 상태:', postsResponse.status, postsResponse.statusText)
+        
+        if (postsResponse.ok) {
+          const postsData = await postsResponse.json()
+          console.log('게시글 상세 데이터:', postsData)
+          console.log('게시글 데이터 타입:', typeof postsData, Array.isArray(postsData))
+          if (Array.isArray(postsData)) {
+            console.log('게시글 개수:', postsData.length)
+            postsData.forEach((post, index) => {
+              console.log(`게시글 ${index}:`, post)
+            })
+          }
+          const posts = postsData.map((post: any) => {
+            console.log('개별 게시글 데이터:', post)
+            return {
+              postId: post.postIdx || post.postId,
+              content: post.content || '내용 없음',
+              authorName: post.authorName || post.author?.nickname || '익명',
+              authorProfileImage: post.authorProfileImage || post.author?.profileImage || '/placeholder.svg',
+              mediaUrls: post.mediaUrls || [],
+              likeCount: post.likeCount || 0,
+              commentCount: post.commentCount || 0,
+              scrapCount: post.scrapCount || 0,
+              createdAt: post.createdAt || new Date().toISOString(),
+              tags: post.tags || [],
+              liked: true
+            }
+          })
+          console.log('변환된 게시글 데이터:', posts)
+          setLikedPosts(posts)
+        }
+      }
+    } catch (error) {
+      console.error('좋아요한 게시글 로드 실패:', error)
+      setLikedPosts([])
+    }
+  }
+
+  // 좋아요한 상품 가져오기
+  const fetchLikedProducts = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      // 1. 좋아요한 상품 ID 목록 가져오기
+      const likesResponse = await fetch('/api/likes/my/products', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (likesResponse.ok) {
+        const likedItems = await likesResponse.json()
+        console.log('좋아요한 상품 ID 목록:', likedItems)
+        const productIds = likedItems.map((item: any) => item.targetIdx)
+        console.log('추출된 상품 ID들:', productIds)
+        
+        if (productIds.length === 0) {
+          setLikedProducts([])
+          return
+        }
+
+        // 2. 상품 상세 정보 가져오기
+        const productsResponse = await fetch('/api/products/liked', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ productIds })
+        })
+
+        if (productsResponse.ok) {
+          const productsData = await productsResponse.json()
+          console.log('상품 상세 데이터:', productsData)
+          const products = productsData.map((item: any) => {
+            console.log('개별 상품 데이터:', item)
+            const product = item.product // 실제 상품 데이터는 product 필드 안에 있음
+            return {
+              productId: product.productIdx,
+              name: product.productName || '상품명 없음',
+              price: product.productPrice || 0,
+              imageUrl: product.productImage || '/placeholder.svg',
+              category: product.majorCategory || '카테고리 없음',
+              storeName: '스토어명 없음', // TODO: 스토어 정보 연동
+              liked: true
+            }
+          })
+          console.log('변환된 상품 데이터:', products)
+          setLikedProducts(products)
+        }
+      }
+    } catch (error) {
+      console.error('좋아요한 상품 로드 실패:', error)
+      setLikedProducts([])
+    }
+  }
+
+  // 좋아요한 브랜드 가져오기
+  const fetchLikedBrands = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/likes/my/brands', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
 
       if (response.ok) {
-        const data = await response.json()
-        // 게시글 데이터로 변환 (실제 API 응답에 따라 조정 필요)
-        const posts = data.map((item: any) => ({
-          postId: item.postId,
-          content: item.content || '내용 없음',
-          authorName: item.author?.nickname || '익명',
-          authorProfileImage: item.author?.profileImage || '/placeholder.svg',
-          mediaUrls: item.mediaUrls || [],
-          likeCount: item.likeCount || 0,
-          commentCount: item.commentCount || 0,
-          scrapCount: item.scrapCount || 0,
-          createdAt: item.createdAt || new Date().toISOString(),
-          tags: item.tags || [],
-          liked: true
-        }))
-        setLikedPosts(posts)
+        const likedItems = await response.json()
+        console.log('좋아요한 브랜드 ID 목록:', likedItems)
+        // TODO: 브랜드 상세 정보 API 구현 후 실제 데이터로 교체
+        // 현재는 좋아요한 브랜드가 없다고 표시
+        setLikedBrands([])
       }
     } catch (error) {
-      console.error('좋아요한 게시글 로드 실패:', error)
+      console.error('좋아요한 브랜드 로드 실패:', error)
+      setLikedBrands([])
     }
-  }
-
-  // 좋아요한 상품 가져오기 (임시 데이터)
-  const fetchLikedProducts = async () => {
-    // TODO: 실제 API 연동
-    const mockProducts: LikedProduct[] = [
-      {
-        productId: 1,
-        name: "베이직 티셔츠",
-        price: 29000,
-        imageUrl: "/placeholder.svg",
-        category: "상의",
-        storeName: "스냅핏 스토어",
-        liked: true
-      },
-      {
-        productId: 2,
-        name: "데님 팬츠",
-        price: 59000,
-        imageUrl: "/placeholder.svg",
-        category: "하의",
-        storeName: "패션몰",
-        liked: true
-      }
-    ]
-    setLikedProducts(mockProducts)
-  }
-
-  // 좋아요한 브랜드 가져오기 (임시 데이터)
-  const fetchLikedBrands = async () => {
-    // TODO: 실제 API 연동
-    const mockBrands: LikedBrand[] = [
-      {
-        brandId: 1,
-        name: "스냅핏",
-        logoUrl: "/placeholder.svg",
-        description: "트렌디한 패션 브랜드",
-        followerCount: 1250,
-        liked: true
-      },
-      {
-        brandId: 2,
-        name: "패션스타",
-        logoUrl: "/placeholder.svg",
-        description: "유니크한 디자인",
-        followerCount: 890,
-        liked: true
-      }
-    ]
-    setLikedBrands(mockBrands)
   }
 
   // 좋아요 토글 (게시글)
@@ -159,14 +231,54 @@ export default function LikedItemsPage() {
 
   // 좋아요 토글 (상품)
   const toggleProductLike = async (productId: number) => {
-    // TODO: 실제 API 연동
-    setLikedProducts(prev => prev.filter(product => product.productId !== productId))
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/likes/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          targetIdx: productId, 
+          targetType: 'PRODUCT' 
+        })
+      })
+
+      if (response.ok) {
+        setLikedProducts(prev => prev.filter(product => product.productId !== productId))
+      }
+    } catch (error) {
+      console.error('상품 좋아요 토글 실패:', error)
+    }
   }
 
   // 좋아요 토글 (브랜드)
   const toggleBrandLike = async (brandId: number) => {
-    // TODO: 실제 API 연동
-    setLikedBrands(prev => prev.filter(brand => brand.brandId !== brandId))
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/likes/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          targetIdx: brandId, 
+          targetType: 'BRAND' 
+        })
+      })
+
+      if (response.ok) {
+        setLikedBrands(prev => prev.filter(brand => brand.brandId !== brandId))
+      }
+    } catch (error) {
+      console.error('브랜드 좋아요 토글 실패:', error)
+    }
   }
 
   useEffect(() => {
@@ -225,9 +337,9 @@ export default function LikedItemsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                                 {likedPosts.map((post) => (
+                                 {likedPosts.map((post, index) => (
                    <div 
-                     key={post.postId} 
+                     key={`post-${post.postId}-${index}`} 
                      className="bg-white rounded-lg border p-4 cursor-pointer hover:shadow-md transition-shadow"
                      onClick={() => router.push(`/community/${post.postId}`)}
                    >
@@ -316,22 +428,29 @@ export default function LikedItemsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
-                {likedProducts.map((product) => (
-                  <div key={product.productId} className="bg-white rounded-lg border p-3">
+                                 {likedProducts.map((product, index) => (
+                   <div 
+                     key={`product-${product.productId}-${index}`} 
+                     className="bg-white rounded-lg border p-3 cursor-pointer hover:shadow-md transition-shadow"
+                     onClick={() => router.push(`/products/${product.productId}`)}
+                   >
                     <div className="relative">
                       <img 
                         src={product.imageUrl} 
                         alt={product.name}
                         className="w-full h-32 object-cover rounded-lg mb-2"
                       />
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => toggleProductLike(product.productId)}
-                        className="absolute top-2 right-2 p-1 h-6 w-6 bg-white/80 hover:bg-white"
-                      >
-                        <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-                      </Button>
+                                             <Button 
+                         variant="ghost" 
+                         size="sm" 
+                         onClick={(e) => {
+                           e.stopPropagation()
+                           toggleProductLike(product.productId)
+                         }}
+                         className="absolute top-2 right-2 p-1 h-6 w-6 bg-white/80 hover:bg-white"
+                       >
+                         <Heart className="w-4 h-4 fill-red-500 text-red-500" />
+                       </Button>
                     </div>
                     
                     <div className="space-y-1">

@@ -101,4 +101,73 @@ public class LikeController {
             return ResponseEntity.ok(List.of());
         }
     }
+
+    @GetMapping("/my/posts")
+    public ResponseEntity<List<Map<String, Object>>> myLikedPosts(@AuthenticationPrincipal CustomUserDetails principal) {
+        try {
+            User user = current(principal);
+            List<Like> userLikes = likeService.listUserLikes(user);
+            
+            // OUTFIT_SHARE 타입의 좋아요만 필터링
+            List<Map<String, Object>> likedPosts = userLikes.stream()
+                .filter(like -> like.getTargetType() == TargetType.OUTFIT_SHARE)
+                .map(like -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("targetIdx", like.getTargetIdx());
+                    map.put("targetType", like.getTargetType().toString());
+                    return map;
+                })
+                .toList();
+            
+            return ResponseEntity.ok(likedPosts);
+        } catch (Exception e) {
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    @GetMapping("/my/products")
+    public ResponseEntity<List<Map<String, Object>>> myLikedProducts(@AuthenticationPrincipal CustomUserDetails principal) {
+        try {
+            User user = current(principal);
+            List<Like> userLikes = likeService.listUserLikes(user);
+            
+            // PRODUCT 타입의 좋아요만 필터링
+            List<Map<String, Object>> likedProducts = userLikes.stream()
+                .filter(like -> like.getTargetType() == TargetType.PRODUCT)
+                .map(like -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("targetIdx", like.getTargetIdx());
+                    map.put("targetType", like.getTargetType().toString());
+                    return map;
+                })
+                .toList();
+            
+            return ResponseEntity.ok(likedProducts);
+        } catch (Exception e) {
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    @GetMapping("/my/brands")
+    public ResponseEntity<List<Map<String, Object>>> myLikedBrands(@AuthenticationPrincipal CustomUserDetails principal) {
+        try {
+            User user = current(principal);
+            List<Like> userLikes = likeService.listUserLikes(user);
+            
+            // BRAND 타입의 좋아요만 필터링 (향후 BRAND 타입 추가 시 사용)
+            List<Map<String, Object>> likedBrands = userLikes.stream()
+                .filter(like -> like.getTargetType() == TargetType.BRAND)
+                .map(like -> {
+                    Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("targetIdx", like.getTargetIdx());
+                    map.put("targetType", like.getTargetType().toString());
+                    return map;
+                })
+                .toList();
+            
+            return ResponseEntity.ok(likedBrands);
+        } catch (Exception e) {
+            return ResponseEntity.ok(List.of());
+        }
+    }
 } 
