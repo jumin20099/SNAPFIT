@@ -405,10 +405,10 @@ export default function MyPage() {
               <Button
                 variant="ghost"
                 className="w-full justify-start h-12"
-                onClick={() => router.push('/liked-products')}
+                onClick={() => router.push('/liked-items')}
               >
                 <Heart className="w-5 h-5 mr-3 text-red-500" />
-                좋아요한 상품
+                좋아요한 목록
               </Button>
               
               <Button
