@@ -267,7 +267,7 @@ export default function CommunityPage() {
 
             {/* 게시글 그리드 */}
             {Array.isArray(filteredPosts) && filteredPosts.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {filteredPosts.map((post) => (
                   <PostCard
                     key={post.postId}
