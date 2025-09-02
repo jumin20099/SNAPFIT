@@ -154,11 +154,11 @@ export function useSSENotifications(props?: UseSSENotificationsProps) {
     };
   }, [connect]);
 
-  return { 
+  return {
     connected, 
-    unreadCount, 
+    unreadCount,
     notifications,
-    error, 
+    error,
     reconnect,
     isConnected: connected // 별칭으로 제공
   };

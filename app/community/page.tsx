@@ -50,10 +50,10 @@ export default function CommunityPage() {
           const postsArray = Array.isArray(data) ? data : (data.content || [])
           setPosts(postsArray)
           setFilteredPosts(postsArray)
-        } else {
+      } else {
           throw new Error(`게시글 로드 실패: ${response.status}`)
-        }
-      } catch (error) {
+      }
+    } catch (error) {
         console.error('게시글 로드 실패:', error)
         setError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다')
         setPosts([])
@@ -70,8 +70,8 @@ export default function CommunityPage() {
   useEffect(() => {
     if (!Array.isArray(posts)) {
       setFilteredPosts([])
-      return
-    }
+        return
+      }
 
     let filtered = [...posts]
 
@@ -123,7 +123,7 @@ export default function CommunityPage() {
 
       if (response.ok) {
         setPosts(prev => prev.map(post => 
-          post.postId === postId 
+            post.postId === postId
             ? { ...post, liked: !post.liked, likeCount: post.liked ? post.likeCount - 1 : post.likeCount + 1 }
             : post
         ))
@@ -189,19 +189,19 @@ export default function CommunityPage() {
                 <User className="w-5 h-5 text-gray-600" />
               </button>
             </div>
-          </div>
+      </div>
 
           {/* 검색바 */}
           {showSearch && (
             <div className="mt-4">
-              <Input
-                placeholder="패션 정보를 검색해보세요..."
+          <Input
+            placeholder="패션 정보를 검색해보세요..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </div>
-          )}
+            className="w-full"
+          />
+        </div>
+      )}
         </div>
       </div>
 
@@ -210,32 +210,32 @@ export default function CommunityPage() {
         {/* 탭 네비게이션 */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList className="w-full grid grid-cols-3 bg-transparent h-12 p-0 border-b border-gray-200">
-            <TabsTrigger 
+              <TabsTrigger
               value="snap" 
               className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none h-full text-base font-medium"
-            >
+              >
               스냅
-            </TabsTrigger>
-            <TabsTrigger 
-              value="ranking" 
+              </TabsTrigger>
+              <TabsTrigger
+                value="ranking"
               className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none h-full text-base font-medium"
-            >
-              랭킹
-            </TabsTrigger>
-            <TabsTrigger 
-              value="following" 
+              >
+                랭킹
+              </TabsTrigger>
+              <TabsTrigger
+                value="following"
               className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-black rounded-none h-full text-base font-medium"
-            >
-              팔로잉
-            </TabsTrigger>
-          </TabsList>
+              >
+                팔로잉
+              </TabsTrigger>
+            </TabsList>
 
           {/* 탭별 컨텐츠 */}
           <TabsContent value="snap" className="m-0">
             {/* 게시글 개수 */}
             <div className="mb-4">
               <span className="text-gray-600">{filteredPosts.length.toLocaleString()}개</span>
-            </div>
+          </div>
 
             {/* 필터 바 */}
             <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2">
@@ -262,7 +262,7 @@ export default function CommunityPage() {
                     <SelectItem value="mostCommented">댓글순</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+                </div>
             </div>
 
             {/* 게시글 그리드 */}
@@ -276,8 +276,8 @@ export default function CommunityPage() {
                     onClick={() => handlePostClick(post.postId)}
                   />
                 ))}
-              </div>
-            ) : (
+                  </div>
+                ) : (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-6xl mb-4">📝</div>
                 <p className="text-gray-500 text-lg mb-2">
@@ -290,9 +290,9 @@ export default function CommunityPage() {
                 )}
               </div>
             )}
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="ranking" className="m-0">
+            <TabsContent value="ranking" className="m-0">
             <div className="text-center py-12">
               <div className="text-gray-400 text-6xl mb-4">🏆</div>
               <h3 className="text-xl font-semibold mb-2">랭킹 시스템</h3>
@@ -302,10 +302,10 @@ export default function CommunityPage() {
                 <p>• 주간 인기 게시글</p>
                 <p>• 인기 사용자</p>
               </div>
-            </div>
-          </TabsContent>
+              </div>
+            </TabsContent>
 
-          <TabsContent value="following" className="m-0">
+            <TabsContent value="following" className="m-0">
             <div className="text-center py-12">
               <div className="text-gray-400 text-6xl mb-4">👥</div>
               <h3 className="text-xl font-semibold mb-2">팔로잉</h3>
@@ -314,8 +314,8 @@ export default function CommunityPage() {
                 <p>• 팔로우한 사용자 게시글</p>
                 <p>• 실시간 업데이트</p>
               </div>
-            </div>
-          </TabsContent>
+              </div>
+            </TabsContent>
         </Tabs>
       </div>
     </div>
@@ -324,7 +324,7 @@ export default function CommunityPage() {
 
 // 필터 드롭다운 컴포넌트
 function FilterDropdown({ label }: { label: string }) {
-  return (
+    return (
     <button className="flex items-center gap-1 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors whitespace-nowrap">
       <span>{label}</span>
       <ChevronDown className="w-4 h-4" />
@@ -345,7 +345,7 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
       className="relative cursor-pointer group aspect-square"
       onClick={onClick}
     >
-      {/* 게시글 이미지 */}
+              {/* 게시글 이미지 */}
       <div className="w-full h-full bg-gray-200 rounded-lg overflow-hidden">
         {post.mediaUrls && post.mediaUrls.length > 0 ? (
           <img
@@ -361,8 +361,8 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
         
         {/* 우측 하단 좋아요 버튼 */}
         <button
-          onClick={(e) => {
-            e.stopPropagation()
+                  onClick={(e) => {
+                    e.stopPropagation()
             onLike()
           }}
           className="absolute bottom-2 right-2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-sm transition-all duration-200 hover:scale-110 border border-gray-200"

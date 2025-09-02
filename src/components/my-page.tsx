@@ -1,154 +1,104 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { ChevronDown, User, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { motion } from 'framer-motion'
+import { User, Settings, Heart, Bookmark, LogOut } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
-import LikedBrandsPage from "./liked-brands-page"
-import LikedProductsPage from "./liked-products-page"
-import ScrapPage from "./scrap-page"
-import MyCodyPage from "./my-cody-page"
-
-interface Brand {
-  id: number
-  name: string
-  logo: string
-  liked: boolean
-}
-
-interface Product {
-  id: number
-  name: string
-  description: string
-  image: string
-  liked: boolean
-}
-
-interface MyPageProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
-
-export default function MyPage({ open, onOpenChange }: MyPageProps) {
-  const [brands, setBrands] = useState<Brand[]>([])
-  const [likedProducts, setLikedProducts] = useState<Product[]>([])
-  const [isLikesOpen, setIsLikesOpen] = useState(false)
-  const [isScrapOpen, setIsScrapOpen] = useState(false)
-  const [isCodyOpen, setIsCodyOpen] = useState(false)
-  const [currentPage, setCurrentPage] = useState<"main" | "liked-brands" | "liked-products" | "scrap" | "my-cody">(
-    "main",
-  )
-
-  const toggleBrandLike = (brandId: number) => {
-    setBrands(brands.map((brand) => (brand.id === brandId ? { ...brand, liked: !brand.liked } : brand)))
-  }
-
-  const toggleProductLike = (productId: number) => {
-    setLikedProducts(
-      likedProducts.map((product) => (product.id === productId ? { ...product, liked: !product.liked } : product)),
-    )
-  }
-
-  if (!open) return null
-
-  // Handle different pages
-  if (currentPage === "liked-brands") {
-    return <LikedBrandsPage onBack={() => setCurrentPage("main")} />
-  }
-
-  if (currentPage === "liked-products") {
-    return <LikedProductsPage onBack={() => setCurrentPage("main")} />
-  }
-
-  if (currentPage === "scrap") {
-    return <ScrapPage onBack={() => setCurrentPage("main")} />
-  }
-
-  if (currentPage === "my-cody") {
-    return <MyCodyPage onBack={() => setCurrentPage("main")} />
-  }
-
+export function MyPage() {
   return (
-    <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <h1 className="text-lg font-semibold">마이페이지</h1>
-        <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
-          <X className="w-5 h-5" />
-        </Button>
-      </div>
-
-      {/* Profile Section */}
-      <div className="p-4 border-b">
-        <div className="flex items-center gap-3">
-          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
-            <User className="w-8 h-8 text-gray-500" />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-24">
+      <div className="max-w-md mx-auto px-4">
+        {/* 프로필 섹션 */}
+        <motion.div
+          className="py-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="text-center">
+            <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900 rounded-full mx-auto mb-4 flex items-center justify-center">
+              <User className="w-12 h-12 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              김주민님
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400">
+              qazplm20099@gmail.com
+            </p>
           </div>
-          <div>
-            <h2 className="font-medium">사용자님</h2>
-            <p className="text-sm text-gray-600">프로필을 설정해보세요</p>
-          </div>
-        </div>
-      </div>
+        </motion.div>
 
-      {/* Menu Items */}
-      <div className="p-4 space-y-2">
-        {/* 좋아요 */}
-        <Collapsible open={isLikesOpen} onOpenChange={setIsLikesOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full justify-between h-12">
-              <span className="font-medium">좋아요</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${isLikesOpen ? "rotate-180" : ""}`} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-2 pl-4">
+        {/* 메뉴 섹션 */}
+        <motion.div
+          className="space-y-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              내 활동
+            </h2>
+            
+            <div className="space-y-3">
+              <Button
+                variant="ghost"
+                className="w-full justify-start h-14 px-4 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => window.location.href = '/liked-items'}
+              >
+                <Heart className="w-5 h-5 mr-3 text-red-500" />
+                <span className="text-left">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">좋아요한 목록</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">저장한 상품과 게시글</div>
+                </span>
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full justify-start h-14 px-4 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Bookmark className="w-5 h-5 mr-3 text-blue-500" />
+                <span className="text-left">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">스크랩한 목록</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">나중에 볼 게시글</div>
+                </span>
+              </Button>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              설정
+            </h2>
+            
+            <div className="space-y-3">
+              <Button
+                variant="ghost"
+                className="w-full justify-start h-14 px-4 hover:bg-gray-100 dark:hover:bg-gray-700"
+                onClick={() => window.location.href = '/my-page'}
+              >
+                <Settings className="w-5 h-5 mr-3 text-gray-500" />
+                <span className="text-left">
+                  <div className="font-medium text-gray-900 dark:text-gray-100">프로필 설정</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">개인정보 및 테마 설정</div>
+                </span>
+              </Button>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6">
             <Button
               variant="ghost"
-              className="w-full justify-start h-10"
-              onClick={() => setCurrentPage("liked-brands")}
+              className="w-full justify-start h-14 px-4 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
             >
-              브랜드
+              <LogOut className="w-5 h-5 mr-3" />
+              <span className="text-left">
+                <div className="font-medium">로그아웃</div>
+                <div className="text-sm opacity-75">계정에서 로그아웃</div>
+              </span>
             </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start h-10"
-              onClick={() => setCurrentPage("liked-products")}
-            >
-              상품
-            </Button>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* 스크랩 */}
-        <Collapsible open={isScrapOpen} onOpenChange={setIsScrapOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full justify-between h-12">
-              <span className="font-medium">스크랩</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${isScrapOpen ? "rotate-180" : ""}`} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-2 pl-4">
-            <Button variant="ghost" className="w-full justify-start h-10" onClick={() => setCurrentPage("scrap")}>
-              스크랩 보기
-            </Button>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* 내 코디 */}
-        <Collapsible open={isCodyOpen} onOpenChange={setIsCodyOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="w-full justify-between h-12">
-              <span className="font-medium">내 코디</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${isCodyOpen ? "rotate-180" : ""}`} />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="space-y-2 pl-4">
-            <Button variant="ghost" className="w-full justify-start h-10" onClick={() => setCurrentPage("my-cody")}>
-              내 코디 보기
-            </Button>
-          </CollapsibleContent>
-        </Collapsible>
+          </div>
+        </motion.div>
       </div>
     </div>
   )

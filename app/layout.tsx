@@ -4,6 +4,7 @@ import './globals.css'
 import { CartProvider } from '@/contexts/CartContext'
 import { ModalProvider } from '@/contexts/ModalContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
+import { BottomTabBar } from '@/components/bottom-tab-bar'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -23,7 +24,10 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           <CartProvider>
-            <ModalProvider>{children}</ModalProvider>
+            <ModalProvider>
+              {children}
+              <BottomTabBar />
+            </ModalProvider>
           </CartProvider>
         </ThemeProvider>
       </body>

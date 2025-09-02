@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ArrowLeft, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { CategorySelector } from "./category-selector"
 
 interface CodyItem {
   id: number
@@ -14,17 +15,28 @@ interface CodyItem {
   position: "hat" | "top" | "bottom" | "shoes" | "bag" | "necklace" | "accessory"
 }
 
-const categories = ["전체", "모자", "상의", "하의", "신발", "가방", "목걸이", "반지", "팔찌"]
-
 interface CodySystemProps {
   isOpen: boolean
   onClose: () => void
+  initialProductId?: string | null
 }
 
-export default function CodySystem({ isOpen, onClose }: CodySystemProps) {
+export default function CodySystem({ isOpen, onClose, initialProductId }: CodySystemProps) {
   const [selectedItems, setSelectedItems] = useState<{ [key: string]: CodyItem }>({})
   const [selectedCategory, setSelectedCategory] = useState("전체")
+  const [selectedSubCategory, setSelectedSubCategory] = useState("")
   const [availableItems, setAvailableItems] = useState<CodyItem[]>([])
+  const [showCategorySelector, setShowCategorySelector] = useState(false)
+
+  // initialProductId가 있을 때 처리
+  useEffect(() => {
+    if (initialProductId) {
+      // TODO: API에서 상품 정보를 가져와서 해당 카테고리에 맞는 위치에 자동 배치
+      console.log('Initial product ID:', initialProductId)
+      // 예시: 상의 카테고리라면 top 위치에 배치
+      // setSelectedItems(prev => ({ ...prev, top: fetchedProduct }))
+    }
+  }, [initialProductId])
 
   const addItemToCody = (item: CodyItem) => {
     setSelectedItems((prev) => ({
@@ -41,13 +53,27 @@ export default function CodySystem({ isOpen, onClose }: CodySystemProps) {
     })
   }
 
+  const handleCategoryChange = (major: string, sub?: string) => {
+    console.log('CategorySelector에서 선택됨:', { major, sub })
+    setSelectedCategory(major)
+    setSelectedSubCategory(sub || '')
+    setShowCategorySelector(false)
+  }
+
+  const toggleCategorySelector = () => {
+    console.log('CategorySelector 토글:', !showCategorySelector)
+    setShowCategorySelector(!showCategorySelector)
+  }
+
   const filteredItems = availableItems.filter((item) => {
     if (selectedCategory === "전체") return true
+    if (selectedSubCategory) {
+      return item.category === selectedCategory && item.name.includes(selectedSubCategory)
+    }
     return item.category === selectedCategory
   })
 
   const saveCody = () => {
-
     alert("코디가 저장되었습니다!")
   }
 
@@ -62,6 +88,11 @@ export default function CodySystem({ isOpen, onClose }: CodySystemProps) {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-xl font-bold">코디 시스템</h1>
+          {initialProductId && (
+            <Badge variant="secondary" className="ml-2">
+              상품 ID: {initialProductId}
+            </Badge>
+          )}
         </div>
         <Button onClick={saveCody} size="sm" className="bg-blue-600 hover:bg-blue-700">
           저장
@@ -134,13 +165,13 @@ export default function CodySystem({ isOpen, onClose }: CodySystemProps) {
             </div>
 
             {/* Top Position */}
-            <div className="absolute top-40 left-1/2 transform -translate-x-1/2">
+            <div className="absolute top-48 left-1/2 transform -translate-x-1/2">
               {selectedItems.top ? (
                 <div className="relative group">
                   <img
                     src={selectedItems.top.image || "/placeholder.svg"}
                     alt={selectedItems.top.name}
-                    className="w-24 h-28 object-contain"
+                    className="w-32 h-40 object-contain"
                   />
                   <Button
                     variant="ghost"
@@ -152,20 +183,20 @@ export default function CodySystem({ isOpen, onClose }: CodySystemProps) {
                   </Button>
                 </div>
               ) : (
-                <div className="w-24 h-28 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
-                  <Plus className="w-6 h-6 text-gray-500" />
+                <div className="w-32 h-40 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
+                  <Plus className="w-8 h-8 text-gray-500" />
                 </div>
               )}
             </div>
 
-            {/* Bag Position (Left side of top) */}
-            <div className="absolute top-40 left-1/4 transform -translate-x-1/2">
+            {/* Bag Position (Left side) */}
+            <div className="absolute top-48 left-1/4 transform -translate-x-1/2">
               {selectedItems.bag ? (
                 <div className="relative group">
                   <img
                     src={selectedItems.bag.image || "/placeholder.svg"}
                     alt={selectedItems.bag.name}
-                    className="w-20 h-24 object-contain"
+                    className="w-16 h-20 object-contain"
                   />
                   <Button
                     variant="ghost"
@@ -177,8 +208,8 @@ export default function CodySystem({ isOpen, onClose }: CodySystemProps) {
                   </Button>
                 </div>
               ) : (
-                <div className="w-20 h-24 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
-                  <Plus className="w-5 h-5 text-gray-500" />
+                <div className="w-16 h-20 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
+                  <Plus className="w-4 h-4 text-gray-500" />
                 </div>
               )}
             </div>
@@ -264,9 +295,33 @@ export default function CodySystem({ isOpen, onClose }: CodySystemProps) {
         <div className="w-80 bg-white border-l flex flex-col">
           {/* Category Filter */}
           <div className="p-4 border-b">
-            <h3 className="font-medium mb-3">카테고리</h3>
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category) => (
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium">카테고리</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleCategorySelector}
+                className="p-1 h-6 w-6"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            {/* 현재 선택된 카테고리 표시 */}
+            <div className="space-y-2">
+              <div className="text-sm text-gray-600">
+                메이저: <span className="font-medium">{selectedCategory}</span>
+              </div>
+              {selectedSubCategory && (
+                <div className="text-sm text-gray-600">
+                  서브: <span className="font-medium">{selectedSubCategory}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 간단한 카테고리 버튼들 (빠른 선택용) */}
+            <div className="flex flex-wrap gap-2 mt-3">
+              {["전체", "상의", "아우터", "바지", "신발", "가방", "패션소품"].map((category) => (
                 <Badge
                   key={category}
                   variant={selectedCategory === category ? "default" : "outline"}
@@ -299,6 +354,17 @@ export default function CodySystem({ isOpen, onClose }: CodySystemProps) {
           </div>
         </div>
       </div>
+
+      {/* 새로운 CategorySelector */}
+      {showCategorySelector && (
+        <div className="fixed inset-0 z-[9999]">
+          <CategorySelector
+            onClose={() => setShowCategorySelector(false)}
+            onSelect={handleCategoryChange}
+            selectedCategory={selectedCategory}
+          />
+        </div>
+      )}
     </div>
   )
 }
