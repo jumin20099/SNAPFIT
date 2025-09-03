@@ -80,7 +80,8 @@ export function ProductSearchPanel({
               price: product.productPrice || 0,
               imageUrl: product.productImage || '/placeholder.svg',
               brand: product.storeName || '',
-              badges: product.tags || [],
+              category: product.majorCategory || '',
+              tags: product.tags || [],
             }}
           />
         ))}

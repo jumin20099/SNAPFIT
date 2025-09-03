@@ -1,7 +1,7 @@
 import { Product, Post, User, Notification, ApiResponse, PaginatedResponse } from './types';
 
 // API 클라이언트 기본 설정
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 class ApiClient {
   private async request<T>(
@@ -30,10 +30,19 @@ class ApiClient {
 
   // 상품 관련 API
   async getProductsByCategory(major: string, sub?: string): Promise<Product[]> {
-    const params = new URLSearchParams({ major });
+    const params = new URLSearchParams();
+    
+    // major가 'all'이 아닐 때만 파라미터에 추가
+    if (major && major !== 'all') {
+      params.append('major', major);
+    }
+    
     if (sub) params.append('sub', sub);
     
-    return this.request<Product[]>(`/api/products?${params.toString()}`);
+    const queryString = params.toString();
+    const url = queryString ? `/api/products?${queryString}` : '/api/products';
+    
+    return this.request<Product[]>(url);
   }
 
   async getProductById(id: number): Promise<Product> {

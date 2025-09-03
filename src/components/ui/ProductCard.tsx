@@ -3,20 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Heart, Star } from 'lucide-react'
-
-interface Product {
-  id: string
-  name: string
-  brand: string
-  price: number
-  originalPrice?: number
-  discountRate?: number
-  imageUrl: string
-  badges?: string[]
-  rating?: number
-  reviewCount?: number
-  shipping?: string
-}
+import type { Product } from '@/shared/types'
 
 interface ProductCardProps {
   product: Product
@@ -59,24 +46,11 @@ export function ProductCard({ product, onLike }: ProductCardProps) {
         )}
 
         {/* 좌상단 뱃지들 */}
-        {product.badges && product.badges.length > 0 && (
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
-            {product.badges.slice(0, 2).map((badge, index) => (
-              <span
-                key={index}
-                className={`text-xs px-2 py-1 angular-rounded text-white font-medium ${
-                  badge.includes('쿠폰') || badge.includes('할인')
-                    ? 'bg-red-500'
-                    : badge.includes('무료배송')
-                    ? 'bg-blue-500'
-                    : 'bg-gray-600'
-                }`}
-              >
-                {badge}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          <span className="text-xs px-2 py-1 angular-rounded text-white font-medium bg-blue-500">
+            무료배송
+          </span>
+        </div>
 
         {/* 우상단 찜 버튼 */}
         <motion.button
@@ -105,35 +79,15 @@ export function ProductCard({ product, onLike }: ProductCardProps) {
         {/* 가격 영역 */}
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            {product.discountRate && (
-              <span className="text-sm font-bold text-red-500">
-                {product.discountRate}%
-              </span>
-            )}
             <span className="text-base font-bold text-gray-900">
               {product.price.toLocaleString()}원
             </span>
           </div>
-          {product.originalPrice && (
-            <div className="text-xs text-gray-400 line-through">
-              {product.originalPrice.toLocaleString()}원
-            </div>
-          )}
         </div>
 
         {/* 메타 정보 */}
         <div className="text-xs text-gray-500">
-          {product.rating && product.reviewCount ? (
-            <div className="flex items-center gap-1">
-              <Star size={12} className="text-yellow-400 fill-yellow-400" />
-              <span>{product.rating}</span>
-              <span>(리뷰 {product.reviewCount.toLocaleString()})</span>
-            </div>
-          ) : product.shipping ? (
-            <span>{product.shipping}</span>
-          ) : (
-            <span>오늘출발</span>
-          )}
+          <span>무료배송</span>
         </div>
       </div>
     </motion.div>
