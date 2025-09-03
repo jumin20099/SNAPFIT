@@ -31,16 +31,16 @@ jest.mock('lucide-react', () => ({
   ChevronRight: () => <div data-testid="chevron-right-icon">ChevronRight</div>,
 }))
 
-// Mock all zigzag components to avoid complex dependencies
-jest.mock('../zigzag/StickyHeader', () => ({
+// Mock all ui components to avoid complex dependencies
+jest.mock('../ui/StickyHeader', () => ({
   StickyHeader: () => <div data-testid="sticky-header">SNAPFIT</div>
 }))
 
-jest.mock('../zigzag/HeroBanner', () => ({
+jest.mock('../ui/HeroBanner', () => ({
   HeroBanner: () => <div data-testid="hero-banner">Hero Banner</div>
 }))
 
-jest.mock('../zigzag/CategoryChips', () => ({
+jest.mock('../ui/CategoryChips', () => ({
   CategoryChips: () => (
     <div data-testid="category-chips">
       <button>전체</button>
@@ -50,11 +50,11 @@ jest.mock('../zigzag/CategoryChips', () => ({
   )
 }))
 
-jest.mock('../zigzag/ProductGrid', () => ({
+jest.mock('../ui/ProductGrid', () => ({
   ProductGrid: () => <div data-testid="product-grid">Product Grid</div>
 }))
 
-jest.mock('../zigzag/BottomTabBar', () => ({
+jest.mock('../ui/BottomTabBar', () => ({
   BottomTabBar: () => (
     <div data-testid="bottom-tab-bar">
       <button>홈</button>
@@ -66,7 +66,7 @@ jest.mock('../zigzag/BottomTabBar', () => ({
   )
 }))
 
-describe('HomePage (ZigzagHomePage)', () => {
+describe('HomePage', () => {
   it('renders SNAPFIT header', () => {
     render(<HomePage />)
     expect(screen.getByTestId('sticky-header')).toBeInTheDocument()

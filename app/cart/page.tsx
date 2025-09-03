@@ -1,6 +1,6 @@
 'use client'
 
-import { CartPage } from '@/components/zigzag/CartPage'
+import { CartPage } from '@/components/ui/CartPage'
 
 export default function Cart() {
   return <CartPage />

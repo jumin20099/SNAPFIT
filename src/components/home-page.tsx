@@ -1,7 +1,7 @@
 'use client'
 
-import { ZigzagHomePage } from './zigzag/ZigzagHomePage'
+import { HomePage as UIHomePage } from './ui/HomePage'
 
 export function HomePage() {
-  return <ZigzagHomePage />
+  return <UIHomePage />
 }

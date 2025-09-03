@@ -1,7 +1,7 @@
 'use client';
 
 import { Product } from '@/shared/types';
-import { ProductCard } from '@/components/zigzag/ProductCard';
+import { ProductCard } from '@/components/ui/ProductCard';
 import { cn } from '@/lib/utils';
 
 interface ProductSearchPanelProps {

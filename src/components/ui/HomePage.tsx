@@ -8,7 +8,7 @@ import { CategoryChips } from './CategoryChips'
 import { ProductGrid } from './ProductGrid'
 import { BottomTabBar } from './BottomTabBar'
 
-export function ZigzagHomePage() {
+export function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState('전체')
   const [selectedGender, setSelectedGender] = useState<string>('all')
   const [selectedMainCategory, setSelectedMainCategory] = useState<string>()

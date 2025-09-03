@@ -1,7 +1,7 @@
 'use client';
 
 import { VirtualizedGrid } from '@/shared/ui/VirtualizedList';
-import { ProductCard } from '@/components/zigzag/ProductCard';
+import { ProductCard } from '@/components/ui/ProductCard';
 import { Product } from '@/shared/types';
 import { cn } from '@/lib/utils';
 

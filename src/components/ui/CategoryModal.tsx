@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronRight } from 'lucide-react'
 import { CATEGORIES, type GenderCategory, type MainCategory, type CategoryItem } from '@/constants/categories'
