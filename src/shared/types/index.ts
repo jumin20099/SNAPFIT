@@ -17,14 +17,22 @@ export interface Product {
   productPrice?: number;
   productImage?: string;
   majorCategory?: string;
+  subCategory?: string;
   storeName?: string;
+  storeIdx?: number;
+  // 평점 및 리뷰 필드들 (추후 구축 예정)
+  rating?: number;
+  reviewCount?: number;
   // API 호환성을 위한 필드들
   product_id?: string;
   product_name?: string;
   product_price?: number;
   product_image?: string;
   major_category?: string;
+  sub_category?: string;
   store_name?: string;
+  rating_score?: number;
+  review_count?: number;
 }
 
 // 사용자 타입
@@ -38,6 +46,17 @@ export interface User {
   provider?: string;
   providerId?: string;
   role?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// 상점 타입
+export interface Store {
+  storeIdx: number;
+  storeName: string;
+  storeDescription?: string;
+  storeImage?: string;
+  isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

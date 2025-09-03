@@ -45,12 +45,7 @@ export function ProductCard({ product, onLike }: ProductCardProps) {
           </div>
         )}
 
-        {/* 좌상단 뱃지들 */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
-          <span className="text-xs px-2 py-1 angular-rounded text-white font-medium bg-blue-500">
-            무료배송
-          </span>
-        </div>
+
 
         {/* 우상단 찜 버튼 */}
         <motion.button
@@ -76,6 +71,30 @@ export function ProductCard({ product, onLike }: ProductCardProps) {
           {product.name}
         </div>
 
+        {/* 쇼핑몰 이름 */}
+        {product.storeName && (
+          <div className="text-xs text-gray-400 truncate">
+            {product.storeName}
+          </div>
+        )}
+
+        {/* 별점 및 리뷰 수 */}
+        {(product.rating || product.reviewCount) && (
+          <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1">
+              <Star size={12} className="text-yellow-400 fill-yellow-400" />
+              <span className="text-xs text-gray-600">
+                {product.rating ? product.rating.toFixed(1) : '0.0'}
+              </span>
+            </div>
+            {product.reviewCount && (
+              <span className="text-xs text-gray-400">
+                ({product.reviewCount.toLocaleString()})
+              </span>
+            )}
+          </div>
+        )}
+
         {/* 가격 영역 */}
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -83,11 +102,6 @@ export function ProductCard({ product, onLike }: ProductCardProps) {
               {product.price.toLocaleString()}원
             </span>
           </div>
-        </div>
-
-        {/* 메타 정보 */}
-        <div className="text-xs text-gray-500">
-          <span>무료배송</span>
         </div>
       </div>
     </motion.div>

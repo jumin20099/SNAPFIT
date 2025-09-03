@@ -1,4 +1,4 @@
-import { Product, Post, User, Notification, ApiResponse, PaginatedResponse } from './types';
+import { Product, Post, User, Store, Notification, ApiResponse, PaginatedResponse } from './types';
 
 // API 클라이언트 기본 설정
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -113,6 +113,11 @@ class ApiClient {
     return this.request<void>('/api/notifications/read-all', {
       method: 'POST',
     });
+  }
+
+  // 상점 관련 API
+  async getStores(): Promise<Store[]> {
+    return this.request<Store[]>('/api/admin/stores/list');
   }
 
   // 사용자 관련 API

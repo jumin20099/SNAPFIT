@@ -414,6 +414,113 @@ export const CATEGORIES: GenderCategory[] = [
   }
 ]
 
+// 카테고리 ID를 백엔드 한글 카테고리명으로 매핑
+export const mapCategoryIdToBackend = (mainCategoryId: string, subCategoryId?: string) => {
+  const categoryMap: Record<string, string> = {
+    'shoes': '신발',
+    'tops': '상의', 
+    'outerwear': '아우터',
+    'pants': '바지',
+    'dresses': '원피스/스커트',
+    'bags': '가방',
+    'accessories': '패션소품'
+  }
+
+  const subCategoryMap: Record<string, string> = {
+    // 신발
+    'sneakers': '스니커즈',
+    'padded-shoes': '패딩/퍼 신발',
+    'boots': '부츠/워커',
+    'dress-shoes': '구두',
+    'sandals': '샌들/슬리퍼',
+    'sports-shoes': '스포츠화',
+    'shoe-accessories': '신발용품',
+    
+    // 상의
+    'sweatshirts': '맨투맨/스웨트',
+    'hoodies': '후드 티셔츠',
+    'shirts': '셔츠/블라우스',
+    'long-sleeve': '긴소매 티셔츠',
+    'short-sleeve': '반소매 티셔츠',
+    'polo': '피케/카라 티셔츠',
+    'knit': '니트/스웨터',
+    'sleeveless': '민소매 티셔츠',
+    'other-tops': '기타 상의',
+    
+    // 아우터
+    'hoodie-zip': '후드 집업',
+    'blouson': '블루종/MA-1',
+    'leather-jacket': '레더/라이더스 재킷',
+    'cardigan': '카디건',
+    'trucker-jacket': '트러커 재킷',
+    'blazer': '슈트/블레이저 재킷',
+    'stadium-jacket': '스타디움 재킷',
+    'nylon-jacket': '나일론/코치 재킷',
+    'anorak': '아노락 재킷',
+    'training-jacket': '트레이닝 재킷',
+    'transition-coat': '환절기 코트',
+    'safari-jacket': '사파리/헌팅 재킷',
+    'vest': '베스트',
+    'short-padding': '숏패딩/헤비 아우터',
+    'fur': '무스탕/퍼',
+    'fleece': '플리스/뽀글이',
+    'winter-single-coat': '겨울 싱글 코트',
+    'winter-double-coat': '겨울 더블 코트',
+    'winter-other-coat': '겨울 기타 코트',
+    'long-padding': '롱패딩/헤비 아우터',
+    'padding-vest': '패딩 베스트',
+    'other-outerwear': '기타 아우터',
+    
+    // 바지
+    'jeans': '데님 팬츠',
+    'training-pants': '트레이닝/조거 팬츠',
+    'cotton-pants': '코튼 팬츠',
+    'suit-pants': '슈트 팬츠/슬랙스',
+    'shorts': '숏 팬츠',
+    'leggings': '레깅스',
+    'jumpsuit': '점프 슈트/오버올',
+    'other-bottoms': '기타 하의',
+    
+    // 원피스/스커트
+    'mini-dress': '미니원피스',
+    'midi-dress': '미디원피스',
+    'maxi-dress': '맥시원피스',
+    'mini-skirt': '미니스커트',
+    'midi-skirt': '미디스커트',
+    'long-skirt': '롱스커트',
+    
+    // 가방
+    'messenger-bag': '메신저/크로스 백',
+    'shoulder-bag': '숄더백',
+    'backpack': '백팩',
+    'tote-bag': '토트백',
+    'eco-bag': '에코백',
+    'boston-bag': '보스턴/더플백',
+    'waist-bag': '웨이스트 백',
+    'pouch-bag': '파우치 백',
+    'briefcase': '브리프 케이스',
+    'carrier': '캐리어',
+    'bag-accessories': '가방 소품',
+    'wallet': '지갑/머니클립',
+    'clutch-bag': '클러치 백',
+    
+    // 패션소품
+    'hats': '모자',
+    'scarves': '머플러',
+    'jewelry': '주얼리',
+    'socks': '양말/레그웨어',
+    'sunglasses': '선글라스/안경테',
+    'accessories': '액세서리',
+    'watches': '시계',
+    'belts': '벨트'
+  }
+
+  const backendMajor = categoryMap[mainCategoryId] || mainCategoryId
+  const backendSub = subCategoryId ? (subCategoryMap[subCategoryId] || subCategoryId) : undefined
+
+  return { major: backendMajor, sub: backendSub }
+}
+
 // 카테고리 유틸리티 함수들
 export const getCategoryById = (genderId: string, mainCategoryId: string, subCategoryId?: string) => {
   const genderCategory = CATEGORIES.find(cat => cat.id === genderId)

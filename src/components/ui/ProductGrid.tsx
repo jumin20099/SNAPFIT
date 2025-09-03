@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ProductCard } from './ProductCard'
 import { useCategoryProducts } from '@/shared/api/queries'
+import { useStores } from '@/hooks/useStores'
+import { mapCategoryIdToBackend } from '@/constants/categories'
 import type { Product } from '@/shared/types'
 
 interface ProductGridProps {
@@ -14,7 +16,7 @@ interface ProductGridProps {
 }
 
 // API Product를 UI Product로 변환하는 함수
-const transformApiProduct = (apiProduct: Product): Product => {
+const transformApiProduct = (apiProduct: any): Product => {
   return {
     id: apiProduct.productIdx?.toString() || apiProduct.id || '',
     name: apiProduct.productName || apiProduct.name || '',
@@ -22,19 +24,56 @@ const transformApiProduct = (apiProduct: Product): Product => {
     price: apiProduct.productPrice || apiProduct.price || 0,
     imageUrl: apiProduct.productImage || apiProduct.imageUrl || '',
     category: apiProduct.majorCategory || apiProduct.category || '',
-    tags: apiProduct.tags || []
+    subCategory: apiProduct.subCategory || apiProduct.sub_category || '',
+    storeName: apiProduct.storeName || apiProduct.store_name || '',
+    rating: apiProduct.rating || apiProduct.rating_score,
+    reviewCount: apiProduct.reviewCount || apiProduct.review_count,
+    tags: apiProduct.tags || [],
+    // storeIdx 추가
+    storeIdx: apiProduct.storeIdx
   }
 }
 
 export function ProductGrid({ category, gender, mainCategory, subCategory }: ProductGridProps) {
-  // 실제 API 호출
-  const { data: apiProducts, isLoading, error } = useCategoryProducts(
-    mainCategory || 'all',
-    subCategory
-  )
+  // 모든 상품을 가져온 후 클라이언트에서 필터링
+  const { data: apiProducts, isLoading, error } = useCategoryProducts('all')
+  const { data: stores } = useStores()
 
-  // API 데이터를 UI 형태로 변환
-  const products = apiProducts ? apiProducts.map(transformApiProduct) : []
+  // 상점 ID로 상점 이름을 찾는 함수
+  const getStoreName = (storeIdx?: number): string | undefined => {
+    if (!storeIdx || !stores || !Array.isArray(stores)) return undefined;
+    const store = stores.find(s => s.storeIdx === storeIdx);
+    return store?.storeName;
+  };
+
+  // API 데이터를 UI 형태로 변환 (상점 이름 포함)
+  const allProducts = apiProducts ? apiProducts.map(apiProduct => {
+    const transformed = transformApiProduct(apiProduct);
+    // 실제 상점 이름으로 업데이트
+    if (transformed.storeIdx) {
+      transformed.storeName = getStoreName(transformed.storeIdx);
+    }
+    return transformed;
+  }) : []
+  
+  // 클라이언트 사이드 필터링
+  const products = allProducts.filter(product => {
+    if (!mainCategory) return true
+    
+    const { major: backendMajor, sub: backendSub } = mapCategoryIdToBackend(mainCategory, subCategory)
+    
+    // 메인 카테고리 필터링
+    if (backendMajor !== 'all' && product.category !== backendMajor) {
+      return false
+    }
+    
+    // 서브 카테고리 필터링
+    if (backendSub && product.subCategory !== backendSub) {
+      return false
+    }
+    
+    return true
+  })
   const hasMore = false // 현재는 페이지네이션 미구현
 
   const handleLike = (productId: string) => {

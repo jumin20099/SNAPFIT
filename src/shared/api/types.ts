@@ -3,6 +3,7 @@ export type {
   Product, 
   Category, 
   User, 
+  Store,
   CodyItem, 
   Notification,
   Post,
