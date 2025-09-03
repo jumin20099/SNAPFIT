@@ -1,54 +1,61 @@
-import { useState } from "react"
+import { useState } from "react";
+import { CodySlot, CodyItem, CodyState, CodyActions, getCodySlotFromCategory } from "@/entities/cody/model";
 
-export const useCody = () => {
-  const [codyItems, setCodyItems] = useState<{ [key: string]: any }>({})
+export const useCody = (): CodyState & CodyActions => {
+  const [codyItems, setCodyItems] = useState<Partial<Record<CodySlot, CodyItem>>>({});
 
-  const addToCody = (product: any) => {
-    const position = getCodyPosition(product.category, product.name)
+  const setItem = (item: CodyItem) => {
     setCodyItems((prev) => ({
       ...prev,
-      [position]: product,
-    }))
-  }
+      [item.slot]: item,
+    }));
+  };
 
-  const getCodyPosition = (category: string, name: string) => {
-    switch (category) {
-      case "상의":
-        return "top"
-      case "아우터":
-        return "outer"
-      case "하의":
-        return "bottom"
-      case "신발":
-        return "shoes"
-      case "액세서리":
-        if (name.includes("모자") || name.includes("캡") || name.includes("햇")) {
-          return "hat"
-        } else if (name.includes("가방") || name.includes("백팩") || name.includes("크로스백")) {
-          return "bag"
-        } else if (name.includes("반지")) {
-          return "ring"
-        } else if (name.includes("팔찌")) {
-          return "bracelet"
-        } else {
-          return "accessory"
-        }
-      default:
-        return "accessory"
-    }
-  }
+  const removeItem = (slot: CodySlot) => {
+    setCodyItems((prev) => {
+      const newItems = { ...prev };
+      delete newItems[slot];
+      return newItems;
+    });
+  };
+
+  const clearAll = () => {
+    setCodyItems({});
+  };
+
+  const getItem = (slot: CodySlot): CodyItem | undefined => {
+    return codyItems[slot];
+  };
+
+  const hasItem = (slot: CodySlot): boolean => {
+    return !!codyItems[slot];
+  };
+
+  // 기존 API와의 호환성을 위한 deprecated 함수들
+  const addToCody = (product: any) => {
+    const slot = getCodySlotFromCategory(product.category, product.name);
+    const codyItem: CodyItem = {
+      id: product.id || product.productIdx,
+      name: product.name || product.productName,
+      image: product.image || product.productImage,
+      category: product.category,
+      slot,
+      price: product.price || product.productPrice,
+      brand: product.brand,
+    };
+    setItem(codyItem);
+  };
 
   const removeCodyItem = (position: string) => {
-    setCodyItems((prev) => {
-      const newItems = { ...prev }
-      delete newItems[position]
-      return newItems
-    })
-  }
+    removeItem(position as CodySlot);
+  };
 
   return {
-    codyItems,
-    addToCody,
-    removeCodyItem,
-  }
-} 
+    items: codyItems,
+    setItem,
+    removeItem,
+    clearAll,
+    getItem,
+    hasItem,
+  };
+}; 

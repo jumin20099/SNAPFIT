@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CategorySelector } from "./category-selector"
+import { CategorySelector } from "@/widgets/category-tabs/category-selector"
 
 interface CodyItem {
   id: number

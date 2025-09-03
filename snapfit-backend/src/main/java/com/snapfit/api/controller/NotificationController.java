@@ -67,8 +67,6 @@ public class NotificationController {
             @AuthenticationPrincipal UserDetails userDetails,
             HttpServletRequest request) {
         try {
-            log.info("=== 알림 목록 조회 요청 시작 ===");
-            log.info("userDetails: {}", userDetails);
             
             String userId = null;
             

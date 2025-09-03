@@ -1,11 +1,7 @@
 "use client"
 
 import Image from 'next/image'
-import AddToCartButton from '@/components/add-to-cart-button'
-import LikeButton from '@/components/like-button'
 import { formatCurrencyKRW } from '@/lib/utils'
-import ViewCountDisplay from '@/components/ViewCountDisplay'
-import ActualViewIncrementer from '@/components/ActualViewIncrementer'
 import { useEffect, useState } from 'react'
 
 type Product = {
@@ -156,7 +152,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       />
       {/* Hero 영역 */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <ActualViewIncrementer productId={Number(params.id)} />
         <div className="relative w-full aspect-square">
           <Image
             src={p.productImage || '/placeholder.svg'}
@@ -174,20 +169,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           <p className="text-xl font-bold" data-testid="product-price">{priceFormatted}</p>
 
           <div className="flex gap-3 items-center">
-            <AddToCartButton
-              product={{
-                productIdx: p.productIdx,
-                productName: p.productName,
-                productPrice: p.productPrice,
-                productImage: p.productImage,
-              }}
-            />
-            <LikeButton
-              targetIdx={p.productIdx}
-              targetType="product"
-              initialLiked={Boolean(detail.likedByUser)}
-              initialCount={Number(detail.likesCount) || 0}
-            />
+            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+              장바구니 담기
+            </button>
+            <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+              ♥ {detail.likesCount || 0}
+            </button>
           </div>
 
           <ul className="text-sm text-gray-500 space-y-1">
@@ -206,7 +193,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
           {/* 실시간 조회수 표시 */}
           <div data-testid="view-count" aria-live="polite">
-            <ViewCountDisplay productId={p.productIdx} initialViewers={Number(detail.liveViewers || 0)} />
+            <span className="text-sm text-gray-500">
+              실시간 조회자: {detail.liveViewers || 0}명
+            </span>
           </div>
         </div>
       </section>

@@ -1,75 +1,103 @@
 import { render, screen } from '@testing-library/react'
 import { HomePage } from '../home-page'
-import { useProductStore } from '@/stores/product-store'
 
-// Mock the product store
-jest.mock('@/stores/product-store')
+// Mock Next.js router
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    back: jest.fn(),
+  }),
+}))
 
-const mockUseProductStore = useProductStore as jest.MockedFunction<typeof useProductStore>
+// Mock Framer Motion
+jest.mock('framer-motion', () => ({
+  motion: {
+    header: ({ children, ...props }: any) => <header {...props}>{children}</header>,
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+  },
+}))
 
-describe('HomePage', () => {
-  beforeEach(() => {
-    mockUseProductStore.mockReturnValue({
-      products: [
-        {
-          id: '1',
-          name: 'Test Product 1',
-          category: '상의',
-          price: 50000,
-          image: '/test1.jpg',
-          description: 'Test description 1'
-        },
-        {
-          id: '2',
-          name: 'Test Product 2',
-          category: '하의',
-          price: 30000,
-          image: '/test2.jpg',
-          description: 'Test description 2'
-        }
-      ],
-      isLoading: false,
-      fetchProducts: jest.fn()
-    })
+// Mock Lucide React icons
+jest.mock('lucide-react', () => ({
+  Search: () => <div data-testid="search-icon">Search</div>,
+  Bell: () => <div data-testid="bell-icon">Bell</div>,
+  ShoppingBag: () => <div data-testid="shopping-bag-icon">ShoppingBag</div>,
+  Home: () => <div data-testid="home-icon">Home</div>,
+  Grid3X3: () => <div data-testid="grid-icon">Grid3X3</div>,
+  Heart: () => <div data-testid="heart-icon">Heart</div>,
+  Clock: () => <div data-testid="clock-icon">Clock</div>,
+  User: () => <div data-testid="user-icon">User</div>,
+  ChevronRight: () => <div data-testid="chevron-right-icon">ChevronRight</div>,
+}))
+
+// Mock all zigzag components to avoid complex dependencies
+jest.mock('../zigzag/StickyHeader', () => ({
+  StickyHeader: () => <div data-testid="sticky-header">SNAPFIT</div>
+}))
+
+jest.mock('../zigzag/HeroBanner', () => ({
+  HeroBanner: () => <div data-testid="hero-banner">Hero Banner</div>
+}))
+
+jest.mock('../zigzag/CategoryChips', () => ({
+  CategoryChips: () => (
+    <div data-testid="category-chips">
+      <button>전체</button>
+      <button>상의</button>
+      <button>아우터</button>
+    </div>
+  )
+}))
+
+jest.mock('../zigzag/ProductGrid', () => ({
+  ProductGrid: () => <div data-testid="product-grid">Product Grid</div>
+}))
+
+jest.mock('../zigzag/BottomTabBar', () => ({
+  BottomTabBar: () => (
+    <div data-testid="bottom-tab-bar">
+      <button>홈</button>
+      <button>카테고리</button>
+      <button>찜</button>
+      <button>장바구니</button>
+      <button>마이</button>
+    </div>
+  )
+}))
+
+describe('HomePage (ZigzagHomePage)', () => {
+  it('renders SNAPFIT header', () => {
+    render(<HomePage />)
+    expect(screen.getByTestId('sticky-header')).toBeInTheDocument()
+    expect(screen.getByText('SNAPFIT')).toBeInTheDocument()
   })
 
-  it('renders search bar', () => {
+  it('renders hero banner', () => {
     render(<HomePage />)
-    expect(screen.getByPlaceholderText('상품이나 스타일을 검색해보세요')).toBeInTheDocument()
+    expect(screen.getByTestId('hero-banner')).toBeInTheDocument()
   })
 
   it('renders category chips', () => {
     render(<HomePage />)
+    expect(screen.getByTestId('category-chips')).toBeInTheDocument()
     expect(screen.getByText('전체')).toBeInTheDocument()
     expect(screen.getByText('상의')).toBeInTheDocument()
-    expect(screen.getByText('하의')).toBeInTheDocument()
+    expect(screen.getByText('아우터')).toBeInTheDocument()
   })
 
   it('renders product grid', () => {
     render(<HomePage />)
-    expect(screen.getByText('Test Product 1')).toBeInTheDocument()
-    expect(screen.getByText('Test Product 2')).toBeInTheDocument()
+    expect(screen.getByTestId('product-grid')).toBeInTheDocument()
   })
 
-  it('shows loading state', () => {
-    mockUseProductStore.mockReturnValue({
-      products: [],
-      isLoading: true,
-      fetchProducts: jest.fn()
-    })
-    
+  it('renders bottom tab bar', () => {
     render(<HomePage />)
-    expect(screen.getByText('추천 상품')).toBeInTheDocument()
-  })
-
-  it('shows no products message when empty', () => {
-    mockUseProductStore.mockReturnValue({
-      products: [],
-      isLoading: false,
-      fetchProducts: jest.fn()
-    })
-    
-    render(<HomePage />)
-    expect(screen.getByText('표시할 상품이 없습니다')).toBeInTheDocument()
+    expect(screen.getByTestId('bottom-tab-bar')).toBeInTheDocument()
+    expect(screen.getByText('홈')).toBeInTheDocument()
+    expect(screen.getByText('카테고리')).toBeInTheDocument()
+    expect(screen.getByText('찜')).toBeInTheDocument()
+    expect(screen.getByText('장바구니')).toBeInTheDocument()
+    expect(screen.getByText('마이')).toBeInTheDocument()
   })
 })

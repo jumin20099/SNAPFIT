@@ -1,3 +1,9 @@
+import withBundleAnalyzer from '@next/bundle-analyzer';
+
+const bundleAnalyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -11,6 +17,20 @@ const nextConfig = {
       // { protocol: 'https', hostname: 'your-s3-bucket.s3.ap-northeast-2.amazonaws.com' },
       // { protocol: 'https', hostname: 'cdn.snapfit.app' },
     ],
+  },
+  // 번들 분석기 활성화
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
+    }
+    return config;
+  },
+  // 실험적 기능
+  experimental: {
+    optimizePackageImports: ['@tanstack/react-query', 'lucide-react'],
   },
   async rewrites() {
     return [
@@ -86,4 +106,4 @@ const nextConfig = {
   }
 }
  
-export default nextConfig 
+export default bundleAnalyzer(nextConfig) 

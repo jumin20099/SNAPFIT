@@ -107,11 +107,11 @@ export const useProfile = () => {
       const data: ImageUploadResponse = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || '이미지 업로드에 실패했습니다');
+        throw new Error('이미지 업로드에 실패했습니다');
       }
 
       if (!data.success) {
-        throw new Error(data.error || '이미지 업로드에 실패했습니다');
+        throw new Error('이미지 업로드에 실패했습니다');
       }
 
       // S3 URL 직접 사용 (프록시 URL 제거)

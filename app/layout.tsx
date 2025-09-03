@@ -2,9 +2,11 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { CartProvider } from '@/contexts/CartContext'
-import { ModalProvider } from '@/contexts/ModalContext'
+import { ModalProvider } from '@/contexts/ModalContextV2'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import { BottomTabBar } from '@/components/bottom-tab-bar'
+import { QueryProvider } from '@/providers/QueryProvider'
+import { ToastProvider } from '@/shared/ui/ToastProvider'
+
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -22,14 +24,16 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className={inter.className}>
-        <ThemeProvider>
-          <CartProvider>
-            <ModalProvider>
-              {children}
-              <BottomTabBar />
-            </ModalProvider>
-          </CartProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            <CartProvider>
+              <ModalProvider>
+                {children}
+                <ToastProvider />
+              </ModalProvider>
+            </CartProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   )
