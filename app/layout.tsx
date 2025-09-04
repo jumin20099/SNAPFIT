@@ -6,6 +6,7 @@ import { ModalProvider } from '@/contexts/ModalContextV2'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { ToastProvider } from '@/shared/ui/ToastProvider'
+import { BottomTabBarWrapper } from '@/components/ui/BottomTabBarWrapper'
 
 
 const inter = Inter({ subsets: ['latin'] })
@@ -29,6 +30,7 @@ export default function RootLayout({
             <CartProvider>
               <ModalProvider>
                 {children}
+                <BottomTabBarWrapper />
                 <ToastProvider />
               </ModalProvider>
             </CartProvider>

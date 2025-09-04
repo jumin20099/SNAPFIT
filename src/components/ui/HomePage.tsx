@@ -7,7 +7,6 @@ import { StickyHeader } from './StickyHeader'
 import { HeroBanner } from './HeroBanner'
 import { CategoryChips } from './CategoryChips'
 import { ProductGrid } from './ProductGrid'
-import { BottomTabBar } from './BottomTabBar'
 
 export function HomePage() {
   const router = useRouter()
@@ -49,7 +48,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20">
       {/* 고정 헤더 */}
       <StickyHeader />
 
@@ -74,11 +73,6 @@ export function HomePage() {
         subCategory={selectedSubCategory}
       />
 
-      {/* 하단 탭바 */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
     </div>
   )
 }

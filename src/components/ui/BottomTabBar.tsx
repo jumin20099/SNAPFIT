@@ -6,7 +6,7 @@ import { Home, Users, Heart, Clock, User, ShoppingBag } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 const tabs = [
-  { id: 'wishlist', label: '좋아요', icon: Heart, path: '/wishlist' },
+  { id: 'wishlist', label: '좋아요', icon: Heart, path: '/like' },
   { id: 'community', label: '커뮤니티', icon: Users, path: '/community' },
   { id: 'home', label: '홈', icon: Home, path: '/' },
   { id: 'cart', label: '장바구니', icon: ShoppingBag, path: '/cart' },
@@ -29,7 +29,7 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 safe-area-pb">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 safe-area-pb">
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-around py-2">
           {tabs.map((tab) => {
@@ -49,13 +49,15 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
                   <Icon
                     size={20}
                     className={`transition-colors ${
-                      isActive ? 'text-gray-800' : 'text-gray-400'
+                      isActive 
+                        ? 'text-gray-800 dark:text-gray-100' 
+                        : 'text-gray-400 dark:text-gray-500'
                     }`}
                   />
                   {/* 활성 상태 인디케이터 */}
                   {isActive && (
                     <motion.div
-                      className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-gray-800 rounded-full"
+                      className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-gray-800 dark:bg-gray-100 rounded-full"
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ duration: 0.2 }}
@@ -66,7 +68,9 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
                 {/* 라벨 */}
                 <span
                   className={`text-xs font-medium transition-colors ${
-                    isActive ? 'text-gray-800' : 'text-gray-400'
+                    isActive 
+                      ? 'text-gray-800 dark:text-gray-100' 
+                      : 'text-gray-400 dark:text-gray-500'
                   }`}
                 >
                   {tab.label}
