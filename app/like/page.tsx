@@ -53,7 +53,10 @@ export default function LikedItemsPage() {
   const fetchLikedPosts = async () => {
     try {
       const token = localStorage.getItem('token')
-      if (!token) return
+      if (!token) {
+        setLikedPosts([])
+        return
+      }
 
       // 1. 좋아요한 게시글 ID 목록 가져오기
       const likesResponse = await fetch('/api/likes/my/posts', {
@@ -125,7 +128,10 @@ export default function LikedItemsPage() {
   const fetchLikedProducts = async () => {
     try {
       const token = localStorage.getItem('token')
-      if (!token) return
+      if (!token) {
+        setLikedProducts([])
+        return
+      }
 
       // 1. 좋아요한 상품 ID 목록 가져오기
       const likesResponse = await fetch('/api/likes/my/products', {
@@ -185,7 +191,10 @@ export default function LikedItemsPage() {
   const fetchLikedBrands = async () => {
     try {
       const token = localStorage.getItem('token')
-      if (!token) return
+      if (!token) {
+        setLikedBrands([])
+        return
+      }
 
       const response = await fetch('/api/likes/my/brands', {
         headers: {

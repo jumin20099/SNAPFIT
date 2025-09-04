@@ -36,7 +36,7 @@ export default function ScrapsPage() {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        router.push('/login')
+        setScrapPosts([])
         return
       }
 

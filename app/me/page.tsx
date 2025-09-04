@@ -56,7 +56,7 @@ export default function MePage() {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        router.push('/login')
+        setUser(null)
         return
       }
 
@@ -220,6 +220,42 @@ export default function MePage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">로딩 중...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 로그인되지 않은 상태
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+          <div className="max-w-md mx-auto flex items-center justify-between">
+            <Button variant="ghost" size="sm" onClick={() => router.back()}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">마이페이지</h1>
+            <div className="w-8"></div>
+          </div>
+        </div>
+
+        <div className="max-w-md mx-auto p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm text-center">
+            <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              로그인이 필요합니다
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              마이페이지를 이용하려면 로그인해주세요.
+            </p>
+            <Button 
+              className="w-full"
+              onClick={() => router.push('/login')}
+            >
+              로그인하기
+            </Button>
+          </div>
         </div>
       </div>
     )
