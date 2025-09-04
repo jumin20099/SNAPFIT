@@ -47,7 +47,7 @@ export function ProductCard({ product, onLike }: ProductCardProps) {
 
 
 
-        {/* 우상단 찜 버튼 */}
+        {/* 우상단 좋아요 버튼 */}
         <motion.button
           onClick={handleLike}
           className="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur-sm angular-rounded flex items-center justify-center shadow-sm"

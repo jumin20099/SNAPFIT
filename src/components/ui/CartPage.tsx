@@ -85,7 +85,7 @@ export function CartPage() {
     router.push(`/products/${productId}`)
   }
 
-  // 찜 토글
+  // 좋아요 토글
   const toggleLike = async (productId: string) => {
     try {
       const response = await fetch('/api/likes/toggle', {
@@ -105,7 +105,7 @@ export function CartPage() {
         )
       }
     } catch (error) {
-      console.error('찜 토글 실패:', error)
+      console.error('좋아요 토글 실패:', error)
     }
   }
 
@@ -275,7 +275,7 @@ export function CartPage() {
                       </div>
                     )}
 
-                    {/* 찜 버튼 */}
+                    {/* 좋아요 버튼 */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()

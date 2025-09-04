@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom'
 import { render, screen } from '@testing-library/react'
 import { HomePage } from '../home-page'
 
@@ -57,9 +58,9 @@ jest.mock('../ui/ProductGrid', () => ({
 jest.mock('../ui/BottomTabBar', () => ({
   BottomTabBar: () => (
     <div data-testid="bottom-tab-bar">
+      <button>좋아요</button>
+      <button>커뮤니티</button>
       <button>홈</button>
-      <button>카테고리</button>
-      <button>찜</button>
       <button>장바구니</button>
       <button>마이</button>
     </div>
@@ -94,9 +95,9 @@ describe('HomePage', () => {
   it('renders bottom tab bar', () => {
     render(<HomePage />)
     expect(screen.getByTestId('bottom-tab-bar')).toBeInTheDocument()
+    expect(screen.getByText('좋아요')).toBeInTheDocument()
+    expect(screen.getByText('커뮤니티')).toBeInTheDocument()
     expect(screen.getByText('홈')).toBeInTheDocument()
-    expect(screen.getByText('카테고리')).toBeInTheDocument()
-    expect(screen.getByText('찜')).toBeInTheDocument()
     expect(screen.getByText('장바구니')).toBeInTheDocument()
     expect(screen.getByText('마이')).toBeInTheDocument()
   })

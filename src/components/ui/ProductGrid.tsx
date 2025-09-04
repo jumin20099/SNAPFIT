@@ -77,8 +77,8 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
   const hasMore = false // 현재는 페이지네이션 미구현
 
   const handleLike = (productId: string) => {
-    // 찜 기능 구현
-    console.log('찜한 상품:', productId)
+    // 좋아요 기능 구현
+    console.log('좋아요한 상품:', productId)
   }
 
   const loadMore = () => {
