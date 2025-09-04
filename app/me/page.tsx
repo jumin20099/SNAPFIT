@@ -196,10 +196,33 @@ export default function MePage() {
 
   // 테마 토글
   const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark')
+    const newTheme = theme === 'dark' ? 'light' : 'dark'
+    setTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
+    
+    // DOM에 즉시 테마 적용
+    const htmlElement = document.documentElement
+    if (newTheme === 'dark') {
+      htmlElement.classList.add('dark')
+    } else {
+      htmlElement.classList.remove('dark')
+    }
   }
 
   useEffect(() => {
+    // 로컬스토리지에서 테마 불러오기
+    const savedTheme = localStorage.getItem('theme')
+    if (savedTheme) {
+      setTheme(savedTheme)
+      // DOM에 테마 적용
+      const htmlElement = document.documentElement
+      if (savedTheme === 'dark') {
+        htmlElement.classList.add('dark')
+      } else {
+        htmlElement.classList.remove('dark')
+      }
+    }
+    
     fetchUserInfo()
     fetchScrapPosts()
     setLoading(false)
@@ -279,7 +302,7 @@ export default function MePage() {
       <div className="max-w-md mx-auto p-4 space-y-6">
         {/* 프로필 섹션 */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex items-center gap-4">
             <div className="relative">
               <Avatar className="w-20 h-20">
                 <AvatarImage src={user?.profileImage} />
@@ -289,15 +312,15 @@ export default function MePage() {
               </Avatar>
               <Button
                 size="sm"
-                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full p-0"
+                className="absolute bottom-0 left-0 w-8 h-8 rounded-full p-0 bg-blue-500 hover:bg-blue-600 shadow-lg border-2 border-white z-10"
                 onClick={() => setShowImageUpload(true)}
               >
-                <Camera className="w-4 h-4" />
+                <Camera className="w-4 h-4 text-black" />
               </Button>
               <input
                 type="file"
                 accept="image/*"
-                className="hidden"
+                className="absolute opacity-0 w-0 h-0 overflow-hidden"
                 onChange={handleImageUpload}
                 ref={(input) => {
                   if (input && showImageUpload) {
@@ -308,104 +331,57 @@ export default function MePage() {
               />
             </div>
             
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
                   {user?.nickname}
                 </h2>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowEditModal(true)}
-                  className="p-1 h-6 w-6"
+                  className="p-1 h-6 w-6 flex-shrink-0"
                 >
                   <Edit3 className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{user?.email}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{user?.email}</p>
               <p className="text-xs text-gray-500 dark:text-gray-500">
                 가입일: {user?.createdAt ? formatDate(user.createdAt) : '알 수 없음'}
               </p>
             </div>
           </div>
+        </div>
 
-          {/* 액션 버튼들 */}
-          <div className="grid grid-cols-2 gap-3">
+
+        {/* 액션 버튼들 */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+          <div className="grid grid-cols-1 gap-3">
             <Button
               variant="outline"
-              className="flex items-center gap-2"
-              onClick={() => router.push('/like')}
+              className="flex items-center gap-2 justify-start h-12"
+              onClick={() => router.push('/wishlist')}
             >
-              <Heart className="w-4 h-4" />
+              <Heart className="w-5 h-5" />
               좋아요 목록
             </Button>
             <Button
               variant="outline"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 justify-start h-12"
+              onClick={() => router.push('/scraps')}
+            >
+              <Bookmark className="w-5 h-5" />
+              스크랩 목록
+            </Button>
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 justify-start h-12"
               onClick={toggleTheme}
             >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               {theme === 'dark' ? '라이트모드' : '다크모드'}
             </Button>
           </div>
-        </div>
-
-        {/* 스크랩한 게시글 섹션 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Bookmark className="w-5 h-5" />
-              스크랩한 게시글
-            </h3>
-            <Badge variant="secondary">{scrapPosts.length}개</Badge>
-          </div>
-
-          {scrapPosts.length === 0 ? (
-            <div className="text-center py-8">
-              <Bookmark className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">스크랩한 게시글이 없습니다</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {scrapPosts.slice(0, 3).map((post) => (
-                <div
-                  key={post.postId}
-                  className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  onClick={() => router.push(`/community/${post.postId}`)}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <Avatar className="w-6 h-6">
-                      <AvatarImage src={post.authorProfileImage} />
-                      <AvatarFallback className="text-xs">
-                        {post.authorName?.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {post.authorName}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                    {post.content}
-                  </p>
-                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                    <span>❤️ {post.likeCount}</span>
-                    <span>💬 {post.commentCount}</span>
-                    <span>🔖 {post.scrapCount}</span>
-                  </div>
-                </div>
-              ))}
-              
-              {scrapPosts.length > 3 && (
-                <Button
-                  variant="ghost"
-                  className="w-full text-sm"
-                  onClick={() => router.push('/scraps')}
-                >
-                  더 보기 ({scrapPosts.length - 3}개 더)
-                </Button>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
