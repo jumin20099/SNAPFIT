@@ -342,22 +342,29 @@ export default function LikedItemsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-md mx-auto">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700">
-              <TabsTrigger value="posts" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600">
-                게시글
-              </TabsTrigger>
-              <TabsTrigger value="products" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600">
-                상품
-              </TabsTrigger>
-              <TabsTrigger value="brands" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600">
-                브랜드
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+      <div className="w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full flex bg-gray-100 dark:bg-gray-700 h-12 p-0 rounded-none border-0">
+            <TabsTrigger 
+              value="posts" 
+              className="flex-1 w-full data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 text-sm font-medium rounded-none justify-center border-0"
+            >
+              게시글
+            </TabsTrigger>
+            <TabsTrigger 
+              value="products" 
+              className="flex-1 w-full data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 text-sm font-medium rounded-none justify-center border-0"
+            >
+              상품
+            </TabsTrigger>
+            <TabsTrigger 
+              value="brands" 
+              className="flex-1 w-full data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 text-sm font-medium rounded-none justify-center border-0"
+            >
+              브랜드
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Content */}
