@@ -46,15 +46,15 @@ global.fetch = jest.fn();
 
 // Next.js Router 모킹
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({
+  useRouter: jest.fn(() => ({
     push: jest.fn(),
     replace: jest.fn(),
     back: jest.fn(),
     forward: jest.fn(),
     refresh: jest.fn(),
     prefetch: jest.fn(),
-  }),
-  useSearchParams: () => ({
+  })),
+  useSearchParams: jest.fn(() => ({
     get: jest.fn(),
     getAll: jest.fn(),
     has: jest.fn(),
@@ -63,8 +63,8 @@ jest.mock('next/navigation', () => ({
     entries: jest.fn(),
     forEach: jest.fn(),
     toString: jest.fn(),
-  }),
-  usePathname: () => '/',
+  })),
+  usePathname: jest.fn(() => '/'),
 }));
 
 // console.error 억제 (테스트 중 불필요한 에러 로그 방지)

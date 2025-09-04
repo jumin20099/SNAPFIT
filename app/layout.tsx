@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { CartProvider } from '@/contexts/CartContext'
 import { ModalProvider } from '@/contexts/ModalContextV2'
-import { ThemeProvider } from 'next-themes'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { ToastProvider } from '@/shared/ui/ToastProvider'
 
@@ -25,7 +25,7 @@ export default function RootLayout({
     <html lang="ko">
       <body className={inter.className}>
         <QueryProvider>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <ThemeProvider>
             <CartProvider>
               <ModalProvider>
                 {children}

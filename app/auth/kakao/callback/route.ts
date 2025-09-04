@@ -75,9 +75,11 @@ export async function GET(request: NextRequest) {
 
     const backendData = await backendResponse.json()
     
-    // JWT 토큰을 쿼리 파라미터로 전달하여 홈페이지로 리다이렉트
+    // 토큰을 쿼리 파라미터로 전달하여 홈페이지로 리다이렉트
+    // 클라이언트 사이드에서 토큰을 로컬스토리지에 저장하도록 함
     const redirectUrl = new URL('/', request.url)
     redirectUrl.searchParams.set('token', backendData.token)
+    redirectUrl.searchParams.set('userIdx', backendData.userIdx || '')
     redirectUrl.searchParams.set('login', 'success')
     
     return NextResponse.redirect(redirectUrl)

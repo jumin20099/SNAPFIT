@@ -140,6 +140,8 @@ export default function MePage() {
       const token = localStorage.getItem('token')
       if (!token) return
 
+      console.log('닉네임 변경 요청:', { nickname: editNickname })
+      
       const response = await fetch('/api/user/profile', {
         method: 'PATCH',
         headers: {
@@ -148,13 +150,21 @@ export default function MePage() {
         },
         body: JSON.stringify({ nickname: editNickname })
       })
+      
+      console.log('응답 상태:', response.status)
 
       if (response.ok) {
         setUser(prev => prev ? { ...prev, nickname: editNickname } : null)
         setShowEditModal(false)
+        alert('닉네임이 성공적으로 변경되었습니다.')
+      } else {
+        const errorData = await response.json()
+        console.error('닉네임 변경 실패:', errorData)
+        alert(`닉네임 변경 실패: ${errorData.error || '알 수 없는 오류'}`)
       }
     } catch (error) {
       console.error('닉네임 변경 실패:', error)
+      alert('닉네임 변경 중 오류가 발생했습니다.')
     }
   }
 

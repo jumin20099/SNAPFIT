@@ -8,6 +8,17 @@ jest.mock('next/navigation', () => ({
     push: jest.fn(),
     back: jest.fn(),
   }),
+  useSearchParams: () => ({
+    get: jest.fn(),
+    getAll: jest.fn(),
+    has: jest.fn(),
+    keys: jest.fn(),
+    values: jest.fn(),
+    entries: jest.fn(),
+    forEach: jest.fn(),
+    toString: jest.fn(),
+  }),
+  usePathname: () => '/',
 }))
 
 // Mock Framer Motion

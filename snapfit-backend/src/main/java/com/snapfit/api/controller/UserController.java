@@ -106,7 +106,7 @@ public class UserController {
                     ));
                 }
                 
-                if (!newNickname.matches("^[가-힣a-zA-Z0-9\\s]+$")) {
+                if (!newNickname.matches("^[가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\\s]+$")) {
                     return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
                         "error", "닉네임은 한글, 영문, 숫자, 공백만 사용할 수 있습니다",
