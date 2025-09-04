@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, ArrowLeft, ShoppingBag, Store } from "lucide-react"
+import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, ArrowLeft, ShoppingBag, Store, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -47,11 +47,15 @@ export default function LikedItemsPage() {
   const [likedPosts, setLikedPosts] = useState<LikedPost[]>([])
   const [likedProducts, setLikedProducts] = useState<LikedProduct[]>([])
   const [likedBrands, setLikedBrands] = useState<LikedBrand[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [postsLoading, setPostsLoading] = useState(false)
+  const [productsLoading, setProductsLoading] = useState(false)
+  const [brandsLoading, setBrandsLoading] = useState(false)
 
   // 좋아요한 게시글 가져오기
   const fetchLikedPosts = async () => {
     try {
+      setPostsLoading(true)
       const token = localStorage.getItem('token')
       if (!token) return
 
@@ -118,12 +122,15 @@ export default function LikedItemsPage() {
     } catch (error) {
       console.error('좋아요한 게시글 로드 실패:', error)
       setLikedPosts([])
+    } finally {
+      setPostsLoading(false)
     }
   }
 
   // 좋아요한 상품 가져오기
   const fetchLikedProducts = async () => {
     try {
+      setProductsLoading(true)
       const token = localStorage.getItem('token')
       if (!token) return
 
@@ -178,12 +185,15 @@ export default function LikedItemsPage() {
     } catch (error) {
       console.error('좋아요한 상품 로드 실패:', error)
       setLikedProducts([])
+    } finally {
+      setProductsLoading(false)
     }
   }
 
   // 좋아요한 브랜드 가져오기
   const fetchLikedBrands = async () => {
     try {
+      setBrandsLoading(true)
       const token = localStorage.getItem('token')
       if (!token) return
 
@@ -203,6 +213,8 @@ export default function LikedItemsPage() {
     } catch (error) {
       console.error('좋아요한 브랜드 로드 실패:', error)
       setLikedBrands([])
+    } finally {
+      setBrandsLoading(false)
     }
   }
 
@@ -282,9 +294,16 @@ export default function LikedItemsPage() {
   }
 
   useEffect(() => {
-    fetchLikedPosts()
-    fetchLikedProducts()
-    fetchLikedBrands()
+    const loadData = async () => {
+      setLoading(true)
+      await Promise.all([
+        fetchLikedPosts(),
+        fetchLikedProducts(),
+        fetchLikedBrands()
+      ])
+      setLoading(false)
+    }
+    loadData()
   }, [])
 
   const formatDate = (dateString: string) => {
@@ -299,48 +318,74 @@ export default function LikedItemsPage() {
     return `${Math.ceil(diffHours / 24)}일 전`
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-600 dark:text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">좋아요 목록을 불러오는 중...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white border-b p-4 flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h1 className="text-xl font-bold">좋아요한 목록</h1>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+        <div className="max-w-md mx-auto flex items-center gap-4">
+          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">좋아요한 목록</h1>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white border-b">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="posts">게시글</TabsTrigger>
-            <TabsTrigger value="products">상품</TabsTrigger>
-            <TabsTrigger value="brands">브랜드</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-md mx-auto">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-700">
+              <TabsTrigger value="posts" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600">
+                게시글
+              </TabsTrigger>
+              <TabsTrigger value="products" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600">
+                상품
+              </TabsTrigger>
+              <TabsTrigger value="brands" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600">
+                브랜드
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="max-w-md mx-auto p-4">
         <Tabs value={activeTab} className="w-full">
           {/* 게시글 탭 */}
           <TabsContent value="posts" className="space-y-4">
-            <div className="text-sm text-gray-600 mb-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               좋아요한 게시글 {likedPosts.length}개
             </div>
             
-            {likedPosts.length === 0 ? (
+            {postsLoading ? (
               <div className="text-center py-12">
-                <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">좋아요한 게시글이 없습니다</h3>
-                <p className="text-gray-500">마음에 드는 게시글에 좋아요를 눌러보세요.</p>
+                <Loader2 className="w-8 h-8 animate-spin text-gray-600 dark:text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">게시글을 불러오는 중...</p>
+              </div>
+            ) : likedPosts.length === 0 ? (
+              <div className="text-center py-12">
+                <Heart className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">좋아요한 게시글이 없습니다</h3>
+                <p className="text-gray-500 dark:text-gray-400">마음에 드는 게시글에 좋아요를 눌러보세요.</p>
               </div>
             ) : (
               <div className="space-y-4">
                                  {likedPosts.map((post, index) => (
                    <div 
                      key={`post-${post.postId}-${index}`} 
-                     className="bg-white rounded-lg border p-4 cursor-pointer hover:shadow-md transition-shadow"
+                     className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:shadow-md transition-shadow"
                      onClick={() => router.push(`/community/${post.postId}`)}
                    >
                     {/* 작성자 정보 */}
@@ -350,8 +395,8 @@ export default function LikedItemsPage() {
                         <AvatarFallback>{post.authorName?.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <div className="font-medium text-sm">{post.authorName}</div>
-                        <div className="text-xs text-gray-500">{formatDate(post.createdAt)}</div>
+                        <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{post.authorName}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt)}</div>
                       </div>
                                              <Button 
                          variant="ghost" 
@@ -368,7 +413,7 @@ export default function LikedItemsPage() {
 
                     {/* 게시글 내용 */}
                     <div className="mb-3">
-                      <p className="text-sm text-gray-700 line-clamp-3">{post.content}</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{post.content}</p>
                     </div>
 
                     {/* 이미지 */}
@@ -394,7 +439,7 @@ export default function LikedItemsPage() {
                     )}
 
                     {/* 액션 버튼 */}
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                       <div className="flex items-center gap-1">
                         <Heart className="w-4 h-4" />
                         <span>{post.likeCount}</span>
@@ -416,22 +461,27 @@ export default function LikedItemsPage() {
 
           {/* 상품 탭 */}
           <TabsContent value="products" className="space-y-4">
-            <div className="text-sm text-gray-600 mb-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               좋아요한 상품 {likedProducts.length}개
             </div>
             
-            {likedProducts.length === 0 ? (
+            {productsLoading ? (
               <div className="text-center py-12">
-                <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">좋아요한 상품이 없습니다</h3>
-                <p className="text-gray-500">마음에 드는 상품에 좋아요를 눌러보세요.</p>
+                <Loader2 className="w-8 h-8 animate-spin text-gray-600 dark:text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">상품을 불러오는 중...</p>
+              </div>
+            ) : likedProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <ShoppingBag className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">좋아요한 상품이 없습니다</h3>
+                <p className="text-gray-500 dark:text-gray-400">마음에 드는 상품에 좋아요를 눌러보세요.</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
                                  {likedProducts.map((product, index) => (
                    <div 
                      key={`product-${product.productId}-${index}`} 
-                     className="bg-white rounded-lg border p-3 cursor-pointer hover:shadow-md transition-shadow"
+                     className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow"
                      onClick={() => router.push(`/products/${product.productId}`)}
                    >
                     <div className="relative">
@@ -454,9 +504,9 @@ export default function LikedItemsPage() {
                     </div>
                     
                     <div className="space-y-1">
-                      <h3 className="font-medium text-sm line-clamp-2">{product.name}</h3>
-                      <p className="text-sm text-gray-600">{product.storeName}</p>
-                      <p className="font-bold text-sm">{product.price.toLocaleString()}원</p>
+                      <h3 className="font-medium text-sm text-gray-900 dark:text-gray-100 line-clamp-2">{product.name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{product.storeName}</p>
+                      <p className="font-bold text-sm text-gray-900 dark:text-gray-100">{product.price.toLocaleString()}원</p>
                       <Badge variant="outline" className="text-xs">{product.category}</Badge>
                     </div>
                   </div>
@@ -467,22 +517,27 @@ export default function LikedItemsPage() {
 
           {/* 브랜드 탭 */}
           <TabsContent value="brands" className="space-y-4">
-            <div className="text-sm text-gray-600 mb-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               좋아요한 브랜드 {likedBrands.length}개
             </div>
             
-            {likedBrands.length === 0 ? (
+            {brandsLoading ? (
               <div className="text-center py-12">
-                <Store className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">좋아요한 브랜드가 없습니다</h3>
-                <p className="text-gray-500">마음에 드는 브랜드에 좋아요를 눌러보세요.</p>
+                <Loader2 className="w-8 h-8 animate-spin text-gray-600 dark:text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">브랜드를 불러오는 중...</p>
+              </div>
+            ) : likedBrands.length === 0 ? (
+              <div className="text-center py-12">
+                <Store className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">좋아요한 브랜드가 없습니다</h3>
+                <p className="text-gray-500 dark:text-gray-400">마음에 드는 브랜드에 좋아요를 눌러보세요.</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {likedBrands.map((brand) => (
-                  <div key={brand.brandId} className="bg-white rounded-lg border p-4">
+                  <div key={brand.brandId} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
                         <img 
                           src={brand.logoUrl} 
                           alt={brand.name}
@@ -491,9 +546,9 @@ export default function LikedItemsPage() {
                       </div>
                       
                       <div className="flex-1">
-                        <h3 className="font-bold text-lg mb-1">{brand.name}</h3>
-                        <p className="text-sm text-gray-600 mb-2">{brand.description}</p>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <h3 className="font-bold text-lg mb-1 text-gray-900 dark:text-gray-100">{brand.name}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{brand.description}</p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                           <span>팔로워 {brand.followerCount.toLocaleString()}명</span>
                         </div>
                       </div>
