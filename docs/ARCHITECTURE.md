@@ -9,11 +9,13 @@ SnapFit은 Next.js 14와 Spring Boot 3를 기반으로 한 패션 플랫폼입�
 ### Frontend
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS + shadcn/ui
-- **State Management**: TanStack Query + React Context
+- **Styling**: Tailwind CSS + shadcn/ui + Pretendard 폰트
+- **State Management**: TanStack Query + React Context + Zustand
+- **Animation**: Framer Motion
 - **Testing**: Jest + React Testing Library + Playwright
 - **Monitoring**: Sentry
 - **Performance**: Lighthouse CI
+- **Real-time**: Server-Sent Events (SSE)
 
 ### Backend
 - **Framework**: Spring Boot 3
@@ -29,11 +31,36 @@ SnapFit은 Next.js 14와 Spring Boot 3를 기반으로 한 패션 플랫폼입�
 ### 1. FSD (Feature-Sliced Design)
 ```
 src/
-├── shared/           # 공통 유틸리티, UI 컴포넌트
+├── shared/           # 공통 유틸리티, UI 컴포넌트, API 클라이언트
+│   ├── api/         # API 클라이언트, 쿼리 정의
+│   ├── hooks/       # 공통 훅
+│   ├── lib/         # 유틸리티 함수
+│   ├── types/       # 타입 정의
+│   └── ui/          # 공통 UI 컴포넌트
 ├── entities/         # 비즈니스 엔티티
+│   ├── cody/        # 코디 관련 엔티티
+│   ├── modal/       # 모달 관련 엔티티
+│   ├── product/     # 상품 관련 엔티티
+│   └── user/        # 사용자 관련 엔티티
 ├── features/         # 기능별 모듈
+│   ├── cody-builder/ # 코디 빌더 기능
+│   ├── notifications/ # 알림 기능
+│   ├── product-like/ # 상품 좋아요 기능
+│   └── product-search/ # 상품 검색 기능
 ├── widgets/          # 복합 컴포넌트
-└── app/             # 라우팅, 레이아웃
+│   ├── category-tabs/ # 카테고리 탭 위젯
+│   ├── header-nav/   # 헤더 네비게이션 위젯
+│   └── product-grid/ # 상품 그리드 위젯
+├── components/       # UI 컴포넌트
+│   ├── ui/          # 기본 UI 컴포넌트 (shadcn/ui)
+│   ├── cody-playground/ # 코디 플레이그라운드
+│   └── home-page.tsx # 홈페이지 컴포넌트
+├── contexts/         # React Context
+├── hooks/           # 커스텀 훅
+└── app/             # Next.js App Router
+    ├── api/         # API Routes
+    ├── (pages)/     # 페이지 컴포넌트
+    └── globals.css  # 전역 스타일
 ```
 
 ### 2. 계층 분리
@@ -56,13 +83,15 @@ src/
 - 검색 기능
 
 ### 2. 코디 시스템
-- 3D 코디 빌더
+- 3단계 코디 플레이그라운드 (상품 선택 → 코디 구성 → 완성)
 - 상품 조합 관리
 - 코디 저장/공유
+- Framer Motion 애니메이션
 
 ### 3. 사용자 관리
 - 소셜 로그인 (Kakao)
-- 프로필 관리
+- 프로필 관리 (닉네임, 프로필 이미지)
+- 다크/라이트 모드 지원
 - 팔로우/팔로워
 
 ### 4. 커뮤니티
@@ -74,6 +103,16 @@ src/
 - SSE 기반 알림
 - 토스트 알림
 - 알림 배지
+
+### 6. 좋아요 시스템
+- 좋아요한 상품/게시글/브랜드 관리
+- 좋아요 목록 페이지 (/like)
+- 탭 기반 UI (게시글/상품/브랜드)
+
+### 7. 하단 탭 네비게이션
+- 모든 페이지에서 일관된 네비게이션
+- 홈, 좋아요, 커뮤니티, 코디, 마이페이지
+- 활성 탭 상태 관리
 
 ## 성능 최적화
 
@@ -93,9 +132,14 @@ src/
 - CDN 정적 자원 캐싱
 
 ### 4. 가상화
-- 대용량 리스트 가상화
+- 대용량 리스트 가상화 (TanStack Virtual)
 - 무한 스크롤
 - 성능 모니터링
+
+### 5. 폰트 최적화
+- Pretendard 폰트 적용
+- font-display: swap으로 로딩 최적화
+- CDN 기반 폰트 로딩
 
 ## 보안
 

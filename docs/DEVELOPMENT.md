@@ -7,6 +7,8 @@
 - npm 9.0.0 이상
 - Git 2.30.0 이상
 - Docker 20.10.0 이상 (백엔드 개발용)
+- Java 17 (백엔드 개발용)
+- PostgreSQL (Docker로 실행 가능)
 
 ### 프로젝트 클론 및 설치
 ```bash
@@ -28,6 +30,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 NEXT_PUBLIC_CDN_URL=https://cdn.snapfit.app
 NEXT_PUBLIC_SENTRY_DSN=your-sentry-dsn
 NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_APP_ORIGIN=http://localhost:3000
 ```
 
 ## 개발 서버 실행
@@ -49,6 +52,9 @@ docker-compose up -d
 
 # Spring Boot 애플리케이션 실행
 ./gradlew bootRun
+
+# 또는 개발 스크립트 사용
+./scripts/dev-start.sh
 ```
 
 ## 코드 스타일
@@ -97,6 +103,9 @@ npm run test:e2e:ui
 
 # 헤드리스 모드로 실행
 npm run test:e2e:headed
+
+# E2E 테스트 시작 스크립트
+./scripts/start-e2e.sh
 ```
 
 ### 테스트 작성 가이드
@@ -191,6 +200,25 @@ npm run analyze
 ```bash
 # Lighthouse 성능 측정
 npm run lighthouse
+```
+
+### 폰트 최적화
+```bash
+# Pretendard 폰트가 이미 적용되어 있음
+# globals.css에서 @font-face로 정의
+# tailwind.config.js에서 font-pretendard 클래스 사용 가능
+```
+
+### 가상화 설정
+```tsx
+// TanStack Virtual 사용 예시
+import { useVirtualizer } from '@tanstack/react-virtual'
+
+const virtualizer = useVirtualizer({
+  count: items.length,
+  getScrollElement: () => parentRef.current,
+  estimateSize: () => 200,
+})
 ```
 
 ### 이미지 최적화
@@ -318,6 +346,15 @@ npm run generate:api
 - ESLint
 - Auto Rename Tag
 - Bracket Pair Colorizer
+- Tailwind CSS IntelliSense
+- Framer Motion Snippets
+
+### 개발 도구
+- TanStack Query DevTools
+- React Developer Tools
+- Redux DevTools (Zustand용)
+- Sentry (에러 추적)
+- Lighthouse CI (성능 모니터링)
 
 ### 유용한 명령어
 ```bash
@@ -342,3 +379,7 @@ npm info <package-name>
 - [Tailwind CSS 문서](https://tailwindcss.com/docs)
 - [TanStack Query 문서](https://tanstack.com/query/latest)
 - [Playwright 문서](https://playwright.dev)
+- [Framer Motion 문서](https://www.framer.com/motion/)
+- [shadcn/ui 문서](https://ui.shadcn.com/)
+- [Pretendard 폰트](https://cactus.tistory.com/306)
+- [Spring Boot 문서](https://spring.io/projects/spring-boot)

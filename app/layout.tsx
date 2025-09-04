@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
 import { CartProvider } from '@/contexts/CartContext'
 import { ModalProvider } from '@/contexts/ModalContextV2'
@@ -9,7 +8,6 @@ import { ToastProvider } from '@/shared/ui/ToastProvider'
 import { BottomTabBarWrapper } from '@/components/ui/BottomTabBarWrapper'
 
 
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'SNAPFIT',
@@ -24,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className={inter.className}>
+      <body className="font-pretendard">
         <QueryProvider>
           <ThemeProvider>
             <CartProvider>

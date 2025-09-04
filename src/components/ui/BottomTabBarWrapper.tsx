@@ -16,8 +16,8 @@ export function BottomTabBarWrapper() {
       setActiveTab('wishlist')
     } else if (pathname === '/community' || pathname.startsWith('/community')) {
       setActiveTab('community')
-    } else if (pathname === '/cart' || pathname.startsWith('/cart')) {
-      setActiveTab('cart')
+    } else if (pathname === '/cody' || pathname.startsWith('/cody')) {
+      setActiveTab('cody')
     } else if (pathname === '/me' || pathname.startsWith('/me')) {
       setActiveTab('profile')
     } else {

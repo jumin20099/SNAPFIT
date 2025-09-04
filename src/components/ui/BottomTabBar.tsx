@@ -2,14 +2,14 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Home, Users, Heart, Clock, User, ShoppingBag } from 'lucide-react'
+import { Home, Users, Heart, Clock, User, Shirt } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 const tabs = [
   { id: 'wishlist', label: '좋아요', icon: Heart, path: '/like' },
   { id: 'community', label: '커뮤니티', icon: Users, path: '/community' },
   { id: 'home', label: '홈', icon: Home, path: '/' },
-  { id: 'cart', label: '장바구니', icon: ShoppingBag, path: '/cart' },
+  { id: 'cody', label: '코디', icon: Shirt, path: '/cody' },
   { id: 'profile', label: '마이', icon: User, path: '/me' },
 ]
 

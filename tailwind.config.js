@@ -59,6 +59,7 @@ module.exports = {
       },
       fontFamily: {
         sans: ["var(--font-sans)", ...fontFamily.sans],
+        pretendard: ["Pretendard", ...fontFamily.sans],
       },
     },
   },

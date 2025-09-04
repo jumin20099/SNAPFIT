@@ -27,6 +27,9 @@ SnapFit의 UI 컴포넌트는 shadcn/ui를 기반으로 하며, 일관된 디자
 
 ### 타이포그래피
 ```css
+/* Font Family */
+font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+
 /* Font Sizes */
 --font-size-xs: 0.75rem;
 --font-size-sm: 0.875rem;
@@ -117,28 +120,45 @@ import { Badge } from '@/components/ui/badge';
 
 ## 복합 컴포넌트
 
-### ProductCard
+### ProductGrid
 ```tsx
-import { ProductCard } from '@/components/product-card';
+import { ProductGrid } from '@/components/ui/ProductGrid';
 
-<ProductCard
-  product={{
-    id: '1',
-    name: '테스트 상품',
-    price: 50000,
-    imageUrl: 'https://example.com/image.jpg',
-    category: '상의',
-    brand: '테스트 브랜드',
-    tags: ['인기', '할인']
-  }}
-  onClick={() => console.log('상품 클릭')}
+<ProductGrid 
+  category="전체"
+  gender="all"
+  mainCategory="상의"
+  subCategory="티셔츠"
 />
 ```
 
 **Props:**
-- `product`: 상품 정보 객체
-- `onClick`: 클릭 이벤트 핸들러
-- `className`: 추가 CSS 클래스
+- `category`: 선택된 카테고리
+- `gender`: 성별 필터
+- `mainCategory`: 대분류 카테고리
+- `subCategory`: 소분류 카테고리
+
+### CategoryChips
+```tsx
+import { CategoryChips } from '@/components/ui/CategoryChips';
+
+<CategoryChips
+  selectedCategory="전체"
+  onCategoryChange={setSelectedCategory}
+  selectedGender="all"
+  selectedMainCategory="상의"
+  selectedSubCategory="티셔츠"
+  onCategorySelect={handleCategorySelect}
+/>
+```
+
+**Props:**
+- `selectedCategory`: 선택된 카테고리
+- `onCategoryChange`: 카테고리 변경 핸들러
+- `selectedGender`: 선택된 성별
+- `selectedMainCategory`: 선택된 대분류
+- `selectedSubCategory`: 선택된 소분류
+- `onCategorySelect`: 카테고리 선택 핸들러
 
 ### CategoryTab
 ```tsx
@@ -185,13 +205,25 @@ import { HeaderNav } from '@/components/HeaderNav';
 
 ### BottomTabBar
 ```tsx
-import { BottomTabBar } from '@/components/bottom-tab-bar';
+import { BottomTabBar } from '@/components/ui/BottomTabBar';
 
 <BottomTabBar
-  currentPath="/"
-  onNavigate={(path) => console.log(path)}
+  activeTab="home"
+  onTabChange={setActiveTab}
 />
 ```
+
+### BottomTabBarWrapper
+```tsx
+import { BottomTabBarWrapper } from '@/components/ui/BottomTabBarWrapper';
+
+<BottomTabBarWrapper />
+```
+
+**기능:**
+- 현재 경로에 따라 자동으로 활성 탭 설정
+- 모든 페이지에서 일관된 네비게이션 제공
+- 홈, 좋아요, 커뮤니티, 코디, 마이페이지 탭 지원
 
 ## 폼 컴포넌트
 
@@ -213,6 +245,40 @@ import { UserProfileForm } from '@/components/user-profile-form';
 <UserProfileForm
   user={user}
   onSubmit={(data) => console.log(data)}
+/>
+```
+
+## 코디 플레이그라운드 컴포넌트
+
+### CodyPlayground
+```tsx
+import { CodyPlayground } from '@/components/cody-playground';
+
+<CodyPlayground />
+```
+
+**기능:**
+- 3단계 코디 프로세스 (상품 선택 → 코디 구성 → 완성)
+- Framer Motion 애니메이션
+- 상품 선택 및 조합 관리
+
+### CodyHeader
+```tsx
+import { CodyHeader } from '@/components/cody-playground/CodyHeader';
+
+<CodyHeader 
+  currentStep={0}
+  onBack={handleBack}
+/>
+```
+
+### CodyStepIndicator
+```tsx
+import { CodyStepIndicator } from '@/components/cody-playground/CodyStepIndicator';
+
+<CodyStepIndicator 
+  currentStep={0}
+  steps={['상품 선택', '코디 구성', '완성']}
 />
 ```
 
@@ -332,6 +398,20 @@ const { theme, toggleTheme } = useTheme();
   내용
 </div>
 ```
+
+### 테마 컨텍스트
+```tsx
+import { ThemeProvider } from '@/contexts/ThemeContext';
+
+<ThemeProvider>
+  <App />
+</ThemeProvider>
+```
+
+**기능:**
+- localStorage에 테마 설정 저장
+- 즉시 테마 적용 (새로고침 불필요)
+- 다크/라이트 모드 토글
 
 ### 커스텀 테마
 ```css
