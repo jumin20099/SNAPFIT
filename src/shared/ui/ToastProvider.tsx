@@ -1,7 +1,7 @@
 'use client';
 
 import { Toaster } from 'sonner';
-import { useTheme } from '@/contexts/ThemeContext';
+import { useTheme } from 'next-themes';
 
 export function ToastProvider() {
   const { theme } = useTheme();
