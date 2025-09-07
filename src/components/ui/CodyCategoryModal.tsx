@@ -61,11 +61,29 @@ export function CodyCategoryModal({
     
     return products.filter(product => {
       // 성별 필터링
-      if (activeGender === 'male' && product.gender !== 'male') return false
-      if (activeGender === 'female' && product.gender !== 'female') return false
+      if (activeGender === 'male' && product.genderCategory !== '남성') return false
+      if (activeGender === 'female' && product.genderCategory !== '여성') return false
       return true
-    })
+    }).map(product => ({
+      ...product,
+      // API 응답 필드명을 컴포넌트에서 사용하는 필드명으로 매핑
+      name: product.productName,
+      imageUrl: product.productImage,
+      price: product.productPrice,
+      id: product.productIdx
+    }))
   }, [products, activeGender])
+
+  // 디버깅을 위한 로그
+  console.log('CodyCategoryModal 상품 데이터:', {
+    products,
+    productsLength: products?.length,
+    filteredProducts,
+    filteredProductsLength: filteredProducts?.length,
+    activeGender,
+    majorCategoryName,
+    subCategoryName
+  })
 
   const handleGenderSelect = (genderId: string) => {
     setActiveGender(genderId)
