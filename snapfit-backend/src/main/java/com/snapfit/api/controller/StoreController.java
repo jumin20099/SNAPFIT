@@ -21,6 +21,17 @@ public class StoreController {
         return storeRepository.findAll();
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Store> getStoreById(@PathVariable Long id) {
+        try {
+            Store store = storeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("제휴몰을 찾을 수 없습니다."));
+            return ResponseEntity.ok(store);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @GetMapping("/{id}/dependencies")
     public ResponseEntity<?> checkStoreDependencies(@PathVariable Long id) {
         try {

@@ -127,6 +127,12 @@ export function MainCategoryModal({
                   <div className="p-2 md:p-4">
                     {/* 서브 카테고리 헤더 */}
                     <div className="flex items-center mb-6">
+                      <button
+                        onClick={() => setActiveMainCategory(undefined)}
+                        className="mr-4 p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
+                      >
+                        <ChevronRight size={20} className="text-gray-600 dark:text-dark-text rotate-180" />
+                      </button>
                       {activeSubCategory && (
                         <button
                           onClick={() => setActiveSubCategory(undefined)}

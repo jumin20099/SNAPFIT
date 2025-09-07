@@ -727,4 +727,16 @@ public class PartnerService {
                 .map(this::convertToProductDto)
                 .collect(Collectors.toList());
     }
+    
+    // 상품 활성화/비활성화 상태 변경
+    public void updateProductActiveStatus(Long productId, Boolean isActive) {
+        Optional<Product> productOpt = productRepository.findById(productId);
+        if (productOpt.isPresent()) {
+            Product product = productOpt.get();
+            product.setIsActive(isActive);
+            productRepository.save(product);
+        } else {
+            throw new RuntimeException("상품을 찾을 수 없습니다: " + productId);
+        }
+    }
 } 

@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 
 export interface Product {
   id?: number
+  productIdx?: number
   product_name: string
   product_content: string
   product_image: string
@@ -229,6 +230,11 @@ export default function AdminPage() {
 
   const handleToggleProductStatus = async (productId: number, newStatus: boolean, isPartner: boolean) => {
     try {
+      if (!productId) {
+        alert("상품 ID가 없습니다")
+        return
+      }
+      
       const token = localStorage.getItem("token")
       const url = isPartner 
         ? `/api/partner/products/${productId}/status`
@@ -240,7 +246,10 @@ export default function AdminPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}` 
         },
-        body: JSON.stringify({ isActive: newStatus })
+        body: JSON.stringify({ 
+          isActive: newStatus,
+          status: newStatus ? 'active' : 'inactive'
+        })
       })
       
       if (res.ok) {
@@ -570,7 +579,7 @@ export default function AdminPage() {
                     {(selectedPartnerId ? partnerProducts : products).map((product: Product) => {
                       const mall = storeMalls.find(m => m.id?.toString() === product.store_mall?.toString());
                       return (
-                        <Card key={product.id}>
+                        <Card key={product.productIdx || product.id || `product-${Math.random()}`}>
                           <CardContent className="p-4">
                             <div className="flex items-center gap-4">
                               <img
@@ -593,7 +602,7 @@ export default function AdminPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleToggleProductStatus(product.id!, !(product.isActive ?? (product.status !== 'active')), !!product.isPartner)}
+                                  onClick={() => handleToggleProductStatus(product.productIdx || product.id || 0, !(product.isActive ?? (product.status !== 'active')), !!product.isPartner)}
                                   className={
                                     (product.isActive ?? (product.status === 'active'))
                                     ? "text-green-600 hover:text-green-700"
@@ -605,14 +614,14 @@ export default function AdminPage() {
                                 <Button 
                                   variant="outline" 
                                   size="sm" 
-                                  onClick={() => router.push(`/admin/products/${product.id}/edit`)}
+                                  onClick={() => router.push(`/admin/products/edit?id=${product.productIdx || product.id}`)}
                                 >
                                   <Edit className="w-4 h-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleDeleteProduct(product.id!, !!product.isPartner)}
+                                  onClick={() => handleDeleteProduct(product.productIdx || product.id || 0, !!product.isPartner)}
                                   className="text-red-600 hover:text-red-700"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -641,7 +650,7 @@ export default function AdminPage() {
                 ) : (
                   <div className="grid gap-4">
                     {storeMalls.map((mall: AdminStoreMall) => (
-                      <Card key={mall.id}>
+                      <Card key={mall.id || `mall-${Math.random()}`}>
                         <CardContent className="p-4">
                           <div className="flex items-center gap-4">
                             <img
@@ -661,7 +670,7 @@ export default function AdminPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleToggleMallStatus(mall.id!, !mall.isActive)}
+                                onClick={() => handleToggleMallStatus(mall.storeIdx!, !mall.isActive)}
                                 className={
                                   mall.isActive
                                   ? "text-green-600 hover:text-green-700 border-green-200"
@@ -673,14 +682,14 @@ export default function AdminPage() {
                               <Button 
                                 size="sm" 
                                 variant="outline" 
-                                onClick={() => router.push(`/admin/store-malls/${mall.id}/edit`)}
+                                onClick={() => router.push(`/admin/store-malls/${mall.storeIdx}/edit`)}
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleDeleteMall(mall.id!)}
+                                onClick={() => handleDeleteMall(mall.storeIdx!)}
                                 className="text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -735,7 +744,7 @@ export default function AdminPage() {
                       </div>
                     ) : (
                       updateRequests.map((product: Product) => (
-                        <Card key={product.id}>
+                        <Card key={product.productIdx || product.id || `update-product-${Math.random()}`}>
                           <CardContent className="p-4">
                             <div className="flex items-center gap-4">
                               <img
@@ -822,7 +831,7 @@ export default function AdminPage() {
                       </div>
                     ) : (
                       reports.map((report) => (
-                        <Card key={report.reportId}>
+                        <Card key={report.reportId || `report-${Math.random()}`}>
                           <CardContent className="p-4">
                             <div className="flex items-start gap-4">
                               <div className="flex-1">

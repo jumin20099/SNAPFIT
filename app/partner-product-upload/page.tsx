@@ -5,6 +5,7 @@ import { ArrowLeft, Upload, Package, Edit, Trash2, CheckCircle, XCircle, Clock, 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -70,6 +71,8 @@ export default function PartnerProductUploadPage() {
   const [userInfo, setUserInfo] = useState<any>(null)
   const [showOriginal, setShowOriginal] = useState<{ [key: number]: boolean }>({})
   const [activeTab, setActiveTab] = useState<'all' | 'modified'>('all')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string>('')
 
   useEffect(() => {
     // 사용자 정보 가져오기
@@ -113,6 +116,7 @@ export default function PartnerProductUploadPage() {
                 subCategory: product.subCategory,
                 productPrice: product.productPrice.toString(),
               })
+              setImagePreview(product.productImage || "")
               setIsFormOpen(true)
             }
           } catch (error) {
@@ -143,6 +147,14 @@ export default function PartnerProductUploadPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // 이미지 미리보기 설정
+    setImageFile(file)
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+
     const formData = new FormData()
     formData.append("file", file)
     formData.append("purpose", "product_image")
@@ -159,8 +171,8 @@ export default function PartnerProductUploadPage() {
         },
       })
       if (!res.ok) {
-        const errorText = await res.text()
-        alert("이미지 업로드 실패: " + errorText)
+        const errorData = await res.json()
+        alert(`이미지 업로드 실패: ${errorData.error || '알 수 없는 오류'}`)
         return
       }
       const { url } = await res.json()
@@ -225,6 +237,7 @@ export default function PartnerProductUploadPage() {
       subCategory: product.subCategory,
       productPrice: product.productPrice.toString(),
     })
+    setImagePreview(product.productImage || "")
     setIsFormOpen(true)
   }
 
@@ -283,6 +296,8 @@ export default function PartnerProductUploadPage() {
       subCategory: "",
       productPrice: "",
     })
+    setImageFile(null)
+    setImagePreview("")
     // URL에서 edit 파라미터 제거
     if (window.history.pushState) {
       const newUrl = window.location.pathname
@@ -414,31 +429,40 @@ export default function PartnerProductUploadPage() {
                   {/* 상품 설명 */}
                   <div className="space-y-2">
                     <Label htmlFor="productContent">상품 설명 *</Label>
-                    <Input
+                    <Textarea
                       id="productContent"
                       value={form.productContent}
                       onChange={(e) => setForm(prev => ({ ...prev, productContent: e.target.value }))}
                       placeholder="상품 설명을 입력하세요"
+                      rows={4}
                       required
                     />
                   </div>
 
                   {/* 상품 이미지 */}
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <Label htmlFor="productImage">상품 이미지 *</Label>
-                    <Input
-                      id="productImage"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      required={!form.productImage}
-                    />
-                    {uploading && <p className="text-sm text-gray-600">업로드 중...</p>}
-                    {form.productImage && (
-                      <div className="mt-2">
-                        <img src={form.productImage} alt="상품 이미지" className="w-32 h-32 object-cover rounded" />
-                      </div>
-                    )}
+                    <div className="space-y-4">
+                      {(imagePreview || form.productImage) && (
+                        <div className="w-32 h-32 border rounded-lg overflow-hidden">
+                          <img 
+                            src={imagePreview || form.productImage} 
+                            alt="상품 미리보기" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <Input
+                        id="productImage"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        required={!form.productImage}
+                      />
+                      {uploading && <p className="text-sm text-gray-600">업로드 중...</p>}
+                      <p className="text-sm text-gray-500">JPG, PNG, GIF 파일만 업로드 가능합니다.</p>
+                    </div>
                   </div>
 
                   {/* 상품 링크 */}
@@ -597,6 +621,8 @@ export default function PartnerProductUploadPage() {
                   subCategory: "",
                   productPrice: "",
                 });
+                setImageFile(null);
+                setImagePreview("");
                 setIsFormOpen(true);
               }}
             >

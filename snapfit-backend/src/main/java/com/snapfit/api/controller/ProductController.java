@@ -70,6 +70,21 @@ public class ProductController {
         return productRepository.findAll();
     }
 
+    // 개별 상품 조회
+    @GetMapping("/{id}")
+    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
+        try {
+            Optional<Product> product = productRepository.findById(id);
+            if (product.isPresent()) {
+                return ResponseEntity.ok(product.get());
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     // 제휴사(applicationId) 기준 상품 조회
     @GetMapping("/by-partner")
     public ResponseEntity<List<Product>> getProductsByPartner(@RequestParam Long partnerApplicationId) {
