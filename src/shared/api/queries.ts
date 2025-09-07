@@ -7,7 +7,7 @@ export function useCategoryProducts(major: string, sub?: string) {
   return useQuery({
     queryKey: ['products', 'category', major, sub],
     queryFn: () => apiClient.getProductsByCategory(major, sub),
-    enabled: !!major,
+    enabled: !!major && major.trim() !== '',
     staleTime: 60 * 1000, // 1분
     gcTime: 5 * 60 * 1000, // 5분
   });

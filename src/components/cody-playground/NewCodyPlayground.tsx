@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Save, Trash2, Move } from "lucide-react"
 import { CATEGORIES, type GenderCategory, type MainCategory, type CategoryItem } from '@/constants/categories'
-import { CategoryChips } from '@/components/ui/CategoryChips'
+import { CodyCategoryChips } from '@/components/ui/CodyCategoryChips'
 
 // ===========================
 // TYPES & TAXONOMY (필수만)
@@ -122,7 +122,7 @@ export function NewCodyPlayground() {
 
 
       {/* Category Chips - 코디 페이지 모드 */}
-      <CategoryChips
+      <CodyCategoryChips
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
         selectedGender={selectedGender}
@@ -133,7 +133,6 @@ export function NewCodyPlayground() {
           // 상품을 마네킹에 추가하는 로직
           console.log('상품 추가:', product)
         }}
-        mode="cody"
         isCategoryModalOpen={isCategoryModalOpen}
         setIsCategoryModalOpen={setIsCategoryModalOpen}
       />

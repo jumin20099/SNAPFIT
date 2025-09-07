@@ -42,7 +42,12 @@ class ApiClient {
     const queryString = params.toString();
     const url = queryString ? `/api/products?${queryString}` : '/api/products';
     
-    return this.request<Product[]>(url);
+    console.log('API 호출:', { major, sub, url, queryString });
+    
+    const result = await this.request<Product[]>(url);
+    console.log('API 응답:', { url, resultLength: result?.length, result });
+    
+    return result;
   }
 
   async getProductById(id: number): Promise<Product> {

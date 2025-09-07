@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useCategoryProducts } from '@/shared/api/queries'
 
-interface CategoryModalProps {
+interface CodyCategoryModalProps {
   isOpen: boolean
   onClose: () => void
   onCategorySelect: (genderId: string, mainCategoryId: string, subCategoryId?: string) => void
@@ -16,19 +16,17 @@ interface CategoryModalProps {
   selectedMainCategory?: string
   selectedSubCategory?: string
   onProductAdd?: (product: any) => void
-  mode?: 'main' | 'cody' // 메인 페이지 vs 코디 페이지 모드
 }
 
-export function CategoryModal({
+export function CodyCategoryModal({
   isOpen,
   onClose,
   onCategorySelect,
   selectedGender = 'all',
   selectedMainCategory,
   selectedSubCategory,
-  onProductAdd,
-  mode = 'main'
-}: CategoryModalProps) {
+  onProductAdd
+}: CodyCategoryModalProps) {
   const [activeGender, setActiveGender] = useState(selectedGender)
   const [activeMainCategory, setActiveMainCategory] = useState(selectedMainCategory)
   const [activeSubCategory, setActiveSubCategory] = useState(selectedSubCategory)
@@ -37,7 +35,6 @@ export function CategoryModal({
   const currentMainCategory = currentGenderCategory?.mainCategories.find(cat => cat.id === activeMainCategory)
 
   // 실제 API에서 상품 데이터 가져오기
-  // majorCategoryId와 subCategoryId를 실제 name으로 변환
   const getMainCategoryName = (mainCategoryId: string | undefined) => {
     if (!mainCategoryId || !currentGenderCategory) return undefined
     const mainCategory = currentGenderCategory.mainCategories.find(main => main.id === mainCategoryId)
@@ -50,39 +47,24 @@ export function CategoryModal({
     return subCategory?.name
   }
 
+  const majorCategoryName = getMainCategoryName(activeMainCategory) || ''
+  const subCategoryName = getSubCategoryName(activeSubCategory)
+
   const { data: products = [], isLoading, error } = useCategoryProducts(
-    getMainCategoryName(activeMainCategory) || '', 
-    getSubCategoryName(activeSubCategory)
+    majorCategoryName, 
+    subCategoryName
   )
 
   // 필터링된 상품 목록 (성별 필터링만 추가)
   const filteredProducts = useMemo(() => {
-    if (!products.length) return []
+    if (!products || products.length === 0) return []
     
-    // API 응답을 프론트엔드 형식으로 변환
-    const transformedProducts = products.map(product => ({
-      id: product.productIdx?.toString() || product.id,
-      name: product.productName || product.name,
-      price: product.productPrice || product.price,
-      imageUrl: product.productImage || product.imageUrl,
-      src: product.productImage || product.imageUrl, // 기존 코드 호환성
-      gender: product.genderCategory || product.gender,
-      type: product.majorCategory || product.type,
-      sub: product.subCategory || product.sub,
-      category: product.majorCategory || product.category,
-      brand: product.storeName || product.brand || 'SNAPFIT',
-      ...product // 원본 데이터도 포함
-    }))
-    
-    let list = transformedProducts.slice()
-    if (activeGender !== "all") {
-      list = list.filter(product => 
-        product.gender === activeGender || 
-        product.gender === "공용" ||
-        product.gender === "UNISEX"
-      )
-    }
-    return list
+    return products.filter(product => {
+      // 성별 필터링
+      if (activeGender === 'male' && product.gender !== 'male') return false
+      if (activeGender === 'female' && product.gender !== 'female') return false
+      return true
+    })
   }, [products, activeGender])
 
   const handleGenderSelect = (genderId: string) => {
@@ -99,22 +81,9 @@ export function CategoryModal({
   const handleSubCategorySelect = (subCategoryId: string) => {
     setActiveSubCategory(subCategoryId)
     onCategorySelect(activeGender, activeMainCategory!, subCategoryId)
-    // 메인 페이지 모드: 소분류 선택 시 모달 닫기
-    // 코디 페이지 모드: 소분류 선택 시 모달 유지하고 상품 표시
-    if (mode === 'main') {
-      onClose()
-    }
+    // 코디 페이지에서는 소분류 선택 시 모달 유지 (상품 표시)
   }
 
-  const handleMainCategoryClick = (mainCategoryId: string) => {
-    setActiveSubCategory(undefined)
-    onCategorySelect(activeGender, mainCategoryId)
-    // 메인 페이지 모드: 대분류 선택 시 모달 닫기
-    // 코디 페이지 모드: 대분류 선택 시 모달 유지
-    if (mode === 'main') {
-      onClose()
-    }
-  }
 
   if (!isOpen) return null
 
@@ -135,9 +104,8 @@ export function CategoryModal({
           className="bg-white dark:bg-dark-bg w-full max-h-[60vh] angular-rounded-t-2xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-
           <div className="flex h-[60vh]">
-            {/* 좌측: 성별 선택 - 모바일에서 더 좁게 */}
+            {/* 좌측: 성별 선택 */}
             <div className="w-20 md:w-24 bg-white dark:bg-dark-bg border-r border-gray-200 dark:border-dark-border">
               {/* 닫기 버튼 */}
               <div className="p-2 border-b border-gray-200 dark:border-dark-border">
@@ -214,7 +182,6 @@ export function CategoryModal({
 
                     {/* 서브 카테고리 그리드 또는 상품 표시 영역 */}
                     {!activeSubCategory ? (
-                      /* 서브 카테고리 그리드 - 소분류 선택 전 */
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {currentMainCategory.subCategories.map((subCategory) => (
                           <button
@@ -238,7 +205,6 @@ export function CategoryModal({
                       </div>
                     ) : (
                       /* 상품 표시 영역 - 소분류 선택 후 */
-                      mode === 'cody' && (
                       <div className="space-y-4">
                         {/* 상품 개수 및 상태 표시 */}
                         <div className="flex items-center justify-between">
@@ -278,9 +244,13 @@ export function CategoryModal({
                                   
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img 
-                                    src={product.imageUrl || product.src || "https://via.placeholder.com/200x200?text=No+Image"} 
+                                    src={product.imageUrl || product.src || "/placeholder-product.png"} 
                                     alt={product.name} 
                                     className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-200" 
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.src = "/placeholder-product.png";
+                                    }}
                                   />
                                 </CardContent>
                                 <div className="p-2 space-y-1">
@@ -312,15 +282,12 @@ export function CategoryModal({
                           </div>
                         )}
                       </div>
-                      )
                     )}
                   </div>
                 )
               )}
             </div>
           </div>
-
-
         </motion.div>
       </motion.div>
     </AnimatePresence>

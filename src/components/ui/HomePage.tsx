@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { StickyHeader } from './StickyHeader'
 import { HeroBanner } from './HeroBanner'
-import { CategoryChips } from './CategoryChips'
+import { MainCategoryChips } from './MainCategoryChips'
 import { ProductGrid } from './ProductGrid'
 
 export function HomePage() {
@@ -56,14 +56,13 @@ export function HomePage() {
       <HeroBanner />
 
       {/* 카테고리 선택 버튼 - 메인 페이지 모드 */}
-      <CategoryChips
+      <MainCategoryChips
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
         selectedGender={selectedGender}
         selectedMainCategory={selectedMainCategory}
         selectedSubCategory={selectedSubCategory}
         onCategorySelect={handleCategorySelect}
-        mode="main"
       />
 
       {/* 상품 그리드 */}

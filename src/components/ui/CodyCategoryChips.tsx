@@ -3,10 +3,10 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Grid3X3, ChevronDown } from 'lucide-react'
-import { CategoryModal } from './CategoryModal'
+import { CodyCategoryModal } from './CodyCategoryModal'
 import { getSelectedCategoryPath } from '@/constants/categories'
 
-interface CategoryChipsProps {
+interface CodyCategoryChipsProps {
   selectedCategory: string
   onCategoryChange: (category: string) => void
   selectedGender?: string
@@ -14,12 +14,11 @@ interface CategoryChipsProps {
   selectedSubCategory?: string
   onCategorySelect: (genderId: string, mainCategoryId: string, subCategoryId?: string) => void
   onProductAdd?: (product: any) => void
-  mode?: 'main' | 'cody' // 메인 페이지 vs 코디 페이지 모드
   isCategoryModalOpen?: boolean
   setIsCategoryModalOpen?: (open: boolean) => void
 }
 
-export function CategoryChips({ 
+export function CodyCategoryChips({ 
   selectedCategory, 
   onCategoryChange,
   selectedGender,
@@ -27,10 +26,9 @@ export function CategoryChips({
   selectedSubCategory,
   onCategorySelect,
   onProductAdd,
-  mode = 'main',
   isCategoryModalOpen: externalIsOpen,
   setIsCategoryModalOpen: externalSetIsOpen
-}: CategoryChipsProps) {
+}: CodyCategoryChipsProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false)
   
   // 외부에서 상태를 관리하는 경우 외부 상태를 사용, 그렇지 않으면 내부 상태 사용
@@ -76,7 +74,7 @@ export function CategoryChips({
         </div>
       </div>
 
-      <CategoryModal
+      <CodyCategoryModal
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
         onCategorySelect={handleCategorySelect}
@@ -84,7 +82,6 @@ export function CategoryChips({
         selectedMainCategory={selectedMainCategory}
         selectedSubCategory={selectedSubCategory}
         onProductAdd={onProductAdd}
-        mode={mode}
       />
     </>
   )
