@@ -249,6 +249,8 @@ export function CodyCategoryModal({
                                     className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-200" 
                                     onError={(e) => {
                                       const target = e.target as HTMLImageElement;
+                                      // onError 이벤트 리스너 제거하여 무한 루프 방지
+                                      target.onerror = null;
                                       target.src = "/placeholder-product.png";
                                     }}
                                   />
