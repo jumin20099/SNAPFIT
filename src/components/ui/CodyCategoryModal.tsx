@@ -244,15 +244,9 @@ export function CodyCategoryModal({
                                   
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img 
-                                    src={product.imageUrl || product.src || "/placeholder-product.png"} 
+                                    src={product.imageUrl || product.src || "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik04NSA3NUgxMTVWMTI1SDg1Vjc1WiIgZmlsbD0iI0Q1RDdEQiIvPgo8cGF0aCBkPSJNODUgMTM1SDEwNVYxNDVIODVWMTM1WiIgZmlsbD0iI0Q1RDdEQiIvPgo8dGV4dCB4PSIxMDAiIHk9IjE2NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzlDQTNBRiIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIj5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+"} 
                                     alt={product.name} 
                                     className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-200" 
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      // onError 이벤트 리스너 제거하여 무한 루프 방지
-                                      target.onerror = null;
-                                      target.src = "/placeholder-product.png";
-                                    }}
                                   />
                                 </CardContent>
                                 <div className="p-2 space-y-1">

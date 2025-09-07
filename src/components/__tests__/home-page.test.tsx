@@ -52,8 +52,8 @@ jest.mock('../ui/HeroBanner', () => ({
   HeroBanner: () => <div data-testid="hero-banner">Hero Banner</div>
 }))
 
-jest.mock('../ui/CategoryChips', () => ({
-  CategoryChips: () => (
+jest.mock('../ui/MainCategoryChips', () => ({
+  MainCategoryChips: () => (
     <div data-testid="category-chips">
       <button>전체</button>
       <button>상의</button>
