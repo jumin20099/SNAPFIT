@@ -157,20 +157,22 @@ export function CodyCategoryModal({
                 /* 메인 카테고리 표시 */
                 currentGenderCategory && (
                   <div className="p-2 md:p-4">
-                    <div className="grid grid-cols-1 gap-1 md:gap-2">
-                      {currentGenderCategory.mainCategories.map((mainCategory) => (
-                        <button
-                          key={mainCategory.id}
-                          onClick={() => handleMainCategorySelect(mainCategory.id)}
-                          className="flex items-center justify-between p-2 md:p-3 angular-rounded transition-colors text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-border"
-                        >
-                          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-                            <span className="text-sm md:text-lg flex-shrink-0">{mainCategory.icon}</span>
-                            <span className="font-medium text-sm md:text-base truncate">{mainCategory.name}</span>
-                          </div>
-                          <ChevronRight size={14} className="text-gray-400 dark:text-dark-text flex-shrink-0" />
-                        </button>
-                      ))}
+                    <div className="max-h-[60vh] overflow-y-auto">
+                      <div className="grid grid-cols-1 gap-1 md:gap-2 pr-2 pb-4">
+                        {currentGenderCategory.mainCategories.map((mainCategory) => (
+                          <button
+                            key={mainCategory.id}
+                            onClick={() => handleMainCategorySelect(mainCategory.id)}
+                            className="flex items-center justify-between p-2 md:p-3 angular-rounded transition-colors text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-border"
+                          >
+                            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+                              <span className="text-sm md:text-lg flex-shrink-0">{mainCategory.icon}</span>
+                              <span className="font-medium text-sm md:text-base truncate">{mainCategory.name}</span>
+                            </div>
+                            <ChevronRight size={14} className="text-gray-400 dark:text-dark-text flex-shrink-0" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )
@@ -200,8 +202,8 @@ export function CodyCategoryModal({
 
                     {/* 서브 카테고리 그리드 또는 상품 표시 영역 */}
                     {!activeSubCategory ? (
-                      <div className="max-h-[50vh] overflow-y-auto">
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pr-2">
+                      <div className="max-h-[60vh] overflow-y-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pr-2 pb-4">
                           {currentMainCategory.subCategories.map((subCategory) => (
                             <button
                               key={subCategory.id}
