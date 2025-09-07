@@ -1,13 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export function HeroBanner() {
   // 실제 API에서 배너 데이터를 가져와야 함
-  // 현재는 빈 상태로 유지
-  const slides: any[] = []
+  // 현재는 기본 배너 데이터 사용
+  const slides = [
+    {
+      title: "특별 할인 이벤트",
+      subtitle: "한정 수량, 놓치지 마세요",
+      badge: "특가",
+      image: "https://picsum.photos/seed/banner1/400/300",
+      link: "/products?category=sale"
+    },
+    {
+      title: "신상품 출시",
+      subtitle: "최신 트렌드를 만나보세요",
+      badge: "NEW",
+      image: "https://picsum.photos/seed/banner2/400/300",
+      link: "/products?category=new"
+    },
+    {
+      title: "코디 추천",
+      subtitle: "완벽한 스타일링을 위한 아이템들",
+      badge: "STYLE",
+      image: "https://picsum.photos/seed/banner3/400/300",
+      link: "/cody"
+    }
+  ]
   
   const [currentSlide, setCurrentSlide] = useState(0)
   const totalSlides = slides.length
@@ -20,10 +42,14 @@ export function HeroBanner() {
     setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides)
   }
 
-  // 배너 데이터가 없으면 렌더링하지 않음
-  if (slides.length === 0) {
-    return null
-  }
+  // 자동 슬라이드 기능
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % totalSlides)
+    }, 5000) // 5초마다 자동 슬라이드
+
+    return () => clearInterval(interval)
+  }, [totalSlides])
 
   return (
     <div className="w-full">
@@ -77,15 +103,19 @@ export function HeroBanner() {
             </motion.p>
           </div>
 
-          {/* 우측: 제품 이미지 */}
+          {/* 우측: 배너 이미지 */}
           <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
             <motion.div
-              className="w-24 h-32 bg-black/20 rounded-lg flex items-center justify-center"
+              className="w-24 h-32 rounded-lg overflow-hidden"
               initial={{ x: 20, opacity: 0, rotate: 5 }}
               animate={{ x: 0, opacity: 1, rotate: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
             >
-              <span className="text-white/60 text-xs">로퍼 이미지</span>
+              <img 
+                src={slides[currentSlide % slides.length].image}
+                alt={slides[currentSlide % slides.length].title}
+                className="w-full h-full object-cover"
+              />
             </motion.div>
           </div>
 

@@ -15,6 +15,8 @@ interface CategoryChipsProps {
   onCategorySelect: (genderId: string, mainCategoryId: string, subCategoryId?: string) => void
   onProductAdd?: (product: any) => void
   mode?: 'main' | 'cody' // 메인 페이지 vs 코디 페이지 모드
+  isCategoryModalOpen?: boolean
+  setIsCategoryModalOpen?: (open: boolean) => void
 }
 
 export function CategoryChips({ 
@@ -25,9 +27,15 @@ export function CategoryChips({
   selectedSubCategory,
   onCategorySelect,
   onProductAdd,
-  mode = 'main'
+  mode = 'main',
+  isCategoryModalOpen: externalIsOpen,
+  setIsCategoryModalOpen: externalSetIsOpen
 }: CategoryChipsProps) {
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
+  const [internalIsOpen, setInternalIsOpen] = useState(false)
+  
+  // 외부에서 상태를 관리하는 경우 외부 상태를 사용, 그렇지 않으면 내부 상태 사용
+  const isCategoryModalOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen
+  const setIsCategoryModalOpen = externalSetIsOpen || setInternalIsOpen
 
   const handleCategorySelect = (genderId: string, mainCategoryId: string, subCategoryId?: string) => {
     onCategorySelect(genderId, mainCategoryId, subCategoryId)

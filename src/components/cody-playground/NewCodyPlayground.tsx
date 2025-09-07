@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useRef, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Save, Trash2, Move } from "lucide-react"
 import { CATEGORIES, type GenderCategory, type MainCategory, type CategoryItem } from '@/constants/categories'
@@ -55,6 +55,7 @@ export function NewCodyPlayground() {
   const [selectedGender, setSelectedGender] = useState<Gender>("all")
   const [selectedMainCategory, setSelectedMainCategory] = useState<Major | null>(null)
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null)
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
 
   const [targetSlot, setTargetSlot] = useState<Major | null>(null)
 
@@ -88,8 +89,23 @@ export function NewCodyPlayground() {
       </div>
 
       {/* Canvas */}
-      <div className="p-3">
-        <div className="relative mx-auto w-full max-w-[400px] aspect-[5/7] rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-sub">
+      <motion.div 
+        className="p-3"
+        animate={{
+          paddingTop: isCategoryModalOpen ? "8px" : "12px",
+          paddingBottom: isCategoryModalOpen ? "8px" : "12px"
+        }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+      >
+        <motion.div 
+          className="relative mx-auto w-full max-w-[400px] aspect-[5/7] rounded-xl border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-dark-sub"
+          animate={{
+            scale: isCategoryModalOpen ? 0.8 : 1,
+            y: isCategoryModalOpen ? -40 : 0,
+            maxWidth: isCategoryModalOpen ? "320px" : "400px"
+          }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+        >
           {/* Mannequin */}
           <DottedMannequin onSelect={(slot) => { setTargetSlot(slot); setSelectedMainCategory(slot); setSelectedSubCategory(null); }} />
 
@@ -101,8 +117,9 @@ export function NewCodyPlayground() {
               <DraggableItem key={p.id} data={p} active={p.id===activeId} onActivate={() => setActiveId(p.id)} onChange={(patch) => setPlaced(prev => prev.map(x => x.id===p.id? { ...x, ...patch } : x))} onRemove={removeActive} />
             ))}
 
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
+
 
       {/* Category Chips - 코디 페이지 모드 */}
       <CategoryChips
@@ -117,6 +134,8 @@ export function NewCodyPlayground() {
           console.log('상품 추가:', product)
         }}
         mode="cody"
+        isCategoryModalOpen={isCategoryModalOpen}
+        setIsCategoryModalOpen={setIsCategoryModalOpen}
       />
 
 
