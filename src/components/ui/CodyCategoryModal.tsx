@@ -200,26 +200,28 @@ export function CodyCategoryModal({
 
                     {/* 서브 카테고리 그리드 또는 상품 표시 영역 */}
                     {!activeSubCategory ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {currentMainCategory.subCategories.map((subCategory) => (
-                          <button
-                            key={subCategory.id}
-                            onClick={() => handleSubCategorySelect(subCategory.id)}
-                            className="p-3 md:p-4 angular-rounded text-center transition-colors bg-white dark:bg-dark-sub text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-border border border-gray-100 dark:border-dark-border"
-                          >
-                            <div className="space-y-2 md:space-y-3">
-                              {/* 아이콘 영역 */}
-                              <div className="w-12 h-12 md:w-16 md:h-16 mx-auto bg-gray-100 dark:bg-dark-border angular-rounded flex items-center justify-center">
-                                <span className="text-lg md:text-2xl">
-                                  {subCategory.isNew ? '🆕' : currentMainCategory.icon}
-                                </span>
+                      <div className="max-h-[50vh] overflow-y-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pr-2">
+                          {currentMainCategory.subCategories.map((subCategory) => (
+                            <button
+                              key={subCategory.id}
+                              onClick={() => handleSubCategorySelect(subCategory.id)}
+                              className="p-3 md:p-4 angular-rounded text-center transition-colors bg-white dark:bg-dark-sub text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-border border border-gray-100 dark:border-dark-border"
+                            >
+                              <div className="space-y-2 md:space-y-3">
+                                {/* 아이콘 영역 */}
+                                <div className="w-12 h-12 md:w-16 md:h-16 mx-auto bg-gray-100 dark:bg-dark-border angular-rounded flex items-center justify-center">
+                                  <span className="text-lg md:text-2xl">
+                                    {subCategory.isNew ? '🆕' : currentMainCategory.icon}
+                                  </span>
+                                </div>
+                                <div className="text-xs md:text-sm font-medium leading-tight">
+                                  {subCategory.name}
+                                </div>
                               </div>
-                              <div className="text-xs md:text-sm font-medium leading-tight">
-                                {subCategory.name}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     ) : (
                       /* 상품 표시 영역 - 소분류 선택 후 */
