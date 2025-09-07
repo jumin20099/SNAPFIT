@@ -23,9 +23,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-light-bg dark:bg-dark-bg flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4">
+      <div className="bg-white dark:bg-dark-sub border-b border-gray-200 dark:border-dark-border p-4">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <Button
             variant="ghost"
@@ -49,15 +49,15 @@ export default function LoginPage() {
               <span className="text-2xl font-bold text-white">S</span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">SNAPFIT</h1>
-              <p className="text-gray-600 text-sm">패션을 더 스마트하게</p>
+              <h1 className="text-2xl font-bold text-light-accent dark:text-dark-accent mb-1">SNAPFIT</h1>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">패션을 더 스마트하게</p>
             </div>
           </div>
 
           {/* Welcome Message */}
           <div className="text-center space-y-2">
-            <h2 className="text-lg font-semibold text-gray-800">환영합니다!</h2>
-            <p className="text-gray-600 text-sm">간편하게 로그인하세요</p>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-dark-text">환영합니다!</h2>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">간편하게 로그인하세요</p>
           </div>
 
           {/* Social Login Buttons */}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Heart, Bell, Search, User, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { NotificationModal } from '@/components/ui/NotificationModal'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -35,6 +36,7 @@ export default function CommunityPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showSearch, setShowSearch] = useState(false)
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
 
   // 게시글 데이터 로드
   useEffect(() => {
@@ -164,29 +166,32 @@ export default function CommunityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
       {/* 헤더 */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="bg-white dark:bg-dark-sub border-b border-gray-200 dark:border-dark-border sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* SNAP 로고 */}
-            <div className="font-bold text-2xl text-black">SNAP</div>
+            <div className="font-bold text-2xl text-light-accent dark:text-dark-accent">SNAP</div>
             
             {/* 우측 아이콘들 */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setShowSearch(!showSearch)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
               >
-                <Search className="w-5 h-5 text-gray-600" />
+                <Search className="w-5 h-5 text-gray-600 dark:text-dark-text" />
               </button>
-              <button className="p-2 hover:bg-gray-100 rounded-full transition-colors relative">
-                <Bell className="w-5 h-5 text-gray-600" />
+              <button 
+                onClick={() => setIsNotificationModalOpen(true)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors relative"
+              >
+                <Bell className="w-5 h-5 text-gray-600 dark:text-dark-text" />
                 {/* 알림 배지 */}
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
               </button>
-              <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <User className="w-5 h-5 text-gray-600" />
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors">
+                <User className="w-5 h-5 text-gray-600 dark:text-dark-text" />
               </button>
             </div>
       </div>
@@ -318,6 +323,12 @@ export default function CommunityPage() {
             </TabsContent>
         </Tabs>
       </div>
+
+      {/* 알림 모달 */}
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+      />
     </div>
   )
 }

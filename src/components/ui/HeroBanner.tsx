@@ -5,15 +5,9 @@ import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export function HeroBanner() {
-  // Mock 데이터 제거됨 - 실제 API에서 배너 데이터를 가져와야 함
-  const slides = [
-    {
-      title: "특별 할인 이벤트",
-      subtitle: "한정 수량, 놓치지 마세요",
-      badge: "특가",
-      image: "/placeholder.svg",
-    }
-  ]
+  // 실제 API에서 배너 데이터를 가져와야 함
+  // 현재는 빈 상태로 유지
+  const slides: any[] = []
   
   const [currentSlide, setCurrentSlide] = useState(0)
   const totalSlides = slides.length
@@ -26,11 +20,15 @@ export function HeroBanner() {
     setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides)
   }
 
+  // 배너 데이터가 없으면 렌더링하지 않음
+  if (slides.length === 0) {
+    return null
+  }
+
   return (
-    <div className="px-4 py-4">
-      <div className="max-w-md mx-auto">
-        <motion.div
-          className="relative bg-gradient-to-br from-gray-800 via-gray-600 to-gray-400 rounded-2xl p-6 h-48 overflow-hidden"
+    <div className="w-full">
+      <motion.div
+        className="relative bg-gradient-to-br from-gray-800 via-gray-600 to-gray-400 p-6 h-48 overflow-hidden w-full"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
@@ -105,7 +103,6 @@ export function HeroBanner() {
             <ChevronRight size={16} />
           </button>
         </motion.div>
-      </div>
     </div>
   )
 }

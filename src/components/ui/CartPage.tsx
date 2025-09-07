@@ -281,7 +281,7 @@ export function CartPage() {
                         e.stopPropagation()
                         toggleLike(product.id)
                       }}
-                      className="absolute bottom-2 right-2 w-6 h-6 bg-white/80 backdrop-blur-sm angular-rounded flex items-center justify-center shadow-sm"
+                      className="absolute bottom-2 right-2 w-6 h-6 flex items-center justify-center"
                     >
                       <Heart
                         size={12}

@@ -1,9 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ChevronRight } from 'lucide-react'
+import { X, ChevronRight, Plus } from 'lucide-react'
 import { CATEGORIES, type GenderCategory, type MainCategory, type CategoryItem } from '@/constants/categories'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { useCategoryProducts } from '@/shared/api/queries'
 
 interface CategoryModalProps {
   isOpen: boolean
@@ -12,6 +15,8 @@ interface CategoryModalProps {
   selectedGender?: string
   selectedMainCategory?: string
   selectedSubCategory?: string
+  onProductAdd?: (product: any) => void
+  mode?: 'main' | 'cody' // 메인 페이지 vs 코디 페이지 모드
 }
 
 export function CategoryModal({
@@ -20,32 +25,95 @@ export function CategoryModal({
   onCategorySelect,
   selectedGender = 'all',
   selectedMainCategory,
-  selectedSubCategory
+  selectedSubCategory,
+  onProductAdd,
+  mode = 'main'
 }: CategoryModalProps) {
   const [activeGender, setActiveGender] = useState(selectedGender)
   const [activeMainCategory, setActiveMainCategory] = useState(selectedMainCategory)
+  const [activeSubCategory, setActiveSubCategory] = useState(selectedSubCategory)
 
   const currentGenderCategory = CATEGORIES.find(cat => cat.id === activeGender)
   const currentMainCategory = currentGenderCategory?.mainCategories.find(cat => cat.id === activeMainCategory)
 
+  // 실제 API에서 상품 데이터 가져오기
+  // majorCategoryId와 subCategoryId를 실제 name으로 변환
+  const getMainCategoryName = (mainCategoryId: string | undefined) => {
+    if (!mainCategoryId || !currentGenderCategory) return undefined
+    const mainCategory = currentGenderCategory.mainCategories.find(main => main.id === mainCategoryId)
+    return mainCategory?.name
+  }
+
+  const getSubCategoryName = (subCategoryId: string | undefined) => {
+    if (!subCategoryId || !currentMainCategory) return undefined
+    const subCategory = currentMainCategory.subCategories.find(sub => sub.id === subCategoryId)
+    return subCategory?.name
+  }
+
+  const { data: products = [], isLoading, error } = useCategoryProducts(
+    getMainCategoryName(activeMainCategory) || '', 
+    getSubCategoryName(activeSubCategory)
+  )
+
+  // 필터링된 상품 목록 (성별 필터링만 추가)
+  const filteredProducts = useMemo(() => {
+    if (!products.length) return []
+    
+    // API 응답을 프론트엔드 형식으로 변환
+    const transformedProducts = products.map(product => ({
+      id: product.productIdx?.toString() || product.id,
+      name: product.productName || product.name,
+      price: product.productPrice || product.price,
+      imageUrl: product.productImage || product.imageUrl,
+      src: product.productImage || product.imageUrl, // 기존 코드 호환성
+      gender: product.genderCategory || product.gender,
+      type: product.majorCategory || product.type,
+      sub: product.subCategory || product.sub,
+      category: product.majorCategory || product.category,
+      brand: product.storeName || product.brand || 'SNAPFIT',
+      ...product // 원본 데이터도 포함
+    }))
+    
+    let list = transformedProducts.slice()
+    if (activeGender !== "all") {
+      list = list.filter(product => 
+        product.gender === activeGender || 
+        product.gender === "공용" ||
+        product.gender === "UNISEX"
+      )
+    }
+    return list
+  }, [products, activeGender])
+
   const handleGenderSelect = (genderId: string) => {
     setActiveGender(genderId)
     setActiveMainCategory(undefined)
+    setActiveSubCategory(undefined)
   }
 
   const handleMainCategorySelect = (mainCategoryId: string) => {
     setActiveMainCategory(mainCategoryId)
+    setActiveSubCategory(undefined)
   }
 
   const handleSubCategorySelect = (subCategoryId: string) => {
+    setActiveSubCategory(subCategoryId)
     onCategorySelect(activeGender, activeMainCategory!, subCategoryId)
-    onClose()
+    // 메인 페이지 모드: 소분류 선택 시 모달 닫기
+    // 코디 페이지 모드: 소분류 선택 시 모달 유지하고 상품 표시
+    if (mode === 'main') {
+      onClose()
+    }
   }
 
   const handleMainCategoryClick = (mainCategoryId: string) => {
-    // 메인 카테고리만 선택하고 모달 닫기
+    setActiveSubCategory(undefined)
     onCategorySelect(activeGender, mainCategoryId)
-    onClose()
+    // 메인 페이지 모드: 대분류 선택 시 모달 닫기
+    // 코디 페이지 모드: 대분류 선택 시 모달 유지
+    if (mode === 'main') {
+      onClose()
+    }
   }
 
   if (!isOpen) return null
@@ -128,52 +196,122 @@ export function CategoryModal({
                 currentMainCategory && (
                   <div className="p-2 md:p-4">
                     {/* 서브 카테고리 헤더 */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center mb-6">
+                      {activeSubCategory && (
                         <button
-                          onClick={() => setActiveMainCategory(undefined)}
-                          className="p-1 hover:bg-gray-100 angular-rounded"
+                          onClick={() => setActiveSubCategory(undefined)}
+                          className="mr-4 p-2 hover:bg-gray-100 rounded-full transition-colors"
                         >
                           <ChevronRight size={20} className="text-gray-600 rotate-180" />
                         </button>
+                      )}
+                      <div>
                         <h3 className="text-lg font-semibold text-gray-900">
-                          {currentMainCategory.name}
+                          {activeSubCategory 
+                            ? currentMainCategory.subCategories.find(sub => sub.id === activeSubCategory)?.name
+                            : currentMainCategory.name
+                          }
                         </h3>
                       </div>
-                      <button
-                        onClick={() => handleMainCategoryClick(currentMainCategory.id)}
-                        className="text-sm text-gray-500 hover:text-gray-700 angular-button px-3 py-1"
-                      >
-                        전체 보기
-                      </button>
                     </div>
 
-                    {/* 서브 카테고리 그리드 */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {currentMainCategory.subCategories.map((subCategory) => (
-                        <button
-                          key={subCategory.id}
-                          onClick={() => handleSubCategorySelect(subCategory.id)}
-                          className={`p-3 md:p-4 angular-rounded text-center transition-colors ${
-                            selectedSubCategory === subCategory.id
-                              ? 'bg-gray-100 text-gray-900 shadow-sm border border-gray-200'
-                              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-100'
-                          }`}
-                        >
-                          <div className="space-y-2 md:space-y-3">
-                            {/* 아이콘 영역 */}
-                            <div className="w-12 h-12 md:w-16 md:h-16 mx-auto bg-gray-100 angular-rounded flex items-center justify-center">
-                              <span className="text-lg md:text-2xl">
-                                {subCategory.isNew ? '🆕' : currentMainCategory.icon}
-                              </span>
+                    {/* 서브 카테고리 그리드 또는 상품 표시 영역 */}
+                    {!activeSubCategory ? (
+                      /* 서브 카테고리 그리드 - 소분류 선택 전 */
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {currentMainCategory.subCategories.map((subCategory) => (
+                          <button
+                            key={subCategory.id}
+                            onClick={() => handleSubCategorySelect(subCategory.id)}
+                            className="p-3 md:p-4 angular-rounded text-center transition-colors bg-white text-gray-700 hover:bg-gray-50 border border-gray-100"
+                          >
+                            <div className="space-y-2 md:space-y-3">
+                              {/* 아이콘 영역 */}
+                              <div className="w-12 h-12 md:w-16 md:h-16 mx-auto bg-gray-100 angular-rounded flex items-center justify-center">
+                                <span className="text-lg md:text-2xl">
+                                  {subCategory.isNew ? '🆕' : currentMainCategory.icon}
+                                </span>
+                              </div>
+                              <div className="text-xs md:text-sm font-medium leading-tight">
+                                {subCategory.name}
+                              </div>
                             </div>
-                            <div className="text-xs md:text-sm font-medium leading-tight">
-                              {subCategory.name}
-                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      /* 상품 표시 영역 - 소분류 선택 후 */
+                      mode === 'cody' && (
+                      <div className="space-y-4">
+                        {/* 상품 개수 및 상태 표시 */}
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-gray-700">
+                            {filteredProducts.length}개 상품
                           </div>
-                        </button>
-                      ))}
-                    </div>
+                          <div className="text-xs text-gray-500">
+                            {currentMainCategory.subCategories.find(sub => sub.id === activeSubCategory)?.name}
+                          </div>
+                        </div>
+                        
+                        {isLoading ? (
+                          <div className="text-center py-12">
+                            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-1">상품을 불러오는 중...</h3>
+                            <p className="text-xs text-gray-500">잠시만 기다려주세요</p>
+                          </div>
+                        ) : error ? (
+                          <div className="text-center py-12">
+                            <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                              <span className="text-2xl">⚠️</span>
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-1">상품을 불러올 수 없습니다</h3>
+                            <p className="text-xs text-gray-500">잠시 후 다시 시도해주세요</p>
+                          </div>
+                        ) : filteredProducts.length > 0 ? (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-80 overflow-y-auto">
+                            {filteredProducts.map((product) => (
+                              <Card key={product.id} className="group rounded-lg border border-gray-200 bg-white hover:shadow-md transition-all duration-200 overflow-hidden">
+                                <CardContent className="p-0">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img 
+                                    src={product.imageUrl || product.src || "https://via.placeholder.com/200x200?text=No+Image"} 
+                                    alt={product.name} 
+                                    className="w-full aspect-[3/4] object-cover group-hover:scale-105 transition-transform duration-200" 
+                                  />
+                                </CardContent>
+                                <div className="p-3 space-y-2">
+                                  <div className="space-y-1">
+                                    <h4 className="text-sm font-medium text-gray-900 truncate">{product.name}</h4>
+                                    <p className="text-xs text-gray-500">{product.price?.toLocaleString()}원</p>
+                                  </div>
+                                  {onProductAdd && (
+                                    <Button 
+                                      size="sm" 
+                                      className="w-full h-8 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors" 
+                                      onClick={() => onProductAdd(product)}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1"/>
+                                      추가
+                                    </Button>
+                                  )}
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-12">
+                            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                              <span className="text-2xl">📦</span>
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-1">상품이 없습니다</h3>
+                            <p className="text-xs text-gray-500">다른 카테고리를 선택해보세요</p>
+                          </div>
+                        )}
+                      </div>
+                      )
+                    )}
                   </div>
                 )
               )}

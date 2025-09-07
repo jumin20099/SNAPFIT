@@ -320,7 +320,7 @@ export default function LikedItemsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-dark-bg flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-8 h-8 animate-spin text-gray-600 dark:text-gray-400 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400">좋아요 목록을 불러오는 중...</p>
@@ -330,9 +330,9 @@ export default function LikedItemsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
+    <div className="min-h-screen bg-light-bg dark:bg-dark-bg pb-20">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-dark-sub border-b border-gray-200 dark:border-dark-border p-4">
         <div className="max-w-md mx-auto flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="w-5 h-5" />
@@ -342,24 +342,24 @@ export default function LikedItemsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="w-full bg-white dark:bg-dark-sub border-b border-gray-200 dark:border-dark-border">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full flex bg-gray-100 dark:bg-gray-700 h-12 p-0 rounded-none border-0">
+          <TabsList className="w-full flex bg-gray-100 dark:bg-dark-border h-12 p-0 rounded-none border-0">
             <TabsTrigger 
               value="posts" 
-              className="flex-1 w-full data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 text-sm font-medium rounded-none justify-center border-0"
+              className="flex-1 w-full data-[state=active]:bg-white dark:data-[state=active]:bg-dark-sub data-[state=active]:text-gray-900 dark:data-[state=active]:text-dark-text text-sm font-medium rounded-none justify-center border-0"
             >
               게시글
             </TabsTrigger>
             <TabsTrigger 
               value="products" 
-              className="flex-1 w-full data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 text-sm font-medium rounded-none justify-center border-0"
+              className="flex-1 w-full data-[state=active]:bg-white dark:data-[state=active]:bg-dark-sub data-[state=active]:text-gray-900 dark:data-[state=active]:text-dark-text text-sm font-medium rounded-none justify-center border-0"
             >
               상품
             </TabsTrigger>
             <TabsTrigger 
               value="brands" 
-              className="flex-1 w-full data-[state=active]:bg-white dark:data-[state=active]:bg-gray-600 data-[state=active]:text-gray-900 dark:data-[state=active]:text-gray-100 text-sm font-medium rounded-none justify-center border-0"
+              className="flex-1 w-full data-[state=active]:bg-white dark:data-[state=active]:bg-dark-sub data-[state=active]:text-gray-900 dark:data-[state=active]:text-dark-text text-sm font-medium rounded-none justify-center border-0"
             >
               브랜드
             </TabsTrigger>
@@ -392,7 +392,7 @@ export default function LikedItemsPage() {
                                  {likedPosts.map((post, index) => (
                    <div 
                      key={`post-${post.postId}-${index}`} 
-                     className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                     className="bg-white dark:bg-dark-sub rounded-lg border border-gray-200 dark:border-dark-border p-4 cursor-pointer hover:shadow-md transition-shadow"
                      onClick={() => router.push(`/community/${post.postId}`)}
                    >
                     {/* 작성자 정보 */}
@@ -488,7 +488,7 @@ export default function LikedItemsPage() {
                                  {likedProducts.map((product, index) => (
                    <div 
                      key={`product-${product.productId}-${index}`} 
-                     className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 cursor-pointer hover:shadow-md transition-shadow"
+                     className="bg-white dark:bg-dark-sub rounded-lg border border-gray-200 dark:border-dark-border p-3 cursor-pointer hover:shadow-md transition-shadow"
                      onClick={() => router.push(`/products/${product.productId}`)}
                    >
                     <div className="relative">
@@ -542,9 +542,9 @@ export default function LikedItemsPage() {
             ) : (
               <div className="space-y-4">
                 {likedBrands.map((brand) => (
-                  <div key={brand.brandId} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+                  <div key={brand.brandId} className="bg-white dark:bg-dark-sub rounded-lg border border-gray-200 dark:border-dark-border p-4">
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                      <div className="w-16 h-16 bg-gray-100 dark:bg-dark-border rounded-lg flex items-center justify-center">
                         <img 
                           src={brand.logoUrl} 
                           alt={brand.name}

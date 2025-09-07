@@ -45,7 +45,7 @@ export function ProductGrid({ products, selectedProducts, onProductSelect, categ
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-0">
       {filteredProducts.map((product, index) => {
         const isSelected = selectedProducts.includes(product.id)
         
@@ -58,10 +58,10 @@ export function ProductGrid({ products, selectedProducts, onProductSelect, categ
             className="group cursor-pointer"
           >
             <div className={cn(
-              'bg-white dark:bg-gray-800 rounded-2xl shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden border-2',
+              'bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-all duration-200 overflow-hidden',
               isSelected 
-                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                : 'border-transparent'
+                ? 'bg-blue-50 dark:bg-blue-900/20' 
+                : ''
             )}>
               {/* 이미지 영역 */}
               <div className="relative aspect-square bg-gray-100 dark:bg-gray-700 overflow-hidden">
@@ -89,7 +89,7 @@ export function ProductGrid({ products, selectedProducts, onProductSelect, categ
               </div>
 
               {/* 상품 정보 */}
-              <div className="p-4 space-y-3">
+              <div className="p-3 space-y-2">
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm line-clamp-2 mb-1">
                     {product.name}

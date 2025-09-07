@@ -110,7 +110,7 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
         </div>
 
         {/* 상품 그리드 */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-0">
           <AnimatePresence>
             {isLoading ? (
               // 로딩 스켈레톤

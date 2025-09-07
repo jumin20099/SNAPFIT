@@ -21,14 +21,14 @@ export function ProductCard({ product, onLike }: ProductCardProps) {
 
   return (
     <motion.div
-      className="bg-white angular-card overflow-hidden shadow-sm border border-gray-100"
+      className="bg-white overflow-hidden shadow-sm"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       whileHover={{ y: -2 }}
     >
       {/* 상품 이미지 */}
-      <div className="relative aspect-[3/4] bg-gray-100">
+      <div className="relative aspect-square bg-gray-100">
         {!imageError ? (
           <img
             src={product.imageUrl}
@@ -50,7 +50,7 @@ export function ProductCard({ product, onLike }: ProductCardProps) {
         {/* 우상단 좋아요 버튼 */}
         <motion.button
           onClick={handleLike}
-          className="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur-sm angular-rounded flex items-center justify-center shadow-sm"
+          className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center"
           whileTap={{ scale: 0.9 }}
           transition={{ duration: 0.1 }}
         >
@@ -62,7 +62,7 @@ export function ProductCard({ product, onLike }: ProductCardProps) {
       </div>
 
       {/* 상품 정보 */}
-      <div className="p-3 space-y-2">
+      <div className="p-2 space-y-1">
         {/* 브랜드명 */}
         <div className="text-xs text-gray-500 truncate">{product.brand}</div>
 

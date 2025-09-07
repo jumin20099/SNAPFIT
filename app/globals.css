@@ -174,43 +174,50 @@ body {
     --sidebar-primary: 240 5.9% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 240 4.8% 95.9%;
+    
+    /* 커스텀 라이트모드 색상 */
+    --light-bg: 0 0% 95%; /* #F2F2F2 */
+    --light-sub: 220 25% 11%; /* #1C2A44 */
+    --light-border: 210 16% 82%; /* #D1D5DB */
+    --light-text: 215 25% 17%; /* #1F2937 */
+    --light-accent: 160 60% 50%; /* #3ED4A2 */
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
   .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 220 25% 7%;
+    --foreground: 0 0% 90%;
+    --card: 220 25% 11%;
+    --card-foreground: 0 0% 90%;
+    --popover: 220 25% 7%;
+    --popover-foreground: 0 0% 90%;
+    --primary: 160 60% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 25% 11%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 220 25% 11%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 160 60% 50%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 160 60% 50%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 220 25% 7%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 160 60% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 220 25% 11%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 220 15% 20%;
+    --sidebar-ring: 160 60% 50%;
   }
 }
 
@@ -223,32 +230,186 @@ body {
   }
 }
 
-/* 다크모드 스타일 */
+/* 라이트모드 스타일 - 사용자 지정 색상 */
+.light {
+  background-color: #F2F2F2;
+  color: #1F2937;
+}
+
+.light .bg-gray-50 {
+  background-color: #F2F2F2;
+}
+
+.light .bg-white {
+  background-color: #1C2A44;
+}
+
+.light .border-gray-200 {
+  border-color: #D1D5DB;
+}
+
+.light .text-gray-600,
+.light .text-gray-500,
+.light .text-gray-900,
+.light .text-gray-700,
+.light .text-gray-800 {
+  color: #1F2937;
+}
+
+/* 추가 라이트모드 스타일 */
+.light .bg-gray-100,
+.light .bg-gray-200,
+.light .hover\:bg-gray-50:hover,
+.light .hover\:bg-gray-100:hover,
+.light .hover\:bg-gray-200:hover {
+  background-color: #D1D5DB;
+}
+
+.light .border-gray-300 {
+  border-color: #D1D5DB;
+}
+
+/* 강조 색상 */
+.light .bg-gray-900 {
+  background-color: #3ED4A2;
+}
+
+.light .hover\:bg-gray-800:hover {
+  background-color: #2FB88A;
+}
+
+.light .border-gray-900 {
+  border-color: #3ED4A2;
+}
+
+/* 텍스트 강조 색상 */
+.light .text-light-accent {
+  color: #3ED4A2 !important;
+}
+
+/* SNAPFIT 로고 강조 색상 강제 적용 */
+.light h1.text-light-accent,
+.light .text-light-accent {
+  color: #3ED4A2 !important;
+}
+
+/* 모든 SNAPFIT 로고에 강조 색상 강제 적용 */
+.light h1,
+.light .font-bold.text-xl,
+.light .font-bold.text-2xl {
+  color: #3ED4A2 !important;
+}
+
+/* 특정 SNAPFIT 로고 선택자 */
+.light header h1,
+.light .sticky h1,
+.light .flex h1 {
+  color: #3ED4A2 !important;
+}
+
+/* SNAPFIT 텍스트 강제 적용 - 표준 CSS 선택자 사용 */
+
+/* 더 구체적인 선택자 */
+.light .flex.items-center h1,
+.light .flex.items-center div.font-bold,
+.light .text-center h1,
+.light .text-center div.font-bold {
+  color: #3ED4A2 !important;
+}
+
+/* 최고 우선순위 SNAPFIT 로고 색상 */
+.light h1[class*="text-"],
+.light div[class*="font-bold"][class*="text-"] {
+  color: #3ED4A2 !important;
+}
+
+/* 모든 헤더 내 텍스트 강조 색상 */
+.light header * {
+  color: #3ED4A2 !important;
+}
+
+/* SNAPFIT 로고만을 위한 특별 규칙 */
+.light h1:not(.dark\\:text-dark-accent),
+.light div.font-bold:not(.dark\\:text-dark-accent) {
+  color: #3ED4A2 !important;
+}
+
+/* 다크모드 스타일 - 사용자 지정 색상 */
 .dark {
-  background-color: rgb(3 7 18);
-  color: rgb(248 250 252);
+  background-color: #12161D;
+  color: #E6E6E6;
 }
 
 .dark .bg-gray-50 {
-  background-color: rgb(15 23 42);
+  background-color: #1C2A44;
 }
 
 .dark .bg-white {
-  background-color: rgb(30 41 59);
+  background-color: #1C2A44;
 }
 
 .dark .border-gray-200 {
-  border-color: rgb(51 65 85);
+  border-color: #2C3440;
 }
 
 .dark .text-gray-600 {
-  color: rgb(148 163 184);
+  color: #E6E6E6;
 }
 
 .dark .text-gray-500 {
-  color: rgb(100 116 139);
+  color: #E6E6E6;
 }
 
 .dark .text-gray-900 {
-  color: rgb(248 250 252);
+  color: #E6E6E6;
+}
+
+.dark .text-gray-700 {
+  color: #E6E6E6;
+}
+
+.dark .text-gray-800 {
+  color: #E6E6E6;
+}
+
+/* 추가 다크모드 스타일 */
+.dark .bg-gray-100 {
+  background-color: #2C3440;
+}
+
+.dark .bg-gray-200 {
+  background-color: #2C3440;
+}
+
+.dark .border-gray-300 {
+  border-color: #2C3440;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: #2C3440;
+}
+
+.dark .hover\:bg-gray-100:hover {
+  background-color: #2C3440;
+}
+
+.dark .hover\:bg-gray-200:hover {
+  background-color: #2C3440;
+}
+
+/* 강조 색상 */
+.dark .bg-gray-900 {
+  background-color: #3ED4A2;
+}
+
+.dark .hover\:bg-gray-800:hover {
+  background-color: #2FB88A;
+}
+
+.dark .text-gray-900 {
+  color: #E6E6E6;
+}
+
+.dark .border-gray-900 {
+  border-color: #3ED4A2;
 }

@@ -13,6 +13,8 @@ interface CategoryChipsProps {
   selectedMainCategory?: string
   selectedSubCategory?: string
   onCategorySelect: (genderId: string, mainCategoryId: string, subCategoryId?: string) => void
+  onProductAdd?: (product: any) => void
+  mode?: 'main' | 'cody' // 메인 페이지 vs 코디 페이지 모드
 }
 
 export function CategoryChips({ 
@@ -21,7 +23,9 @@ export function CategoryChips({
   selectedGender,
   selectedMainCategory,
   selectedSubCategory,
-  onCategorySelect
+  onCategorySelect,
+  onProductAdd,
+  mode = 'main'
 }: CategoryChipsProps) {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
 
@@ -71,6 +75,8 @@ export function CategoryChips({
         selectedGender={selectedGender}
         selectedMainCategory={selectedMainCategory}
         selectedSubCategory={selectedSubCategory}
+        onProductAdd={onProductAdd}
+        mode={mode}
       />
     </>
   )

@@ -124,7 +124,7 @@ export const MusinsaProductCard = forwardRef<HTMLDivElement, MusinsaProductCardP
                 size="sm"
                 variant="ghost"
                 onClick={handleLike}
-                className="w-8 h-8 p-0 bg-white/80 hover:bg-white"
+                className="w-8 h-8 p-0 hover:bg-white/20"
               >
                 <Heart 
                   className={cn(
@@ -138,7 +138,7 @@ export const MusinsaProductCard = forwardRef<HTMLDivElement, MusinsaProductCardP
                 size="sm"
                 variant="ghost"
                 onClick={handleView}
-                className="w-8 h-8 p-0 bg-white/80 hover:bg-white"
+                className="w-8 h-8 p-0 hover:bg-white/20"
               >
                 <Eye className="w-4 h-4 text-gray-600" />
               </MusinsaButton>

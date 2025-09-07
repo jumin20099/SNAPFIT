@@ -1,5 +1,5 @@
-import { CodyPlayground } from '@/components/cody-playground'
+import { NewCodyPlayground } from '@/components/cody-playground/NewCodyPlayground'
 
 export default function CodyPage() {
-  return <CodyPlayground />
+  return <NewCodyPlayground />
 }

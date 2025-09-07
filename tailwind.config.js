@@ -51,6 +51,22 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // 커스텀 다크모드 색상
+        dark: {
+          bg: "#12161D",
+          sub: "#1C2A44", 
+          border: "#2C3440",
+          text: "#E6E6E6",
+          accent: "#3ED4A2",
+        },
+        // 커스텀 라이트모드 색상
+        light: {
+          bg: "#F2F2F2",
+          sub: "#1C2A44",
+          border: "#D1D5DB", // 가독성 좋은 회색
+          text: "#1F2937", // 진한 회색으로 가독성 확보
+          accent: "#3ED4A2",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

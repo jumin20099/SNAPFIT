@@ -249,7 +249,7 @@ export default function MePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-dark-bg flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-400">로딩 중...</p>
@@ -261,9 +261,9 @@ export default function MePage() {
   // 로그인되지 않은 상태
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
         {/* Header */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+        <div className="bg-white dark:bg-dark-sub border-b border-gray-200 dark:border-dark-border p-4">
           <div className="max-w-md mx-auto flex items-center justify-between">
             <Button variant="ghost" size="sm" onClick={() => router.back()}>
               <ArrowLeft className="w-5 h-5" />
@@ -274,7 +274,7 @@ export default function MePage() {
         </div>
 
         <div className="max-w-md mx-auto p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm text-center">
+          <div className="bg-white dark:bg-dark-sub rounded-lg p-8 shadow-sm text-center">
             <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               로그인이 필요합니다
@@ -295,9 +295,9 @@ export default function MePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
+    <div className="min-h-screen bg-light-bg dark:bg-dark-bg pb-20">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
+      <div className="bg-white dark:bg-dark-sub border-b border-gray-200 dark:border-dark-border p-4">
         <div className="max-w-md mx-auto flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => router.back()}>
             <ArrowLeft className="w-5 h-5" />
@@ -311,7 +311,7 @@ export default function MePage() {
 
       <div className="max-w-md mx-auto p-4 space-y-6">
         {/* 프로필 섹션 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+        <div className="bg-white dark:bg-dark-sub rounded-lg p-6 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="relative">
               <Avatar className="w-20 h-20">
@@ -365,12 +365,12 @@ export default function MePage() {
 
 
         {/* 액션 버튼들 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
+        <div className="bg-white dark:bg-dark-sub rounded-lg p-6 shadow-sm">
           <div className="grid grid-cols-1 gap-3">
             <Button
               variant="outline"
               className="flex items-center gap-2 justify-start h-12"
-              onClick={() => router.push('/wishlist')}
+              onClick={() => router.push('/like')}
             >
               <Heart className="w-5 h-5" />
               좋아요 목록

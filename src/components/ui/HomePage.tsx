@@ -48,14 +48,14 @@ export function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-light-bg dark:bg-dark-bg pb-20">
       {/* 고정 헤더 */}
       <StickyHeader />
 
       {/* 히어로 배너 */}
       <HeroBanner />
 
-      {/* 카테고리 선택 버튼 */}
+      {/* 카테고리 선택 버튼 - 메인 페이지 모드 */}
       <CategoryChips
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
@@ -63,6 +63,7 @@ export function HomePage() {
         selectedMainCategory={selectedMainCategory}
         selectedSubCategory={selectedSubCategory}
         onCategorySelect={handleCategorySelect}
+        mode="main"
       />
 
       {/* 상품 그리드 */}
