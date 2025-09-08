@@ -30,3 +30,42 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const token = request.headers.get('authorization')?.replace('Bearer ', '')
+    
+    if (!token) {
+      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
+    }
+
+    const body = await request.json()
+
+    // 백엔드 API 호출
+    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:8080'}/api/admin/products/add`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      return NextResponse.json(data)
+    } else {
+      console.warn(`백엔드 API 응답 오류: ${response.status}`)
+      return NextResponse.json(
+        { error: '상품 추가에 실패했습니다.' },
+        { status: response.status }
+      )
+    }
+  } catch (error) {
+    console.error('어드민 상품 추가 오류:', error)
+    return NextResponse.json(
+      { error: '상품 추가에 실패했습니다.' },
+      { status: 500 }
+    )
+  }
+}

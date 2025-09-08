@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Grid3X3, ChevronDown } from 'lucide-react'
+import { Grid3X3 } from 'lucide-react'
 import { CodyCategoryModal } from './CodyCategoryModal'
 import { getSelectedCategoryPath } from '@/constants/categories'
 
@@ -42,37 +42,20 @@ export function CodyCategoryChips({
     onCategoryChange(categoryPath || '전체')
   }
 
-  const displayText = selectedMainCategory && selectedGender 
-    ? getSelectedCategoryPath(selectedGender, selectedMainCategory, selectedSubCategory)
-    : selectedCategory
 
   return (
     <>
-      <div className="px-4 py-4">
-        <div className="max-w-md mx-auto">
-          <motion.button
-            onClick={() => setIsCategoryModalOpen(true)}
-            className="w-full flex items-center justify-between p-4 bg-white angular-card border border-gray-200 hover:border-gray-300 transition-colors"
-            whileTap={{ scale: 0.98 }}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-100 angular-rounded flex items-center justify-center">
-                <Grid3X3 size={20} className="text-gray-600" />
-              </div>
-              <div className="text-left">
-                <div className="text-sm text-gray-500">카테고리</div>
-                <div className="text-base font-medium text-gray-900">
-                  {displayText}
-                </div>
-              </div>
-            </div>
-            <ChevronDown size={20} className="text-gray-400" />
-          </motion.button>
-        </div>
-      </div>
+      <motion.button
+        onClick={() => setIsCategoryModalOpen(true)}
+        className="flex items-center justify-center w-12 h-12 bg-white/90 dark:bg-dark-sub/90 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 dark:border-dark-border hover:shadow-xl transition-all duration-200"
+        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.05 }}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Grid3X3 size={20} className="text-gray-600 dark:text-dark-text" />
+      </motion.button>
 
       <CodyCategoryModal
         isOpen={isCategoryModalOpen}

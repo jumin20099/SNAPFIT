@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useCody } from '@/hooks/useCody';
 import { useCategoryProducts } from '@/shared/api/queries';
 import { CodyBuilderPanel } from './CodyBuilderPanel';
-import { CodyItem } from '@/entities/cody/model';
+import { CodyItem, getCodySlotFromCategory } from '@/entities/cody/model';
 
 interface CodyBuilderContainerProps {
   isOpen: boolean;
@@ -32,12 +32,15 @@ export function CodyBuilderContainer({
     if (initialProductId && availableProducts.length > 0) {
       const product = availableProducts.find(p => p.productIdx?.toString() === initialProductId);
       if (product) {
+        const slot = getCodySlotFromCategory(product.majorCategory || '기타', product.productName || '');
         const codyItem: CodyItem = {
           id: product.productIdx || 0,
           name: product.productName || '상품',
           image: product.productImage || '/placeholder.svg',
           category: product.majorCategory || '기타',
-          slot: 'top', // 기본값, 실제로는 카테고리에 따라 결정
+          slot: slot,
+          price: product.productPrice,
+          brand: product.storeMall,
         };
         setItem(codyItem);
       }
@@ -50,12 +53,15 @@ export function CodyBuilderContainer({
   };
 
   const handleItemSelect = (product: any) => {
+    const slot = getCodySlotFromCategory(product.majorCategory || '기타', product.productName || '');
     const codyItem: CodyItem = {
       id: product.productIdx,
       name: product.productName,
       image: product.productImage,
       category: product.majorCategory,
-      slot: 'top', // 실제로는 카테고리에 따라 결정
+      slot: slot,
+      price: product.productPrice,
+      brand: product.storeMall,
     };
     setItem(codyItem);
   };

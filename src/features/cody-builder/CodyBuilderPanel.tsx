@@ -92,6 +92,33 @@ export function CodyBuilderPanel({
               )}
             </div>
 
+            {/* Outer Position */}
+            <div className="absolute top-32 left-1/2 transform -translate-x-1/2">
+              {codyItems.outer ? (
+                <div className="relative group">
+                  <OptimizedImage
+                    src={codyItems.outer.image}
+                    alt={codyItems.outer.name}
+                    width={140}
+                    height={180}
+                    className="object-contain"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute -top-2 -right-2 w-6 h-6 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onItemRemove('outer')}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="w-35 h-45 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
+                  <Plus className="w-8 h-8 text-gray-500" />
+                </div>
+              )}
+            </div>
+
             {/* Top Position */}
             <div className="absolute top-48 left-1/2 transform -translate-x-1/2">
               {codyItems.top ? (
@@ -169,6 +196,141 @@ export function CodyBuilderPanel({
               ) : (
                 <div className="w-28 h-20 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
                   <Plus className="w-6 h-6 text-gray-500" />
+                </div>
+              )}
+            </div>
+
+            {/* Bag Position (좌측) */}
+            <div className="absolute top-40 left-8">
+              {codyItems.bag ? (
+                <div className="relative group">
+                  <OptimizedImage
+                    src={codyItems.bag.image}
+                    alt={codyItems.bag.name}
+                    width={60}
+                    height={80}
+                    className="object-contain"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute -top-2 -right-2 w-6 h-6 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onItemRemove('bag')}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="w-15 h-20 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
+                  <Plus className="w-4 h-4 text-gray-500" />
+                </div>
+              )}
+            </div>
+
+            {/* Necklace Position (목 부분) */}
+            <div className="absolute top-40 left-1/2 transform -translate-x-1/2">
+              {codyItems.necklace ? (
+                <div className="relative group">
+                  <OptimizedImage
+                    src={codyItems.necklace.image}
+                    alt={codyItems.necklace.name}
+                    width={40}
+                    height={40}
+                    className="object-contain"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute -top-2 -right-2 w-6 h-6 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onItemRemove('necklace')}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="w-10 h-10 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
+                  <Plus className="w-3 h-3 text-gray-500" />
+                </div>
+              )}
+            </div>
+
+            {/* Ring Position (우측 하단) */}
+            <div className="absolute bottom-20 right-8">
+              {codyItems.ring ? (
+                <div className="relative group">
+                  <OptimizedImage
+                    src={codyItems.ring.image}
+                    alt={codyItems.ring.name}
+                    width={30}
+                    height={30}
+                    className="object-contain"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute -top-2 -right-2 w-6 h-6 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onItemRemove('ring')}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="w-8 h-8 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
+                  <Plus className="w-3 h-3 text-gray-500" />
+                </div>
+              )}
+            </div>
+
+            {/* Bracelet Position (좌측 하단) */}
+            <div className="absolute bottom-20 left-8">
+              {codyItems.bracelet ? (
+                <div className="relative group">
+                  <OptimizedImage
+                    src={codyItems.bracelet.image}
+                    alt={codyItems.bracelet.name}
+                    width={30}
+                    height={30}
+                    className="object-contain"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute -top-2 -right-2 w-6 h-6 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onItemRemove('bracelet')}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="w-8 h-8 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
+                  <Plus className="w-3 h-3 text-gray-500" />
+                </div>
+              )}
+            </div>
+
+            {/* Accessory Position (우측 상단) */}
+            <div className="absolute top-20 right-8">
+              {codyItems.accessory ? (
+                <div className="relative group">
+                  <OptimizedImage
+                    src={codyItems.accessory.image}
+                    alt={codyItems.accessory.name}
+                    width={40}
+                    height={40}
+                    className="object-contain"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute -top-2 -right-2 w-6 h-6 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onItemRemove('accessory')}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="w-10 h-10 border-2 border-dashed border-gray-500 rounded-lg flex items-center justify-center">
+                  <Plus className="w-3 h-3 text-gray-500" />
                 </div>
               )}
             </div>

@@ -11,14 +11,14 @@ import { useRouter } from "next/navigation"
 export interface Product {
   id?: number
   productIdx?: number
-  product_name: string
-  product_content: string
-  product_image: string
-  product_link: string
-  product_category: string
-  store_mall: string
-  price: string
-  created_at?: string
+  productName: string
+  productContent: string
+  productImage: string
+  productLink: string
+  productCategory: string
+  storeMall: string
+  productPrice: number
+  createdAt?: string
   status?: "active" | "inactive"
   type?: "일반" | "제휴사"
   isActive?: boolean
@@ -34,7 +34,7 @@ export interface Product {
   originalGenderCategory?: string;
   originalMajorCategory?: string;
   originalSubCategory?: string;
-  originalProductPrice?: string;
+  originalProductPrice?: number;
   requestedProductName?: string;
   requestedProductContent?: string;
   requestedProductImage?: string;
@@ -42,7 +42,7 @@ export interface Product {
   requestedGenderCategory?: string;
   requestedMajorCategory?: string;
   requestedSubCategory?: string;
-  requestedProductPrice?: string;
+  requestedProductPrice?: number;
 }
 
 interface AdminStoreMall {
@@ -577,24 +577,24 @@ export default function AdminPage() {
                 ) : (
                   <div className="grid gap-4">
                     {(selectedPartnerId ? partnerProducts : products).map((product: Product) => {
-                      const mall = storeMalls.find(m => m.id?.toString() === product.store_mall?.toString());
+                      const mall = storeMalls.find(m => m.id?.toString() === product.storeMall?.toString());
                       return (
                         <Card key={product.productIdx || product.id || `product-${Math.random()}`}>
                           <CardContent className="p-4">
                             <div className="flex items-center gap-4">
                               <img
-                                src={product.product_image || "/placeholder.svg"}
-                                alt={product.product_name}
+                                src={product.productImage || "/placeholder.svg"}
+                                alt={product.productName}
                                 className="w-16 h-16 object-cover rounded"
                               />
                               <div className="flex-1">
-                                <h3 className="font-medium">{product.product_name}</h3>
+                                <h3 className="font-medium">{product.productName}</h3>
                                 <p className="text-sm text-gray-600 mb-1">{mall ? mall.storeName : '-'}</p>
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline">
                                     {product.genderCategory || "전체"} / {product.majorCategory} / {product.subCategory}
                                   </Badge>
-                                  <span className="text-sm font-medium">{product.price}</span>
+                                  <span className="text-sm font-medium">{product.productPrice?.toLocaleString()}원</span>
                                   <Badge variant="secondary">{product.type || "일반"}</Badge>
                                 </div>
                               </div>
@@ -748,13 +748,13 @@ export default function AdminPage() {
                           <CardContent className="p-4">
                             <div className="flex items-center gap-4">
                               <img
-                                src={product.product_image || "/placeholder.svg"}
-                                alt={product.product_name}
+                                src={product.productImage || "/placeholder.svg"}
+                                alt={product.productName}
                                 className="w-16 h-16 object-cover rounded"
                               />
                               <div className="flex-1">
-                                <h3 className="font-medium mb-1">{product.requestedProductName || product.product_name}</h3>
-                                <p className="text-sm text-gray-600 mb-2">{product.requestedProductContent || product.product_content}</p>
+                                <h3 className="font-medium mb-1">{product.requestedProductName || product.productName}</h3>
+                                <p className="text-sm text-gray-600 mb-2">{product.requestedProductContent || product.productContent}</p>
                                 <table className="w-full border text-sm mb-2">
                                   <thead>
                                     <tr>
@@ -768,7 +768,7 @@ export default function AdminPage() {
                                       { label: "상품명", before: product.originalProductName, after: product.requestedProductName },
                                       { label: "설명", before: product.originalProductContent, after: product.requestedProductContent },
                                       { label: "카테고리", before: [product.originalGenderCategory, product.originalMajorCategory, product.originalSubCategory].filter(Boolean).join(" / "), after: [product.requestedGenderCategory, product.requestedMajorCategory, product.requestedSubCategory].filter(Boolean).join(" / ") },
-                                      { label: "가격", before: product.originalProductPrice, after: product.requestedProductPrice },
+                                      { label: "가격", before: product.originalProductPrice?.toLocaleString() + "원", after: product.requestedProductPrice?.toLocaleString() + "원" },
                                       { label: "링크", before: product.originalProductLink, after: product.requestedProductLink },
                                     ].map(({ label, before, after }, index) => (
                                       <tr key={`${product.id}-${label}-${index}`}>
