@@ -51,8 +51,9 @@ function computePixelRect(
 
   // 자산 메타데이터에서 실제 크기와 핫스팟 가져오기
   const assetMeta = item.assetMeta
-  const intrinsicW = assetMeta?.intrinsicWidth || baseImgW
-  const intrinsicH = assetMeta?.intrinsicHeight || baseImgH
+  // ITEM_SIZES를 우선적으로 사용 (실시간 크기 조정을 위해)
+  const intrinsicW = baseImgW
+  const intrinsicH = baseImgH
   const hotspot = assetMeta?.hotspot || { x: 0.5, y: 0.5 } // 기본값: 중앙
   const trimOffset = assetMeta?.trimOffset || { x: 0, y: 0 }
 
@@ -165,26 +166,26 @@ function toNormalized(
 // 카테고리별 이미지 크기 설정 (px 단위)
 const ITEM_SIZES: Record<Major, { width: number; height: number }> = {
   // 의류 아이템들 (큰 크기)
-  top: { width: 110, height: 110 },        // 상의: 기본 크기
-  outer: { width: 220, height: 220 },   // 아우터: 상의보다 약간 큼
-  bottom: { width: 200, height: 200 },       // 하의: 가로는 좁고 세로는 길게
-  dresses: { width: 200, height: 280 },     // 원피스: 전체 의상이므로 세로로 길게
-  shoes: { width: 130, height: 90 },       // 신발: 가로로 넓고 세로는 낮게
+  top: { width: 500, height: 500 },        // 상의: 더 크게
+  outer: { width: 700, height: 700 },   // 아우터: 더 크게
+  bottom: { width: 700, height: 700 },       // 하의: 더 크게
+  dresses: { width: 250, height: 350 },     // 원피스: 더 크게
+  shoes: { width: 350, height: 350 },       // 신발: 더 크게
   
   // 액세서리 아이템들 (중간 크기)
-  bag: { width: 120, height: 150 },        // 가방: 세로로 길게
-  hat: { width: 80, height: 80 },         // 모자: 가로로 넓게
-  glasses: { width: 80, height: 60 },       // 선글라스: 작고 가로로 넓게
-  watch: { width: 60, height: 60 },         // 시계: 작은 정사각형
+  bag: { width: 400, height: 400 },        // 가방: 세로로 길게
+  hat: { width: 300, height: 300 },         // 모자: 가로로 넓게
+  glasses: { width: 300, height: 300 },       // 선글라스: 작고 가로로 넓게
+  watch: { width: 250, height: 250 },         // 시계: 작은 정사각형
   belt: { width: 100, height: 40 },         // 벨트: 가로로 매우 길게
   socks: { width: 80, height: 120 },        // 양말: 세로로 길게
   
   // 주얼리 아이템들 (작은 크기)
-  jewelry: { width: 60, height: 60 },       // 주얼리: 작은 정사각형
-  accessory: { width: 80, height: 80 },   // 기타 액세서리: 작은 정사각형
-  ring: { width: 40, height: 40 },         // 반지: 매우 작은 정사각형
-  bracelet: { width: 50, height: 50 },     // 팔찌: 작은 정사각형
-  necklace: { width: 60, height: 60 },     // 목걸이: 작은 정사각형
+  jewelry: { width: 300, height: 300 },       // 주얼리: 작은 정사각형
+  accessory: { width: 200, height: 200 },   // 기타 액세서리: 작은 정사각형
+  ring: { width: 200, height: 200 },         // 반지: 매우 작은 정사각형
+  bracelet: { width: 200, height: 200 },     // 팔찌: 작은 정사각형
+  necklace: { width: 200, height: 200 },     // 목걸이: 작은 정사각형
 }
 
 // 상세한 코디 배치 규칙에 따른 ANCHOR 설정 (정규화 좌표와 앵커)
@@ -608,7 +609,20 @@ export function NewCodyPlayground() {
         {/* Items - 안정된 크기와 하이드레이션 완료 후에만 렌더링 */}
         {isHydrated && viewTransform && placed
           .slice()
-          .sort((a, b) => a.z - b.z)
+          .sort((a, b) => {
+            // 아우터와 상의가 함께 있을 때 상의의 z-index를 가장 낮게 설정
+            const hasOuter = placed.some(item => item.slot === 'outer');
+            const hasTop = placed.some(item => item.slot === 'top');
+            
+            if (hasOuter && hasTop) {
+              // 아우터가 있으면 상의는 가장 뒤로
+              if (a.slot === 'top' && b.slot !== 'top') return -1;
+              if (b.slot === 'top' && a.slot !== 'top') return 1;
+            }
+            
+            // 기본 정렬: z-index 순
+            return a.z - b.z;
+          })
           .map(p => (
             <DraggableItem 
               key={p.id} 
@@ -621,8 +635,8 @@ export function NewCodyPlayground() {
             />
           ))}
 
-        {/* 카테고리 버튼 - 우측 하단 */}
-        <div className="absolute bottom-4 right-4">
+        {/* 카테고리 버튼 - 우측 하단 (탭바 위로) */}
+        <div className="absolute bottom-24 right-4">
           <CodyCategoryChips
             selectedCategory={selectedCategory}
             onCategoryChange={setSelectedCategory}
@@ -790,6 +804,8 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
   const ref = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number; nx: number; ny: number } | null>(null);
+  const [touchStartTime, setTouchStartTime] = useState<number>(0);
+  const [hasMoved, setHasMoved] = useState(false);
   
   // 정규화 좌표를 픽셀 좌표로 변환 (안전한 접근)
   const safeSlot = data.slot || 'accessory'; // 기본값 설정
@@ -807,13 +823,19 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
     itemSize.height
   );
 
-  // 드래그 시작 핸들러
+  // 드래그 시작 핸들러 (모바일 최적화)
   const handlePointerDown = (e: React.PointerEvent) => {
-    e.preventDefault();
+    // 모바일에서는 즉시 preventDefault하지 않음
+    if (e.pointerType === 'touch') {
+      setTouchStartTime(Date.now());
+      setHasMoved(false);
+      // 터치 시작 시에는 preventDefault 하지 않음 (스크롤 허용)
+    } else {
+      e.preventDefault();
+    }
     e.stopPropagation();
     
     onActivate();
-    setIsDragging(true);
     setDragStart({
       x: e.clientX,
       y: e.clientY,
@@ -822,14 +844,31 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
     });
   };
 
-  // 드래그 중 핸들러
+  // 드래그 중 핸들러 (모바일 최적화)
   const handlePointerMove = (e: PointerEvent) => {
-    if (!isDragging || !dragStart) return;
-    
-    e.preventDefault();
+    if (!dragStart) return;
     
     const deltaX = e.clientX - dragStart.x;
     const deltaY = e.clientY - dragStart.y;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    
+    // 모바일에서 드래그 시작 판단 (최소 이동 거리와 시간 체크)
+    if (e.pointerType === 'touch') {
+      const timeSinceStart = Date.now() - touchStartTime;
+      const isLongPress = timeSinceStart > 200; // 200ms 이상
+      const hasMovedEnough = distance > 10; // 10px 이상 이동
+      
+      if (!isDragging && (isLongPress || hasMovedEnough)) {
+        setIsDragging(true);
+        setHasMoved(true);
+        e.preventDefault(); // 드래그 시작 후 스크롤 방지
+      } else if (!isDragging) {
+        return; // 아직 드래그 시작하지 않음
+      }
+    } else {
+      if (!isDragging) return;
+      e.preventDefault();
+    }
     
     // 픽셀 델타를 정규화 좌표로 변환 (computePixelRect의 역변환)
     const deltaNx = deltaX / (BASE_W * viewTransform.scale);
@@ -849,15 +888,31 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
     });
   };
 
-  // 드래그 종료 핸들러
+  // 드래그 종료 핸들러 (모바일 최적화)
   const handlePointerUp = () => {
+    // 모바일에서 짧은 터치의 경우 드래그로 간주하지 않음
+    if (touchStartTime > 0) {
+      const timeSinceStart = Date.now() - touchStartTime;
+      const wasShortTouch = timeSinceStart < 200 && !hasMoved;
+      
+      if (wasShortTouch) {
+        // 짧은 터치는 클릭으로 처리 (드래그 아님)
+        setDragStart(null);
+        setTouchStartTime(0);
+        setHasMoved(false);
+        return;
+      }
+    }
+    
     setIsDragging(false);
     setDragStart(null);
+    setTouchStartTime(0);
+    setHasMoved(false);
   };
 
-  // 이벤트 리스너 등록/해제
+  // 이벤트 리스너 등록/해제 (모바일 최적화)
   React.useEffect(() => {
-    if (!isDragging) return;
+    if (!dragStart) return;
 
     const handleMove = (e: PointerEvent) => handlePointerMove(e);
     const handleUp = () => handlePointerUp();
@@ -869,7 +924,7 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
       document.removeEventListener('pointermove', handleMove);
       document.removeEventListener('pointerup', handleUp);
     };
-  }, [isDragging, dragStart, viewTransform]);
+  }, [dragStart, viewTransform, isDragging, touchStartTime, hasMoved]);
   
   return (
     <div
@@ -883,7 +938,7 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
         left: 0,
         top: 0,
         transform: `translate3d(${pixelRect.x}px, ${pixelRect.y}px, 0) rotate(${data.rotation}deg)`, 
-        zIndex: data.z, 
+        zIndex: Math.min(data.z, 50), // 모달보다 낮게 제한 
         display: data.visible ? undefined : "none",
         willChange: 'transform'
       }}

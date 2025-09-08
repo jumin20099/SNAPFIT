@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { X, ChevronRight, Plus, Heart } from 'lucide-react'
 import { CATEGORIES, type GenderCategory, type MainCategory, type CategoryItem } from '@/constants/categories'
 import { Button } from '@/components/ui/button'
@@ -106,23 +105,15 @@ export function CodyCategoryModal({
   if (!isOpen) return null
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-end"
-        onClick={onClose}
+    <div
+      className="fixed inset-0 z-[100] flex items-end bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-dark-bg w-full max-h-[70vh] rounded-t-2xl overflow-hidden transform transition-transform duration-300 ease-out"
+        onClick={(e) => e.stopPropagation()}
       >
-        <motion.div
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="bg-white dark:bg-dark-bg w-full max-h-[60vh] angular-rounded-t-2xl overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex h-[60vh]">
+          <div className="flex h-[70vh] overflow-hidden">
             {/* 좌측: 성별 선택 */}
             <div className="w-20 md:w-24 bg-white dark:bg-dark-bg border-r border-gray-200 dark:border-dark-border">
               {/* 닫기 버튼 */}
@@ -157,7 +148,7 @@ export function CodyCategoryModal({
                 /* 메인 카테고리 표시 */
                 currentGenderCategory && (
                   <div className="p-2 md:p-4">
-                    <div className="max-h-[60vh] overflow-y-auto">
+                    <div className="max-h-[calc(70vh-4rem)] overflow-y-auto">
                       <div className="grid grid-cols-1 gap-1 md:gap-2 pr-2 pb-4">
                         {currentGenderCategory.mainCategories.map((mainCategory) => (
                           <button
@@ -208,7 +199,7 @@ export function CodyCategoryModal({
 
                     {/* 서브 카테고리 그리드 또는 상품 표시 영역 */}
                     {!activeSubCategory ? (
-                      <div className="max-h-[60vh] overflow-y-auto">
+                      <div className="max-h-[calc(70vh-8rem)] overflow-y-auto">
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pr-2 pb-4">
                           {currentMainCategory.subCategories.map((subCategory) => (
                             <button
@@ -261,7 +252,7 @@ export function CodyCategoryModal({
                             <p className="text-xs text-gray-500 dark:text-gray-400">잠시 후 다시 시도해주세요</p>
                           </div>
                         ) : filteredProducts.length > 0 ? (
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-0 max-h-80 overflow-y-auto">
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-0 max-h-[calc(70vh-12rem)] overflow-y-auto">
                             {filteredProducts.map((product) => (
                               <Card key={product.id} className="group bg-white dark:bg-dark-sub hover:shadow-md dark:hover:shadow-lg transition-all duration-200 overflow-hidden border-0 rounded-none">
                                 <CardContent className="p-0 relative">
@@ -312,8 +303,7 @@ export function CodyCategoryModal({
               )}
             </div>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </div>
+      </div>
   )
 }

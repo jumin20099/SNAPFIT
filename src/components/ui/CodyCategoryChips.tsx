@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { Grid3X3 } from 'lucide-react'
 import { CodyCategoryModal } from './CodyCategoryModal'
 import { getSelectedCategoryPath } from '@/constants/categories'
@@ -45,17 +44,12 @@ export function CodyCategoryChips({
 
   return (
     <>
-      <motion.button
+      <button
         onClick={() => setIsCategoryModalOpen(true)}
-        className="flex items-center justify-center w-12 h-12 bg-white/90 dark:bg-dark-sub/90 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 dark:border-dark-border hover:shadow-xl transition-all duration-200"
-        whileTap={{ scale: 0.95 }}
-        whileHover={{ scale: 1.05 }}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
+        className="flex items-center justify-center w-12 h-12 bg-white/90 dark:bg-dark-sub/90 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 dark:border-dark-border hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
       >
         <Grid3X3 size={20} className="text-gray-600 dark:text-dark-text" />
-      </motion.button>
+      </button>
 
       <CodyCategoryModal
         isOpen={isCategoryModalOpen}
