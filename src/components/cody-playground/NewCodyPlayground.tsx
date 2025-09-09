@@ -3,9 +3,13 @@
 import React, { useMemo, useRef, useState } from "react"
 // import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Save, Trash2, Move, RotateCcw } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Move, RotateCcw, Settings, X } from "lucide-react"
 import { CATEGORIES, type GenderCategory, type MainCategory, type CategoryItem } from '@/constants/categories'
 import { CodyCategoryChips } from '@/components/ui/CodyCategoryChips'
+import { CodyBackgroundModal } from '@/components/ui/CodyBackgroundModal'
+import { SceneOverlay, SCENE_PRESETS, getShadowStyles, type ScenePreset } from './SceneSystem'
+import { SmartGuides, calculateSnapPosition } from './SmartGuides'
+import { TemplateSelector, getTemplateLayout, type TemplateType } from './TemplateSystem'
 import { PlacedItem, AssetMeta, AssetMetaManager, BASE_W, BASE_H, type Anchor } from '@/entities/cody/model'
 
 // ===========================
@@ -160,6 +164,18 @@ function toNormalized(
 }
 
 // ===========================
+// 배경 테마 설정
+// ===========================
+
+const BACKGROUND_THEMES = {
+  white: { name: '화이트', color: '#ffffff' },
+  black: { name: '블랙', color: '#000000' },
+  cool: { name: '쿨', color: '#f0f9ff' },
+  warm: { name: '웜', color: '#fef3c7' },
+  lovely: { name: '러블리', color: '#fce7f3' },
+} as const
+
+// ===========================
 // 코디 아이템 설정 (위치, 크기, 레이어)
 // ===========================
 
@@ -167,25 +183,25 @@ function toNormalized(
 const ITEM_SIZES: Record<Major, { width: number; height: number }> = {
   // 의류 아이템들 (큰 크기)
   top: { width: 500, height: 500 },        // 상의: 더 크게
-  outer: { width: 700, height: 700 },   // 아우터: 더 크게
-  bottom: { width: 700, height: 700 },       // 하의: 더 크게
-  dresses: { width: 250, height: 350 },     // 원피스: 더 크게
-  shoes: { width: 350, height: 350 },       // 신발: 더 크게
+  outer: { width: 700, height: 700 },      // 아우터: 더 크게
+  bottom: { width: 700, height: 700 },     // 하의: 더 크게
+  dresses: { width: 250, height: 350 },    // 원피스: 더 크게
+  shoes: { width: 350, height: 350 },      // 신발: 더 크게
   
   // 액세서리 아이템들 (중간 크기)
   bag: { width: 400, height: 400 },        // 가방: 세로로 길게
-  hat: { width: 300, height: 300 },         // 모자: 가로로 넓게
-  glasses: { width: 300, height: 300 },       // 선글라스: 작고 가로로 넓게
-  watch: { width: 250, height: 250 },         // 시계: 작은 정사각형
-  belt: { width: 100, height: 40 },         // 벨트: 가로로 매우 길게
-  socks: { width: 80, height: 120 },        // 양말: 세로로 길게
+  hat: { width: 300, height: 300 },        // 모자: 가로로 넓게
+  glasses: { width: 300, height: 300 },    // 선글라스: 작고 가로로 넓게
+  watch: { width: 250, height: 250 },      // 시계: 작은 정사각형
+  belt: { width: 100, height: 40 },        // 벨트: 가로로 매우 길게
+  socks: { width: 80, height: 120 },       // 양말: 세로로 길게
   
   // 주얼리 아이템들 (작은 크기)
-  jewelry: { width: 300, height: 300 },       // 주얼리: 작은 정사각형
+  jewelry: { width: 300, height: 300 },     // 주얼리: 작은 정사각형
   accessory: { width: 200, height: 200 },   // 기타 액세서리: 작은 정사각형
-  ring: { width: 200, height: 200 },         // 반지: 매우 작은 정사각형
-  bracelet: { width: 200, height: 200 },     // 팔찌: 작은 정사각형
-  necklace: { width: 200, height: 200 },     // 목걸이: 작은 정사각형
+  ring: { width: 200, height: 200 },        // 반지: 매우 작은 정사각형
+  bracelet: { width: 200, height: 200 },    // 팔찌: 작은 정사각형
+  necklace: { width: 200, height: 200 },    // 목걸이: 작은 정사각형
 }
 
 // 상세한 코디 배치 규칙에 따른 ANCHOR 설정 (정규화 좌표와 앵커)
@@ -362,6 +378,14 @@ export function NewCodyPlayground() {
   const [selectedMainCategory, setSelectedMainCategory] = useState<Major | null>(null)
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
+  const [isBackgroundModalOpen, setIsBackgroundModalOpen] = useState(false)
+  const [backgroundType, setBackgroundType] = useState<'color' | 'image'>('color')
+  const [selectedBackground, setSelectedBackground] = useState<string>('white')
+  const [customBackgroundColor, setCustomBackgroundColor] = useState<string>('#ffffff')
+  const [scenePreset, setScenePreset] = useState<ScenePreset>('editorial')
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateType | null>(null)
+  const [showGuides, setShowGuides] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
 
   const [targetSlot, setTargetSlot] = useState<Major | null>(null)
 
@@ -451,6 +475,28 @@ export function NewCodyPlayground() {
       y: item.y,
     }
   }
+
+  // 배경 설정 로드
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedBackgroundType = localStorage.getItem('cody-background-type') as 'color' | 'image' | null
+      const savedBackground = localStorage.getItem('cody-background') || 'white'
+      const savedCustomColor = localStorage.getItem('cody-custom-color') || '#ffffff'
+      
+      if (savedBackgroundType) setBackgroundType(savedBackgroundType)
+      setSelectedBackground(savedBackground)
+      setCustomBackgroundColor(savedCustomColor)
+    }
+  }, [])
+
+  // 배경 설정 저장
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cody-background-type', backgroundType)
+      localStorage.setItem('cody-background', selectedBackground)
+      localStorage.setItem('cody-custom-color', customBackgroundColor)
+    }
+  }, [backgroundType, selectedBackground, customBackgroundColor])
 
   // 클라이언트에서만 localStorage에서 데이터 로드
   React.useEffect(() => {
@@ -573,42 +619,58 @@ export function NewCodyPlayground() {
             <RotateCcw className="mr-2 h-4 w-4"/>
             전체 초기화
           </Button>
-          <Button className="rounded-lg h-8 px-3 bg-gray-900 dark:bg-dark-accent text-white hover:bg-gray-800 dark:hover:bg-[#2FB88A]">
-            <Save className="mr-2 h-4 w-4"/>저장
-          </Button>
+        <Button className="rounded-lg h-8 px-3 bg-gray-900 dark:bg-dark-accent text-white hover:bg-gray-800 dark:hover:bg-[#2FB88A]">
+          <Save className="mr-2 h-4 w-4"/>저장
+        </Button>
         </div>
       </div>
 
       {/* Canvas - 전체 화면 코디 영역 */}
-      <div 
-        ref={canvasRef}
-        className="relative w-full bg-gray-50 dark:bg-dark-sub"
-        style={{ 
-          backgroundImage: 'url(/배경.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          // 가상 캔버스 비율 고정 (letterboxing 적용)
-          aspectRatio: `${BASE_W}/${BASE_H}`,
-          // 100dvh 사용 (모바일 주소창 변화 대응)
-          height: '100dvh',
-          // 고정 헤더와 겹치지 않도록 상단 패딩
-          paddingTop: '60px', // 헤더 높이만큼 패딩
-          // 오버플로우 숨김으로 letterboxing 효과
-          overflow: 'hidden',
-          // 레이아웃 격리를 위한 독립 레이어
-          isolation: 'isolate',
-          // 부모 transform 영향 차단
-          transform: 'translateZ(0)',
-          // 폰트 로딩 영향 차단
-          // fontDisplay: 'block', // CSS 속성이므로 제거
-          // 스크롤 격리: 내부 스크롤만 허용
-          overscrollBehavior: 'contain'
+      <SceneOverlay 
+        preset={scenePreset}
+        customBackground={{
+          type: backgroundType,
+          selectedBackground: selectedBackground,
+          customColor: customBackgroundColor
         }}
       >
+        <div
+          ref={canvasRef}
+          className="relative w-full"
+          style={{ 
+            // 가상 캔버스 비율 고정 (letterboxing 적용)
+            aspectRatio: `${BASE_W}/${BASE_H}`,
+            // 100dvh 사용 (모바일 주소창 변화 대응)
+            height: '100dvh',
+            // 고정 헤더와 겹치지 않도록 상단 패딩
+            paddingTop: '60px', // 헤더 높이만큼 패딩
+            // 오버플로우 숨김으로 letterboxing 효과
+            overflow: 'hidden',
+            // 레이아웃 격리를 위한 독립 레이어
+            isolation: 'isolate',
+            // 부모 transform 영향 차단
+            transform: 'translateZ(0)',
+            // 스크롤 격리: 내부 스크롤만 허용
+            overscrollBehavior: 'contain'
+          }}
+        >
+        {/* 스마트 가이드 */}
+        <SmartGuides
+          isVisible={showGuides && isDragging}
+          canvasRect={stableRect}
+          items={viewTransform ? placed.map(p => ({
+            id: p.id,
+            x: p.nx * BASE_W * viewTransform.scale + viewTransform.offsetX,
+            y: p.ny * BASE_H * viewTransform.scale + viewTransform.offsetY,
+            width: 100, // 임시값, 실제로는 computePixelRect에서 계산
+            height: 100
+          })) : []}
+          activeItemId={activeId}
+        />
+
         {/* Items - 안정된 크기와 하이드레이션 완료 후에만 렌더링 */}
         {isHydrated && viewTransform && placed
-          .slice()
+            .slice()
           .sort((a, b) => {
             // 아우터와 상의가 함께 있을 때 상의의 z-index를 가장 낮게 설정
             const hasOuter = placed.some(item => item.slot === 'outer');
@@ -623,7 +685,7 @@ export function NewCodyPlayground() {
             // 기본 정렬: z-index 순
             return a.z - b.z;
           })
-          .map(p => (
+            .map(p => (
             <DraggableItem 
               key={p.id} 
               data={p} 
@@ -632,20 +694,39 @@ export function NewCodyPlayground() {
               onChange={(patch) => setPlaced(prev => prev.map(x => x.id===p.id? { ...x, ...patch } : x))} 
               onRemove={removeActive}
               viewTransform={viewTransform}
+              stableRect={stableRect}
+              placed={placed}
+              setShowGuides={setShowGuides}
             />
           ))}
 
+        {/* 설정 버튼 - 좌측 하단 (탭바 위로) */}
+        <div className="absolute bottom-24 left-4 flex gap-2">
+          <button
+            onClick={() => setIsBackgroundModalOpen(true)}
+            className="flex items-center justify-center w-12 h-12 bg-white/90 dark:bg-dark-sub/90 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 dark:border-dark-border hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
+          >
+            <Settings size={20} className="text-gray-600 dark:text-dark-text" />
+          </button>
+          <button
+            onClick={() => setSelectedTemplate(selectedTemplate ? null : 'flatlay')}
+            className="flex items-center justify-center w-12 h-12 bg-white/90 dark:bg-dark-sub/90 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 dark:border-dark-border hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
+          >
+            <span className="text-lg">📐</span>
+          </button>
+        </div>
+
         {/* 카테고리 버튼 - 우측 하단 (탭바 위로) */}
         <div className="absolute bottom-24 right-4">
-          <CodyCategoryChips
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-            selectedGender={selectedGender}
-            selectedMainCategory={selectedMainCategory || undefined}
-            selectedSubCategory={selectedSubCategory || undefined}
-            onCategorySelect={handleCategorySelect}
-            onProductAdd={(product) => {
-              // 상품을 마네킹에 추가하는 로직
+      <CodyCategoryChips
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+        selectedGender={selectedGender}
+        selectedMainCategory={selectedMainCategory || undefined}
+        selectedSubCategory={selectedSubCategory || undefined}
+        onCategorySelect={handleCategorySelect}
+        onProductAdd={(product) => {
+          // 상품을 마네킹에 추가하는 로직
               console.log('상품 추가 시도:', product, 'selectedMainCategory:', selectedMainCategory);
               
               // 상세한 카테고리 매핑 (상품명 기반 세부 분류)
@@ -781,10 +862,52 @@ export function NewCodyPlayground() {
             }}
           />
         </div>
-      </div>
+        </div>
+      </SceneOverlay>
 
+      {/* 배경 설정 모달 */}
+      <CodyBackgroundModal
+        isOpen={isBackgroundModalOpen}
+        onClose={() => setIsBackgroundModalOpen(false)}
+        backgroundType={backgroundType}
+        onBackgroundTypeChange={setBackgroundType}
+        selectedBackground={selectedBackground}
+        onBackgroundChange={setSelectedBackground}
+        customColor={customBackgroundColor}
+        onCustomColorChange={setCustomBackgroundColor}
+      />
 
-
+      {/* 템플릿 선택 모달 */}
+      {selectedTemplate && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-dark-bg w-full max-w-md max-h-[80vh] rounded-2xl overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-dark-text">
+                  레이아웃 템플릿
+                </h2>
+                <button
+                  onClick={() => setSelectedTemplate(null)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
+                >
+                  <X size={20} className="text-gray-600 dark:text-dark-text" />
+                </button>
+              </div>
+              <TemplateSelector
+                selectedTemplate={selectedTemplate}
+                onTemplateSelect={setSelectedTemplate}
+                onApplyTemplate={(template) => {
+                  if (stableRect && viewTransform) {
+                    const newLayout = getTemplateLayout(template, placed, stableRect.width, stableRect.height)
+                    setPlaced(newLayout)
+                  }
+                  setSelectedTemplate(null)
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -793,13 +916,16 @@ export function NewCodyPlayground() {
 // ===========================
 // DRAG ITEM (정규화 좌표 시스템)
 // ===========================
-function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTransform }: {
+function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTransform, stableRect, placed, setShowGuides }: {
   data: PlacedItem;
   active: boolean;
   onActivate: () => void;
   onChange: (patch: Partial<PlacedItem>) => void;
   onRemove: () => void;
   viewTransform: ViewTransform | null;
+  stableRect: DOMRect | null;
+  placed: PlacedItem[];
+  setShowGuides: (show: boolean) => void;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -842,6 +968,9 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
       nx: data.nx,
       ny: data.ny
     });
+    
+    // 드래그 시작 시 가이드 표시
+    setShowGuides(true);
   };
 
   // 드래그 중 핸들러 (모바일 최적화)
@@ -874,12 +1003,48 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
     const deltaNx = deltaX / (BASE_W * viewTransform.scale);
     const deltaNy = deltaY / (BASE_H * viewTransform.scale);
     
-    const newNx = Math.max(0, Math.min(1, dragStart.nx + deltaNx));
-    const newNy = Math.max(0, Math.min(1, dragStart.ny + deltaNy));
+    const rawNx = Math.max(0, Math.min(1, dragStart.nx + deltaNx));
+    const rawNy = Math.max(0, Math.min(1, dragStart.ny + deltaNy));
+    
+    // 스마트 스냅 적용
+    if (viewTransform && stableRect) {
+      const pixelX = rawNx * BASE_W * viewTransform.scale + viewTransform.offsetX
+      const pixelY = rawNy * BASE_H * viewTransform.scale + viewTransform.offsetY
+      
+      const snapResult = calculateSnapPosition(
+        pixelX, 
+        pixelY, 
+        stableRect,
+        placed.map((p: PlacedItem) => ({
+          id: p.id,
+          x: p.nx * BASE_W * viewTransform.scale + viewTransform.offsetX,
+          y: p.ny * BASE_H * viewTransform.scale + viewTransform.offsetY,
+          width: 100, // 임시값
+          height: 100
+        })),
+        data.id
+      )
+      
+      if (snapResult.snapped) {
+        const snappedNx = (snapResult.x - viewTransform.offsetX) / (BASE_W * viewTransform.scale)
+        const snappedNy = (snapResult.y - viewTransform.offsetY) / (BASE_H * viewTransform.scale)
+        
+        onChange({
+          nx: Math.max(0, Math.min(1, snappedNx)),
+          ny: Math.max(0, Math.min(1, snappedNy)),
+          lastModified: Date.now(),
+          metadata: {
+            ...data.metadata,
+            isCustomPosition: true
+          }
+        });
+        return
+      }
+    }
     
     onChange({
-      nx: newNx,
-      ny: newNy,
+      nx: rawNx,
+      ny: rawNy,
       lastModified: Date.now(),
       metadata: {
         ...data.metadata,
@@ -908,6 +1073,7 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
     setDragStart(null);
     setTouchStartTime(0);
     setHasMoved(false);
+    setShowGuides(false);
   };
 
   // 이벤트 리스너 등록/해제 (모바일 최적화)
@@ -926,21 +1092,29 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
     };
   }, [dragStart, viewTransform, isDragging, touchStartTime, hasMoved]);
   
+  const shadowStyles = getShadowStyles(data.slot || 'accessory', active)
+  
   return (
     <div
       ref={ref}
       className={cn(
         "absolute select-none touch-none", 
-        active && "outline outline-1 outline-gray-400 dark:outline-dark-accent",
         isDragging && "cursor-grabbing opacity-80"
       )}
       style={{ 
         left: 0,
         top: 0,
-        transform: `translate3d(${pixelRect.x}px, ${pixelRect.y}px, 0) rotate(${data.rotation}deg)`, 
+        transform: `translate3d(${pixelRect.x}px, ${pixelRect.y}px, 0) rotate(${data.rotation}deg) ${shadowStyles.transform}`, 
         zIndex: Math.min(data.z, 50), // 모달보다 낮게 제한 
         display: data.visible ? undefined : "none",
-        willChange: 'transform'
+        willChange: 'transform',
+        filter: shadowStyles.filter,
+        transition: shadowStyles.transition,
+        // 선택 상태의 절제된 피드백
+        ...(active && {
+          outline: '1px solid rgba(59, 130, 246, 0.3)',
+          outlineOffset: '1px'
+        })
       }}
       onPointerDown={handlePointerDown}
     >
