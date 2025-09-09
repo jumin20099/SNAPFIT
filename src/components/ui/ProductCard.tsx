@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Heart, Star } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import type { Product } from '@/shared/types'
 
 interface ProductCardProps {
@@ -13,19 +14,26 @@ interface ProductCardProps {
 export function ProductCard({ product, onLike }: ProductCardProps) {
   const [isLiked, setIsLiked] = useState(false)
   const [imageError, setImageError] = useState(false)
+  const router = useRouter()
 
-  const handleLike = () => {
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation() // 상품 카드 클릭 이벤트와 분리
     setIsLiked(!isLiked)
     onLike?.(product.id)
   }
 
+  const handleProductClick = () => {
+    router.push(`/products/${product.id}`)
+  }
+
   return (
     <motion.div
-      className="bg-white overflow-hidden shadow-sm"
+      className="bg-white overflow-hidden shadow-sm cursor-pointer"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       whileHover={{ y: -2 }}
+      onClick={handleProductClick}
     >
       {/* 상품 이미지 */}
       <div className="relative aspect-square bg-gray-100">
