@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CodyDisplay } from '@/components/ui/CodyDisplay'
+import { getPublicOutfits, type OutfitResponse } from '@/lib/outfit-api'
 
 interface Post {
   postId: number
@@ -24,6 +26,16 @@ interface Post {
   scraped: boolean
   mediaUrls?: string[]
   tags?: string[]
+  type?: 'text' | 'cody'
+  codyData?: {
+    items: any[]
+    background: {
+      type: 'color' | 'image'
+      selectedBackground: string
+      customColor: string
+    }
+    timestamp: number
+  }
 }
 
 export default function CommunityPage() {
@@ -50,8 +62,35 @@ export default function CommunityPage() {
           const data = await response.json()
           // 데이터가 배열인지 확인하고 안전하게 설정
           const postsArray = Array.isArray(data) ? data : (data.content || [])
-          setPosts(postsArray)
-          setFilteredPosts(postsArray)
+          
+          // 데이터베이스에서 공개 코디 로드
+          try {
+            const publicOutfits = await getPublicOutfits()
+            const codyPosts = publicOutfits.map(outfit => ({
+              postId: outfit.outfitIdx,
+              content: `코디 아이템 ${JSON.parse(outfit.outfitItem).items.length}개로 구성된 오늘의 코디입니다.`,
+              authorName: outfit.user.nickname || '익명',
+              authorProfileImage: '',
+              createdAt: outfit.createdAt,
+              likeCount: 0,
+              commentCount: 0,
+              scrapCount: 0,
+              liked: false,
+              scraped: false,
+              tags: ['코디', '패션'],
+              type: 'cody',
+              codyData: JSON.parse(outfit.outfitItem)
+            }))
+            
+            const allPosts = [...postsArray, ...codyPosts]
+            setPosts(allPosts)
+            setFilteredPosts(allPosts)
+          } catch (error) {
+            console.error('공개 코디 로드 실패:', error)
+            // 실패 시 기존 게시글만 표시
+            setPosts(postsArray)
+            setFilteredPosts(postsArray)
+          }
       } else {
           throw new Error(`게시글 로드 실패: ${response.status}`)
       }
@@ -356,33 +395,44 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
       className="relative cursor-pointer group aspect-square"
       onClick={onClick}
     >
-              {/* 게시글 이미지 */}
-      <div className="w-full h-full bg-gray-200 rounded-lg overflow-hidden">
-        {post.mediaUrls && post.mediaUrls.length > 0 ? (
-          <img
-            src={post.mediaUrls[0]}
-            alt="게시글 이미지"
-            className="w-full h-full object-cover"
+      {/* 코디 게시글인 경우 */}
+      {post.type === 'cody' && post.codyData ? (
+        <div className="w-full h-full bg-gray-200 rounded-lg overflow-hidden">
+          <CodyDisplay
+            codyData={post.codyData}
+            showProductInfo={false}
+            className="w-full h-full"
           />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-            <span className="text-gray-500 text-sm">이미지 없음</span>
-          </div>
-        )}
+        </div>
+      ) : (
+        /* 일반 게시글 이미지 */
+        <div className="w-full h-full bg-gray-200 rounded-lg overflow-hidden">
+          {post.mediaUrls && post.mediaUrls.length > 0 ? (
+            <img
+              src={post.mediaUrls[0]}
+              alt="게시글 이미지"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+              <span className="text-gray-500 text-sm">이미지 없음</span>
+            </div>
+          )}
+        </div>
+      )}
         
-        {/* 우측 하단 좋아요 버튼 */}
-        <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-            onLike()
-          }}
-          className="absolute bottom-2 right-2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-sm transition-all duration-200 hover:scale-110 border border-gray-200"
-        >
-          <Heart 
-            className={`w-4 h-4 ${post.liked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
-          />
-        </button>
-      </div>
+      {/* 우측 하단 좋아요 버튼 */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onLike()
+        }}
+        className="absolute bottom-2 right-2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-sm transition-all duration-200 hover:scale-110 border border-gray-200"
+      >
+        <Heart 
+          className={`w-4 h-4 ${post.liked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
+        />
+      </button>
     </div>
   )
 }

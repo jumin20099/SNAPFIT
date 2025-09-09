@@ -1,5 +1,6 @@
 package com.snapfit.api.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Data;
 
 /**
@@ -7,8 +8,8 @@ import lombok.Data;
  */
 @Data
 public class OutfitDto {
-    /** 코디에 사용된 상품 정보(JSON 문자열) */
-    private String outfitItem;
+    /** 코디에 사용된 상품 정보(JSON) */
+    private JsonNode outfitItem;
     /** 미리보기 썸네일 URL */
     private String outfitThumbnail;
     /** 공개 여부 */

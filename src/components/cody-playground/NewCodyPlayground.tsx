@@ -11,6 +11,7 @@ import { SceneOverlay, SCENE_PRESETS, getShadowStyles, type ScenePreset } from '
 import { SmartGuides, calculateSnapPosition } from './SmartGuides'
 import { TemplateSelector, getTemplateLayout, type TemplateType } from './TemplateSystem'
 import { PlacedItem, AssetMeta, AssetMetaManager, BASE_W, BASE_H, type Anchor } from '@/entities/cody/model'
+import { CodySaveModal } from './CodySaveModal'
 
 // ===========================
 // TYPES & TAXONOMY (필수만)
@@ -386,6 +387,7 @@ export function NewCodyPlayground() {
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateType | null>(null)
   const [showGuides, setShowGuides] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false)
 
   const [targetSlot, setTargetSlot] = useState<Major | null>(null)
 
@@ -619,7 +621,11 @@ export function NewCodyPlayground() {
             <RotateCcw className="mr-2 h-4 w-4"/>
             전체 초기화
           </Button>
-        <Button className="rounded-lg h-8 px-3 bg-gray-900 dark:bg-dark-accent text-white hover:bg-gray-800 dark:hover:bg-[#2FB88A]">
+        <Button 
+          className="rounded-lg h-8 px-3 bg-gray-900 dark:bg-dark-accent text-white hover:bg-gray-800 dark:hover:bg-[#2FB88A]"
+          onClick={() => setIsSaveModalOpen(true)}
+          disabled={!isHydrated || placed.length === 0}
+        >
           <Save className="mr-2 h-4 w-4"/>저장
         </Button>
         </div>
@@ -908,6 +914,25 @@ export function NewCodyPlayground() {
           </div>
         </div>
       )}
+
+      {/* 코디 저장 모달 */}
+      <CodySaveModal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        codyData={{
+          items: placed,
+          background: {
+            type: backgroundType,
+            selectedBackground: selectedBackground,
+            customColor: customBackgroundColor
+          },
+          timestamp: Date.now()
+        }}
+        onSaveToCommunity={() => {
+          // 커뮤니티 게시글 생성 후 커뮤니티 페이지로 이동
+          // router.push('/community')
+        }}
+      />
     </div>
   )
 }

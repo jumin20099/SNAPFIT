@@ -102,6 +102,14 @@ public class OutfitService {
     }
 
     /**
+     * 특정 사용자의 코디 목록을 최신순으로 반환한다.
+     */
+    @Transactional(readOnly = true)
+    public List<Outfit> getUserOutfits(User user) {
+        return outfitRepository.findByUserOrderByCreatedAtDesc(user);
+    }
+
+    /**
      * 코디 상세를 반환한다. 공개 코디이거나 소유자일 때만 접근 가능하다.
      *
      * @param outfitIdx 코디 PK

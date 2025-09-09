@@ -57,7 +57,7 @@ export function SceneOverlay({
     customColor: string
   }
 }) {
-  const scene = SCENE_PRESETS[preset]
+  const scene = SCENE_PRESETS[preset] || SCENE_PRESETS.editorial
   
   // 사용자 배경 설정이 있으면 우선 적용
   const getBackgroundStyle = () => {
@@ -93,14 +93,14 @@ export function SceneOverlay({
       />
       
       {/* 스테이지 플레이트 (웜 스튜디오만) */}
-      {scene.stage.type === 'floor' && (
+      {scene?.stage?.type === 'floor' && (
         <div 
           className="absolute bottom-0 left-1/2 transform -translate-x-1/2"
           style={{
-            width: `${scene.stage.radius * 100}%`,
+            width: `${(scene?.stage?.radius || 0.8) * 100}%`,
             height: '200px',
-            background: `radial-gradient(ellipse at center top, ${scene.stage.color} 0%, transparent 70%)`,
-            filter: `blur(${scene.stage.blur}px)`,
+            background: `radial-gradient(ellipse at center top, ${scene?.stage?.color || '#8B4513'} 0%, transparent 70%)`,
+            filter: `blur(${scene?.stage?.blur || 8}px)`,
             transform: 'translateX(-50%) translateY(50%)'
           }}
         />

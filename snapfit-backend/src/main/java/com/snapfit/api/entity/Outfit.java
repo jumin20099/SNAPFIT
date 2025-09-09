@@ -2,6 +2,11 @@ package com.snapfit.api.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -41,7 +46,8 @@ public class Outfit {
 
     /** 코디에 사용된 상품 정보(JSON) */
     @Column(name = "outfit_item", nullable = false, columnDefinition = "jsonb")
-    private String outfitItem;
+    @JdbcTypeCode(SqlTypes.JSON)
+    private JsonNode outfitItem;
 
     /** 코디 미리보기 썸네일 URL */
     @Column(name = "outfit_thumbnail")
