@@ -238,16 +238,108 @@ export async function downloadCodyAsImage(codyData: CodyImageData, filename?: st
 }
 
 /**
+ * 가상 코디 컨테이너 생성 (썸네일용)
+ */
+function createVirtualCodyContainer(codyData: CodyImageData): HTMLElement {
+  const container = document.createElement('div')
+  container.setAttribute('data-cody-container', 'true')
+  container.style.cssText = `
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    width: 300px;
+    height: 300px;
+    background: ${codyData.background?.type === 'color' 
+      ? (codyData.background?.customColor || codyData.background?.selectedBackground || '#ffffff')
+      : '#ffffff'};
+    overflow: hidden;
+    isolation: isolate;
+    transform: translateZ(0);
+    border-radius: 8px;
+  `
+  
+  // 배경 이미지가 있는 경우
+  if (codyData.background?.type === 'image' && codyData.background?.selectedBackground) {
+    container.style.backgroundImage = `url(${codyData.background.selectedBackground})`
+    container.style.backgroundSize = 'cover'
+    container.style.backgroundPosition = 'center'
+  }
+  
+  // 코디 아이템들 추가
+  codyData.items?.forEach((item, index) => {
+    console.log(`아이템 ${index} 데이터:`, item)
+    
+    // PlacedItem 타입에 맞는 속성 접근
+    const nx = item.nx || 0.5  // 정규화된 x 좌표 (0~1)
+    const ny = item.ny || 0.5  // 정규화된 y 좌표 (0~1)
+    const rotation = item.rotation || 0
+    const z = item.z || 1
+    const scale = item.scale || 1
+    const imageUrl = item.src || item.imageUrl || ''
+    const name = item.name || `아이템 ${index}`
+    
+    if (!imageUrl) {
+      console.warn(`아이템 ${index}에 이미지 URL이 없습니다:`, item)
+      return
+    }
+    
+    // 정규화 좌표를 실제 픽셀 좌표로 변환 (300x300 정사각형 컨테이너 기준)
+    const containerWidth = 300
+    const containerHeight = 300
+    const x = nx * containerWidth
+    const y = ny * containerHeight
+    
+    // 기본 크기 (정사각형 썸네일에 맞게 조정)
+    const baseSize = 60
+    const width = baseSize * scale
+    const height = baseSize * scale
+    
+    // 아이템이 컨테이너 경계를 벗어나지 않도록 조정
+    const halfWidth = width / 2
+    const halfHeight = height / 2
+    const left = Math.max(halfWidth, Math.min(containerWidth - halfWidth, x - halfWidth))
+    const top = Math.max(halfHeight, Math.min(containerHeight - halfHeight, y - halfHeight))
+    
+    const img = document.createElement('img')
+    img.src = imageUrl
+    img.alt = name
+    img.style.cssText = `
+      position: absolute;
+      left: ${left}px;
+      top: ${top}px;
+      width: ${width}px;
+      height: ${height}px;
+      transform: rotate(${rotation}deg);
+      transform-origin: center center;
+      z-index: ${z};
+      pointer-events: none;
+    `
+    container.appendChild(img)
+  })
+  
+  // DOM에 추가 (보이지 않게)
+  document.body.appendChild(container)
+  
+  return container
+}
+
+/**
  * 코디를 썸네일 이미지로 변환 (작은 크기)
  */
-export async function generateCodyThumbnail(codyData: CodyImageData, size: number = 200): Promise<string> {
-  try {
-    // 코디 플레이그라운드 컨테이너 찾기
-    const codyContainer = document.querySelector('[data-cody-container]') as HTMLElement
-    if (!codyContainer) {
-      throw new Error('코디 컨테이너를 찾을 수 없습니다')
-    }
+export async function generateCodyThumbnail(codyData: CodyImageData, size: number = 200): Promise<Blob> {
+  console.log('=== generateCodyThumbnail 시작 ===', { codyData })
+  
+  // 코디 플레이그라운드 컨테이너 찾기 또는 가상 컨테이너 생성
+  let codyContainer = document.querySelector('[data-cody-container]') as HTMLElement
+  let isVirtualContainer = false
+  
+  if (!codyContainer) {
+    console.log('실제 DOM에서 코디 컨테이너를 찾을 수 없음. 가상 DOM 생성...')
+    codyContainer = createVirtualCodyContainer(codyData)
+    isVirtualContainer = true
+  }
 
+  try {
     // 모든 이미지가 완전히 로드될 때까지 대기
     const images = codyContainer.querySelectorAll('img')
     const imageLoadPromises = Array.from(images).map((img, index) => {
@@ -340,7 +432,7 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
     // html2canvas 라이브러리 동적 로드
     const html2canvas = await import('html2canvas')
     
-    // 코디 영역 캡처
+    // 코디 영역 캡처 (정사각형 썸네일)
     const canvas = await html2canvas.default(codyContainer, {
       backgroundColor: codyData.background.type === 'color' 
         ? (codyData.background.customColor || codyData.background.selectedBackground)
@@ -348,7 +440,7 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
       scale: 1,
       useCORS: true, // CORS 활성화 (프록시 이미지 처리)
       allowTaint: false, // tainted canvas 비활성화
-      logging: true, // 디버깅을 위해 로깅 활성화
+      logging: false, // 성능을 위해 로깅 비활성화
       width: size,
       height: size,
       foreignObjectRendering: false, // 외부 객체 렌더링 비활성화 (이미지 처리 개선)
@@ -391,10 +483,27 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
       }
     })
 
+    // 가상 컨테이너 정리
+    if (isVirtualContainer && codyContainer.parentNode) {
+      codyContainer.parentNode.removeChild(codyContainer)
+    }
 
-    return canvas.toDataURL('image/png', 0.8)
+    // Canvas를 Blob으로 변환
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob)
+        } else {
+          reject(new Error('썸네일 Blob 생성 실패'))
+        }
+      }, 'image/png', 0.8)
+    })
   } catch (error) {
     console.error('썸네일 생성 실패:', error)
+    // 가상 컨테이너 정리 (에러 시에도)
+    if (isVirtualContainer && codyContainer && codyContainer.parentNode) {
+      codyContainer.parentNode.removeChild(codyContainer)
+    }
     throw error
   }
 }

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { PlacedItem } from '@/entities/cody/model'
 import { CodyDisplay } from './CodyDisplay'
 import { getMyOutfits, deleteOutfit, type OutfitResponse } from '@/lib/outfit-api'
-import { downloadCodyAsImage } from '@/lib/image-utils'
+import { downloadCodyAsImage, generateCodyThumbnail } from '@/lib/image-utils'
 
 interface SavedCody {
   id: string
@@ -24,6 +24,8 @@ interface SavedCody {
 export function MyCodyList() {
   const [savedCodies, setSavedCodies] = useState<OutfitResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({})
+  const [thumbnailLoading, setThumbnailLoading] = useState<Record<string, boolean>>({})
 
   // 저장된 코디 목록 로드
   useEffect(() => {
@@ -48,6 +50,24 @@ export function MyCodyList() {
     loadCodies()
   }, [])
 
+  // 코디 목록이 로드되면 썸네일 생성
+  useEffect(() => {
+    if (savedCodies.length > 0) {
+      savedCodies.forEach(cody => {
+        generateThumbnail(cody)
+      })
+    }
+  }, [savedCodies])
+
+  // 컴포넌트 언마운트 시 메모리 정리
+  useEffect(() => {
+    return () => {
+      Object.values(thumbnails).forEach(url => {
+        URL.revokeObjectURL(url)
+      })
+    }
+  }, [thumbnails])
+
   // 코디 삭제
   const handleDeleteCody = async (outfitIdx: number) => {
     if (confirm('이 코디를 삭제하시겠습니까?')) {
@@ -58,6 +78,34 @@ export function MyCodyList() {
         console.error('코디 삭제 실패:', error)
         alert('코디 삭제에 실패했습니다')
       }
+    }
+  }
+
+  // 코디 썸네일 생성
+  const generateThumbnail = async (cody: OutfitResponse) => {
+    const codyId = cody.outfitIdx.toString()
+    
+    // 이미 로딩 중이거나 썸네일이 있으면 스킵
+    if (thumbnailLoading[codyId] || thumbnails[codyId]) {
+      return
+    }
+
+    try {
+      setThumbnailLoading(prev => ({ ...prev, [codyId]: true }))
+      
+      const codyData = JSON.parse(cody.outfitItem)
+      console.log(`썸네일 생성 시작: 코디 #${codyId}`, codyData)
+      
+      const thumbnailBlob = await generateCodyThumbnail(codyData)
+      const thumbnailUrl = URL.createObjectURL(thumbnailBlob)
+      
+      console.log(`썸네일 생성 완료: 코디 #${codyId}`, thumbnailUrl)
+      setThumbnails(prev => ({ ...prev, [codyId]: thumbnailUrl }))
+    } catch (error) {
+      console.error(`썸네일 생성 실패: 코디 #${codyId}`, error)
+      // 에러 발생 시 기존 CodyDisplay 사용하도록 상태 유지
+    } finally {
+      setThumbnailLoading(prev => ({ ...prev, [codyId]: false }))
     }
   }
 
@@ -150,11 +198,23 @@ export function MyCodyList() {
               >
                 {/* 코디 미리보기 */}
                 <div className="mb-3">
-                  <CodyDisplay
-                    codyData={codyData}
-                    showProductInfo={false}
-                    className="aspect-square"
-                  />
+                  {thumbnails[cody.outfitIdx.toString()] ? (
+                    <img
+                      src={thumbnails[cody.outfitIdx.toString()]}
+                      alt={codyData.name || `코디 #${cody.outfitIdx}`}
+                      className="w-full aspect-square object-cover rounded-lg"
+                    />
+                  ) : thumbnailLoading[cody.outfitIdx.toString()] ? (
+                    <div className="w-full aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-white"></div>
+                    </div>
+                  ) : (
+                    <CodyDisplay
+                      codyData={codyData}
+                      showProductInfo={false}
+                      className="aspect-square"
+                    />
+                  )}
                 </div>
 
                 {/* 코디 정보 */}
