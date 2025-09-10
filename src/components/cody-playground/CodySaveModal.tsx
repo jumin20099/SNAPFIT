@@ -6,6 +6,7 @@ import { X, Download, Share2, Check, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlacedItem } from '@/entities/cody/model'
 import { saveOutfitToDatabase, type OutfitData } from '@/lib/outfit-api'
+import { downloadCodyAsImage } from '@/lib/image-utils'
 
 interface CodySaveModalProps {
   isOpen: boolean
@@ -37,16 +38,14 @@ export function CodySaveModal({
   const handleDownloadImage = async () => {
     setIsDownloading(true)
     try {
-      // 코디 캔버스를 이미지로 변환하는 로직
-      const canvas = document.getElementById('cody-canvas') as HTMLCanvasElement
-      if (canvas) {
-        const link = document.createElement('a')
-        link.download = `cody-${new Date().toISOString().split('T')[0]}.png`
-        link.href = canvas.toDataURL('image/png')
-        link.click()
-      }
+      const filename = codyName.trim() 
+        ? `${codyName.trim()}-${new Date().toISOString().split('T')[0]}.png`
+        : `cody-${new Date().toISOString().split('T')[0]}.png`
+      
+      await downloadCodyAsImage(codyData, filename)
     } catch (error) {
       console.error('이미지 다운로드 실패:', error)
+      alert('이미지 다운로드에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setIsDownloading(false)
     }

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { PlacedItem } from '@/entities/cody/model'
 
 interface CodyDisplayProps {
@@ -17,12 +19,16 @@ interface CodyDisplayProps {
   }
   showProductInfo?: boolean
   className?: string
+  onDownload?: () => void
+  showDownloadButton?: boolean
 }
 
 export function CodyDisplay({ 
   codyData, 
   showProductInfo = true, 
-  className = '' 
+  className = '',
+  onDownload,
+  showDownloadButton = false
 }: CodyDisplayProps) {
   const router = useRouter()
   const [productDetails, setProductDetails] = useState<Record<string, any>>({})
@@ -185,6 +191,20 @@ export function CodyDisplay({
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* 다운로드 버튼 */}
+      {showDownloadButton && onDownload && (
+        <div className="absolute top-2 right-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 bg-white/80 hover:bg-white/90 shadow-md"
+            onClick={onDownload}
+          >
+            <Download className="w-4 h-4" />
+          </Button>
         </div>
       )}
     </div>

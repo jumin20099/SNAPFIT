@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { PlacedItem } from '@/entities/cody/model'
 import { CodyDisplay } from './CodyDisplay'
 import { getMyOutfits, deleteOutfit, type OutfitResponse } from '@/lib/outfit-api'
+import { downloadCodyAsImage } from '@/lib/image-utils'
 
 interface SavedCody {
   id: string
@@ -61,9 +62,27 @@ export function MyCodyList() {
   }
 
   // 코디 이미지 다운로드
-  const handleDownloadImage = (codyId: string) => {
-    // 코디를 이미지로 변환하는 로직
-    console.log('코디 이미지 다운로드:', codyId)
+  const handleDownloadImage = async (cody: OutfitResponse) => {
+    try {
+      // JSON 문자열을 파싱하여 코디 데이터 추출
+      let codyData
+      try {
+        codyData = JSON.parse(cody.outfitItem)
+      } catch (error) {
+        console.error('코디 데이터 파싱 실패:', error)
+        alert('코디 데이터를 불러올 수 없습니다')
+        return
+      }
+
+      const filename = codyData.name 
+        ? `${codyData.name}-${new Date().toISOString().split('T')[0]}.png`
+        : `cody-${cody.outfitIdx}-${new Date().toISOString().split('T')[0]}.png`
+      
+      await downloadCodyAsImage(codyData, filename)
+    } catch (error) {
+      console.error('이미지 다운로드 실패:', error)
+      alert('이미지 다운로드에 실패했습니다. 다시 시도해주세요.')
+    }
   }
 
   // 커뮤니티에 공유
@@ -157,7 +176,7 @@ export function MyCodyList() {
                       size="sm"
                       variant="ghost"
                       className="h-6 w-6 p-0"
-                      onClick={() => handleDownloadImage(cody.outfitIdx.toString())}
+                      onClick={() => handleDownloadImage(cody)}
                     >
                       <Download className="w-3 h-3" />
                     </Button>

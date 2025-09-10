@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CodyDisplay } from '@/components/ui/CodyDisplay'
 import { getPublicOutfits, type OutfitResponse } from '@/lib/outfit-api'
+import { downloadCodyAsImage } from '@/lib/image-utils'
 
 interface Post {
   postId: number
@@ -147,6 +148,20 @@ export default function CommunityPage() {
 
     setFilteredPosts(filtered)
   }, [posts, searchTerm, sortBy, activeTab])
+
+  // 코디 이미지 다운로드
+  const handleDownloadCodyImage = async (codyData: any) => {
+    try {
+      const filename = codyData.name 
+        ? `${codyData.name}-${new Date().toISOString().split('T')[0]}.png`
+        : `cody-${new Date().toISOString().split('T')[0]}.png`
+      
+      await downloadCodyAsImage(codyData, filename)
+    } catch (error) {
+      console.error('이미지 다운로드 실패:', error)
+      alert('이미지 다운로드에 실패했습니다. 다시 시도해주세요.')
+    }
+  }
 
   // 좋아요 토글
   const handleLike = async (postId: number) => {
@@ -402,6 +417,8 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
             codyData={post.codyData}
             showProductInfo={false}
             className="w-full h-full"
+            showDownloadButton={true}
+            onDownload={() => handleDownloadCodyImage(post.codyData)}
           />
         </div>
       ) : (
