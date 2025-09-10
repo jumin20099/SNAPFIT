@@ -29,15 +29,25 @@ export async function downloadCodyAsImage(codyData: CodyImageData, filename?: st
         ? (codyData.background.customColor || codyData.background.selectedBackground)
         : '#ffffff',
       scale: 2, // 고해상도
-      useCORS: false, // CORS 비활성화
-      allowTaint: true, // tainted canvas 허용
+      useCORS: true, // CORS 활성화 (프록시를 통해 로드된 이미지들)
+      allowTaint: false, // tainted canvas 비활성화
       logging: false,
       width: codyContainer.offsetWidth,
       height: codyContainer.offsetHeight,
-      foreignObjectRendering: false, // 외부 객체 렌더링 비활성화
-      ignoreElements: (element) => {
-        // S3 이미지 요소는 무시하고 대체 이미지 사용
-        return element.tagName === 'IMG' && element.src.includes('snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com')
+      foreignObjectRendering: true, // 외부 객체 렌더링 활성화
+      onclone: (clonedDoc) => {
+        // 클론된 문서에서 이미지들이 제대로 로드되도록 대기
+        const images = clonedDoc.querySelectorAll('img')
+        return Promise.all(Array.from(images).map(img => {
+          return new Promise((resolve) => {
+            if (img.complete) {
+              resolve(img)
+            } else {
+              img.onload = () => resolve(img)
+              img.onerror = () => resolve(img)
+            }
+          })
+        }))
       }
     })
 
@@ -72,15 +82,25 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
         ? (codyData.background.customColor || codyData.background.selectedBackground)
         : '#ffffff',
       scale: 1,
-      useCORS: false, // CORS 비활성화
-      allowTaint: true, // tainted canvas 허용
+      useCORS: true, // CORS 활성화 (프록시를 통해 로드된 이미지들)
+      allowTaint: false, // tainted canvas 비활성화
       logging: false,
       width: size,
       height: size,
-      foreignObjectRendering: false, // 외부 객체 렌더링 비활성화
-      ignoreElements: (element) => {
-        // S3 이미지 요소는 무시하고 대체 이미지 사용
-        return element.tagName === 'IMG' && element.src.includes('snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com')
+      foreignObjectRendering: true, // 외부 객체 렌더링 활성화
+      onclone: (clonedDoc) => {
+        // 클론된 문서에서 이미지들이 제대로 로드되도록 대기
+        const images = clonedDoc.querySelectorAll('img')
+        return Promise.all(Array.from(images).map(img => {
+          return new Promise((resolve) => {
+            if (img.complete) {
+              resolve(img)
+            } else {
+              img.onload = () => resolve(img)
+              img.onerror = () => resolve(img)
+            }
+          })
+        }))
       }
     })
 

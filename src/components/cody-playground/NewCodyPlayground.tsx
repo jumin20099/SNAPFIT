@@ -779,7 +779,11 @@ export function NewCodyPlayground() {
               
               const now = Date.now();
               const basePosition = ANCHOR[slot];
-              const imageSrc = product.productImage || product.image || '/placeholder.svg';
+              // S3 이미지인 경우 프록시를 통해 로드
+              const originalImageSrc = product.productImage || product.image || '/placeholder.svg';
+              const imageSrc = originalImageSrc.includes('snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com')
+                ? `/api/image-proxy?url=${encodeURIComponent(originalImageSrc)}`
+                : originalImageSrc;
               
               // 자산 메타데이터 생성 (비동기 로딩)
               const assetMeta = AssetMetaManager.getDefaultAssetMeta(
