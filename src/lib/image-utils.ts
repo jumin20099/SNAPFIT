@@ -29,25 +29,24 @@ export async function downloadCodyAsImage(codyData: CodyImageData, filename?: st
         ? (codyData.background.customColor || codyData.background.selectedBackground)
         : '#ffffff',
       scale: 2, // 고해상도
-      useCORS: true, // CORS 활성화 (프록시를 통해 로드된 이미지들)
-      allowTaint: false, // tainted canvas 비활성화
+      useCORS: false, // CORS 비활성화
+      allowTaint: true, // tainted canvas 허용
       logging: false,
       width: codyContainer.offsetWidth,
       height: codyContainer.offsetHeight,
       foreignObjectRendering: true, // 외부 객체 렌더링 활성화
-      onclone: (clonedDoc) => {
-        // 클론된 문서에서 이미지들이 제대로 로드되도록 대기
+      proxy: '/api/image-proxy', // 모든 이미지 요청을 프록시를 통해 처리
+      onclone: async (clonedDoc) => {
+        // 클론된 문서에서 모든 이미지가 로드될 때까지 기다립니다
         const images = clonedDoc.querySelectorAll('img')
-        return Promise.all(Array.from(images).map(img => {
-          return new Promise((resolve) => {
-            if (img.complete) {
-              resolve(img)
-            } else {
-              img.onload = () => resolve(img)
-              img.onerror = () => resolve(img)
-            }
+        const promises = Array.from(images).map(img => {
+          if (img.complete) return Promise.resolve()
+          return new Promise((resolve, reject) => {
+            img.onload = resolve
+            img.onerror = reject
           })
-        }))
+        })
+        await Promise.allSettled(promises)
       }
     })
 
@@ -82,25 +81,24 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
         ? (codyData.background.customColor || codyData.background.selectedBackground)
         : '#ffffff',
       scale: 1,
-      useCORS: true, // CORS 활성화 (프록시를 통해 로드된 이미지들)
-      allowTaint: false, // tainted canvas 비활성화
+      useCORS: false, // CORS 비활성화
+      allowTaint: true, // tainted canvas 허용
       logging: false,
       width: size,
       height: size,
       foreignObjectRendering: true, // 외부 객체 렌더링 활성화
-      onclone: (clonedDoc) => {
-        // 클론된 문서에서 이미지들이 제대로 로드되도록 대기
+      proxy: '/api/image-proxy', // 모든 이미지 요청을 프록시를 통해 처리
+      onclone: async (clonedDoc) => {
+        // 클론된 문서에서 모든 이미지가 로드될 때까지 기다립니다
         const images = clonedDoc.querySelectorAll('img')
-        return Promise.all(Array.from(images).map(img => {
-          return new Promise((resolve) => {
-            if (img.complete) {
-              resolve(img)
-            } else {
-              img.onload = () => resolve(img)
-              img.onerror = () => resolve(img)
-            }
+        const promises = Array.from(images).map(img => {
+          if (img.complete) return Promise.resolve()
+          return new Promise((resolve, reject) => {
+            img.onload = resolve
+            img.onerror = reject
           })
-        }))
+        })
+        await Promise.allSettled(promises)
       }
     })
 
