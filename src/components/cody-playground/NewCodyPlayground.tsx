@@ -642,6 +642,7 @@ export function NewCodyPlayground() {
       >
         <div
           ref={canvasRef}
+          data-cody-container
           className="relative w-full"
           style={{ 
             // 가상 캔버스 비율 고정 (letterboxing 적용)
