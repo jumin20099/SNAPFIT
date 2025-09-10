@@ -58,14 +58,19 @@ async function drawCodyItems(ctx: CanvasRenderingContext2D, items: any[], canvas
     if (!item.visible) continue
 
     try {
-      // 이미지 로드
+      // 이미지 로드 (CORS 문제 해결을 위해 프록시 사용)
       const img = new Image()
       img.crossOrigin = 'anonymous'
+      
+      // S3 이미지인 경우 프록시를 통해 로드
+      const imageUrl = item.src.includes('snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com')
+        ? `/api/image-proxy?url=${encodeURIComponent(item.src)}`
+        : item.src
       
       await new Promise((resolve, reject) => {
         img.onload = resolve
         img.onerror = reject
-        img.src = item.src
+        img.src = imageUrl
       })
 
       // 아이템 위치 및 크기 계산

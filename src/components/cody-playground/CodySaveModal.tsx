@@ -225,16 +225,28 @@ export function CodySaveModal({
                 </div>
               </div>
 
-              {/* 저장 버튼 */}
-              <Button
-                onClick={handleSaveCody}
-                className="w-full"
-                size="lg"
-                disabled={!codyName.trim()}
-              >
-                <Check className="w-4 h-4 mr-2" />
-                코디 저장하기
-              </Button>
+              {/* 버튼들 */}
+              <div className="space-y-3">
+                <Button
+                  onClick={handleSaveCody}
+                  className="w-full"
+                  size="lg"
+                  disabled={!codyName.trim()}
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  코디 저장하기
+                </Button>
+                
+                <Button
+                  onClick={handleDownloadImage}
+                  disabled={isDownloading}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  {isDownloading ? '이미지 생성 중...' : '이미지로 저장'}
+                </Button>
+              </div>
             </div>
           )}
         </motion.div>
