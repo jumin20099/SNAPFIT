@@ -8,6 +8,8 @@ import lombok.Data;
  */
 @Data
 public class OutfitDto {
+    /** 코디 이름 */
+    private String outfitName;
     /** 코디에 사용된 상품 정보(JSON) */
     private JsonNode outfitItem;
     /** 미리보기 썸네일 URL */

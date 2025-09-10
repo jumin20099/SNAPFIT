@@ -146,7 +146,7 @@ export function MyCodyList() {
                   </div>
                   
                   <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    코디 #{cody.outfitIdx}
+                    {codyData.name || `코디 #${cody.outfitIdx}`}
                   </div>
                 </div>
 

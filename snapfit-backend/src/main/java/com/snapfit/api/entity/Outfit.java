@@ -44,6 +44,10 @@ public class Outfit {
     @JoinColumn(name = "user_idx", nullable = false)
     private User user;
 
+    /** 코디 이름 */
+    @Column(name = "outfit_name", nullable = false, length = 100)
+    private String outfitName;
+
     /** 코디에 사용된 상품 정보(JSON) */
     @Column(name = "outfit_item", nullable = false, columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)

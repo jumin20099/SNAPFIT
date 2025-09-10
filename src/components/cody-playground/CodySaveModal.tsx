@@ -31,6 +31,7 @@ export function CodySaveModal({
   const [isSaved, setIsSaved] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [codyName, setCodyName] = useState('')
 
   // 코디를 이미지로 다운로드
   const handleDownloadImage = async () => {
@@ -87,8 +88,14 @@ export function CodySaveModal({
 
   // 코디 데이터를 데이터베이스에 저장
   const handleSaveCody = async () => {
+    if (!codyName.trim()) {
+      alert('코디 이름을 입력해주세요.')
+      return
+    }
+
     try {
       const outfitData: OutfitData = {
+        name: codyName.trim(),
         items: codyData.items,
         background: codyData.background,
         timestamp: codyData.timestamp
@@ -104,6 +111,7 @@ export function CodySaveModal({
         const savedCodies = JSON.parse(localStorage.getItem('my-codies') || '[]')
         const newCody = {
           id: Date.now().toString(),
+          name: codyName.trim(),
           ...codyData,
           createdAt: new Date().toISOString()
         }
@@ -190,6 +198,24 @@ export function CodySaveModal({
             </motion.div>
           ) : (
             <div className="space-y-4">
+              {/* 코디 이름 입력 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  코디 이름
+                </label>
+                <input
+                  type="text"
+                  value={codyName}
+                  onChange={(e) => setCodyName(e.target.value)}
+                  placeholder="예: 오늘의 캐주얼 룩"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  maxLength={50}
+                />
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {codyName.length}/50
+                </div>
+              </div>
+
               {/* 코디 미리보기 */}
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center">
                 <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
@@ -205,6 +231,7 @@ export function CodySaveModal({
                 onClick={handleSaveCody}
                 className="w-full"
                 size="lg"
+                disabled={!codyName.trim()}
               >
                 <Check className="w-4 h-4 mr-2" />
                 코디 저장하기

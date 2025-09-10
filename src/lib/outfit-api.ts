@@ -1,6 +1,7 @@
 // 코디 관련 API 함수들
 
 export interface OutfitData {
+  name: string
   items: any[]
   background: {
     type: 'color' | 'image'
@@ -41,6 +42,7 @@ export async function saveOutfitToDatabase(outfitData: OutfitData): Promise<Outf
       'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
+      outfitName: outfitData.name,
       outfitItem: JSON.stringify(outfitData),
       outfitThumbnail: null, // 썸네일은 나중에 구현
       isPublic: true

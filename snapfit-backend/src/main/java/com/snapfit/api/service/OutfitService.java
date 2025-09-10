@@ -34,6 +34,7 @@ public class OutfitService {
     public Outfit createOutfit(OutfitDto dto, User user) {
         Outfit outfit = Outfit.builder()
                 .user(user)
+                .outfitName(dto.getOutfitName())
                 .outfitItem(dto.getOutfitItem())
                 .outfitThumbnail(dto.getOutfitThumbnail())
                 .isPublic(dto.getIsPublic())
@@ -61,6 +62,9 @@ public class OutfitService {
         }
 
         // 필드 변경
+        if (dto.getOutfitName() != null) {
+            outfit.setOutfitName(dto.getOutfitName());
+        }
         if (dto.getOutfitItem() != null) {
             outfit.setOutfitItem(dto.getOutfitItem());
         }
