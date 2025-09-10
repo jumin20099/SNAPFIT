@@ -1,5 +1,7 @@
 package com.snapfit.api.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.snapfit.api.dto.OutfitDto;
 import com.snapfit.api.entity.Outfit;
 import com.snapfit.api.entity.User;
@@ -27,12 +29,24 @@ class OutfitServiceTest {
     OutfitService outfitService;
 
     @Test
-    void createOutfit_returns_saved_entity() {
+    void createOutfit_returns_saved_entity() throws Exception {
         // given
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode outfitItem = objectMapper.readTree("{\"items\":[],\"background\":{\"type\":\"color\",\"selectedBackground\":\"white\"}}");
+        
         User user = User.builder().userIdx(UUID.randomUUID()).email("test@ex.com").provider("kakao").providerId("1").build();
         OutfitDto dto = new OutfitDto();
-        dto.setOutfitItem("{}");
-        Outfit saved = Outfit.builder().outfitIdx(1L).user(user).outfitItem("{}").build();
+        dto.setOutfitName("테스트 코디");
+        dto.setOutfitItem(outfitItem);
+        dto.setIsPublic(true);
+        
+        Outfit saved = Outfit.builder()
+                .outfitIdx(1L)
+                .user(user)
+                .outfitName("테스트 코디")
+                .outfitItem(outfitItem)
+                .isPublic(true)
+                .build();
         when(outfitRepository.save(any(Outfit.class))).thenReturn(saved);
 
         // when
