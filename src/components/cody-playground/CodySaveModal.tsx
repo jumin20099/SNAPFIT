@@ -36,13 +36,16 @@ export function CodySaveModal({
 
   // 코디를 이미지로 다운로드
   const handleDownloadImage = async () => {
+    console.log('=== handleDownloadImage 호출됨 ===', { codyData, codyName })
     setIsDownloading(true)
     try {
       const filename = codyName.trim() 
         ? `${codyName.trim()}-${new Date().toISOString().split('T')[0]}.png`
         : `cody-${new Date().toISOString().split('T')[0]}.png`
       
+      console.log('다운로드할 파일명:', filename)
       await downloadCodyAsImage(codyData, filename)
+      console.log('이미지 다운로드 완료')
     } catch (error) {
       console.error('이미지 다운로드 실패:', error)
       alert('이미지 다운로드에 실패했습니다. 다시 시도해주세요.')
