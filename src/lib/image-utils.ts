@@ -29,11 +29,16 @@ export async function downloadCodyAsImage(codyData: CodyImageData, filename?: st
         ? (codyData.background.customColor || codyData.background.selectedBackground)
         : '#ffffff',
       scale: 2, // 고해상도
-      useCORS: true,
-      allowTaint: true,
+      useCORS: false, // CORS 비활성화
+      allowTaint: true, // tainted canvas 허용
       logging: false,
       width: codyContainer.offsetWidth,
-      height: codyContainer.offsetHeight
+      height: codyContainer.offsetHeight,
+      foreignObjectRendering: false, // 외부 객체 렌더링 비활성화
+      ignoreElements: (element) => {
+        // S3 이미지 요소는 무시하고 대체 이미지 사용
+        return element.tagName === 'IMG' && element.src.includes('snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com')
+      }
     })
 
     // 이미지 다운로드
@@ -67,11 +72,16 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
         ? (codyData.background.customColor || codyData.background.selectedBackground)
         : '#ffffff',
       scale: 1,
-      useCORS: true,
-      allowTaint: true,
+      useCORS: false, // CORS 비활성화
+      allowTaint: true, // tainted canvas 허용
       logging: false,
       width: size,
-      height: size
+      height: size,
+      foreignObjectRendering: false, // 외부 객체 렌더링 비활성화
+      ignoreElements: (element) => {
+        // S3 이미지 요소는 무시하고 대체 이미지 사용
+        return element.tagName === 'IMG' && element.src.includes('snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com')
+      }
     })
 
     return canvas.toDataURL('image/png', 0.8)
