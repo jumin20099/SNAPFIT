@@ -13,24 +13,24 @@ export interface CodyImageData {
 const BASE_W = 400
 const BASE_H = 600
 
-// 카테고리별 이미지 크기 설정 (px 단위) - 실제 코디와 동일
+// 카테고리별 이미지 크기 설정 (px 단위) - 실제 화면 크기에 맞게 조정
 const ITEM_SIZES: Record<string, { width: number; height: number }> = {
-  top: { width: 500, height: 500 },
-  outer: { width: 700, height: 700 },
-  bottom: { width: 700, height: 700 },
-  dresses: { width: 250, height: 350 },
-  shoes: { width: 350, height: 350 },
-  bag: { width: 400, height: 400 },
-  hat: { width: 300, height: 300 },
-  glasses: { width: 300, height: 300 },
-  watch: { width: 250, height: 250 },
-  belt: { width: 100, height: 40 },
-  socks: { width: 80, height: 120 },
-  jewelry: { width: 300, height: 300 },
-  accessory: { width: 200, height: 200 },
-  ring: { width: 200, height: 200 },
-  bracelet: { width: 200, height: 200 },
-  necklace: { width: 200, height: 200 },
+  top: { width: 120, height: 120 },        // 상의: 적당한 크기
+  outer: { width: 140, height: 140 },      // 아우터: 상의보다 약간 크게
+  bottom: { width: 130, height: 180 },     // 하의: 세로로 길게
+  dresses: { width: 100, height: 140 },    // 원피스: 세로로 길게
+  shoes: { width: 100, height: 100 },      // 신발: 정사각형
+  bag: { width: 80, height: 100 },         // 가방: 세로로 길게
+  hat: { width: 80, height: 60 },          // 모자: 가로로 넓게
+  glasses: { width: 60, height: 40 },      // 선글라스: 작고 가로로 넓게
+  watch: { width: 50, height: 50 },        // 시계: 작은 정사각형
+  belt: { width: 80, height: 20 },         // 벨트: 가로로 매우 길게
+  socks: { width: 30, height: 50 },        // 양말: 세로로 길게
+  jewelry: { width: 40, height: 40 },      // 주얼리: 작은 정사각형
+  accessory: { width: 50, height: 50 },    // 기타 액세서리: 작은 정사각형
+  ring: { width: 30, height: 30 },         // 반지: 매우 작은 정사각형
+  bracelet: { width: 40, height: 40 },     // 팔찌: 작은 정사각형
+  necklace: { width: 40, height: 40 },     // 목걸이: 작은 정사각형
 }
 
 // ViewTransform 타입 정의
