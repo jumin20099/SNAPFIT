@@ -35,10 +35,16 @@ export async function downloadCodyAsImage(codyData: CodyImageData, filename?: st
       width: codyContainer.offsetWidth,
       height: codyContainer.offsetHeight,
       foreignObjectRendering: true, // 외부 객체 렌더링 활성화
-      proxy: '/api/image-proxy', // 모든 이미지 요청을 프록시를 통해 처리
       onclone: async (clonedDoc) => {
-        // 클론된 문서에서 모든 이미지가 로드될 때까지 기다립니다
+        // 클론된 문서에서 S3 이미지들을 프록시 URL로 변경
         const images = clonedDoc.querySelectorAll('img')
+        images.forEach(img => {
+          if (img.src.includes('snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com')) {
+            img.src = `/api/image-proxy?url=${encodeURIComponent(img.src)}`
+          }
+        })
+        
+        // 모든 이미지가 로드될 때까지 기다립니다
         const promises = Array.from(images).map(img => {
           if (img.complete) return Promise.resolve()
           return new Promise((resolve, reject) => {
@@ -87,10 +93,16 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
       width: size,
       height: size,
       foreignObjectRendering: true, // 외부 객체 렌더링 활성화
-      proxy: '/api/image-proxy', // 모든 이미지 요청을 프록시를 통해 처리
       onclone: async (clonedDoc) => {
-        // 클론된 문서에서 모든 이미지가 로드될 때까지 기다립니다
+        // 클론된 문서에서 S3 이미지들을 프록시 URL로 변경
         const images = clonedDoc.querySelectorAll('img')
+        images.forEach(img => {
+          if (img.src.includes('snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com')) {
+            img.src = `/api/image-proxy?url=${encodeURIComponent(img.src)}`
+          }
+        })
+        
+        // 모든 이미지가 로드될 때까지 기다립니다
         const promises = Array.from(images).map(img => {
           if (img.complete) return Promise.resolve()
           return new Promise((resolve, reject) => {
