@@ -10,9 +10,6 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { CodyDisplay } from '@/components/ui/CodyDisplay'
-import { getPublicOutfits, type OutfitResponse } from '@/lib/outfit-api'
-import { downloadCodyAsImage } from '@/lib/image-utils'
 
 interface Post {
   postId: number
@@ -27,16 +24,6 @@ interface Post {
   scraped: boolean
   mediaUrls?: string[]
   tags?: string[]
-  type?: 'text' | 'cody'
-  codyData?: {
-    items: any[]
-    background: {
-      type: 'color' | 'image'
-      selectedBackground: string
-      customColor: string
-    }
-    timestamp: number
-  }
 }
 
 export default function CommunityPage() {
@@ -64,34 +51,8 @@ export default function CommunityPage() {
           // 데이터가 배열인지 확인하고 안전하게 설정
           const postsArray = Array.isArray(data) ? data : (data.content || [])
           
-          // 데이터베이스에서 공개 코디 로드
-          try {
-            const publicOutfits = await getPublicOutfits()
-            const codyPosts = publicOutfits.map(outfit => ({
-              postId: outfit.outfitIdx,
-              content: `코디 아이템 ${JSON.parse(outfit.outfitItem).items.length}개로 구성된 오늘의 코디입니다.`,
-              authorName: outfit.user.nickname || '익명',
-              authorProfileImage: '',
-              createdAt: outfit.createdAt,
-              likeCount: 0,
-              commentCount: 0,
-              scrapCount: 0,
-              liked: false,
-              scraped: false,
-              tags: ['코디', '패션'],
-              type: 'cody',
-              codyData: JSON.parse(outfit.outfitItem)
-            }))
-            
-            const allPosts = [...postsArray, ...codyPosts]
-            setPosts(allPosts)
-            setFilteredPosts(allPosts)
-          } catch (error) {
-            console.error('공개 코디 로드 실패:', error)
-            // 실패 시 기존 게시글만 표시
-            setPosts(postsArray)
-            setFilteredPosts(postsArray)
-          }
+          setPosts(postsArray)
+          setFilteredPosts(postsArray)
       } else {
           throw new Error(`게시글 로드 실패: ${response.status}`)
       }
@@ -149,19 +110,6 @@ export default function CommunityPage() {
     setFilteredPosts(filtered)
   }, [posts, searchTerm, sortBy, activeTab])
 
-  // 코디 이미지 다운로드
-  const handleDownloadCodyImage = async (codyData: any) => {
-    try {
-      const filename = codyData.name 
-        ? `${codyData.name}-${new Date().toISOString().split('T')[0]}.png`
-        : `cody-${new Date().toISOString().split('T')[0]}.png`
-      
-      await downloadCodyAsImage(codyData, filename)
-    } catch (error) {
-      console.error('이미지 다운로드 실패:', error)
-      alert('이미지 다운로드에 실패했습니다. 다시 시도해주세요.')
-    }
-  }
 
   // 좋아요 토글
   const handleLike = async (postId: number) => {
@@ -230,6 +178,14 @@ export default function CommunityPage() {
             
             {/* 우측 아이콘들 */}
             <div className="flex items-center gap-4">
+              {/* 글 작성 버튼 */}
+              <Button
+                onClick={() => router.push('/community/create')}
+                className="bg-light-accent dark:bg-dark-accent hover:bg-light-accent/90 dark:hover:bg-dark-accent/90 text-white px-4 py-2 rounded-lg font-medium"
+              >
+                글 작성
+              </Button>
+              
               <button
                 onClick={() => setShowSearch(!showSearch)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
@@ -407,36 +363,23 @@ interface PostCardProps {
 function PostCard({ post, onLike, onClick }: PostCardProps) {
   return (
     <div 
-      className="relative cursor-pointer group aspect-square"
+      className="relative cursor-pointer group"
       onClick={onClick}
     >
-      {/* 코디 게시글인 경우 */}
-      {post.type === 'cody' && post.codyData ? (
-        <div className="w-full h-full bg-gray-200 rounded-lg overflow-hidden">
-          <CodyDisplay
-            codyData={post.codyData}
-            showProductInfo={false}
-            className="w-full h-full"
-            showDownloadButton={true}
-            onDownload={() => handleDownloadCodyImage(post.codyData)}
+      {/* 게시글 이미지 */}
+      <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
+        {post.mediaUrls && post.mediaUrls.length > 0 ? (
+          <img
+            src={post.mediaUrls[0]}
+            alt="게시글 이미지"
+            className="w-full h-full object-cover"
           />
-        </div>
-      ) : (
-        /* 일반 게시글 이미지 */
-        <div className="w-full h-full bg-gray-200 rounded-lg overflow-hidden">
-          {post.mediaUrls && post.mediaUrls.length > 0 ? (
-            <img
-              src={post.mediaUrls[0]}
-              alt="게시글 이미지"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-              <span className="text-gray-500 text-sm">이미지 없음</span>
-            </div>
-          )}
-        </div>
-      )}
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+            <span className="text-gray-500 text-sm">이미지 없음</span>
+          </div>
+        )}
+      </div>
         
       {/* 우측 하단 좋아요 버튼 */}
       <button
@@ -444,7 +387,7 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
           e.stopPropagation()
           onLike()
         }}
-        className="absolute bottom-2 right-2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-sm transition-all duration-200 hover:scale-110 border border-gray-200"
+        className="absolute top-2 right-2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-sm transition-all duration-200 hover:scale-110 border border-gray-200"
       >
         <Heart 
           className={`w-4 h-4 ${post.liked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 

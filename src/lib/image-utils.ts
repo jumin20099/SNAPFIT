@@ -22,7 +22,7 @@ function convertToProxyUrl(originalUrl: string): string {
 /**
  * 코디 영역을 스크린샷으로 캡처하여 이미지로 다운로드
  */
-export async function downloadCodyAsImage(codyData: CodyImageData, filename?: string): Promise<void> {
+export async function downloadCodyAsImage(codyData: CodyImageData, filename?: string): Promise<Blob> {
   console.log('=== downloadCodyAsImage 시작 ===', { codyData, filename })
   try {
     // 코디 플레이그라운드 컨테이너 찾기
@@ -224,13 +224,18 @@ export async function downloadCodyAsImage(codyData: CodyImageData, filename?: st
       ctx.drawImage(canvas, 0, 0, highResCanvas.width, highResCanvas.height)
     }
     
-    // 이미지 다운로드
-    console.log('이미지 다운로드 시작...')
-    const link = document.createElement('a')
-    link.download = filename || `cody-${new Date().toISOString().split('T')[0]}.png`
-    link.href = highResCanvas.toDataURL('image/png', 1.0)
-    link.click()
-    console.log('이미지 다운로드 완료')
+    // Canvas를 Blob으로 변환하여 반환
+    console.log('Blob 변환 시작...')
+    return new Promise<Blob>((resolve, reject) => {
+      highResCanvas.toBlob((blob) => {
+        if (blob) {
+          console.log('Blob 변환 완료')
+          resolve(blob)
+        } else {
+          reject(new Error('Blob 변환 실패'))
+        }
+      }, 'image/png', 1.0)
+    })
   } catch (error) {
     console.error('이미지 생성 실패:', error)
     throw error

@@ -44,7 +44,16 @@ export function CodySaveModal({
         : `cody-${new Date().toISOString().split('T')[0]}.png`
       
       console.log('다운로드할 파일명:', filename)
-      await downloadCodyAsImage(codyData, filename)
+      const blob = await downloadCodyAsImage(codyData, filename)
+      
+      // Blob을 다운로드
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      link.click()
+      URL.revokeObjectURL(url)
+      
       console.log('이미지 다운로드 완료')
     } catch (error) {
       console.error('이미지 다운로드 실패:', error)
@@ -56,33 +65,43 @@ export function CodySaveModal({
 
   // 커뮤니티 게시글로 export
   const handleExportToCommunity = async () => {
+    if (!codyName.trim()) {
+      alert('코디 이름을 입력해주세요.')
+      return
+    }
+
     setIsExporting(true)
     try {
-      // 코디 데이터를 커뮤니티 게시글 형태로 변환
-      const codyPost = {
-        postId: Date.now(), // 임시 ID
-        type: 'cody',
-        content: `코디 아이템 ${codyData.items.length}개로 구성된 오늘의 코디입니다.`,
-        authorName: '나',
-        authorProfileImage: '',
-        createdAt: new Date().toISOString(),
-        likeCount: 0,
-        commentCount: 0,
-        scrapCount: 0,
-        liked: false,
-        scraped: false,
-        tags: ['코디', '패션'],
-        codyData: codyData
+      // 코디 이미지 생성
+      const codyImageBlob = await downloadCodyAsImage(codyData, `${codyName.trim()}-community.png`)
+      
+      // Blob을 Base64로 변환
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64Image = reader.result as string
+        
+        // 코디 데이터에 이름 추가
+        const codyDataWithName = {
+          ...codyData,
+          name: codyName.trim()
+        }
+        
+        // localStorage에 데이터 저장 (URL 파라미터 대신)
+        const exportData = {
+          codyData: codyDataWithName,
+          codyImage: base64Image,
+          timestamp: Date.now()
+        }
+        localStorage.setItem('cody-export-data', JSON.stringify(exportData))
+        
+        // 게시글 작성 페이지로 이동
+        window.location.href = '/community/create'
       }
+      reader.readAsDataURL(codyImageBlob)
       
-      // localStorage에 임시 저장 (실제로는 API 호출)
-      const existingPosts = JSON.parse(localStorage.getItem('community-posts') || '[]')
-      existingPosts.unshift(codyPost)
-      localStorage.setItem('community-posts', JSON.stringify(existingPosts))
-      
-      onSaveToCommunity?.()
     } catch (error) {
       console.error('커뮤니티 export 실패:', error)
+      alert('커뮤니티 공유에 실패했습니다. 다시 시도해주세요.')
     } finally {
       setIsExporting(false)
     }
@@ -248,6 +267,16 @@ export function CodySaveModal({
                 >
                   <Download className="w-4 h-4 mr-2" />
                   {isDownloading ? '이미지 생성 중...' : '이미지로 저장'}
+                </Button>
+
+                <Button
+                  onClick={handleExportToCommunity}
+                  disabled={isExporting || !codyName.trim()}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <Share2 className="w-4 h-4 mr-2" />
+                  {isExporting ? '커뮤니티 업로드 중...' : '커뮤니티로 내보내기'}
                 </Button>
               </div>
             </div>

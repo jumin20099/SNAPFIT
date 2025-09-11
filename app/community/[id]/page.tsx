@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
+import { CodyProductList } from "@/components/ui/CodyProductList"
 import { useRouter, useParams } from "next/navigation"
 import { isCurrentUserPostAuthor } from "@/lib/auth-utils"
 import { useDeletePost } from "@/hooks/useDeletePost"
@@ -36,6 +37,15 @@ interface Post {
   liked?: boolean
   scraped?: boolean
   type?: string
+  codyData?: {
+    items: any[]
+    background: {
+      type: 'color' | 'image'
+      selectedBackground: string
+      customColor: string
+    }
+    timestamp: number
+  }
 }
 
 export default function PostDetailPage() {
@@ -552,11 +562,34 @@ export default function PostDetailPage() {
 
             {/* Main Image */}
             <div className="relative">
-              <img
-                src={post.mediaUrls?.[0] || "/placeholder.svg"}
-                alt={post.content.substring(0, 20)}
-                className="w-full h-auto"
-              />
+              {post.type === 'cody' && post.codyData ? (
+                <div className="space-y-4">
+                  {/* 코디 이미지 */}
+                  <img
+                    src={post.mediaUrls?.[0] || "/placeholder.svg"}
+                    alt={post.content.substring(0, 20)}
+                    className="w-full h-auto"
+                  />
+                  
+                  {/* 코디 상품 정보 */}
+                  <div className="px-4">
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                      사용된 상품
+                    </h4>
+                    <CodyProductList
+                      items={post.codyData.items}
+                      showScrollButtons={true}
+                      className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src={post.mediaUrls?.[0] || "/placeholder.svg"}
+                  alt={post.content.substring(0, 20)}
+                  className="w-full h-auto"
+                />
+              )}
             </div>
 
             {/* Interaction Buttons */}

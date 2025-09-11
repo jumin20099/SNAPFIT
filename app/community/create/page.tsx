@@ -1,0 +1,269 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Image as ImageIcon, Tag, Send, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+
+export default function CreatePostPage() {
+  const router = useRouter()
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+  const [images, setImages] = useState<string[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // 태그 추가
+  const handleAddTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      setTags([...tags, tagInput.trim()])
+      setTagInput('')
+    }
+  }
+
+  // 태그 제거
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove))
+  }
+
+  // 이미지 업로드
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files && files.length > 0) {
+      const file = files[0]
+      
+      // 파일 타입 검증
+      if (!file.type.startsWith('image/')) {
+        alert('이미지 파일만 업로드 가능합니다.')
+        return
+      }
+      
+      // 파일 크기 검증 (5MB 제한)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('파일 크기는 5MB 이하여야 합니다.')
+        return
+      }
+      
+      // 이미지 개수 제한 (최대 5개)
+      if (images.length >= 5) {
+        alert('최대 5개의 이미지만 업로드 가능합니다.')
+        return
+      }
+      
+      // FileReader로 이미지를 Base64로 변환
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setImages([...images, e.target.result as string])
+        }
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // 이미지 제거
+  const handleRemoveImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index))
+  }
+
+  // 게시글 제출
+  const handleSubmit = async () => {
+    if (!title.trim() || !content.trim()) {
+      alert('제목과 내용을 입력해주세요.')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const postData = {
+        title: title.trim(),
+        content: content.trim(),
+        tags: tags,
+        mediaUrls: images
+      }
+
+      // 실제 API 호출
+      console.log('게시글 작성 요청 데이터:', postData)
+      
+      const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+      })
+
+      console.log('API 응답 상태:', response.status, response.statusText)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('API 에러 응답:', errorData)
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+      }
+
+      const result = await response.json()
+      console.log('게시글 작성 성공:', result)
+      
+      alert('게시글이 성공적으로 작성되었습니다! 🎉')
+      router.push('/community')
+    } catch (error) {
+      console.error('게시글 작성 실패:', error)
+      alert(`게시글 작성에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-dark-bg">
+      {/* 헤더 */}
+      <div className="bg-white dark:bg-dark-sub border-b border-gray-200 dark:border-dark-border sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.back()}
+                className="p-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-lg font-semibold">글 작성</h1>
+            </div>
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !title.trim() || !content.trim()}
+              size="sm"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              {isSubmitting ? '게시 중...' : '게시'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* 메인 컨텐츠 */}
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* 제목 입력 */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            제목
+          </label>
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="제목을 입력하세요"
+            className="w-full"
+            maxLength={100}
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            {title.length}/100
+          </div>
+        </div>
+
+        {/* 내용 입력 */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            내용
+          </label>
+          <Textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="내용을 입력하세요"
+            className="w-full min-h-[200px]"
+            maxLength={1000}
+          />
+          <div className="text-xs text-gray-500 mt-1">
+            {content.length}/1000
+          </div>
+        </div>
+
+        {/* 이미지 업로드 */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            이미지
+          </label>
+          <div className="space-y-3">
+            {images.map((image, index) => (
+              <div key={index} className="relative">
+                <img
+                  src={image}
+                  alt={`업로드된 이미지 ${index + 1}`}
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+                <button
+                  onClick={() => handleRemoveImage(index)}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            <label className="block">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={images.length >= 5}
+              />
+              <div className="w-full h-32 border-dashed border-2 border-gray-300 hover:border-gray-400 rounded-lg cursor-pointer flex items-center justify-center hover:bg-gray-50 transition-colors">
+                <div className="text-center">
+                  <ImageIcon className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                  <p className="text-sm text-gray-500">
+                    {images.length >= 5 ? '최대 5개까지 업로드 가능' : '이미지 추가'}
+                  </p>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* 태그 입력 */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            태그
+          </label>
+          <div className="flex gap-2 mb-3">
+            <Input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              placeholder="태그를 입력하세요"
+              className="flex-1"
+              onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+            />
+            <Button
+              type="button"
+              onClick={handleAddTag}
+              disabled={!tagInput.trim()}
+              size="sm"
+            >
+              <Tag className="w-4 h-4 mr-1" />
+              추가
+            </Button>
+          </div>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag, index) => (
+                <Badge
+                  key={index}
+                  variant="secondary"
+                  className="px-3 py-1 cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleRemoveTag(tag)}
+                >
+                  {tag}
+                  <X className="w-3 h-3 ml-1" />
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
