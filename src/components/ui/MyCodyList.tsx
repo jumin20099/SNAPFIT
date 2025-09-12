@@ -134,7 +134,7 @@ export function MyCodyList() {
   }
 
   // 커뮤니티에 공유
-  const handleShareToCommunity = (cody: SavedCody) => {
+  const handleShareToCommunity = (cody: OutfitResponse) => {
     // 커뮤니티 게시글 생성 로직
     console.log('커뮤니티 공유:', cody)
   }

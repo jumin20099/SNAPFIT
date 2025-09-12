@@ -46,7 +46,7 @@ export const DynamicPages = {
   ProductGrid: createDynamicImport(() => import('@/widgets/product-grid/product-grid').then(mod => ({ default: mod.ProductGrid }))),
   
   // 코디 관련 페이지
-  CodySystem: createDynamicImport(() => import('@/components/cody-system').then(mod => ({ default: mod.default }))),
+  // CodySystem: createDynamicImport(() => import('@/components/cody-system').then(mod => ({ default: mod.default }))),
   CodyPlayground: createDynamicImport(() => import('@/components/cody-playground').then(mod => ({ default: mod.CodyPlayground }))),
   
   // 사용자 관련 페이지는 제거됨

@@ -50,8 +50,8 @@ public class CommunityService {
             // 태그 통계
             List<Object[]> tagStats = tagRepository.getTagStatistics();
             
-            // 댓글 통계
-            Object[] commentStats = commentRepository.getCommentStatistics();
+            // 댓글 통계 (임시 비활성화)
+            // Object[] commentStats = commentRepository.getCommentStatistics();
             
             // 신고 통계 (임시 비활성화)
             // List<Object[]> reportStats = reportRepository.getReportStatistics();
@@ -65,7 +65,7 @@ public class CommunityService {
                     "avgScraps", postStats[4]
                 ),
                 "tags", tagStats,
-                "comments", commentStats,
+                "comments", Map.of("total", 0, "recent", 0), // 임시 비활성화
                 // "reports", reportStats, // 임시 비활성화
                 "lastUpdated", LocalDateTime.now()
             );
@@ -91,7 +91,8 @@ public class CommunityService {
             long postCount = postRepository.countByAuthorId(userId);
             
             // 댓글 수
-            long commentCount = commentRepository.countByAuthorId(userId);
+            // long commentCount = commentRepository.countByAuthorId(userId);
+            long commentCount = 0L; // 임시 비활성화
             
             // 스크랩 수
             long scrapCount = scrapRepository.countByUserId(userId);
@@ -134,7 +135,8 @@ public class CommunityService {
             Page<Post> posts = postRepository.searchPostsByContentAndTags(searchTerm, pageable);
             
             // 댓글 검색
-            Page<Comment> comments = commentRepository.searchByContent(searchTerm, pageable);
+            // Page<Comment> comments = commentRepository.searchByContent(searchTerm, pageable);
+            Page<Comment> comments = Page.empty(); // 임시 비활성화
             
             // 태그 검색
             List<Tag> tags = tagRepository.findByNamePatternOrderByPostCountDesc(searchTerm);
@@ -176,7 +178,8 @@ public class CommunityService {
             Page<Tag> topTags = tagRepository.findTopTagsByPostCount(pageable);
             
             // 최근 댓글
-            Page<Comment> recentComments = commentRepository.findTopLevelCommentsByPostId(1L, pageable);
+            // Page<Comment> recentComments = commentRepository.findTopLevelCommentsByPostId(1L, pageable);
+            Page<Comment> recentComments = Page.empty(); // 임시 비활성화
             
             Map<String, Object> trendingContent = Map.of(
                 "topPosts", topPosts,

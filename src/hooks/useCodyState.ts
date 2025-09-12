@@ -232,10 +232,11 @@ export function useCodyState() {
         await new Promise((resolve, reject) => {
           img.onload = resolve
           img.onerror = reject
-          img.src = product.productImage
+          img.src = product?.productImage || '/placeholder.svg'
         })
 
         // 상품 이미지를 적절한 위치에 그리기
+        if (!product) return
         const category = product.majorCategory
         const mannequinPart = categoryToMannequinMap[category]
         

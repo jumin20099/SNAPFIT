@@ -99,8 +99,9 @@ export async function downloadCodyAsImage(codyData: CodyImageData, filename?: st
     const imagesToConvert = codyContainer.querySelectorAll('img[src*="snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com"]')
     const originalUrls: string[] = []
     
-    imagesToConvert.forEach((img: HTMLImageElement, index) => {
-      originalUrls[index] = img.src
+    imagesToConvert.forEach((img, index) => {
+      const imageElement = img as HTMLImageElement
+      originalUrls[index] = imageElement.src
     })
     console.log('원본 이미지 URL 저장 완료')
 
@@ -140,35 +141,36 @@ export async function downloadCodyAsImage(codyData: CodyImageData, filename?: st
         const clonedImages = clonedDoc.querySelectorAll('img[src*="snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com"]');
         console.log(`클론된 이미지 개수: ${clonedImages.length}`);
         
-        const cloneImagePromises = Array.from(clonedImages).map((img: HTMLImageElement, index) => {
+        const cloneImagePromises = Array.from(clonedImages).map((img, index) => {
+          const imageElement = img as HTMLImageElement
           return new Promise<void>((resolve) => {
-            const proxyUrl = convertToProxyUrl(img.src);
-            console.log(`클론 이미지 ${index} URL 변환: ${img.src} -> ${proxyUrl}`);
-            img.src = proxyUrl;
+            const proxyUrl = convertToProxyUrl(imageElement.src);
+            console.log(`클론 이미지 ${index} URL 변환: ${imageElement.src} -> ${proxyUrl}`);
+            imageElement.src = proxyUrl;
             
             // 이미지 로딩 완료 대기 (더 엄격한 확인)
             const checkImageLoaded = () => {
-              if (img.complete && img.naturalHeight > 0 && img.naturalWidth > 0) {
-                console.log(`클론 이미지 ${index} 로딩 완료: ${img.src}`);
+              if (imageElement.complete && imageElement.naturalHeight > 0 && imageElement.naturalWidth > 0) {
+                console.log(`클론 이미지 ${index} 로딩 완료: ${imageElement.src}`);
                 resolve();
               }
             };
             
-            if (img.complete && img.naturalHeight > 0 && img.naturalWidth > 0) {
+            if (imageElement.complete && imageElement.naturalHeight > 0 && imageElement.naturalWidth > 0) {
               resolve();
             } else {
               const timeout = setTimeout(() => {
-                console.warn(`클론 이미지 ${index} 로딩 타임아웃: ${img.src}`);
+                console.warn(`클론 이미지 ${index} 로딩 타임아웃: ${imageElement.src}`);
                 resolve();
               }, 10000);
               
-              img.onload = () => {
+              imageElement.onload = () => {
                 clearTimeout(timeout);
                 checkImageLoaded();
               };
-              img.onerror = () => {
+              imageElement.onerror = () => {
                 clearTimeout(timeout);
-                console.warn(`클론 이미지 ${index} 로딩 실패: ${img.src}`);
+                console.warn(`클론 이미지 ${index} 로딩 실패: ${imageElement.src}`);
                 resolve();
               };
               
@@ -200,9 +202,10 @@ export async function downloadCodyAsImage(codyData: CodyImageData, filename?: st
 
     // 원본 URL로 복원
     console.log('이미지 URL을 원본으로 복원 시작...')
-    imagesToConvert.forEach((img: HTMLImageElement, index) => {
+    imagesToConvert.forEach((img, index) => {
+      const imageElement = img as HTMLImageElement
       if (originalUrls[index]) {
-        img.src = originalUrls[index]
+        imageElement.src = originalUrls[index]
       }
     })
     console.log('이미지 URL 복원 완료')
@@ -390,40 +393,42 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
     const imagesToConvert = codyContainer.querySelectorAll('img[src*="snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com"]')
     const originalUrls: string[] = []
     
-    imagesToConvert.forEach((img: HTMLImageElement, index) => {
-      originalUrls[index] = img.src
-      const proxyUrl = convertToProxyUrl(img.src)
-      img.src = proxyUrl
+    imagesToConvert.forEach((img, index) => {
+      const imageElement = img as HTMLImageElement
+      originalUrls[index] = imageElement.src
+      const proxyUrl = convertToProxyUrl(imageElement.src)
+      imageElement.src = proxyUrl
     })
 
     // 추가 대기: 프록시 이미지 안정화
     await new Promise(resolve => setTimeout(resolve, 300))
 
     // 프록시 이미지들이 완전히 로드될 때까지 대기
-    const proxyImageLoadPromises = Array.from(imagesToConvert).map((img: HTMLImageElement, index) => {
+    const proxyImageLoadPromises = Array.from(imagesToConvert).map((img, index) => {
+      const imageElement = img as HTMLImageElement
       return new Promise<void>((resolve) => {
         // 이미 로드된 경우
-        if (img.complete && img.naturalHeight > 0 && img.naturalWidth > 0) {
+        if (imageElement.complete && imageElement.naturalHeight > 0 && imageElement.naturalWidth > 0) {
           resolve()
           return
         }
         
         const timeout = setTimeout(() => {
-          console.warn(`프록시 이미지 ${index} 로딩 타임아웃:`, img.src)
+          console.warn(`프록시 이미지 ${index} 로딩 타임아웃:`, imageElement.src)
           resolve()
         }, 10000)
         
         const checkProxyImageLoaded = () => {
-          if (img.complete && img.naturalHeight > 0 && img.naturalWidth > 0) {
+          if (imageElement.complete && imageElement.naturalHeight > 0 && imageElement.naturalWidth > 0) {
             clearTimeout(timeout)
             resolve()
           }
         }
         
-        img.onload = checkProxyImageLoaded
-        img.onerror = () => {
+        imageElement.onload = checkProxyImageLoaded
+        imageElement.onerror = () => {
           clearTimeout(timeout)
-          console.warn(`프록시 이미지 ${index} 로딩 실패:`, img.src)
+          console.warn(`프록시 이미지 ${index} 로딩 실패:`, imageElement.src)
           resolve()
         }
         
@@ -454,21 +459,22 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
       onclone: async (clonedDoc) => {
         // 클론된 문서에서 프록시 URL로 이미지 변환
         const clonedImages = clonedDoc.querySelectorAll('img[src*="snapfit-static-bucket.s3.ap-northeast-2.amazonaws.com"]');
-        const cloneImagePromises = Array.from(clonedImages).map((img: HTMLImageElement) => {
+        const cloneImagePromises = Array.from(clonedImages).map((img) => {
+          const imageElement = img as HTMLImageElement
           return new Promise<void>((resolve) => {
-            const proxyUrl = convertToProxyUrl(img.src);
-            img.src = proxyUrl;
+            const proxyUrl = convertToProxyUrl(imageElement.src);
+            imageElement.src = proxyUrl;
             
             // 이미지 로딩 완료 대기
-            if (img.complete && img.naturalHeight > 0) {
+            if (imageElement.complete && imageElement.naturalHeight > 0) {
               resolve();
             } else {
               const timeout = setTimeout(() => resolve(), 5000);
-              img.onload = () => {
+              imageElement.onload = () => {
                 clearTimeout(timeout);
                 resolve();
               };
-              img.onerror = () => {
+              imageElement.onerror = () => {
                 clearTimeout(timeout);
                 resolve();
               };
@@ -482,9 +488,10 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
     })
 
     // 원본 URL로 복원
-    imagesToConvert.forEach((img: HTMLImageElement, index) => {
+    imagesToConvert.forEach((img, index) => {
+      const imageElement = img as HTMLImageElement
       if (originalUrls[index]) {
-        img.src = originalUrls[index]
+        imageElement.src = originalUrls[index]
       }
     })
 

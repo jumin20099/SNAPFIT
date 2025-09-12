@@ -27,4 +27,8 @@ public class PostResponseDto {
     private LocalDateTime updatedAt;
     private Boolean isLiked;
     private Boolean isScrapped;
+    
+    // 코디 관련 필드
+    private Long outfitId;
+    private CreatePostRequestDto.CodyData codyData;
 }

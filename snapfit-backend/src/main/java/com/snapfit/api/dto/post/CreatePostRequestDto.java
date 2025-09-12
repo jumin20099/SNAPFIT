@@ -25,4 +25,33 @@ public class CreatePostRequestDto {
 
     @Size(max = 10, message = "이미지는 최대 10개까지 가능합니다")
     private List<String> mediaUrls;
+
+    // 코디 관련 필드 (선택사항)
+    private CodyData codyData;
+
+    @Data
+    public static class CodyData {
+        private String name;
+        private List<CodyItem> items;
+        private CodyBackground background;
+        private Long timestamp;
+    }
+
+    @Data
+    public static class CodyItem {
+        private Long productId;
+        private String src;
+        private Double nx;
+        private Double ny;
+        private Double rotation;
+        private Double z;
+        private Double scale;
+    }
+
+    @Data
+    public static class CodyBackground {
+        private String type;
+        private String selectedBackground;
+        private String customColor;
+    }
 }

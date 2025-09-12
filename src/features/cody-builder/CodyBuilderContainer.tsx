@@ -40,7 +40,7 @@ export function CodyBuilderContainer({
           category: product.majorCategory || '기타',
           slot: slot,
           price: product.productPrice,
-          brand: product.storeMall,
+          brand: product.storeName || '브랜드',
         };
         setItem(codyItem);
       }

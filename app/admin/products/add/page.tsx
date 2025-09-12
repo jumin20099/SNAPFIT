@@ -101,9 +101,9 @@ export default function AddProductPage() {
   const handleInputChange = (field: keyof Product, value: string | number | boolean) => {
     if (field === 'majorCategory') {
       // 대분류가 변경되면 소분류 초기화
-      setProduct({ ...product, [field]: value, subCategory: '' })
+      setProduct({ ...product, [field]: value as string, subCategory: '' })
     } else {
-      setProduct({ ...product, [field]: value })
+      setProduct({ ...product, [field]: value as string })
     }
   }
 

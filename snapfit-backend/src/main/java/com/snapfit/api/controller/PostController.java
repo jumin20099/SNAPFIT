@@ -6,10 +6,12 @@ import com.snapfit.api.entity.Post;
 import com.snapfit.api.entity.Tag;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.entity.Like;
+import com.snapfit.api.entity.Outfit;
 import com.snapfit.api.repository.PostRepository;
 import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.repository.LikeRepository;
 import com.snapfit.api.repository.ScrapRepository;
+import com.snapfit.api.repository.OutfitRepository;
 import com.snapfit.api.security.JwtUtil;
 import com.snapfit.api.service.PostService;
 import com.snapfit.api.service.TagService;
@@ -32,6 +34,8 @@ import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.Map;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * 게시글 API 컨트롤러
@@ -49,6 +53,7 @@ public class PostController {
     private final UserRepository userRepository;
     private final LikeRepository likeRepository;
     private final ScrapRepository scrapRepository;
+    private final OutfitRepository outfitRepository;
     private final JwtUtil jwtUtil;
     private final FollowService followService;
 
@@ -62,8 +67,6 @@ public class PostController {
         log.info("게시글 생성 요청: {}", request.getTitle());
         
         try {
-            // 단계별 DB 저장 테스트 - User 엔티티만 저장
-            
             // 1. 기존 사용자 찾기 또는 새로 생성
             User savedUser = userRepository.findByEmail("temp@test.com")
                 .orElseGet(() -> {
@@ -78,21 +81,37 @@ public class PostController {
             
             log.info("User 엔티티 저장 성공: userId={}", savedUser.getUserIdx());
             
-            // 2. Post 엔티티 생성 및 저장
+            // 2. 코디 데이터 처리 (있는 경우)
+            Long outfitId = null;
+            if (request.getCodyData() != null) {
+                outfitId = createOutfitFromCodyData(request.getCodyData(), savedUser);
+                log.info("코디 데이터 저장 성공: outfitId={}", outfitId);
+            }
+            
+            // 3. Post 엔티티 생성 및 저장
             Post post = Post.builder()
                 .content(request.getContent())
                 .mediaUrls(request.getMediaUrls().stream().collect(Collectors.toSet()))
                 .build();
             
-            // 3. 작성자 설정
+            // 4. 작성자 설정
             post.setAuthor(savedUser);
             
-            // 4. Post 엔티티 저장 (saveAndFlush로 조기 실패 유도)
+            // 5. 코디 연결 (있는 경우)
+            if (outfitId != null) {
+                // Outfit 엔티티를 찾아서 연결
+                final Long finalOutfitId = outfitId;
+                Outfit outfit = outfitRepository.findById(finalOutfitId)
+                    .orElseThrow(() -> new RuntimeException("코디를 찾을 수 없습니다: " + finalOutfitId));
+                post.setOutfit(outfit);
+            }
+            
+            // 6. Post 엔티티 저장
             Post savedPost = postRepository.saveAndFlush(post);
             
-            log.info("Post 엔티티 저장 성공: postId={}", savedPost.getPostId());
+            log.info("Post 엔티티 저장 성공: postId={}, outfitId={}", savedPost.getPostId(), outfitId);
             
-            // 5. 응답 DTO 생성 (실제 저장된 데이터 사용)
+            // 7. 응답 DTO 생성
             PostResponseDto response = new PostResponseDto();
             response.setPostId(savedPost.getPostId());
             response.setTitle(""); // Post 엔티티에는 title 필드가 없음
@@ -111,7 +130,14 @@ public class PostController {
             response.setIsLiked(false);
             response.setIsScrapped(false);
             
-            log.info("게시글 생성 성공 (User + Post 모두 저장): postId={}, userId={}", savedPost.getPostId(), savedUser.getUserIdx());
+            // 8. 코디 정보 추가 (있는 경우)
+            if (savedPost.getOutfit() != null) {
+                response.setOutfitId(savedPost.getOutfit().getOutfitIdx());
+                response.setCodyData(convertOutfitToCodyData(savedPost.getOutfit()));
+            }
+            
+            log.info("게시글 생성 성공: postId={}, userId={}, outfitId={}", 
+                savedPost.getPostId(), savedUser.getUserIdx(), outfitId);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             
         } catch (Exception e) {
@@ -481,6 +507,13 @@ public class PostController {
             post.getPostId(), dto.getLikeCount(), dto.getScrapCount(), post.getCalculatedLikeCount(), post.getCalculatedScrapCount());
         dto.setIsLiked(false); // 기본값 설정
         dto.setIsScrapped(false); // 기본값 설정
+        
+        // 코디 정보 추가 (있는 경우)
+        if (post.getOutfit() != null) {
+            dto.setOutfitId(post.getOutfit().getOutfitIdx());
+            dto.setCodyData(convertOutfitToCodyData(post.getOutfit()));
+        }
+        
         return dto;
     }
 
@@ -548,6 +581,87 @@ public class PostController {
             // 오류 발생 시 기본값 사용
             post.setCalculatedLikeCount(post.getLikeCount() != null ? post.getLikeCount().intValue() : 0);
             post.setCalculatedScrapCount(post.getScrapCount() != null ? post.getScrapCount().intValue() : 0);
+        }
+    }
+
+    /**
+     * 코디 데이터를 Outfit 엔티티로 변환하여 저장
+     */
+    private Long createOutfitFromCodyData(CreatePostRequestDto.CodyData codyData, User user) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            
+            // 코디 데이터를 JSON으로 변환
+            Map<String, Object> outfitItemMap = new java.util.HashMap<>();
+            outfitItemMap.put("name", codyData.getName());
+            outfitItemMap.put("items", codyData.getItems());
+            outfitItemMap.put("background", codyData.getBackground());
+            outfitItemMap.put("timestamp", codyData.getTimestamp());
+            
+            JsonNode outfitItemJson = objectMapper.valueToTree(outfitItemMap);
+            
+            // Outfit 엔티티 생성
+            Outfit outfit = Outfit.builder()
+                .user(user)
+                .outfitName(codyData.getName() != null ? codyData.getName() : "코디")
+                .outfitItem(outfitItemJson)
+                .isPublic(true)
+                .build();
+            
+            // 저장
+            Outfit savedOutfit = outfitRepository.save(outfit);
+            return savedOutfit.getOutfitIdx();
+            
+        } catch (Exception e) {
+            log.error("코디 데이터 저장 실패", e);
+            throw new RuntimeException("코디 데이터 저장 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Outfit 엔티티를 코디 데이터로 변환
+     */
+    private CreatePostRequestDto.CodyData convertOutfitToCodyData(Outfit outfit) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode outfitItem = outfit.getOutfitItem();
+            
+            CreatePostRequestDto.CodyData codyData = new CreatePostRequestDto.CodyData();
+            codyData.setName(outfitItem.get("name").asText());
+            codyData.setTimestamp(outfitItem.get("timestamp").asLong());
+            
+            // items 변환
+            if (outfitItem.has("items")) {
+                List<CreatePostRequestDto.CodyItem> items = new ArrayList<>();
+                for (JsonNode item : outfitItem.get("items")) {
+                    CreatePostRequestDto.CodyItem codyItem = new CreatePostRequestDto.CodyItem();
+                    codyItem.setProductId(item.get("productId").asLong());
+                    codyItem.setSrc(item.get("src").asText());
+                    codyItem.setNx(item.get("nx").asDouble());
+                    codyItem.setNy(item.get("ny").asDouble());
+                    codyItem.setRotation(item.get("rotation").asDouble());
+                    codyItem.setZ(item.get("z").asDouble());
+                    codyItem.setScale(item.get("scale").asDouble());
+                    items.add(codyItem);
+                }
+                codyData.setItems(items);
+            }
+            
+            // background 변환
+            if (outfitItem.has("background")) {
+                JsonNode background = outfitItem.get("background");
+                CreatePostRequestDto.CodyBackground codyBackground = new CreatePostRequestDto.CodyBackground();
+                codyBackground.setType(background.get("type").asText());
+                codyBackground.setSelectedBackground(background.get("selectedBackground").asText());
+                codyBackground.setCustomColor(background.get("customColor").asText());
+                codyData.setBackground(codyBackground);
+            }
+            
+            return codyData;
+            
+        } catch (Exception e) {
+            log.error("코디 데이터 변환 실패", e);
+            return null;
         }
     }
 }

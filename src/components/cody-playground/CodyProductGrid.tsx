@@ -86,10 +86,10 @@ export function CodyProductGrid({
   }, [selectedGender, selectedMajorCategory, selectedSubCategory])
 
   // 무한 스크롤 설정
-  const { loadMoreRef } = useInfiniteScroll({
-    hasMore,
-    loading,
-    onLoadMore: () => fetchProducts(page + 1)
+  const { lastElementRef } = useInfiniteScroll({
+    hasNextPage: hasMore,
+    isFetchingNextPage: loading,
+    fetchNextPage: () => fetchProducts(page + 1)
   })
 
   // 상품 선택 핸들러
@@ -210,7 +210,7 @@ export function CodyProductGrid({
 
       {/* 무한 스크롤 로딩 */}
       {loading && products.length > 0 && (
-        <div ref={loadMoreRef} className="flex items-center justify-center py-8">
+        <div ref={lastElementRef} className="flex items-center justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
         </div>
       )}

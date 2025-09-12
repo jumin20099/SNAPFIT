@@ -24,6 +24,25 @@ interface Post {
   scraped: boolean
   mediaUrls?: string[]
   tags?: string[]
+  outfitId?: number
+  codyData?: {
+    name: string
+    items: Array<{
+      productId: number
+      src: string
+      nx: number
+      ny: number
+      rotation: number
+      z: number
+      scale: number
+    }>
+    background: {
+      type: string
+      selectedBackground: string
+      customColor: string
+    }
+    timestamp: number
+  }
 }
 
 export default function CommunityPage() {
@@ -393,6 +412,25 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
           className={`w-4 h-4 ${post.liked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
         />
       </button>
+
+      {/* 게시글 정보 */}
+      <div className="p-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-medium text-sm">{post.authorName}</span>
+          <span className="text-xs text-gray-500">{post.likeCount}</span>
+        </div>
+        
+        {post.tags && post.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {post.tags.slice(0, 2).map((tag, index) => (
+              <Badge key={index} variant="secondary" className="text-xs">
+                #{tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+      </div>
     </div>
   )
 }

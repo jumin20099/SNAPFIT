@@ -1,12 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Image as ImageIcon, Tag, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { CodyProductList } from '@/components/ui/CodyProductList'
+import { PlacedItem } from '@/entities/cody/model'
+
+interface CodyData {
+  items: PlacedItem[]
+  background: {
+    type: 'color' | 'image'
+    selectedBackground: string
+    customColor: string
+  }
+  timestamp: number
+  name?: string
+}
 
 export default function CreatePostPage() {
   const router = useRouter()
@@ -16,6 +29,54 @@ export default function CreatePostPage() {
   const [tagInput, setTagInput] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [codyData, setCodyData] = useState<CodyData | null>(null)
+  const [codyImage, setCodyImage] = useState<string | null>(null)
+
+  // localStorage에서 코디 데이터 로드
+  useEffect(() => {
+    const loadExportData = () => {
+      try {
+        const exportDataStr = localStorage.getItem('cody-export-data')
+        if (exportDataStr) {
+          const exportData = JSON.parse(exportDataStr)
+          
+          // 5분 이내 데이터만 유효 (메모리 정리)
+          const now = Date.now()
+          const dataAge = now - exportData.timestamp
+          if (dataAge > 5 * 60 * 1000) { // 5분
+            localStorage.removeItem('cody-export-data')
+            return
+          }
+          
+          if (exportData.codyData) {
+            setCodyData(exportData.codyData)
+            // 코디 이름을 제목으로 설정
+            if (exportData.codyData.name) {
+              setTitle(exportData.codyData.name)
+            }
+            // 기본 내용 설정
+            setContent(`"${exportData.codyData.name || '코디'}" 코디를 공유합니다! 💫\n\n아이템 ${exportData.codyData.items.length}개로 구성된 오늘의 코디입니다.`)
+            // 기본 태그 설정
+            setTags(['코디', '패션', exportData.codyData.name || '코디'])
+          }
+          
+          if (exportData.codyImage) {
+            setCodyImage(exportData.codyImage)
+            // 코디 이미지를 images 배열에 추가
+            setImages([exportData.codyImage])
+          }
+          
+          // 데이터 사용 후 정리
+          localStorage.removeItem('cody-export-data')
+        }
+      } catch (error) {
+        console.error('코디 데이터 로드 실패:', error)
+        localStorage.removeItem('cody-export-data')
+      }
+    }
+    
+    loadExportData()
+  }, [])
 
   // 태그 추가
   const handleAddTag = () => {
@@ -83,7 +144,13 @@ export default function CreatePostPage() {
         title: title.trim(),
         content: content.trim(),
         tags: tags,
-        mediaUrls: images
+        mediaUrls: images,
+        codyData: codyData ? {
+          name: codyData.name,
+          items: codyData.items,
+          background: codyData.background,
+          timestamp: codyData.timestamp
+        } : undefined
       }
 
       // 실제 API 호출
@@ -149,6 +216,32 @@ export default function CreatePostPage() {
 
       {/* 메인 컨텐츠 */}
       <div className="max-w-2xl mx-auto px-4 py-6">
+        {/* 코디에 사용된 상품 정보 */}
+        {codyData && codyData.items.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3">사용된 상품</h3>
+            <CodyProductList
+              items={codyData.items}
+              className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4"
+              showScrollButtons={true}
+            />
+          </div>
+        )}
+
+        {/* 코디 이미지 */}
+        {codyImage && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-3">코디 이미지</h3>
+            <div className="relative">
+              <img
+                src={codyImage}
+                alt="코디 이미지"
+                className="w-full max-w-sm mx-auto rounded-lg"
+              />
+            </div>
+          </div>
+        )}
+
         {/* 제목 입력 */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

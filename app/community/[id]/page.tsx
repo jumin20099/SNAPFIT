@@ -8,17 +8,28 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { CodyProductList } from "@/components/ui/CodyProductList"
+import { CommentsModal } from "@/components/ui/CommentsModal"
 import { useRouter, useParams } from "next/navigation"
 import { isCurrentUserPostAuthor } from "@/lib/auth-utils"
 import { useDeletePost } from "@/hooks/useDeletePost"
 
 interface Comment {
-  id: number
-  author: string
-  authorImage: string
+  commentId: number
   content: string
-  date: string
-  likes: number
+  authorName: string
+  authorProfileImage: string
+  parentId?: number
+  likeCount: number
+  isLiked?: boolean
+  createdAt: string
+  updatedAt: string
+  replies?: Comment[]
+  // 프론트엔드 호환성을 위한 별칭
+  id?: number
+  author?: string
+  authorImage?: string
+  date?: string
+  likes?: number
   liked?: boolean
 }
 
@@ -37,8 +48,18 @@ interface Post {
   liked?: boolean
   scraped?: boolean
   type?: string
+  outfitId?: number
   codyData?: {
-    items: any[]
+    name: string
+    items: Array<{
+      productId: number
+      src: string
+      nx: number
+      ny: number
+      rotation: number
+      z: number
+      scale: number
+    }>
     background: {
       type: 'color' | 'image'
       selectedBackground: string
@@ -57,14 +78,16 @@ export default function PostDetailPage() {
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [currentPage, setCurrentPage] = useState(0)
-  const [commentText, setCommentText] = useState("")
-  const [comments, setComments] = useState<Comment[]>([])
+  const [commentTexts, setCommentTexts] = useState<Record<number, string>>({})
+  const [commentsByPost, setCommentsByPost] = useState<Record<number, Comment[]>>({})
   const [isLiked, setIsLiked] = useState(false)
   const [isScraped, setIsScraped] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
   const [currentPost, setCurrentPost] = useState<Post | null>(null)
   const [userInteractionsLoaded, setUserInteractionsLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false)
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null)
   const observer = useRef<IntersectionObserver | null>(null)
   
   // 게시글 삭제 기능
@@ -117,7 +140,7 @@ export default function PostDetailPage() {
               console.log('Like 엔티티 배열로 인식')
               likedPostIds = new Set(
                 likesData
-                  .filter((like: any) => like?.targetType === 'POST')
+                  .filter((like: any) => like?.targetType === 'POST' || like?.targetType === 'OUTFIT_SHARE')
                   .map((like: any) => Number(like?.targetIdx))
               )
             }
@@ -127,7 +150,7 @@ export default function PostDetailPage() {
           console.log('페이지네이션된 응답으로 인식')
           likedPostIds = new Set(
             likesData.content
-              .filter((like: any) => like?.targetType === 'POST')
+              .filter((like: any) => like?.targetType === 'POST' || like?.targetType === 'OUTFIT_SHARE')
               .map((like: any) => Number(like?.targetIdx))
           )
         }
@@ -235,7 +258,9 @@ export default function PostDetailPage() {
           tags: post.tags || [],
           liked: false, // 초기값은 false로 설정, fetchUserInteractions에서 실제 상태로 업데이트
           scraped: false, // 초기값은 false로 설정, fetchUserInteractions에서 실제 상태로 업데이트
-          type: post.type || "fashion-tip"
+          type: post.type || "fashion-tip",
+          outfitId: post.outfitId,
+          codyData: post.codyData
         }))
         
         if (page === 0) {
@@ -253,6 +278,10 @@ export default function PostDetailPage() {
             setIsScraped(false)
           } else {
             setPosts(transformedPosts)
+            // 타겟 게시글을 찾지 못한 경우 첫 번째 게시글을 currentPost로 설정
+            if (transformedPosts.length > 0) {
+              setCurrentPost(transformedPosts[0])
+            }
           }
         } else {
           setPosts(prev => [...prev, ...transformedPosts])
@@ -317,6 +346,13 @@ export default function PostDetailPage() {
       fetchPosts(0)
     }
   }, [postId]) // fetchPosts를 의존성에서 제거하여 무한루프 방지
+
+  // posts가 변경될 때마다 모든 댓글 로드
+  useEffect(() => {
+    if (posts.length > 0) {
+      fetchAllComments()
+    }
+  }, [posts])
 
   // currentPost가 변경될 때마다 사용자 상호작용 상태 확인
   useEffect(() => {
@@ -446,20 +482,214 @@ export default function PostDetailPage() {
     setIsFollowing(!isFollowing)
   }
 
-  const handleCommentSubmit = () => {
-    if (commentText.trim()) {
-      const newComment: Comment = {
-        id: Date.now(),
-        author: "나",
-        authorImage: "/placeholder.svg",
-        content: commentText,
-        date: new Date().toISOString(),
-        likes: 0,
-        liked: false
-      }
-      setComments([...comments, newComment])
-      setCommentText("")
+  // 댓글 데이터 변환 (백엔드 응답을 프론트엔드 형식으로)
+  const transformComment = (comment: any): Comment => ({
+    ...comment,
+    id: comment.commentId,
+    author: comment.authorName,
+    authorImage: comment.authorProfileImage,
+    date: comment.createdAt,
+    likes: comment.likeCount,
+    liked: comment.isLiked,
+    replies: comment.replies?.map(transformComment)
+  })
+
+  // 모든 게시글의 댓글 목록 로드
+  const fetchAllComments = async () => {
+    try {
+      const commentPromises = posts.map(async (post) => {
+        const response = await fetch(`/api/comments/posts/${post.postId}`)
+        if (response.ok) {
+          const commentsData = await response.json()
+          const transformedComments = commentsData.map(transformComment)
+          return { postId: post.postId, comments: transformedComments }
+        }
+        return { postId: post.postId, comments: [] }
+      })
+      
+      const results = await Promise.all(commentPromises)
+      const commentsMap: Record<number, Comment[]> = {}
+      results.forEach(({ postId, comments }) => {
+        commentsMap[postId] = comments
+      })
+      
+      setCommentsByPost(commentsMap)
+    } catch (error) {
+      console.error('댓글 로드 실패:', error)
     }
+  }
+
+  // 특정 게시글의 댓글 목록 로드
+  const fetchComments = async (postId: number) => {
+    try {
+      const response = await fetch(`/api/comments/posts/${postId}`)
+      if (response.ok) {
+        const commentsData = await response.json()
+        const transformedComments = commentsData.map(transformComment)
+        setCommentsByPost(prev => ({
+          ...prev,
+          [postId]: transformedComments
+        }))
+      }
+    } catch (error) {
+      console.error('댓글 로드 실패:', error)
+    }
+  }
+
+  const handleCommentSubmit = async (postId: number) => {
+    const commentText = commentTexts[postId] || ""
+    if (commentText.trim()) {
+      try {
+        const response = await fetch('/api/comments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            postId: postId,
+            content: commentText.trim()
+          }),
+        })
+
+        if (response.ok) {
+          const newComment = await response.json()
+          const transformedComment = transformComment(newComment)
+          setCommentsByPost(prev => ({
+            ...prev,
+            [postId]: [transformedComment, ...(prev[postId] || [])]
+          }))
+          setCommentTexts(prev => ({
+            ...prev,
+            [postId]: ""
+          }))
+          // 댓글 수 업데이트
+          setPosts(prev => prev.map(post => 
+            post.postId === postId 
+              ? { ...post, commentCount: post.commentCount + 1 }
+              : post
+          ))
+        }
+      } catch (error) {
+        console.error('댓글 작성 실패:', error)
+      }
+    }
+  }
+
+  const handleAddComment = async (content: string) => {
+    if (selectedPostId) {
+      try {
+        const response = await fetch('/api/comments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            postId: selectedPostId,
+            content: content.trim()
+          }),
+        })
+
+        if (response.ok) {
+          const newComment = await response.json()
+          const transformedComment = transformComment(newComment)
+          setCommentsByPost(prev => ({
+            ...prev,
+            [selectedPostId]: [transformedComment, ...(prev[selectedPostId] || [])]
+          }))
+          // 댓글 수 업데이트
+          setPosts(prev => prev.map(post => 
+            post.postId === selectedPostId 
+              ? { ...post, commentCount: post.commentCount + 1 }
+              : post
+          ))
+        }
+      } catch (error) {
+        console.error('댓글 작성 실패:', error)
+      }
+    }
+  }
+
+  const handleLikeComment = async (commentId: number) => {
+    try {
+      const response = await fetch(`/api/comments/${commentId}/like`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        const updatedComment = await response.json()
+        const transformedComment = transformComment(updatedComment)
+        setCommentsByPost(prev => {
+          const newCommentsByPost = { ...prev }
+          Object.keys(newCommentsByPost).forEach(postId => {
+            newCommentsByPost[parseInt(postId)] = newCommentsByPost[parseInt(postId)].map(comment => 
+              comment.commentId === commentId 
+                ? { ...comment, liked: transformedComment.liked, likes: transformedComment.likes }
+                : comment
+            )
+          })
+          return newCommentsByPost
+        })
+      }
+    } catch (error) {
+      console.error('댓글 좋아요 실패:', error)
+    }
+  }
+
+  const handleReplyComment = async (commentId: number, content: string) => {
+    if (selectedPostId) {
+      try {
+        const response = await fetch('/api/comments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            postId: selectedPostId,
+            content: content.trim(),
+            parentId: commentId
+          }),
+        })
+
+        if (response.ok) {
+          const newReply = await response.json()
+          const transformedReply = transformComment(newReply)
+          setCommentsByPost(prev => {
+            const newCommentsByPost = { ...prev }
+            Object.keys(newCommentsByPost).forEach(postId => {
+              newCommentsByPost[parseInt(postId)] = newCommentsByPost[parseInt(postId)].map(comment => 
+                comment.commentId === commentId 
+                  ? { ...comment, replies: [...(comment.replies || []), transformedReply] }
+                  : comment
+              )
+            })
+            return newCommentsByPost
+          })
+          // 댓글 수 업데이트
+          setPosts(prev => prev.map(post => 
+            post.postId === selectedPostId 
+              ? { ...post, commentCount: post.commentCount + 1 }
+              : post
+          ))
+        }
+      } catch (error) {
+        console.error('대댓글 작성 실패:', error)
+      }
+    }
+  }
+
+  // 가장 인기 있는 댓글 찾기 (좋아요 + 대댓글 수)
+  const getMostPopularComment = (postId: number) => {
+    const comments = commentsByPost[postId] || []
+    if (comments.length === 0) return null
+    
+    return comments.reduce((mostPopular, comment) => {
+      const commentScore = (comment.likes || comment.likeCount) + (comment.replies?.length || 0)
+      const mostPopularScore = (mostPopular.likes || mostPopular.likeCount) + (mostPopular.replies?.length || 0)
+      return commentScore > mostPopularScore ? comment : mostPopular
+    })
   }
 
   const handleDeletePost = async () => {
@@ -562,7 +792,7 @@ export default function PostDetailPage() {
 
             {/* Main Image */}
             <div className="relative">
-              {post.type === 'cody' && post.codyData ? (
+              {post.codyData && post.codyData.items && post.codyData.items.length > 0 ? (
                 <div className="space-y-4">
                   {/* 코디 이미지 */}
                   <img
@@ -577,7 +807,21 @@ export default function PostDetailPage() {
                       사용된 상품
                     </h4>
                     <CodyProductList
-                      items={post.codyData.items}
+                      items={post.codyData.items.map(item => ({
+                        id: item.productId.toString(),
+                        itemId: item.productId.toString(),
+                        name: `상품 ${item.productId}`,
+                        src: item.src,
+                        slot: 'accessory' as const,
+                        nx: item.nx,
+                        ny: item.ny,
+                        rotation: item.rotation,
+                        z: item.z,
+                        scale: item.scale,
+                        visible: true,
+                        anchor: 'center' as const,
+                        stateVersion: 1
+                      }))}
                       showScrollButtons={true}
                       className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3"
                     />
@@ -592,6 +836,13 @@ export default function PostDetailPage() {
               )}
             </div>
 
+            {/* Post Content */}
+            {post.content && (
+              <div className="px-4 py-2">
+                <p className="text-sm text-gray-900">{post.content}</p>
+              </div>
+            )}
+
             {/* Interaction Buttons */}
             <div className="p-4 border-b">
               <div className="flex items-center gap-4 mb-3">
@@ -603,7 +854,15 @@ export default function PostDetailPage() {
                 >
                   <Heart className={`w-6 h-6 ${post.liked ? "fill-red-500 text-red-500" : ""}`} />
                 </Button>
-                <Button variant="ghost" size="sm" className="p-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="p-2"
+                  onClick={() => {
+                    setSelectedPostId(post.postId)
+                    setIsCommentsModalOpen(true)
+                  }}
+                >
                   <MessageSquare className="w-6 h-6" />
                 </Button>
                 <Button variant="ghost" size="sm" className="p-2">
@@ -643,11 +902,82 @@ export default function PostDetailPage() {
               <div className="text-sm text-gray-500 mb-4">
                 {post.commentCount === 0 ? "첫 댓글을 남겨주세요." : `댓글 ${post.commentCount}개`}
               </div>
+              
+              {/* 가장 인기 있는 댓글 하나만 표시 */}
+              {commentsByPost[post.postId] && commentsByPost[post.postId].length > 0 && (
+                <div className="space-y-3">
+                  {(() => {
+                    const mostPopularComment = getMostPopularComment(post.postId)
+                    if (!mostPopularComment) return null
+                    
+                    return (
+                      <div className="flex gap-3">
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={mostPopularComment.authorImage || mostPopularComment.authorProfileImage} />
+                          <AvatarFallback>{(mostPopularComment.author || mostPopularComment.authorName).charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">{mostPopularComment.author || mostPopularComment.authorName}</span>
+                          <span className="text-xs text-gray-500">{formatDate(mostPopularComment.date || mostPopularComment.createdAt)}</span>
+                        </div>
+                        <p className="text-sm text-gray-900">{mostPopularComment.content}</p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="p-1 h-6"
+                            onClick={() => handleLikeComment(mostPopularComment.commentId)}
+                          >
+                            <Heart className={`w-4 h-4 ${(mostPopularComment.liked || mostPopularComment.isLiked) ? "fill-red-500 text-red-500" : ""}`} />
+                          </Button>
+                          <span className="text-xs text-gray-500">{(mostPopularComment.likes || mostPopularComment.likeCount)}개</span>
+                        </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                  
+                  {/* 더보기 버튼 */}
+                  {(commentsByPost[post.postId]?.length || 0) > 1 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-blue-600 hover:text-blue-700 p-0 h-auto"
+                      onClick={() => {
+                        setSelectedPostId(post.postId)
+                        setIsCommentsModalOpen(true)
+                      }}
+                    >
+                      댓글 {(commentsByPost[post.postId]?.length || 0) - 1}개 더보기
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Post Time */}
             <div className="p-4 text-sm text-gray-500">
               {formatDate(post.createdAt)}
+            </div>
+
+            {/* Comment Input for each post */}
+            <div className="border-t bg-white p-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="댓글을 입력하세요..."
+                  value={commentTexts[post.postId] || ""}
+                  onChange={(e) => setCommentTexts(prev => ({
+                    ...prev,
+                    [post.postId]: e.target.value
+                  }))}
+                  onKeyPress={(e) => e.key === 'Enter' && handleCommentSubmit(post.postId)}
+                  className="flex-1"
+                />
+                <Button onClick={() => handleCommentSubmit(post.postId)} disabled={!(commentTexts[post.postId] || "").trim()}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
         ))}
@@ -667,21 +997,19 @@ export default function PostDetailPage() {
         )}
       </div>
 
-      {/* Comment Input */}
-      <div className="border-t bg-white p-4 flex-shrink-0">
-        <div className="flex gap-2">
-          <Input
-            placeholder="댓글을 입력하세요..."
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleCommentSubmit()}
-            className="flex-1"
-          />
-          <Button onClick={handleCommentSubmit} disabled={!commentText.trim()}>
-            <Send className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
+      {/* Comments Modal */}
+      <CommentsModal
+        isOpen={isCommentsModalOpen}
+        onClose={() => {
+          setIsCommentsModalOpen(false)
+          setSelectedPostId(null)
+        }}
+        comments={selectedPostId ? (commentsByPost[selectedPostId] || []) : []}
+        onAddComment={handleAddComment}
+        onLikeComment={handleLikeComment}
+        onReplyComment={handleReplyComment}
+        formatDate={formatDate}
+      />
     </div>
   )
 }

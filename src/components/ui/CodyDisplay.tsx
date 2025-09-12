@@ -39,15 +39,15 @@ export function CodyDisplay({
       const details: Record<string, any> = {}
       
       for (const item of codyData.items) {
-        if (item.productId) {
+        if (item.itemId) {
           try {
-            const response = await fetch(`/api/products/${item.productId}`)
+            const response = await fetch(`/api/products/${item.itemId}`)
             if (response.ok) {
               const product = await response.json()
-              details[item.productId] = product
+              details[item.itemId] = product
             }
           } catch (error) {
-            console.error(`상품 ${item.productId} 정보 가져오기 실패:`, error)
+            console.error(`상품 ${item.itemId} 정보 가져오기 실패:`, error)
           }
         }
       }
@@ -105,9 +105,9 @@ export function CodyDisplay({
               <div className="relative">
                 {/* 상품 이미지 */}
                 <div className="w-16 h-16 bg-white dark:bg-gray-600 rounded-lg shadow-md overflow-hidden">
-                  {item.imageUrl ? (
+                  {item.src ? (
                     <img
-                      src={item.imageUrl}
+                      src={item.src}
                       alt={item.name}
                       className="w-full h-full object-cover"
                     />
@@ -122,16 +122,16 @@ export function CodyDisplay({
                 </div>
                 
                 {/* 상품 정보 오버레이 */}
-                {showProductInfo && item.productId && productDetails[item.productId] && (
+                {showProductInfo && item.itemId && productDetails[item.itemId] && (
                   <motion.div
                     className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-black/80 text-white text-xs px-2 py-1 rounded whitespace-nowrap"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <div className="font-medium">{productDetails[item.productId].productName}</div>
+                    <div className="font-medium">{productDetails[item.itemId].productName}</div>
                     <div className="text-gray-300">
-                      {productDetails[item.productId].productPrice?.toLocaleString()}원
+                      {productDetails[item.itemId].productPrice?.toLocaleString()}원
                     </div>
                   </motion.div>
                 )}
@@ -149,20 +149,20 @@ export function CodyDisplay({
           </h4>
           <div className="space-y-2">
             {codyData.items.map((item) => {
-              const product = productDetails[item.productId || '']
+              const product = productDetails[item.itemId || '']
               return (
                 <motion.div
                   key={item.id}
                   className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  onClick={() => item.productId && handleProductClick(item.productId)}
+                  onClick={() => item.itemId && handleProductClick(item.itemId)}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
                   {/* 상품 이미지 */}
                   <div className="w-10 h-10 bg-white dark:bg-gray-600 rounded overflow-hidden flex-shrink-0">
-                    {item.imageUrl ? (
+                    {item.src ? (
                       <img
-                        src={item.imageUrl}
+                        src={item.src}
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />

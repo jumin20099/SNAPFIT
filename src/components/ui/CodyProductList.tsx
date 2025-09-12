@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PlacedItem } from '@/entities/cody/model'
+import { useRouter } from 'next/navigation'
 
 interface ProductInfo {
   id: string
@@ -26,6 +27,7 @@ export function CodyProductList({
   className = '',
   showScrollButtons = true 
 }: CodyProductListProps) {
+  const router = useRouter()
   const [productInfos, setProductInfos] = useState<ProductInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [scrollPosition, setScrollPosition] = useState(0)
@@ -40,8 +42,8 @@ export function CodyProductList({
       
       for (const item of items) {
         try {
-          // itemId가 있으면 API 호출, 없으면 기본 정보 사용
-          if (item.itemId) {
+          // itemId가 있고 유효한 값(0이 아닌 양수)이면 API 호출, 아니면 기본 정보 사용
+          if (item.itemId && parseInt(item.itemId) > 0) {
             const response = await fetch(`/api/products/${item.itemId}`)
             if (response.ok) {
               const product = await response.json()
@@ -63,7 +65,7 @@ export function CodyProductList({
               })
             }
           } else {
-            // itemId가 없으면 기본 정보 사용
+            // itemId가 없거나 유효하지 않으면 기본 정보 사용
             infos.push({
               id: item.id,
               name: item.name,
@@ -120,6 +122,10 @@ export function CodyProductList({
     }
   }
 
+  const handleProductClick = (productId: string) => {
+    router.push(`/products/${productId}`)
+  }
+
   if (loading) {
     return (
       <div className={`flex items-center justify-center py-4 ${className}`}>
@@ -168,11 +174,12 @@ export function CodyProductList({
       >
         {productInfos.map((product, index) => (
           <motion.div
-            key={product.id}
+            key={`${product.id}-${index}`}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="flex-shrink-0 w-24 text-center"
+            className="flex-shrink-0 w-24 text-center cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => handleProductClick(product.id)}
           >
             {/* 상품 이미지 */}
             <div className="relative w-20 h-20 mx-auto mb-2 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
