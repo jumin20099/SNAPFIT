@@ -3,6 +3,10 @@
 import Image from 'next/image'
 import { formatCurrencyKRW } from '@/lib/utils'
 import { useEffect, useState } from 'react'
+import { useCart } from '@/contexts/CartContext'
+import { Button } from '@/components/ui/button'
+import { ShoppingCart, Heart, Check } from 'lucide-react'
+import CartSuccessModal from '@/components/ui/CartSuccessModal'
 
 type Product = {
   productIdx: number
@@ -27,6 +31,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [detail, setDetail] = useState<ProductDetailDto | null>(null)
   const [related, setRelated] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [showSuccessToast, setShowSuccessToast] = useState(false)
+  const [showCartModal, setShowCartModal] = useState(false)
+  const { addItem } = useCart()
 
   useEffect(() => {
     const fetchProductDetail = async () => {
@@ -116,6 +124,32 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     return () => clearInterval(interval)
   }, [params.id])
 
+  const handleAddToCart = () => {
+    if (!detail) return
+    
+    try {
+      setIsAddingToCart(true)
+      
+      // 장바구니에 상품 추가
+      addItem({
+        id: detail.product.productIdx,
+        name: detail.product.productName,
+        price: detail.product.productPrice,
+        image: detail.product.productImage
+      })
+      
+      // 성공 시 팝업 모달 표시
+      setShowCartModal(true)
+      
+    } catch (error) {
+      console.error('장바구니 추가 실패:', error)
+      setShowSuccessToast(true)
+      setTimeout(() => setShowSuccessToast(false), 3000)
+    } finally {
+      setIsAddingToCart(false)
+    }
+  }
+
   if (loading || !detail) {
     return (
       <main className="mx-auto max-w-screen-lg p-4">
@@ -150,6 +184,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      
+      {/* 성공 토스트 */}
+      {showSuccessToast && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
+          <Check className="w-4 h-4" />
+          상품이 장바구니에 추가되었습니다!
+        </div>
+      )}
       {/* Hero 영역 */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="relative w-full aspect-square">
@@ -169,12 +211,21 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           <p className="text-xl font-bold" data-testid="product-price">{priceFormatted}</p>
 
           <div className="flex gap-3 items-center">
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-              장바구니 담기
-            </button>
-            <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
-              ♥ {detail.likesCount || 0}
-            </button>
+            <Button 
+              onClick={handleAddToCart}
+              disabled={isAddingToCart}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <ShoppingCart className="w-4 h-4" />
+              {isAddingToCart ? '추가 중...' : '장바구니 담기'}
+            </Button>
+            <Button 
+              variant="outline"
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Heart className="w-4 h-4" />
+              {detail.likesCount || 0}
+            </Button>
           </div>
 
           <ul className="text-sm text-gray-500 space-y-1">
@@ -215,18 +266,48 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {related.slice(0, 8).map((rp: any) => (
-                <a key={rp.productIdx} href={`/products/${rp.productIdx}`} className="block">
-                  <div className="relative w-full aspect-square mb-2">
-                    <Image src={rp.productImage || '/placeholder.svg'} alt={rp.productName} fill sizes="(max-width:640px) 50vw, (max-width:1024px) 25vw, 320px" className="object-cover rounded" />
-                  </div>
-                  <div className="text-sm font-medium line-clamp-2">{rp.productName}</div>
-                  <div className="text-xs text-blue-600 font-semibold">{formatCurrencyKRW(rp.productPrice)}</div>
-                </a>
+                <div key={rp.productIdx} className="group">
+                  <a href={`/products/${rp.productIdx}`} className="block">
+                    <div className="relative w-full aspect-square mb-2">
+                      <Image src={rp.productImage || '/placeholder.svg'} alt={rp.productName} fill sizes="(max-width:640px) 50vw, (max-width:1024px) 25vw, 320px" className="object-cover rounded" />
+                    </div>
+                    <div className="text-sm font-medium line-clamp-2">{rp.productName}</div>
+                    <div className="text-xs text-blue-600 font-semibold">{formatCurrencyKRW(rp.productPrice)}</div>
+                  </a>
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      addItem({
+                        id: rp.productIdx,
+                        name: rp.productName,
+                        price: rp.productPrice,
+                        image: rp.productImage
+                      })
+                      setShowCartModal(true)
+                    }}
+                    className="w-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <ShoppingCart className="w-3 h-3 mr-1" />
+                    담기
+                  </Button>
+                </div>
               ))}
             </div>
           )}
         </aside>
       </section>
+      
+      {/* 장바구니 성공 모달 */}
+      {detail && (
+        <CartSuccessModal
+          isOpen={showCartModal}
+          onClose={() => setShowCartModal(false)}
+          productName={detail.product.productName}
+          productImage={detail.product.productImage}
+          productPrice={detail.product.productPrice}
+        />
+      )}
     </main>
   )
 }

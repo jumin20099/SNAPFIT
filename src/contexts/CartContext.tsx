@@ -13,6 +13,7 @@ interface CartState {
   items: CartItem[];
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
   removeItem: (id: number) => void;
+  updateQuantity: (id: number, quantity: number) => void;
   clear: () => void;
 }
 
@@ -45,10 +46,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.filter((p) => p.id !== id));
   };
 
+  const updateQuantity = (id: number, quantity: number) => {
+    setItems((prev) => {
+      if (quantity <= 0) {
+        return prev.filter((p) => p.id !== id);
+      }
+      return prev.map((p) => (p.id === id ? { ...p, quantity } : p));
+    });
+  };
+
   const clear = () => setItems([]);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, clear }}>{children}</CartContext.Provider>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clear }}>{children}</CartContext.Provider>
   );
 }
 

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Heart, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useCart } from '@/contexts/CartContext'
+import dynamic from 'next/dynamic'
 
 interface CartItem {
   id: string
@@ -38,27 +40,28 @@ interface RecentProduct {
 
 export function CartPage() {
   const router = useRouter()
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const { items: cartItems, addItem, removeItem, updateQuantity } = useCart()
   const [recentProducts, setRecentProducts] = useState<RecentProduct[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    loadCartData()
+    setIsMounted(true)
     loadRecentProducts()
   }, [])
 
-  // 장바구니 데이터 로드
-  const loadCartData = async () => {
-    try {
-      const response = await fetch('/api/cart')
-      if (response.ok) {
-        const data = await response.json()
-        setCartItems(data.items || [])
-      }
-    } catch (error) {
-      console.error('장바구니 로드 실패:', error)
-    }
-  }
+  // 장바구니 데이터는 CartContext에서 가져옴
+  // CartContext의 데이터를 CartPage 형식에 맞게 변환
+  const transformedCartItems: CartItem[] = cartItems.map(item => ({
+    id: item.id.toString(),
+    productId: item.id.toString(),
+    name: item.name,
+    brand: 'SNAPFIT', // 기본 브랜드
+    price: item.price,
+    imageUrl: item.image,
+    quantity: item.quantity,
+    isLiked: false // 기본값
+  }))
 
   // 최근 본 상품 로드
   const loadRecentProducts = async () => {
@@ -85,6 +88,34 @@ export function CartPage() {
     router.push(`/products/${productId}`)
   }
 
+  // 수량 증가
+  const increaseQuantity = (item: any) => {
+    const productId = parseInt(item.id)
+    const currentItem = cartItems.find(cartItem => cartItem.id === productId)
+    if (currentItem) {
+      updateQuantity(productId, currentItem.quantity + 1)
+    }
+  }
+
+  // 수량 감소
+  const decreaseQuantity = (item: any) => {
+    const productId = parseInt(item.id)
+    const currentItem = cartItems.find(cartItem => cartItem.id === productId)
+    if (currentItem) {
+      if (currentItem.quantity > 1) {
+        updateQuantity(productId, currentItem.quantity - 1)
+      } else {
+        removeItem(productId) // 수량이 1이면 완전히 제거
+      }
+    }
+  }
+
+  // 아이템 삭제
+  const deleteItem = (item: any) => {
+    const productId = parseInt(item.id)
+    removeItem(productId)
+  }
+
   // 좋아요 토글
   const toggleLike = async (productId: string) => {
     try {
@@ -109,6 +140,30 @@ export function CartPage() {
     }
   }
 
+  // Hydration 오류 방지를 위한 로딩 상태
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="sticky top-0 z-50 bg-white border-b border-gray-200">
+          <div className="max-w-md mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
+              <div className="p-2">
+                <ArrowLeft size={20} className="text-gray-700" />
+              </div>
+              <h1 className="text-lg font-bold text-gray-900">장바구니</h1>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-md mx-auto px-4 py-6">
+          <div className="text-center py-16">
+            <div className="text-6xl mb-6">🛒</div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">로딩 중...</h2>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 헤더 */}
@@ -128,13 +183,8 @@ export function CartPage() {
 
       <div className="max-w-md mx-auto px-4 py-6">
         {/* 장바구니가 비어있을 때 */}
-        {cartItems.length === 0 ? (
-          <motion.div
-            className="text-center py-16"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+        {transformedCartItems.length === 0 ? (
+          <div className="text-center py-16">
             <div className="text-6xl mb-6">🛒</div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">
               장바구니에 담긴 상품이 없어요
@@ -148,17 +198,15 @@ export function CartPage() {
             >
               상품 보러 가기
             </button>
-          </motion.div>
+          </div>
         ) : (
           /* 장바구니에 상품이 있을 때 */
           <div className="space-y-4">
-            {cartItems.map((item) => (
-              <motion.div
+            {transformedCartItems.map((item) => (
+              <div
                 key={item.id}
-                className="bg-white angular-card p-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                className="bg-white angular-card p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => goToProduct(item.productId)}
               >
                 <div className="flex gap-4">
                   <div className="w-20 h-20 bg-gray-100 angular-rounded flex-shrink-0">
@@ -183,7 +231,10 @@ export function CartPage() {
                         )}
                       </div>
                       <button
-                        onClick={() => toggleLike(item.productId)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleLike(item.productId)
+                        }}
                         className="p-1 hover:bg-gray-100 angular-rounded transition-colors"
                       >
                         <Heart
@@ -204,20 +255,32 @@ export function CartPage() {
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button className="w-6 h-6 bg-gray-100 angular-rounded flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            decreaseQuantity(item)
+                          }}
+                          className="w-6 h-6 bg-gray-100 angular-rounded flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                        >
                           -
                         </button>
                         <span className="text-sm font-medium w-8 text-center">
                           {item.quantity}
                         </span>
-                        <button className="w-6 h-6 bg-gray-100 angular-rounded flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            increaseQuantity(item)
+                          }}
+                          className="w-6 h-6 bg-gray-100 angular-rounded flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                        >
                           +
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         )}
@@ -250,12 +313,10 @@ export function CartPage() {
           ) : recentProducts.length > 0 ? (
             <div className="flex gap-3 overflow-x-auto pb-2">
               {recentProducts.map((product) => (
-                <motion.div
+                <div
                   key={product.id}
-                  className="flex-shrink-0 w-32 cursor-pointer"
+                  className="flex-shrink-0 w-32 cursor-pointer hover:scale-105 transition-transform duration-200"
                   onClick={() => goToProduct(product.id)}
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.2 }}
                 >
                   <div className="relative">
                     <div className="w-32 h-40 bg-gray-100 angular-rounded overflow-hidden">
@@ -315,7 +376,7 @@ export function CartPage() {
                       </p>
                     )}
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           ) : (
