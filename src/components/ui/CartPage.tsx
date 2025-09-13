@@ -44,10 +44,30 @@ export function CartPage() {
   const [recentProducts, setRecentProducts] = useState<RecentProduct[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     setIsMounted(true)
     loadRecentProducts()
+    
+    // 로그인 상태 확인
+    const checkLoginStatus = () => {
+      const token = localStorage.getItem('token')
+      setIsLoggedIn(!!token)
+    }
+    
+    checkLoginStatus()
+    
+    // 로그인 상태 변경 감지
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'token') {
+        checkLoginStatus()
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
 
   // 장바구니 데이터는 CartContext에서 가져옴
@@ -60,7 +80,7 @@ export function CartPage() {
     price: item.price,
     imageUrl: item.image,
     quantity: item.quantity,
-    isLiked: false // 기본값
+    isLiked: likedProducts.has(item.id.toString()) // 실제 좋아요 상태 반영
   }))
 
   // 최근 본 상품 로드
@@ -69,7 +89,12 @@ export function CartPage() {
       const response = await fetch('/api/products/recent')
       if (response.ok) {
         const data = await response.json()
-        setRecentProducts(data.products || [])
+        // 좋아요 상태 초기화
+        const productsWithLikeStatus = (data.products || []).map((product: any) => ({
+          ...product,
+          isLiked: likedProducts.has(product.id)
+        }))
+        setRecentProducts(productsWithLikeStatus)
       }
     } catch (error) {
       console.error('최근 본 상품 로드 실패:', error)
@@ -118,22 +143,53 @@ export function CartPage() {
 
   // 좋아요 토글
   const toggleLike = async (productId: string) => {
+    // 로그인 상태 확인
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('좋아요 기능을 사용하려면 로그인이 필요합니다.')
+      return
+    }
+    
     try {
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId })
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          targetIdx: parseInt(productId),
+          targetType: 'PRODUCT'
+        })
       })
       
       if (response.ok) {
+        const data = await response.json()
+        
+        // 좋아요 상태 업데이트
+        setLikedProducts(prev => {
+          const newSet = new Set(prev)
+          if (data.liked) {
+            newSet.add(productId)
+          } else {
+            newSet.delete(productId)
+          }
+          return newSet
+        })
+        
         // 최근 본 상품 목록 업데이트
         setRecentProducts(prev => 
           prev.map(product => 
             product.id === productId 
-              ? { ...product, isLiked: !product.isLiked }
+              ? { ...product, isLiked: data.liked }
               : product
           )
         )
+      } else {
+        console.error('좋아요 토글 실패:', response.status)
+        if (response.status === 401) {
+          alert('로그인이 필요합니다.')
+        }
       }
     } catch (error) {
       console.error('좋아요 토글 실패:', error)
@@ -235,7 +291,13 @@ export function CartPage() {
                           e.stopPropagation()
                           toggleLike(item.productId)
                         }}
-                        className="p-1 hover:bg-gray-100 angular-rounded transition-colors"
+                        disabled={!isLoggedIn}
+                        className={`p-1 angular-rounded transition-colors ${
+                          !isLoggedIn 
+                            ? 'cursor-not-allowed opacity-50' 
+                            : 'hover:bg-gray-100'
+                        }`}
+                        title={!isLoggedIn ? '로그인이 필요합니다' : ''}
                       >
                         <Heart
                           size={16}
@@ -342,7 +404,11 @@ export function CartPage() {
                         e.stopPropagation()
                         toggleLike(product.id)
                       }}
-                      className="absolute bottom-2 right-2 w-6 h-6 flex items-center justify-center"
+                      disabled={!isLoggedIn}
+                      className={`absolute bottom-2 right-2 w-6 h-6 flex items-center justify-center ${
+                        !isLoggedIn ? 'cursor-not-allowed opacity-50' : ''
+                      }`}
+                      title={!isLoggedIn ? '로그인이 필요합니다' : ''}
                     >
                       <Heart
                         size={12}
