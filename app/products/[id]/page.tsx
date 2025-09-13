@@ -34,6 +34,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
   const [showCartModal, setShowCartModal] = useState(false)
+  const [isLiking, setIsLiking] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const { addItem } = useCart()
 
   useEffect(() => {
@@ -87,42 +89,26 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     fetchProductDetail()
   }, [params.id])
 
-  // 좋아요 상태를 주기적으로 확인 (무한 루프 방지)
+  // 로그인 상태 확인
   useEffect(() => {
-    const checkLikeStatus = async () => {
-      try {
-        const response = await fetch('/api/likes/my', {
-          credentials: 'include',
-        })
-        if (response.ok) {
-          const likedIds = await response.json()
-          const isLiked = likedIds.some((like: any) => 
-            like.targetIdx === Number(params.id) && like.targetType === 'PRODUCT'
-          )
-          
-          // 현재 상태와 다를 때만 업데이트 (무한 루프 방지)
-          setDetail(prev => {
-            if (prev && prev.likedByUser !== isLiked) {
-              return {
-                ...prev,
-                likedByUser: isLiked
-              }
-            }
-            return prev
-          })
-        }
-      } catch (error) {
-        console.error('좋아요 상태 확인 실패:', error)
+    const checkLoginStatus = () => {
+      const token = localStorage.getItem('token')
+      setIsLoggedIn(!!token)
+    }
+    
+    checkLoginStatus()
+    
+    // 로그인 상태 변경 감지
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'token') {
+        checkLoginStatus()
       }
     }
-
-    // 초기 로드 시 즉시 확인
-    checkLikeStatus()
     
-    // 이후 2초마다 좋아요 상태 확인
-    const interval = setInterval(checkLikeStatus, 2000)
-    return () => clearInterval(interval)
-  }, [params.id])
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
 
   const handleAddToCart = () => {
     if (!detail) return
@@ -147,6 +133,51 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       setTimeout(() => setShowSuccessToast(false), 3000)
     } finally {
       setIsAddingToCart(false)
+    }
+  }
+
+  const handleToggleLike = async () => {
+    if (!detail || isLiking) return
+    
+    // 로그인 상태 확인
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('좋아요 기능을 사용하려면 로그인이 필요합니다.')
+      return
+    }
+    
+    try {
+      setIsLiking(true)
+      
+      const response = await fetch('/api/likes/toggle', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          targetIdx: detail.product.productIdx,
+          targetType: 'PRODUCT'
+        })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setDetail(prev => prev ? {
+          ...prev,
+          likedByUser: data.liked,
+          likesCount: data.count
+        } : null)
+      } else {
+        console.error('좋아요 토글 실패:', response.status)
+        if (response.status === 401) {
+          alert('로그인이 필요합니다.')
+        }
+      }
+    } catch (error) {
+      console.error('좋아요 토글 중 오류:', error)
+    } finally {
+      setIsLiking(false)
     }
   }
 
@@ -221,10 +252,19 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             </Button>
             <Button 
               variant="outline"
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+              onClick={handleToggleLike}
+              disabled={isLiking || !isLoggedIn}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                !isLoggedIn 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : detail.likedByUser 
+                    ? 'bg-red-100 hover:bg-red-200 text-red-700 border-red-300' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+              title={!isLoggedIn ? '로그인이 필요합니다' : ''}
             >
-              <Heart className="w-4 h-4" />
-              {detail.likesCount || 0}
+              <Heart className={`w-4 h-4 ${detail.likedByUser ? 'fill-red-500' : ''}`} />
+              {isLiking ? '처리 중...' : (detail.likesCount || 0)}
             </Button>
           </div>
 
