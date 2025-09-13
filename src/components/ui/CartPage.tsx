@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Heart, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/contexts/CartContext'
+import { useRecentProducts } from '@/hooks/useRecentProducts'
 import dynamic from 'next/dynamic'
 
 interface CartItem {
@@ -41,7 +42,7 @@ interface RecentProduct {
 export function CartPage() {
   const router = useRouter()
   const { items: cartItems, addItem, removeItem, updateQuantity } = useCart()
-  const [recentProducts, setRecentProducts] = useState<RecentProduct[]>([])
+  const { recentProducts, addRecentProduct } = useRecentProducts()
   const [isLoading, setIsLoading] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -49,7 +50,7 @@ export function CartPage() {
 
   useEffect(() => {
     setIsMounted(true)
-    loadRecentProducts()
+    setIsLoading(false) // 최근 본 상품은 훅에서 관리하므로 로딩 완료
     
     // 로그인 상태 확인
     const checkLoginStatus = () => {
@@ -83,25 +84,6 @@ export function CartPage() {
     isLiked: likedProducts.has(item.id.toString()) // 실제 좋아요 상태 반영
   }))
 
-  // 최근 본 상품 로드
-  const loadRecentProducts = async () => {
-    try {
-      const response = await fetch('/api/products/recent')
-      if (response.ok) {
-        const data = await response.json()
-        // 좋아요 상태 초기화
-        const productsWithLikeStatus = (data.products || []).map((product: any) => ({
-          ...product,
-          isLiked: likedProducts.has(product.id)
-        }))
-        setRecentProducts(productsWithLikeStatus)
-      }
-    } catch (error) {
-      console.error('최근 본 상품 로드 실패:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   // 상품 보러 가기
   const goToProducts = () => {
@@ -177,14 +159,8 @@ export function CartPage() {
           return newSet
         })
         
-        // 최근 본 상품 목록 업데이트
-        setRecentProducts(prev => 
-          prev.map(product => 
-            product.id === productId 
-              ? { ...product, isLiked: data.liked }
-              : product
-          )
-        )
+        // 최근 본 상품은 훅에서 관리하므로 별도 업데이트 불필요
+        // 좋아요 상태만 로컬에서 관리
       } else {
         console.error('좋아요 토글 실패:', response.status)
         if (response.status === 401) {
@@ -360,19 +336,7 @@ export function CartPage() {
             </button>
           </div>
 
-          {isLoading ? (
-            <div className="flex gap-3 overflow-x-auto pb-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex-shrink-0 w-32">
-                  <div className="animate-pulse">
-                    <div className="w-32 h-40 bg-gray-200 angular-rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 angular-rounded mb-1"></div>
-                    <div className="h-3 bg-gray-200 angular-rounded w-2/3"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : recentProducts.length > 0 ? (
+          {recentProducts.length > 0 ? (
             <div className="flex gap-3 overflow-x-auto pb-2">
               {recentProducts.map((product) => (
                 <div
@@ -412,7 +376,7 @@ export function CartPage() {
                     >
                       <Heart
                         size={12}
-                        className={product.isLiked ? 'text-red-500 fill-red-500' : 'text-gray-400'}
+                        className={likedProducts.has(product.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'}
                       />
                     </button>
                   </div>
@@ -447,7 +411,9 @@ export function CartPage() {
             </div>
           ) : (
             <div className="text-center py-8">
+              <div className="text-4xl mb-4">👀</div>
               <p className="text-gray-500 text-sm">최근 본 상품이 없습니다</p>
+              <p className="text-gray-400 text-xs mt-1">상품을 둘러보시면 여기에 표시됩니다</p>
             </div>
           )}
         </div>

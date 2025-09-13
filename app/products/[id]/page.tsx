@@ -7,6 +7,7 @@ import { useCart } from '@/contexts/CartContext'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, Heart, Check } from 'lucide-react'
 import CartSuccessModal from '@/components/ui/CartSuccessModal'
+import { useRecentProducts } from '@/hooks/useRecentProducts'
 
 type Product = {
   productIdx: number
@@ -37,6 +38,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [isLiking, setIsLiking] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const { addItem } = useCart()
+  const { addRecentProduct } = useRecentProducts()
 
   useEffect(() => {
     const fetchProductDetail = async () => {
@@ -52,6 +54,15 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         if (response.ok) {
           const data = await response.json()
           setDetail(data)
+          
+          // 최근 본 상품에 추가
+          addRecentProduct({
+            id: data.product.productIdx.toString(),
+            name: data.product.productName,
+            brand: data.product.storeName || 'SNAPFIT',
+            price: data.product.productPrice,
+            imageUrl: data.product.productImage
+          })
           
           // 연관 상품 가져오기
           const usp = new URLSearchParams()
