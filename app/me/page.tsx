@@ -42,17 +42,38 @@ interface ScrapPost {
   tags: string[]
 }
 
+interface OrderItem {
+  productId: number
+  productName: string
+  productImage: string
+  quantity: number
+  price: number
+}
+
+interface Order {
+  orderId: string
+  orderNumber: string
+  status: string
+  totalAmount: number
+  createdAt: string
+  orderItems: OrderItem[]
+  customerName?: string
+  customerEmail?: string
+  customerPhone?: string
+}
+
 export default function MePage() {
   const router = useRouter()
   // const { theme, setTheme } = useTheme()
   const [theme, setTheme] = useState('light')
   const [user, setUser] = useState<UserProfile | null>(null)
   const [scrapPosts, setScrapPosts] = useState<ScrapPost[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editNickname, setEditNickname] = useState('')
   const [showImageUpload, setShowImageUpload] = useState(false)
-  const [activeTab, setActiveTab] = useState<'profile' | 'cody'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'cody' | 'orders'>('profile')
 
   // 사용자 정보 가져오기
   const fetchUserInfo = async () => {
@@ -134,6 +155,29 @@ export default function MePage() {
       }
     } catch (error) {
       console.error('스크랩 게시글 로드 실패:', error)
+    }
+  }
+
+  // 주문 내역 가져오기
+  const fetchOrders = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch('/api/orders/my-orders', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const ordersData = await response.json()
+        setOrders(ordersData)
+      } else {
+        console.error('주문 내역 조회 실패:', response.status)
+      }
+    } catch (error) {
+      console.error('주문 내역 조회 오류:', error)
     }
   }
 
@@ -238,6 +282,7 @@ export default function MePage() {
     
     fetchUserInfo()
     fetchScrapPosts()
+    fetchOrders()
     setLoading(false)
   }, [])
 
@@ -389,6 +434,16 @@ export default function MePage() {
             >
               내 코디
             </button>
+            <button
+              className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
+                activeTab === 'orders'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+              onClick={() => setActiveTab('orders')}
+            >
+              주문 내역
+            </button>
           </div>
         </div>
 
@@ -425,10 +480,94 @@ export default function MePage() {
           </div>
         </div>
           </>
-        ) : (
+        ) : activeTab === 'cody' ? (
           /* 내 코디 탭 */
           <div className="bg-white dark:bg-dark-sub rounded-lg p-6 shadow-sm">
             <MyCodyList />
+          </div>
+        ) : (
+          /* 주문 내역 탭 */
+          <div className="bg-white dark:bg-dark-sub rounded-lg p-6 shadow-sm">
+            {orders.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-4">
+                  <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">주문 내역이 없습니다</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">아직 주문한 상품이 없습니다.</p>
+                <Button
+                  onClick={() => router.push('/')}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  쇼핑하러 가기
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {orders.map((order) => (
+                  <div key={order.orderId} className="border border-gray-200 dark:border-dark-border rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">주문번호: {order.orderNumber}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(order.createdAt)}</p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        order.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                        order.status === 'PAID' ? 'bg-green-100 text-green-800' :
+                        order.status === 'SHIPPED' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'DELIVERED' ? 'bg-purple-100 text-purple-800' :
+                        order.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {order.status === 'PENDING' ? '결제 대기' :
+                         order.status === 'PAID' ? '결제 완료' :
+                         order.status === 'SHIPPED' ? '배송 중' :
+                         order.status === 'DELIVERED' ? '배송 완료' :
+                         order.status === 'CANCELLED' ? '주문 취소' :
+                         order.status}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2 mb-3">
+                      {order.orderItems?.map((item, index) => (
+                        <div key={index} className="flex items-center py-3 border-b border-gray-100 dark:border-dark-border last:border-b-0">
+                          <div className="flex-shrink-0 w-16 h-16 mr-3">
+                            <img
+                              src={item.productImage}
+                              alt={item.productName}
+                              className="w-full h-full object-cover rounded-lg border border-gray-200 dark:border-dark-border"
+                              onError={(e) => {
+                                e.currentTarget.src = '/images/placeholder-product.svg'
+                              }}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{item.productName}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">수량: {item.quantity}개</p>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <p className="font-semibold text-gray-900 dark:text-gray-100">
+                              {(item.price * item.quantity).toLocaleString()}원
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-dark-border">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        총 {order.orderItems?.length || 0}개 상품
+                      </div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        총 {order.totalAmount.toLocaleString()}원
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

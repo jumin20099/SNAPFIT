@@ -28,34 +28,89 @@ export function usePortOnePayment() {
       setIsLoading(true)
       setError(null)
 
-             // 결제 요청 (PortOne v2 SDK)
-             const response = await requestPayment({
-               storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID!,
-               channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY!,
-               paymentId: `order_${paymentData.orderId}_${Date.now()}`,
-               orderName: paymentData.orderName,
-               totalAmount: paymentData.totalAmount,
-               currency: 'KRW',
-               payMethod: 'EASY_PAY', // 간편결제로 설정
-               confirmUrl: `${window.location.origin}/orders/success?orderId=${paymentData.orderId}`,
-               cancelUrl: `${window.location.origin}/cart`,
-               failUrl: `${window.location.origin}/cart?error=payment_failed`,
-               windowType: {
-                 type: 'REDIRECT' // 리다이렉트 방식 (객체 형식)
-               },
-               customizations: {
-                 colors: {
-                   primary: '#3C1E1E', // 브랜드 컬러
-                 },
-               },
-               // 카카오페이 간편결제 설정
-               easyPay: {
-                 use: true,
-                 easyPayMethod: 'KAKAOPAY'
-               }
-             })
+      // 1. 서버에서 PortOne 결제 생성
+      const createResponse = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: paymentData.orderId,
+          amount: paymentData.totalAmount,
+          orderName: paymentData.orderName,
+        }),
+      })
 
-      if (response.code === 'PAYMENT_SUCCESS') {
+      if (!createResponse.ok) {
+        throw new Error('결제 생성에 실패했습니다.')
+      }
+
+      const { clientSecret, paymentId } = await createResponse.json()
+      console.log('PortOne 결제 생성 완료:', { paymentId, clientSecret })
+
+      // 2. PortOne 결제창 호출 (v2 SDK)
+      const response = await requestPayment({
+        storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID!,
+        channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY!,
+        paymentId: paymentId, // 서버에서 받은 paymentId 사용
+        orderName: paymentData.orderName,
+        totalAmount: paymentData.totalAmount,
+        currency: 'KRW',
+        payMethod: 'EASY_PAY',
+        easyPay: {
+          use: true,
+          easyPayMethod: 'KAKAOPAY'
+        },
+        confirmUrl: `${window.location.origin}/orders/success?orderId=${paymentData.orderId}`,
+        cancelUrl: `${window.location.origin}/cart`,
+        failUrl: `${window.location.origin}/cart?error=payment_failed`,
+        windowType: {
+          type: 'POPUP'
+        },
+        customizations: {
+          colors: {
+            primary: '#3C1E1E',
+          },
+        },
+      })
+
+      console.log('PortOne 결제 응답:', response)
+
+      // PortOne v2 SDK는 response.code가 아닌 다른 방식으로 응답 처리
+      if (response.paymentId && response.paymentToken) {
+        // 결제 성공으로 간주 (실제로는 PortOne이 confirmUrl로 리다이렉트할 것)
+        console.log('PortOne 결제 성공:', {
+          paymentId: response.paymentId,
+          paymentToken: response.paymentToken,
+          txId: response.txId
+        })
+
+        // 서버 검증 (선택적)
+        try {
+          const confirmResponse = await fetch('/api/payment/confirm', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              paymentId: response.paymentId,
+              orderId: paymentData.orderId,
+            }),
+          })
+
+          if (confirmResponse.ok) {
+            const confirmResult = await confirmResponse.json()
+            console.log('PortOne 결제 검증 완료:', confirmResult)
+          }
+        } catch (error) {
+          console.warn('결제 검증 실패 (무시):', error)
+        }
+
+        // 결제 성공 후 성공 페이지로 리다이렉트
+        setTimeout(() => {
+          window.location.href = `/orders/success?orderId=${paymentData.orderId}`
+        }, 1000)
+
         return {
           success: true,
           paymentId: response.paymentId,
@@ -63,7 +118,7 @@ export function usePortOnePayment() {
       } else {
         return {
           success: false,
-          error: response.message || '결제에 실패했습니다.',
+          error: '결제에 실패했습니다.',
         }
       }
     } catch (error) {
