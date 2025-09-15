@@ -28,26 +28,32 @@ export function usePortOnePayment() {
       setIsLoading(true)
       setError(null)
 
-      // 결제 요청
-      const response = await requestPayment({
-        storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID!,
-        channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY!,
-        paymentId: `order_${paymentData.orderId}_${Date.now()}`,
-        orderName: paymentData.orderName,
-        totalAmount: paymentData.totalAmount,
-        currency: 'KRW',
-        payMethod: 'KAKAOPAY', // 카카오페이 결제
-        // 카카오페이는 사용자 정보를 자동으로 가져오므로 customer 정보 제거
-        confirmUrl: `${window.location.origin}/api/payment/confirm`,
-        cancelUrl: `${window.location.origin}/cart`,
-        failUrl: `${window.location.origin}/cart?error=payment_failed`,
-        windowType: 'POPUP', // 팝업으로 결제 진행
-        customizations: {
-          colors: {
-            primary: '#3C1E1E', // 브랜드 컬러
-          },
-        },
-      })
+             // 결제 요청 (PortOne v2 SDK)
+             const response = await requestPayment({
+               storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID!,
+               channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY!,
+               paymentId: `order_${paymentData.orderId}_${Date.now()}`,
+               orderName: paymentData.orderName,
+               totalAmount: paymentData.totalAmount,
+               currency: 'KRW',
+               payMethod: 'EASY_PAY', // 간편결제로 설정
+               confirmUrl: `${window.location.origin}/orders/success?orderId=${paymentData.orderId}`,
+               cancelUrl: `${window.location.origin}/cart`,
+               failUrl: `${window.location.origin}/cart?error=payment_failed`,
+               windowType: {
+                 type: 'REDIRECT' // 리다이렉트 방식 (객체 형식)
+               },
+               customizations: {
+                 colors: {
+                   primary: '#3C1E1E', // 브랜드 컬러
+                 },
+               },
+               // 카카오페이 간편결제 설정
+               easyPay: {
+                 use: true,
+                 easyPayMethod: 'KAKAOPAY'
+               }
+             })
 
       if (response.code === 'PAYMENT_SUCCESS') {
         return {

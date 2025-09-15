@@ -193,8 +193,8 @@ export function CartPage() {
       if (paymentResult.success) {
         // 3. 결제 성공 시 장바구니 비우기
         clear()
-        alert('결제가 완료되었습니다!')
-        router.push(`/orders/${orderId}/success`)
+        // 결제 성공 시 주문 성공 페이지로 리다이렉트
+        window.location.href = `/orders/success?orderId=${orderId}`
       } else {
         alert(paymentResult.error || '결제에 실패했습니다.')
       }

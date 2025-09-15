@@ -1,18 +1,19 @@
 'use client'
 
-import { useParams, useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export default function OrderSuccessPage() {
-  const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [orderId, setOrderId] = useState<string>('')
 
   useEffect(() => {
-    if (params.orderId) {
-      setOrderId(params.orderId as string)
+    const orderIdParam = searchParams.get('orderId')
+    if (orderIdParam) {
+      setOrderId(orderIdParam)
     }
-  }, [params.orderId])
+  }, [searchParams])
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -25,25 +26,23 @@ export default function OrderSuccessPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">결제가 완료되었습니다!</h1>
           <p className="text-gray-600">주문이 성공적으로 처리되었습니다.</p>
-        </div>
-
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <p className="text-sm text-gray-600 mb-1">주문 번호</p>
-          <p className="font-mono text-lg font-semibold text-gray-900">{orderId}</p>
+          {orderId && (
+            <p className="text-sm text-gray-500 mt-2">주문번호: {orderId}</p>
+          )}
         </div>
 
         <div className="space-y-3">
           <button
-            onClick={() => router.push('/my-page')}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            onClick={() => router.push('/')}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            주문 내역 보기
+            홈으로 이동
           </button>
           <button
-            onClick={() => router.push('/')}
-            className="w-full bg-gray-200 text-gray-800 py-3 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+            onClick={() => router.push('/cart')}
+            className="w-full bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
           >
-            홈으로 돌아가기
+            장바구니로 이동
           </button>
         </div>
       </div>
