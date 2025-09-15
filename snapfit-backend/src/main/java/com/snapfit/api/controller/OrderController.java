@@ -2,10 +2,14 @@ package com.snapfit.api.controller;
 
 import com.snapfit.api.dto.OrderRequestDto;
 import com.snapfit.api.dto.OrderResponseDto;
+import com.snapfit.api.entity.User;
+import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.security.CustomUserDetails;
 import com.snapfit.api.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,26 +22,23 @@ import java.util.UUID;
 public class OrderController {
     
     private final OrderService orderService;
+    private final UserRepository userRepository;
     
     // 주문 생성
     @PostMapping
     public ResponseEntity<OrderResponseDto> createOrder(
-            @RequestHeader("X-User-Id") String userIdStr,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody OrderRequestDto requestDto) {
         
-        log.info("주문 생성 요청: userId={}", userIdStr);
-        
-        // 기본 사용자 ID 설정 (인증이 없는 경우)
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000001");
-        if (userIdStr != null && !userIdStr.isEmpty()) {
-            try {
-                userId = UUID.fromString(userIdStr);
-            } catch (IllegalArgumentException e) {
-                log.warn("잘못된 사용자 ID 형식: {}, 기본값 사용", userIdStr);
-            }
+        if (userDetails == null) {
+            log.warn("인증되지 않은 사용자의 주문 생성 시도");
+            return ResponseEntity.status(401).body(null);
         }
         
-        OrderResponseDto response = orderService.createOrder(userId, requestDto);
+        User user = userDetails.getUser();
+        log.info("주문 생성 요청: userId={}, email={}", user.getUserIdx(), user.getEmail());
+        
+        OrderResponseDto response = orderService.createOrder(user.getUserIdx(), requestDto);
         return ResponseEntity.ok(response);
     }
     
@@ -53,21 +54,17 @@ public class OrderController {
     // 사용자 주문 목록 조회
     @GetMapping
     public ResponseEntity<List<OrderResponseDto>> getUserOrders(
-            @RequestHeader("X-User-Id") String userIdStr) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         
-        log.info("사용자 주문 목록 조회 요청: userId={}", userIdStr);
-        
-        // 기본 사용자 ID 설정 (인증이 없는 경우)
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000001");
-        if (userIdStr != null && !userIdStr.isEmpty()) {
-            try {
-                userId = UUID.fromString(userIdStr);
-            } catch (IllegalArgumentException e) {
-                log.warn("잘못된 사용자 ID 형식: {}, 기본값 사용", userIdStr);
-            }
+        if (userDetails == null) {
+            log.warn("인증되지 않은 사용자의 주문 목록 조회 시도");
+            return ResponseEntity.status(401).body(null);
         }
         
-        List<OrderResponseDto> response = orderService.getUserOrders(userId);
+        User user = userDetails.getUser();
+        log.info("사용자 주문 목록 조회 요청: userId={}, email={}", user.getUserIdx(), user.getEmail());
+        
+        List<OrderResponseDto> response = orderService.getUserOrders(user.getUserIdx());
         return ResponseEntity.ok(response);
     }
     

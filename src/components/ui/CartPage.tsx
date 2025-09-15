@@ -62,7 +62,7 @@ export function CartPage() {
       
       if (token) {
         try {
-          const response = await fetch('http://localhost:8080/api/users/me', {
+          const response = await fetch('http://localhost:8080/api/user/info', {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -144,10 +144,12 @@ export function CartPage() {
   const processPayment = async () => {
     try {
       // 1. 주문 생성
+      const token = localStorage.getItem('token')
       const orderResponse = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           items: cartItems.map(item => ({
