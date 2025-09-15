@@ -27,7 +27,7 @@ public class CommentLike {
     private Comment comment;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "user_idx", nullable = false)
     private User user;
     
     @CreationTimestamp

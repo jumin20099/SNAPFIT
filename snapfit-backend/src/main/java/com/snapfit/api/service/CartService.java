@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,7 +30,7 @@ public class CartService {
     
     // 장바구니에 상품 추가
     @Transactional
-    public CartItemResponseDto addToCart(Long userId, CartItemRequestDto requestDto) {
+    public CartItemResponseDto addToCart(UUID userId, CartItemRequestDto requestDto) {
         log.info("장바구니에 상품 추가 요청: userId={}, productId={}, quantity={}", 
                 userId, requestDto.getProductId(), requestDto.getQuantity());
         
@@ -67,7 +68,7 @@ public class CartService {
     }
     
     // 사용자의 장바구니 조회
-    public List<CartItemResponseDto> getCartItems(Long userId) {
+    public List<CartItemResponseDto> getCartItems(UUID userId) {
         log.info("장바구니 조회 요청: userId={}", userId);
         
         List<CartItem> cartItems = cartItemRepository.findByUserIdWithProduct(userId);
@@ -80,7 +81,7 @@ public class CartService {
     
     // 장바구니 아이템 수량 수정
     @Transactional
-    public CartItemResponseDto updateQuantity(Long userId, Long cartItemId, Integer quantity) {
+    public CartItemResponseDto updateQuantity(UUID userId, Long cartItemId, Integer quantity) {
         log.info("장바구니 아이템 수량 수정: userId={}, cartItemId={}, quantity={}", 
                 userId, cartItemId, quantity);
         
@@ -88,7 +89,7 @@ public class CartService {
                 .orElseThrow(() -> new RuntimeException("장바구니 아이템을 찾을 수 없습니다."));
         
         // 권한 확인
-        if (!cartItem.getUser().getId().equals(userId)) {
+        if (!cartItem.getUser().getUserIdx().equals(userId)) {
             throw new RuntimeException("권한이 없습니다.");
         }
         
@@ -100,14 +101,14 @@ public class CartService {
     
     // 장바구니 아이템 삭제
     @Transactional
-    public void removeFromCart(Long userId, Long cartItemId) {
+    public void removeFromCart(UUID userId, Long cartItemId) {
         log.info("장바구니 아이템 삭제: userId={}, cartItemId={}", userId, cartItemId);
         
         CartItem cartItem = cartItemRepository.findById(cartItemId)
                 .orElseThrow(() -> new RuntimeException("장바구니 아이템을 찾을 수 없습니다."));
         
         // 권한 확인
-        if (!cartItem.getUser().getId().equals(userId)) {
+        if (!cartItem.getUser().getUserIdx().equals(userId)) {
             throw new RuntimeException("권한이 없습니다.");
         }
         
@@ -117,15 +118,15 @@ public class CartService {
     
     // 장바구니 전체 비우기
     @Transactional
-    public void clearCart(Long userId) {
+    public void clearCart(UUID userId) {
         log.info("장바구니 전체 비우기: userId={}", userId);
-        cartItemRepository.deleteByUserId(userId);
+        cartItemRepository.deleteByUserUserIdx(userId);
         log.info("장바구니 전체 비우기 완료");
     }
     
     // 장바구니 아이템 개수 조회
-    public long getCartItemCount(Long userId) {
-        return cartItemRepository.countByUserId(userId);
+    public long getCartItemCount(UUID userId) {
+        return cartItemRepository.countByUserUserIdx(userId);
     }
     
     // Entity를 ResponseDto로 변환

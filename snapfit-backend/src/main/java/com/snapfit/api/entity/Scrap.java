@@ -46,7 +46,7 @@ public class Scrap {
      */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @MapsId("userId")
-    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_scraps_users"))
+    @JoinColumn(name = "user_id", referencedColumnName = "user_idx", nullable = false, foreignKey = @ForeignKey(name = "fk_scraps_users"))
     @JsonIgnore
     private User user;
 

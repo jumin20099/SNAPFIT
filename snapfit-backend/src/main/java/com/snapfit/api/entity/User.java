@@ -29,6 +29,7 @@ public class User {
     }
 
     @Id
+    @Column(name = "user_idx", updatable = false, nullable = false)
     private UUID userIdx;
 
     private LocalDateTime createdAt;

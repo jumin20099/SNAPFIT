@@ -6,6 +6,7 @@ import { ArrowLeft, Heart, ChevronRight } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/contexts/CartContext'
 import { useRecentProducts } from '@/hooks/useRecentProducts'
+import { usePortOnePayment } from '@/hooks/usePortOnePayment'
 import dynamic from 'next/dynamic'
 
 interface CartItem {
@@ -41,21 +42,39 @@ interface RecentProduct {
 
 export function CartPage() {
   const router = useRouter()
-  const { items: cartItems, addItem, removeItem, updateQuantity } = useCart()
+  const { items: cartItems, addItem, removeItem, updateQuantity, clear } = useCart()
   const { recentProducts, addRecentProduct } = useRecentProducts()
+  const { requestPayment, isLoading: isPaymentLoading, error: paymentError } = usePortOnePayment()
   const [isLoading, setIsLoading] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set())
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     setIsMounted(true)
     setIsLoading(false) // 최근 본 상품은 훅에서 관리하므로 로딩 완료
     
-    // 로그인 상태 확인
-    const checkLoginStatus = () => {
+    // 로그인 상태 확인 및 사용자 정보 가져오기
+    const checkLoginStatus = async () => {
       const token = localStorage.getItem('token')
       setIsLoggedIn(!!token)
+      
+      if (token) {
+        try {
+          const response = await fetch('http://localhost:8080/api/users/me', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+          if (response.ok) {
+            const userData = await response.json()
+            setUser(userData)
+          }
+        } catch (error) {
+          console.error('사용자 정보 가져오기 실패:', error)
+        }
+      }
     }
     
     checkLoginStatus()
@@ -93,6 +112,92 @@ export function CartPage() {
   // 상품 상세 페이지로 이동
   const goToProduct = (productId: string) => {
     router.push(`/products/${productId}`)
+  }
+
+  // 총 금액 계산
+  const calculateTotal = () => {
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0)
+  }
+
+  // 구매하기 버튼 클릭
+  const handlePurchase = async () => {
+    if (cartItems.length === 0) {
+      alert('장바구니가 비어있습니다.')
+      return
+    }
+
+    if (!isLoggedIn) {
+      alert('로그인이 필요합니다.')
+      return
+    }
+
+    if (!user) {
+      alert('사용자 정보를 가져오는 중입니다. 잠시 후 다시 시도해주세요.')
+      return
+    }
+
+    // 바로 결제 진행 (사용자 정보 자동 입력)
+    await processPayment()
+  }
+
+  // 결제 진행 (사용자 정보 자동 입력)
+  const processPayment = async () => {
+    try {
+      // 1. 주문 생성
+      const orderResponse = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: cartItems.map(item => ({
+            productId: item.id,
+            productName: item.name,
+            quantity: item.quantity,
+            price: item.price
+          })),
+          totalAmount: calculateTotal(),
+          customerInfo: {
+            name: user.nickname || '사용자',
+            email: user.email || '',
+            phone: user.phone || ''
+          }
+        })
+      })
+
+      if (!orderResponse.ok) {
+        throw new Error('주문 생성에 실패했습니다.')
+      }
+
+      const { orderId } = await orderResponse.json()
+
+      // 2. 포트원 카카오페이 결제 요청
+      const paymentResult = await requestPayment({
+        orderId,
+        orderName: cartItems.length === 1 
+          ? cartItems[0].name 
+          : `${cartItems[0].name} 외 ${cartItems.length - 1}개`,
+        totalAmount: calculateTotal(),
+        items: cartItems.map(item => ({
+          productId: item.id,
+          productName: item.name,
+          quantity: item.quantity,
+          price: item.price
+        }))
+      })
+
+      if (paymentResult.success) {
+        // 3. 결제 성공 시 장바구니 비우기
+        clear()
+        alert('결제가 완료되었습니다!')
+        router.push(`/orders/${orderId}/success`)
+      } else {
+        alert(paymentResult.error || '결제에 실패했습니다.')
+      }
+    } catch (error) {
+      console.error('결제 오류:', error)
+      alert('결제 중 오류가 발생했습니다.')
+    }
   }
 
   // 수량 증가
@@ -320,6 +425,23 @@ export function CartPage() {
                 </div>
               </div>
             ))}
+            
+            {/* 총 금액 및 구매하기 버튼 */}
+            <div className="bg-white angular-card p-4 mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-lg font-bold">총 금액</span>
+                <span className="text-xl font-bold text-gray-900">
+                  {calculateTotal().toLocaleString()}원
+                </span>
+              </div>
+              <button
+                onClick={handlePurchase}
+                disabled={isPaymentLoading}
+                className="w-full bg-gray-900 text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPaymentLoading ? '결제 진행 중...' : '카카오페이로 구매하기'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -390,13 +512,8 @@ export function CartPage() {
                       {product.name}
                     </p>
                     <div className="flex items-center gap-1">
-                      {product.discountRate && (
-                        <span className="text-xs font-bold text-red-500">
-                          {product.discountRate}%
-                        </span>
-                      )}
                       <span className="text-sm font-bold text-gray-900">
-                        {product.price.toLocaleString()}~
+                        {product.price.toLocaleString()}원
                       </span>
                     </div>
                     <p className="text-xs text-gray-500">{product.shippingInfo}</p>
@@ -418,6 +535,7 @@ export function CartPage() {
           )}
         </div>
       </div>
+
     </div>
   )
 }

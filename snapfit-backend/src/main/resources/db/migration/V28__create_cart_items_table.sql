@@ -1,7 +1,7 @@
 -- 장바구니 아이템 테이블 생성
 CREATE TABLE cart_items (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
+    user_id UUID NOT NULL,
     product_id BIGINT NOT NULL,
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -9,7 +9,7 @@ CREATE TABLE cart_items (
     
     -- 외래키 제약조건
     CONSTRAINT fk_cart_items_user_id 
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(user_idx) ON DELETE CASCADE,
     CONSTRAINT fk_cart_items_product_id 
         FOREIGN KEY (product_id) REFERENCES products(product_idx) ON DELETE CASCADE,
     

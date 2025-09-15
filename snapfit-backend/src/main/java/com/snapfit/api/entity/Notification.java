@@ -46,7 +46,7 @@ public class Notification {
      * 보안: 본인만 알림 조회/수정 가능
      */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_notifications_users"))
+    @JoinColumn(name = "user_id", referencedColumnName = "user_idx", nullable = false, foreignKey = @ForeignKey(name = "fk_notifications_users"))
     @JsonIgnore
     private User user;
 

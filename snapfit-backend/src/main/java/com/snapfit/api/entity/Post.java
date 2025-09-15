@@ -54,7 +54,7 @@ public class Post {
      * 보안: 작성자만 수정/삭제 가능
      */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "author_id", nullable = false, foreignKey = @ForeignKey(name = "fk_posts_users"))
+    @JoinColumn(name = "author_id", referencedColumnName = "user_idx", nullable = false, foreignKey = @ForeignKey(name = "fk_posts_users"))
     @JsonIgnore
     private User author;
 
