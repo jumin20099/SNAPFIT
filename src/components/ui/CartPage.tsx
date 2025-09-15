@@ -145,6 +145,8 @@ export function CartPage() {
     try {
       // 1. 주문 생성
       const token = localStorage.getItem('token')
+      console.log('주문 생성 요청 토큰:', token ? token.substring(0, 20) + '...' : 'null')
+      
       const orderResponse = await fetch('/api/orders', {
         method: 'POST',
         headers: {
