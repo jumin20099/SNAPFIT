@@ -15,25 +15,37 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 실제로는 데이터베이스에서 상품을 검색해야 함
-    // 현재는 빈 배열 반환 (실제 구현 시 교체 필요)
+    // 백엔드 API를 통해 상품 검색
+    const API_BASE = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
+    
+    const backendParams = new URLSearchParams({
+      keyword: query.trim(),
+      type: 'all'
+    })
+    
+    const response = await fetch(`${API_BASE}/api/admin/products/search?${backendParams.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    
+    if (!response.ok) {
+      throw new Error(`검색 API 오류: ${response.status}`)
+    }
+    
+    const products = await response.json()
+    console.log('검색 API 응답:', products)
+    console.log('첫 번째 상품 ID 필드들:', products[0] ? {
+      id: products[0].id,
+      productIdx: products[0].productIdx,
+      product_id: products[0].product_id,
+      product_idx: products[0].product_idx
+    } : '상품 없음')
     
     const searchResults = {
-      products: [
-        // 실제 데이터베이스 쿼리 예시:
-        // SELECT * FROM products 
-        // WHERE (
-        //   product_name LIKE ? OR 
-        //   brand_name LIKE ? OR 
-        //   category LIKE ? OR
-        //   tags LIKE ?
-        // )
-        // ORDER BY 
-        //   CASE WHEN product_name LIKE ? THEN 1 ELSE 2 END,
-        //   created_at DESC
-        // LIMIT ? OFFSET ?
-      ],
-      total: 0,
+      products: products || [],
+      total: products?.length || 0,
       page,
       limit,
       query: query.trim()

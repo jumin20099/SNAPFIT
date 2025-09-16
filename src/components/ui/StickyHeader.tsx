@@ -54,10 +54,8 @@ export function StickyHeader() {
   }, [pathname])
 
   const handleSearch = (query: string) => {
-    // 실제 검색 로직 구현
-    console.log('검색어:', query)
-    // 여기서 검색 결과 페이지로 이동하거나 검색 결과를 표시
-    // 예: router.push(`/search?q=${encodeURIComponent(query)}`)
+    // 검색 결과 페이지로 이동
+    router.push(`/search?q=${encodeURIComponent(query)}`)
   }
 
   const handleCartClick = () => {
