@@ -18,6 +18,12 @@ import { CodySaveModal } from './CodySaveModal'
 // ===========================
 
 type Gender = "all" | "male" | "female"
+
+// 헥스 색상을 RGB로 변환하는 함수
+function hexToRgb(hex: string): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '255, 255, 255'
+}
 type Major = "shoes" | "top" | "outer" | "bottom" | "dresses" | "bag" | "accessory" | "hat" | "glasses" | "jewelry" | "watch" | "belt" | "socks" | "ring" | "bracelet" | "necklace"
 
 // 실제 API에서 데이터를 가져올 예정
@@ -593,17 +599,27 @@ export function NewCodyPlayground() {
     >
       {/* App bar - 오버레이 레이어 */}
       <div 
-        className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg px-3 py-2"
+        className="sticky top-0 z-40 flex items-center justify-between border-b border-gray-200/50 dark:border-dark-border/50 px-3 py-2"
         style={{
           // 오버레이로 떠있게 하여 캔버스 레이아웃에 영향 없음
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
+          height: '60px',
           // 부모 transform 영향 차단
           transform: 'translateZ(0)',
-          // 폰트 로딩 영향 차단
-          // fontDisplay: 'block' // CSS 속성이므로 제거
+          // 배경 블러 처리
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          // 선택된 배경색에 따라 동적 배경색 설정
+          backgroundColor: backgroundType === 'color' 
+            ? (selectedBackground === 'white' 
+                ? 'rgba(255, 255, 255, 0.3)' 
+                : selectedBackground === 'black'
+                ? 'rgba(0, 0, 0, 0.3)'
+                : `rgba(${hexToRgb(customBackgroundColor)}, 0.3)`)
+            : 'rgba(255, 255, 255, 0.3)',
         }}
       >
         <Button variant="ghost" size="icon" aria-label="뒤로가기"><ArrowLeft className="h-5 w-5 text-gray-700 dark:text-dark-text"/></Button>
@@ -711,13 +727,31 @@ export function NewCodyPlayground() {
         <div className="absolute bottom-24 left-4 flex gap-2">
           <button
             onClick={() => setIsBackgroundModalOpen(true)}
-            className="flex items-center justify-center w-12 h-12 bg-white/90 dark:bg-dark-sub/90 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 dark:border-dark-border hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
+            className="flex items-center justify-center w-12 h-12 backdrop-blur-sm rounded-full shadow-lg border border-gray-200/50 dark:border-dark-border/50 hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: backgroundType === 'color' 
+                ? (selectedBackground === 'white' 
+                    ? 'rgba(255, 255, 255, 0.4)' 
+                    : selectedBackground === 'black'
+                    ? 'rgba(0, 0, 0, 0.4)'
+                    : `rgba(${hexToRgb(customBackgroundColor)}, 0.4)`)
+                : 'rgba(255, 255, 255, 0.4)',
+            }}
           >
             <Settings size={20} className="text-gray-600 dark:text-dark-text" />
           </button>
           <button
             onClick={() => setSelectedTemplate(selectedTemplate ? null : 'flatlay')}
-            className="flex items-center justify-center w-12 h-12 bg-white/90 dark:bg-dark-sub/90 backdrop-blur-sm rounded-full shadow-lg border border-gray-200 dark:border-dark-border hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
+            className="flex items-center justify-center w-12 h-12 backdrop-blur-sm rounded-full shadow-lg border border-gray-200/50 dark:border-dark-border/50 hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              backgroundColor: backgroundType === 'color' 
+                ? (selectedBackground === 'white' 
+                    ? 'rgba(255, 255, 255, 0.4)' 
+                    : selectedBackground === 'black'
+                    ? 'rgba(0, 0, 0, 0.4)'
+                    : `rgba(${hexToRgb(customBackgroundColor)}, 0.4)`)
+                : 'rgba(255, 255, 255, 0.4)',
+            }}
           >
             <span className="text-lg">📐</span>
           </button>

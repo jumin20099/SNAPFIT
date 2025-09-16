@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Home, Users, Heart, Clock, User, Shirt } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
 const tabs = [
   { id: 'wishlist', label: '좋아요', icon: Heart, path: '/like' },
@@ -13,6 +13,12 @@ const tabs = [
   { id: 'profile', label: '마이', icon: User, path: '/me' },
 ]
 
+// 헥스 색상을 RGB로 변환하는 함수
+function hexToRgb(hex: string): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '255, 255, 255'
+}
+
 interface BottomTabBarProps {
   activeTab: string
   onTabChange: (tabId: string) => void
@@ -20,6 +26,31 @@ interface BottomTabBarProps {
 
 export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
   const router = useRouter()
+  const pathname = usePathname()
+  const [isCodyPage, setIsCodyPage] = useState(false)
+  const [codyBackground, setCodyBackground] = useState({
+    type: 'color',
+    selectedBackground: 'white',
+    customColor: '#ffffff'
+  })
+
+  // 코디 페이지 감지 및 배경 정보 로드
+  useEffect(() => {
+    const isCody = pathname === '/cody' || pathname.startsWith('/cody')
+    setIsCodyPage(isCody)
+    
+    if (isCody && typeof window !== 'undefined') {
+      const backgroundType = localStorage.getItem('cody-background-type') || 'color'
+      const selectedBackground = localStorage.getItem('cody-background') || 'white'
+      const customColor = localStorage.getItem('cody-custom-color') || '#ffffff'
+      
+      setCodyBackground({
+        type: backgroundType as 'color' | 'image',
+        selectedBackground,
+        customColor
+      })
+    }
+  }, [pathname])
 
   const handleTabClick = (tab: typeof tabs[0]) => {
     onTabChange(tab.id)
@@ -29,7 +60,25 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-light-sub dark:bg-dark-sub border-t border-light-border dark:border-dark-border safe-area-pb">
+    <div 
+      className={`fixed bottom-0 left-0 right-0 z-50 border-t safe-area-pb ${
+        isCodyPage 
+          ? 'border-light-border/50 dark:border-dark-border/50' 
+          : 'border-light-border dark:border-dark-border bg-light-sub dark:bg-dark-sub'
+      }`}
+      style={isCodyPage ? {
+        // 코디 페이지에서만 블러 처리 및 동적 배경색 적용
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        backgroundColor: codyBackground.type === 'color' 
+          ? (codyBackground.selectedBackground === 'white' 
+              ? 'rgba(255, 255, 255, 0.3)' 
+              : codyBackground.selectedBackground === 'black'
+              ? 'rgba(0, 0, 0, 0.3)'
+              : `rgba(${hexToRgb(codyBackground.customColor)}, 0.3)`)
+          : 'rgba(255, 255, 255, 0.3)',
+      } : undefined}
+    >
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-around py-1">
           {tabs.map((tab) => {
