@@ -90,12 +90,20 @@ export default function PostDetailPage() {
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false)
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null)
   const observer = useRef<IntersectionObserver | null>(null)
+  const hasIncrementedView = useRef<Set<number>>(new Set())
   
   // 게시글 삭제 기능
   const { isDeleting, deletePost } = useDeletePost()
 
   // 조회수 증가 함수 (Redis 기반 - 원자적 연산)
   const incrementViewCount = useCallback(async (postId: number) => {
+    // 중복 호출 방지
+    if (hasIncrementedView.current.has(postId)) {
+      console.log('조회수 중복 호출 방지:', postId)
+      return
+    }
+    
+    hasIncrementedView.current.add(postId)
     console.log('조회수 증가 시작:', postId)
     
     try {

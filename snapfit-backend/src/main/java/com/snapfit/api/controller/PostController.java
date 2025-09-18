@@ -395,22 +395,7 @@ public class PostController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 게시글 조회수 증가
-     * @param postId 게시글 ID
-     * @return 조회수 정보
-     */
-    @PostMapping("/{postId}/view")
-    public ResponseEntity<ViewCountResponseDto> incrementViewCount(@PathVariable Long postId) {
-        log.info("게시글 조회수 증가 요청: {}", postId);
-        
-        // TODO: 실제 조회수 증가 로직 구현
-        ViewCountResponseDto response = new ViewCountResponseDto();
-        response.setPostId(postId);
-        response.setViewCount(1L);
-        
-        return ResponseEntity.ok(response);
-    }
+    // 조회수 증가는 PostViewController에서 처리
 
     /**
      * 인기 게시글 조회

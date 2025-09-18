@@ -21,11 +21,17 @@ public class PostViewController {
     @PostMapping("/{postId}/view")
     public ResponseEntity<?> incrementViewCount(@PathVariable Long postId) {
         try {
+            System.out.println("=== PostViewController.incrementViewCount 호출됨 ===");
+            System.out.println("postId: " + postId);
+            System.out.println("postViewService: " + postViewService);
+            
             // Redis를 사용하여 조회수 증가
             boolean incremented = postViewService.incrementViewCount(postId);
+            System.out.println("incremented: " + incremented);
             
             // 현재 조회수 가져오기
             long currentViewCount = postViewService.getViewCount(postId);
+            System.out.println("currentViewCount: " + currentViewCount);
             
             if (incremented) {
                 return ResponseEntity.ok().body(Map.of(
@@ -39,6 +45,8 @@ public class PostViewController {
                     .body(Map.of("success", false, "message", "조회수 증가 실패"));
             }
         } catch (Exception e) {
+            System.out.println("PostViewController 예외 발생: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.internalServerError()
                 .body(Map.of("success", false, "message", "조회수 증가 실패: " + e.getMessage()));
         }
