@@ -290,20 +290,4 @@ public class PartnerController {
         }
     }
     
-    // 제휴사용 수정 요청 취소
-    @PutMapping("/products/{id}/update-request/cancel")
-    public ResponseEntity<PartnerProductDto> cancelUpdateRequest(@PathVariable Long id) {
-        try {
-            PartnerProductDto result = partnerService.cancelUpdateRequest(id);
-            if (result != null) {
-                return ResponseEntity.ok(result);
-            } else {
-                return ResponseEntity.badRequest().body(null);
-            }
-        } catch (IllegalStateException e) {
-            return ResponseEntity.badRequest().body(null);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
-    }
 } 

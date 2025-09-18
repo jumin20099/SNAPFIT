@@ -21,12 +21,21 @@ interface PartnerProduct {
   status: "pending" | "approved" | "rejected"
   submittedDate?: string
   rejectionReason?: string
+  hasPendingUpdateRequest?: boolean
+  viewCount?: number
+  actualViewCount?: number
+  // 수정 요청 관련 필드들 (정규화 후에는 별도 테이블에서 관리)
   updateRequestStatus?: string
   updateRequestReason?: string
   updateRequestDate?: string
-  viewCount?: number
-  actualViewCount?: number
-  // 수정 요청 관련 필드들
+  originalProductName?: string
+  originalProductContent?: string
+  originalProductImage?: string
+  originalProductLink?: string
+  originalGenderCategory?: string
+  originalMajorCategory?: string
+  originalSubCategory?: string
+  originalProductPrice?: number
   requestedProductName?: string
   requestedProductContent?: string
   requestedProductImage?: string
@@ -359,11 +368,11 @@ export default function PartnerProductsPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => router.push(`/partner-product-upload?edit=${product.id}`)}
-                        disabled={product.updateRequestStatus === "PENDING_UPDATE"}
+                        disabled={product.hasPendingUpdateRequest}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      {product.updateRequestStatus === "PENDING_UPDATE" && (
+                      {product.hasPendingUpdateRequest && (
                         <Button
                           variant="outline"
                           size="sm"

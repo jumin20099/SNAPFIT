@@ -144,13 +144,24 @@ export default function ProductApprovalsPage() {
 
       // 백엔드 API 호출 시도
       try {
-        const url = actionType === 'approve' 
-          ? `/api/partner/admin/products/${selectedProduct.id}/update-request/approve`
-          : `/api/partner/admin/products/${selectedProduct.id}/update-request/reject`
+        // 수정 요청이 있는 경우와 일반 상품 승인/거절을 구분
+        const isUpdateRequest = selectedProduct.hasPendingUpdateRequest || 
+                               selectedProduct.updateRequestStatus === 'PENDING_UPDATE'
         
-        const body = actionType === 'approve' 
+        const url = isUpdateRequest 
+          ? actionType === 'approve'
+            ? `/api/partner/admin/products/${selectedProduct.id}/update-request/approve`
+            : `/api/partner/admin/products/${selectedProduct.id}/update-request/reject`
+          : `/api/partner/admin/products/${selectedProduct.id}/status`
+        
+        const body = isUpdateRequest && actionType === 'reject'
+          ? { rejectionReason }
+          : isUpdateRequest && actionType === 'approve'
           ? {}
-          : { rejectionReason }
+          : {
+              action: actionType,
+              ...(actionType === 'reject' && { rejectionReason })
+            }
         
         const response = await fetch(url, {
           method: "PUT",

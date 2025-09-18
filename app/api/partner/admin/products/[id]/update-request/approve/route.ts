@@ -1,0 +1,39 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const productId = params.id
+
+    // 백엔드 API로 프록시
+    const backendUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'}/api/partner/admin/products/${productId}/update-request/approve`
+    
+    const response = await fetch(backendUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': request.headers.get('Authorization') || '',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      return NextResponse.json(
+        { error: errorData.message || '수정 요청 승인 실패' },
+        { status: response.status }
+      )
+    }
+
+    const data = await response.json()
+    return NextResponse.json(data)
+
+  } catch (error) {
+    console.error('수정 요청 승인 API 오류:', error)
+    return NextResponse.json(
+      { error: '서버 오류가 발생했습니다.' },
+      { status: 500 }
+    )
+  }
+}

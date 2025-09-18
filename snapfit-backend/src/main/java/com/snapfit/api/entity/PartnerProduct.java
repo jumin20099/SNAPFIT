@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "partner_products")
@@ -15,7 +17,8 @@ public class PartnerProduct {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "partner_product_idx")
+    private Long partnerProductIdx;
     
     @Column(name = "store_idx", nullable = false)
     private Long storeIdx;
@@ -72,65 +75,13 @@ public class PartnerProduct {
     @Column(name = "deactivated_at")
     private LocalDateTime deactivatedAt;
     
-    // 수정 요청 관련 필드들
-    @Column(name = "original_product_name")
-    private String originalProductName;
+    // 수정 요청 관련 필드 (간단한 참조용)
+    @Column(name = "has_pending_update_request")
+    private Boolean hasPendingUpdateRequest = false;
     
-    @Column(name = "original_product_content")
-    private String originalProductContent;
-    
-    @Column(name = "original_product_image")
-    private String originalProductImage;
-    
-    @Column(name = "original_product_link")
-    private String originalProductLink;
-    
-    @Column(name = "original_gender_category")
-    private String originalGenderCategory;
-    
-    @Column(name = "original_major_category")
-    private String originalMajorCategory;
-    
-    @Column(name = "original_sub_category")
-    private String originalSubCategory;
-    
-    @Column(name = "original_product_price")
-    private Integer originalProductPrice;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "update_request_status")
-    private UpdateRequestStatus updateRequestStatus = UpdateRequestStatus.NO_UPDATE;
-    
-    @Column(name = "update_request_reason")
-    private String updateRequestReason;
-    
-    @Column(name = "update_request_date")
-    private LocalDateTime updateRequestDate;
-    
-    // 요청된 데이터 필드들
-    @Column(name = "requested_product_name")
-    private String requestedProductName;
-    
-    @Column(name = "requested_product_content")
-    private String requestedProductContent;
-    
-    @Column(name = "requested_product_image")
-    private String requestedProductImage;
-    
-    @Column(name = "requested_product_link")
-    private String requestedProductLink;
-    
-    @Column(name = "requested_gender_category")
-    private String requestedGenderCategory;
-    
-    @Column(name = "requested_major_category")
-    private String requestedMajorCategory;
-    
-    @Column(name = "requested_sub_category")
-    private String requestedSubCategory;
-    
-    @Column(name = "requested_product_price")
-    private Integer requestedProductPrice;
+    // 수정 요청 관계 매핑
+    @OneToMany(mappedBy = "partnerProduct", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ProductUpdateRequest> updateRequests = new ArrayList<>();
     
     @PrePersist
     protected void onCreate() {
@@ -155,10 +106,4 @@ public class PartnerProduct {
         REJECTED    // 거절됨
     }
     
-    public enum UpdateRequestStatus {
-        NO_UPDATE,      // 수정 요청 없음
-        PENDING_UPDATE, // 수정 요청 대기
-        APPROVED_UPDATE, // 수정 승인됨
-        REJECTED_UPDATE  // 수정 거절됨
-    }
 } 

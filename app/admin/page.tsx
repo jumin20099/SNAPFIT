@@ -314,13 +314,17 @@ export default function AdminPage() {
         const token = localStorage.getItem("token")
         const res = await fetch(`/api/partner/admin/products/${productId}/update-request/approve`, {
           method: "PUT",
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}` 
+          }
         })
         if (res.ok) {
           alert("수정 요청이 승인되었습니다.")
           loadData()
         } else {
-          alert("승인 실패")
+          const errorData = await res.json().catch(() => ({}))
+          alert(`승인 실패: ${errorData.error || '알 수 없는 오류'}`)
         }
       } catch (error) {
         console.error("승인 중 오류:", error)
@@ -346,7 +350,8 @@ export default function AdminPage() {
           alert("수정 요청이 거절되었습니다.")
           loadData()
         } else {
-          alert("거절 실패")
+          const errorData = await res.json().catch(() => ({}))
+          alert(`거절 실패: ${errorData.error || '알 수 없는 오류'}`)
         }
       } catch (error) {
         console.error("거절 중 오류:", error)
@@ -765,16 +770,38 @@ export default function AdminPage() {
                                   </thead>
                                   <tbody>
                                     {[
-                                      { label: "상품명", before: product.originalProductName, after: product.requestedProductName },
-                                      { label: "설명", before: product.originalProductContent, after: product.requestedProductContent },
-                                      { label: "카테고리", before: [product.originalGenderCategory, product.originalMajorCategory, product.originalSubCategory].filter(Boolean).join(" / "), after: [product.requestedGenderCategory, product.requestedMajorCategory, product.requestedSubCategory].filter(Boolean).join(" / ") },
-                                      { label: "가격", before: product.originalProductPrice?.toLocaleString() + "원", after: product.requestedProductPrice?.toLocaleString() + "원" },
-                                      { label: "링크", before: product.originalProductLink, after: product.requestedProductLink },
+                                      { 
+                                        label: "상품명", 
+                                        before: product.originalProductName || product.productName, 
+                                        after: product.requestedProductName || product.productName 
+                                      },
+                                      { 
+                                        label: "설명", 
+                                        before: product.originalProductContent || product.productContent, 
+                                        after: product.requestedProductContent || product.productContent 
+                                      },
+                                      { 
+                                        label: "카테고리", 
+                                        before: [product.originalGenderCategory, product.originalMajorCategory, product.originalSubCategory].filter(Boolean).join(" / ") || 
+                                               [product.genderCategory, product.majorCategory, product.subCategory].filter(Boolean).join(" / "), 
+                                        after: [product.requestedGenderCategory, product.requestedMajorCategory, product.requestedSubCategory].filter(Boolean).join(" / ") || 
+                                               [product.genderCategory, product.majorCategory, product.subCategory].filter(Boolean).join(" / ")
+                                      },
+                                      { 
+                                        label: "가격", 
+                                        before: (product.originalProductPrice || product.productPrice)?.toLocaleString() + "원", 
+                                        after: (product.requestedProductPrice || product.productPrice)?.toLocaleString() + "원" 
+                                      },
+                                      { 
+                                        label: "링크", 
+                                        before: product.originalProductLink || product.productLink, 
+                                        after: product.requestedProductLink || product.productLink 
+                                      },
                                     ].map(({ label, before, after }, index) => (
                                       <tr key={`${product.id}-${label}-${index}`}>
                                         <td className="font-medium text-gray-700 bg-gray-50">{label}</td>
-                                        <td className="px-2 py-1 border-r">{before}</td>
-                                        <td className={`px-2 py-1 ${before !== after ? "bg-green-100 font-semibold" : ""}`}>{after}</td>
+                                        <td className="px-2 py-1 border-r">{before || "-"}</td>
+                                        <td className={`px-2 py-1 ${before !== after ? "bg-green-100 font-semibold" : ""}`}>{after || "-"}</td>
                                       </tr>
                                     ))}
                                   </tbody>

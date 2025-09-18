@@ -25,6 +25,11 @@ interface PartnerProduct {
   status: "pending" | "approved" | "rejected"
   submittedDate?: string
   rejectionReason?: string
+  hasPendingUpdateRequest?: boolean
+  // 뷰 지표(제휴사용 노출)
+  viewCount?: number
+  actualViewCount?: number
+  // 수정 요청 관련 필드들 (정규화 후에는 별도 테이블에서 관리)
   updateRequestStatus?: string
   updateRequestReason?: string
   updateRequestDate?: string
@@ -36,7 +41,6 @@ interface PartnerProduct {
   originalMajorCategory?: string
   originalSubCategory?: string
   originalProductPrice?: number
-  // 수정 요청 데이터 필드들
   requestedProductName?: string
   requestedProductContent?: string
   requestedProductImage?: string
@@ -45,9 +49,6 @@ interface PartnerProduct {
   requestedMajorCategory?: string
   requestedSubCategory?: string
   requestedProductPrice?: number
-  // 뷰 지표(제휴사용 노출)
-  viewCount?: number
-  actualViewCount?: number
 }
 
 export default function PartnerProductUploadPage() {
@@ -784,11 +785,11 @@ export default function PartnerProductUploadPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditProduct(product)}
-                        disabled={product.updateRequestStatus === "PENDING_UPDATE"}
+                        disabled={product.hasPendingUpdateRequest}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      {product.updateRequestStatus === "PENDING_UPDATE" && (
+                      {product.hasPendingUpdateRequest && (
                         <Button
                           variant="outline"
                           size="sm"

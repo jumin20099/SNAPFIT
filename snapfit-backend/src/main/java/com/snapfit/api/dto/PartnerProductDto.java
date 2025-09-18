@@ -35,6 +35,7 @@ public class PartnerProductDto {
     private String updateRequestStatus;
     private String updateRequestReason;
     private LocalDateTime updateRequestDate;
+    private Boolean hasPendingUpdateRequest;
     
     // 원본 데이터 필드들
     private String originalProductName;
