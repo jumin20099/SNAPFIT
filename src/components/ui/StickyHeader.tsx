@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Bell, ShoppingBag } from 'lucide-react'
+import { Search, Bell, ShoppingBag, Menu, ArrowLeft } from 'lucide-react'
 import { useRouter, usePathname } from 'next/navigation'
 import { SearchModal } from './SearchModal'
 import { NotificationModal } from './NotificationModal'
+import { MainCategoryModal } from './MainCategoryModal'
+import { getSelectedCategoryPath } from '@/constants/categories'
 
 // 헥스 색상을 RGB로 변환하는 함수
 function hexToRgb(hex: string): string {
@@ -13,12 +15,29 @@ function hexToRgb(hex: string): string {
   return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '255, 255, 255'
 }
 
-export function StickyHeader() {
+interface StickyHeaderProps {
+  selectedCategory?: string
+  onCategoryChange?: (category: string) => void
+  selectedGender?: string
+  selectedMainCategory?: string
+  selectedSubCategory?: string
+  onCategorySelect?: (genderId: string, mainCategoryId: string, subCategoryId?: string) => void
+}
+
+export function StickyHeader({ 
+  selectedCategory = '전체',
+  onCategoryChange,
+  selectedGender,
+  selectedMainCategory,
+  selectedSubCategory,
+  onCategorySelect
+}: StickyHeaderProps = {}) {
   const router = useRouter()
   const pathname = usePathname()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const [isCodyPage, setIsCodyPage] = useState(false)
   const [codyBackground, setCodyBackground] = useState({
     type: 'color',
@@ -62,6 +81,21 @@ export function StickyHeader() {
     router.push('/cart')
   }
 
+  const handleBackClick = () => {
+    router.back()
+  }
+
+  const handleCategorySelect = (genderId: string, mainCategoryId: string, subCategoryId?: string) => {
+    onCategorySelect?.(genderId, mainCategoryId, subCategoryId)
+    // 선택된 카테고리 경로를 표시용으로 설정
+    const categoryPath = getSelectedCategoryPath(genderId, mainCategoryId, subCategoryId)
+    onCategoryChange?.(categoryPath || '전체')
+  }
+
+  const displayText = selectedMainCategory && selectedGender 
+    ? getSelectedCategoryPath(selectedGender, selectedMainCategory, selectedSubCategory)
+    : selectedCategory
+
   return (
     <>
       <motion.header
@@ -87,13 +121,37 @@ export function StickyHeader() {
       >
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            {/* 좌측: 로고 */}
+            {/* 좌측: 되돌아가기 버튼 또는 로고 */}
             <div className="flex items-center">
-              <h1 className="text-xl font-bold text-light-accent dark:text-dark-accent">SNAPFIT</h1>
+              {pathname.startsWith('/products/') ? (
+                <button 
+                  onClick={handleBackClick}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
+                >
+                  <ArrowLeft size={20} className="text-gray-700 dark:text-dark-text" />
+                </button>
+              ) : (
+                <button 
+                  onClick={() => router.push('/')}
+                  className="text-xl font-bold text-light-accent dark:text-dark-accent"
+                >
+                  SNAPFIT
+                </button>
+              )}
             </div>
 
             {/* 우측: 아이콘들 */}
             <div className="flex items-center gap-4">
+              {/* 카테고리 버튼 */}
+              {onCategorySelect && (
+                <button
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
+                >
+                  <Menu size={20} className="text-gray-700 dark:text-dark-text" />
+                </button>
+              )}
+              
               <button 
                 onClick={() => setIsSearchModalOpen(true)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
@@ -131,6 +189,18 @@ export function StickyHeader() {
         isOpen={isNotificationModalOpen}
         onClose={() => setIsNotificationModalOpen(false)}
       />
+
+      {/* 카테고리 모달 */}
+      {onCategorySelect && (
+        <MainCategoryModal
+          isOpen={isCategoryModalOpen}
+          onClose={() => setIsCategoryModalOpen(false)}
+          onCategorySelect={handleCategorySelect}
+          selectedGender={selectedGender}
+          selectedMainCategory={selectedMainCategory}
+          selectedSubCategory={selectedSubCategory}
+        />
+      )}
     </>
   )
 }

@@ -43,6 +43,7 @@ interface Post {
   likeCount: number
   commentCount: number
   scrapCount: number
+  viewCount: number
   createdAt: string
   tags: string[]
   liked?: boolean
@@ -92,6 +93,90 @@ export default function PostDetailPage() {
   
   // 게시글 삭제 기능
   const { isDeleting, deletePost } = useDeletePost()
+
+  // 조회수 증가 함수 (Redis 기반 - 원자적 연산)
+  const incrementViewCount = useCallback(async (postId: number) => {
+    console.log('조회수 증가 시작:', postId)
+    
+    try {
+      // 백엔드 Redis API 호출 (원자적 연산)
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
+      const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/view`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const newViewCount = data.viewCount || 0
+        
+        console.log('Redis 조회수 증가 성공:', postId, '->', newViewCount)
+        
+        // 상태 업데이트
+        setPosts(prev => prev.map(post => 
+          post.postId === postId 
+            ? { ...post, viewCount: newViewCount }
+            : post
+        ))
+        
+        setCurrentPost(prev => 
+          prev && prev.postId === postId 
+            ? { ...prev, viewCount: newViewCount }
+            : prev
+        )
+      } else {
+        console.error('Redis 조회수 증가 실패:', response.status)
+        // 실패 시 localStorage fallback
+        const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
+        const currentCount = viewCounts[postId] || 0
+        const newViewCount = currentCount + 1
+        
+        viewCounts[postId] = newViewCount
+        localStorage.setItem('postViewCounts', JSON.stringify(viewCounts))
+        
+        console.log('localStorage fallback 조회수 증가:', postId, currentCount, '->', newViewCount)
+        
+        setPosts(prev => prev.map(post => 
+          post.postId === postId 
+            ? { ...post, viewCount: newViewCount }
+            : post
+        ))
+        
+        setCurrentPost(prev => 
+          prev && prev.postId === postId 
+            ? { ...prev, viewCount: newViewCount }
+            : prev
+        )
+      }
+      
+    } catch (error) {
+      console.error('Redis API 호출 실패, localStorage fallback:', error)
+      // 네트워크 오류 시 localStorage fallback
+      const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
+      const currentCount = viewCounts[postId] || 0
+      const newViewCount = currentCount + 1
+      
+      viewCounts[postId] = newViewCount
+      localStorage.setItem('postViewCounts', JSON.stringify(viewCounts))
+      
+      console.log('localStorage fallback 조회수 증가:', postId, currentCount, '->', newViewCount)
+      
+      setPosts(prev => prev.map(post => 
+        post.postId === postId 
+          ? { ...post, viewCount: newViewCount }
+          : post
+      ))
+      
+      setCurrentPost(prev => 
+        prev && prev.postId === postId 
+          ? { ...prev, viewCount: newViewCount }
+          : prev
+      )
+    }
+  }, [])
 
   // 사용자 상호작용 상태 가져오기 (좋아요, 스크랩) - 백엔드 API만 사용
   const fetchUserInteractions = useCallback(async () => {
@@ -243,6 +328,9 @@ export default function PostDetailPage() {
         const data = await response.json()
         const newPosts = data.content || []
         
+        // localStorage에서 조회수 가져오기
+        const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
+        
         // Post 타입에 맞게 데이터 변환
         const transformedPosts = newPosts.map((post: any) => ({
           postId: post.postId,
@@ -254,6 +342,7 @@ export default function PostDetailPage() {
           likeCount: post.likeCount || 0, // 백엔드에서 받은 좋아요 개수 유지
           commentCount: post.commentCount || 0,
           scrapCount: post.scrapCount || 0,
+          viewCount: viewCounts[post.postId] || post.viewCount || 0, // localStorage에서 조회수 복원
           createdAt: post.createdAt,
           tags: post.tags || [],
           liked: false, // 초기값은 false로 설정, fetchUserInteractions에서 실제 상태로 업데이트
@@ -267,15 +356,31 @@ export default function PostDetailPage() {
           // 선택한 게시글을 제일 위에 오도록 정렬
           const targetPost = transformedPosts.find((p: Post) => p.postId === postId)
           if (targetPost) {
-            // 선택한 게시글을 제거하고 맨 앞에 추가
-            const otherPosts = transformedPosts.filter((p: Post) => p.postId !== postId)
-            const sortedPosts = [targetPost, ...otherPosts]
-            setPosts(sortedPosts)
+            // 기존 게시글의 조회수 유지
+            setPosts(prev => {
+              const existingPost = prev.find(p => p.postId === targetPost.postId)
+              const updatedTargetPost = existingPost 
+                ? { ...targetPost, viewCount: existingPost.viewCount }
+                : targetPost
+              
+              const otherPosts = transformedPosts.filter((p: Post) => p.postId !== postId)
+              return [updatedTargetPost, ...otherPosts]
+            })
             
-            setCurrentPost(targetPost)
+            // currentPost도 조회수 유지
+            setCurrentPost(prev => {
+              const existingPost = prev?.postId === targetPost.postId ? prev : null
+              return existingPost 
+                ? { ...targetPost, viewCount: existingPost.viewCount }
+                : targetPost
+            })
+            
             // 초기 상태는 false로 설정하고, fetchUserInteractions에서 실제 상태로 업데이트
             setIsLiked(false)
             setIsScraped(false)
+            
+            // 선택된 게시글의 조회수 증가
+            incrementViewCount(targetPost.postId)
           } else {
             setPosts(transformedPosts)
             // 타겟 게시글을 찾지 못한 경우 첫 번째 게시글을 currentPost로 설정
@@ -880,7 +985,7 @@ export default function PostDetailPage() {
                 </div>
               </div>
               <div className="text-sm font-medium">
-                좋아요 {post.likeCount}개 · 스크랩 {post.scrapCount}개
+                좋아요 {post.likeCount}개 · 스크랩 {post.scrapCount}개 · 조회 {post.viewCount || 0}회
               </div>
             </div>
 

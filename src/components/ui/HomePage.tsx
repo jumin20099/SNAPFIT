@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { StickyHeader } from './StickyHeader'
 import { HeroBanner } from './HeroBanner'
-import { MainCategoryChips } from './MainCategoryChips'
 import { ProductGrid } from './ProductGrid'
+import { BottomTabBar } from './BottomTabBar'
 
 export function HomePage() {
   const router = useRouter()
@@ -49,14 +49,8 @@ export function HomePage() {
 
   return (
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg pb-20">
-      {/* 고정 헤더 */}
-      <StickyHeader />
-
-      {/* 히어로 배너 */}
-      <HeroBanner />
-
-      {/* 카테고리 선택 버튼 - 메인 페이지 모드 */}
-      <MainCategoryChips
+      {/* 고정 헤더 (카테고리 선택 포함) */}
+      <StickyHeader
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
         selectedGender={selectedGender}
@@ -64,6 +58,9 @@ export function HomePage() {
         selectedSubCategory={selectedSubCategory}
         onCategorySelect={handleCategorySelect}
       />
+
+      {/* 히어로 배너 */}
+      <HeroBanner />
 
       {/* 상품 그리드 */}
       <ProductGrid 
@@ -73,6 +70,8 @@ export function HomePage() {
         subCategory={selectedSubCategory}
       />
 
+      {/* 하단 탭 바 */}
+      <BottomTabBar activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
   )
 }

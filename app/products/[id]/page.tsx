@@ -2,12 +2,13 @@
 
 import Image from 'next/image'
 import { formatCurrencyKRW } from '@/lib/utils'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useCart } from '@/contexts/CartContext'
 import { Button } from '@/components/ui/button'
 import { ShoppingCart, Heart, Check } from 'lucide-react'
 import CartSuccessModal from '@/components/ui/CartSuccessModal'
 import { useRecentProducts } from '@/hooks/useRecentProducts'
+import { StickyHeader } from '@/components/ui/StickyHeader'
 
 type Product = {
   productIdx: number
@@ -39,8 +40,13 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const { addItem } = useCart()
   const { addRecentProduct } = useRecentProducts()
+  const hasFetched = useRef<string | null>(null)
 
   useEffect(() => {
+    // 중복 호출 방지 - 같은 상품 ID에 대해서만
+    if (hasFetched.current === params.id) return
+    hasFetched.current = params.id
+
     const fetchProductDetail = async () => {
       try {
         setLoading(true)
@@ -98,7 +104,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
 
     fetchProductDetail()
-  }, [params.id])
+  }, [params.id, addRecentProduct])
 
   // 로그인 상태 확인
   useEffect(() => {
@@ -194,11 +200,21 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
   if (loading || !detail) {
     return (
-      <main className="mx-auto max-w-screen-lg p-4">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">로딩 중...</div>
-        </div>
-      </main>
+      <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
+        <StickyHeader
+          selectedCategory="전체"
+          onCategoryChange={() => {}}
+          selectedGender="all"
+          selectedMainCategory=""
+          selectedSubCategory=""
+          onCategorySelect={() => {}}
+        />
+        <main className="mx-auto max-w-screen-lg p-4">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg">로딩 중...</div>
+          </div>
+        </main>
+      </div>
     )
   }
 
@@ -220,21 +236,32 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   }
 
   return (
-    <main className="mx-auto max-w-screen-lg p-4">
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    <div className="min-h-screen bg-light-bg dark:bg-dark-bg">
+      <StickyHeader
+        selectedCategory="전체"
+        onCategoryChange={() => {}}
+        selectedGender="all"
+        selectedMainCategory=""
+        selectedSubCategory=""
+        onCategorySelect={() => {}}
       />
       
-      {/* 성공 토스트 */}
-      {showSuccessToast && (
-        <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
-          <Check className="w-4 h-4" />
-          상품이 장바구니에 추가되었습니다!
-        </div>
-      )}
-      {/* Hero 영역 */}
+      <main className="mx-auto max-w-screen-lg p-4">
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        
+        {/* 성공 토스트 */}
+        {showSuccessToast && (
+          <div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
+            <Check className="w-4 h-4" />
+            상품이 장바구니에 추가되었습니다!
+          </div>
+        )}
+        
+        {/* Hero 영역 */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="relative w-full aspect-square">
           <Image
@@ -349,17 +376,18 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         </aside>
       </section>
       
-      {/* 장바구니 성공 모달 */}
-      {detail && (
-        <CartSuccessModal
-          isOpen={showCartModal}
-          onClose={() => setShowCartModal(false)}
-          productName={detail.product.productName}
-          productImage={detail.product.productImage}
-          productPrice={detail.product.productPrice}
-        />
-      )}
-    </main>
+        {/* 장바구니 성공 모달 */}
+        {detail && (
+          <CartSuccessModal
+            isOpen={showCartModal}
+            onClose={() => setShowCartModal(false)}
+            productName={detail.product.productName}
+            productImage={detail.product.productImage}
+            productPrice={detail.product.productPrice}
+          />
+        )}
+      </main>
+    </div>
   )
 }
 

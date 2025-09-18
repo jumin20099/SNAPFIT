@@ -20,6 +20,7 @@ interface Post {
   likeCount: number
   commentCount: number
   scrapCount: number
+  viewCount: number
   liked: boolean
   scraped: boolean
   mediaUrls?: string[]
@@ -70,8 +71,17 @@ export default function CommunityPage() {
           // 데이터가 배열인지 확인하고 안전하게 설정
           const postsArray = Array.isArray(data) ? data : (data.content || [])
           
-          setPosts(postsArray)
-          setFilteredPosts(postsArray)
+          // localStorage에서 조회수 가져오기
+          const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
+          
+          // 조회수 복원
+          const postsWithViewCount = postsArray.map((post: any) => ({
+            ...post,
+            viewCount: viewCounts[post.postId] || post.viewCount || 0
+          }))
+          
+          setPosts(postsWithViewCount)
+          setFilteredPosts(postsWithViewCount)
       } else {
           throw new Error(`게시글 로드 실패: ${response.status}`)
       }
@@ -417,7 +427,10 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
       <div className="p-3">
         <div className="flex items-center justify-between mb-2">
           <span className="font-medium text-sm">{post.authorName}</span>
-          <span className="text-xs text-gray-500">{post.likeCount}</span>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>좋아요 {post.likeCount}</span>
+            <span>조회 {post.viewCount || 0}</span>
+          </div>
         </div>
         
         {post.tags && post.tags.length > 0 && (

@@ -45,21 +45,20 @@ jest.mock('lucide-react', () => ({
 
 // Mock all ui components to avoid complex dependencies
 jest.mock('../ui/StickyHeader', () => ({
-  StickyHeader: () => <div data-testid="sticky-header">SNAPFIT</div>
+  StickyHeader: ({ onCategorySelect }: any) => (
+    <div data-testid="sticky-header">
+      SNAPFIT
+      {onCategorySelect && <div data-testid="category-chips">
+        <button>전체</button>
+        <button>상의</button>
+        <button>아우터</button>
+      </div>}
+    </div>
+  )
 }))
 
 jest.mock('../ui/HeroBanner', () => ({
   HeroBanner: () => <div data-testid="hero-banner">Hero Banner</div>
-}))
-
-jest.mock('../ui/MainCategoryChips', () => ({
-  MainCategoryChips: () => (
-    <div data-testid="category-chips">
-      <button>전체</button>
-      <button>상의</button>
-      <button>아우터</button>
-    </div>
-  )
 }))
 
 jest.mock('../ui/ProductGrid', () => ({
