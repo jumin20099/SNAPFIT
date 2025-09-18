@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -17,14 +17,14 @@ import java.util.Set;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@ConditionalOnBean(RedisTemplate.class)
+@ConditionalOnBean(StringRedisTemplate.class)
 public class ViewCountFlushScheduler {
 
     private final JdbcTemplate jdbcTemplate;
     
-    // RedisTemplate을 조건부로 주입
+    // StringRedisTemplate을 조건부로 주입
     @Autowired(required = false)
-    private RedisTemplate<String, Long> redisTemplate;
+    private StringRedisTemplate redisTemplate;
 
     @Scheduled(fixedRate = 60_000)
     public void flushViewCounts() {
@@ -37,8 +37,11 @@ public class ViewCountFlushScheduler {
         if (keys == null || keys.isEmpty()) return;
 
         for (String key : keys) {
-            Long count = redisTemplate.opsForValue().get(key);
-            if (count == null || count == 0) continue;
+            String countStr = redisTemplate.opsForValue().get(key);
+            if (countStr == null || countStr.isEmpty()) continue;
+            
+            Long count = Long.parseLong(countStr);
+            if (count == 0) continue;
 
             try {
                 Long productId = Long.parseLong(key.split(":")[1]);

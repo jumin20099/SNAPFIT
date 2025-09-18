@@ -2,7 +2,7 @@ package com.snapfit.community.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -12,7 +12,7 @@ import java.time.Duration;
 @Slf4j
 public class PostViewService {
     
-    private final RedisTemplate<String, String> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     
     // Redis 키 패턴
     private static final String VIEW_COUNT_KEY = "post:view_count:";
