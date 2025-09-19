@@ -19,6 +19,10 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @EntityGraph(attributePaths = {"author", "replies", "replies.author"})
     Page<Comment> findByPostAndParentIsNullOrderByCreatedAtDesc(Post post, Pageable pageable);
     
+    // 게시글의 댓글 조회 (인기순 정렬) - User 엔티티 함께 로드
+    @EntityGraph(attributePaths = {"author", "replies", "replies.author"})
+    Page<Comment> findByPostAndParentIsNullOrderByLikeCountDesc(Post post, Pageable pageable);
+    
     // 게시글의 모든 댓글 조회 (대댓글 포함)
     List<Comment> findByPostOrderByCreatedAtAsc(Post post);
     

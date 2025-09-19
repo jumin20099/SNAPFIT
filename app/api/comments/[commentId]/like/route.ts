@@ -8,6 +8,9 @@ export async function POST(
   { params }: { params: { commentId: string } }
 ) {
   try {
+    // 인증 토큰 가져오기
+    const token = request.headers.get('authorization')
+    
     // 백엔드 API 호출
     const backendUrl = `${BACKEND_URL}/api/comments/${params.commentId}/like`
     
@@ -15,6 +18,7 @@ export async function POST(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': token || '',
       },
     })
 

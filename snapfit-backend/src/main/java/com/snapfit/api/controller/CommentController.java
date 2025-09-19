@@ -17,6 +17,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -94,26 +96,35 @@ public class CommentController {
     public ResponseEntity<List<CommentResponseDto>> getComments(
             @PathVariable Long postId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "time") String sortBy) {
         
         try {
             Post post = postRepository.findById(postId)
                     .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다: " + postId));
             
-            // 작성자 조회 (임시로 고정 사용자 사용)
-            User currentUser = userRepository.findByEmail("temp@test.com")
-                    .orElseGet(() -> {
-                        User tempUser = new User();
-                        tempUser.setNickname("임시사용자");
-                        tempUser.setEmail("temp@test.com");
-                        tempUser.setProvider("test");
-                        tempUser.setProviderId("test-id");
-                        return userRepository.save(tempUser);
-                    });
+            // 인증된 사용자 조회 (없으면 null로 처리)
+            final User currentUser;
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && 
+                !"anonymousUser".equals(authentication.getName())) {
+                String email = authentication.getName();
+                currentUser = userRepository.findByEmail(email).orElse(null);
+            } else {
+                currentUser = null;
+            }
             
-            // 댓글 조회 (대댓글 제외)
+            // 댓글 조회 (대댓글 제외) - 정렬 방식에 따라 다르게 처리
             Pageable pageable = PageRequest.of(page, size);
-            Page<Comment> comments = commentRepository.findByPostAndParentIsNullOrderByCreatedAtDesc(post, pageable);
+            Page<Comment> comments;
+            
+            if ("popular".equals(sortBy)) {
+                // 인기순 정렬 (좋아요 수 + 대댓글 수)
+                comments = commentRepository.findByPostAndParentIsNullOrderByLikeCountDesc(post, pageable);
+            } else {
+                // 시간순 정렬 (기본값)
+                comments = commentRepository.findByPostAndParentIsNullOrderByCreatedAtDesc(post, pageable);
+            }
             
             List<CommentResponseDto> response = comments.getContent().stream()
                     .map(comment -> convertToDtoWithReplies(comment, currentUser))
@@ -130,22 +141,23 @@ public class CommentController {
     
     // 댓글 좋아요 토글
     @PostMapping("/{commentId}/like")
+    @Transactional
     public ResponseEntity<CommentResponseDto> toggleLike(@PathVariable Long commentId) {
         
         try {
             Comment comment = commentRepository.findById(commentId)
                     .orElseThrow(() -> new RuntimeException("댓글을 찾을 수 없습니다: " + commentId));
             
-            // 작성자 조회 (임시로 고정 사용자 사용)
-            User currentUser = userRepository.findByEmail("temp@test.com")
-                    .orElseGet(() -> {
-                        User tempUser = new User();
-                        tempUser.setNickname("임시사용자");
-                        tempUser.setEmail("temp@test.com");
-                        tempUser.setProvider("test");
-                        tempUser.setProviderId("test-id");
-                        return userRepository.save(tempUser);
-                    });
+            // 인증된 사용자 조회
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated() || 
+                "anonymousUser".equals(authentication.getName())) {
+                return ResponseEntity.status(401).body(null);
+            }
+            
+            String email = authentication.getName();
+            User currentUser = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + email));
             
             // 좋아요 상태 확인
             boolean isLiked = commentLikeRepository.findByCommentAndUser(comment, currentUser).isPresent();
@@ -212,8 +224,11 @@ public class CommentController {
         dto.setCreatedAt(comment.getCreatedAt());
         dto.setUpdatedAt(comment.getUpdatedAt());
         
-        // 현재 사용자의 좋아요 상태 확인
-        boolean isLiked = commentLikeRepository.findByCommentAndUser(comment, currentUser).isPresent();
+        // 현재 사용자의 좋아요 상태 확인 (사용자가 없으면 false)
+        boolean isLiked = false;
+        if (currentUser != null) {
+            isLiked = commentLikeRepository.findByCommentAndUser(comment, currentUser).isPresent();
+        }
         dto.setIsLiked(isLiked);
         
         return dto;

@@ -463,7 +463,9 @@ export default function PostDetailPage() {
   // posts가 변경될 때마다 모든 댓글 로드
   useEffect(() => {
     if (posts.length > 0) {
-      fetchAllComments()
+      // 새로고침인지 확인 (performance.navigation.type === 1은 새로고침)
+      const isRefresh = performance.navigation && performance.navigation.type === 1
+      fetchAllComments(isRefresh) // 새로고침 시에만 인기순 정렬 사용
     }
   }, [posts])
 
@@ -607,11 +609,12 @@ export default function PostDetailPage() {
     replies: comment.replies?.map(transformComment)
   })
 
-  // 모든 게시글의 댓글 목록 로드
-  const fetchAllComments = async () => {
+  // 모든 게시글의 댓글 목록 로드 (새로고침 시에만 인기순 정렬)
+  const fetchAllComments = async (usePopularSort = false) => {
     try {
       const commentPromises = posts.map(async (post) => {
-        const response = await fetch(`/api/comments/posts/${post.postId}`)
+        const sortParam = usePopularSort ? '?sortBy=popular' : '?sortBy=time'
+        const response = await fetch(`/api/comments/posts/${post.postId}${sortParam}`)
         if (response.ok) {
           const commentsData = await response.json()
           const transformedComments = commentsData.map(transformComment)
@@ -632,10 +635,10 @@ export default function PostDetailPage() {
     }
   }
 
-  // 특정 게시글의 댓글 목록 로드
+  // 특정 게시글의 댓글 목록 로드 (시간순 정렬)
   const fetchComments = async (postId: number) => {
     try {
-      const response = await fetch(`/api/comments/posts/${postId}`)
+      const response = await fetch(`/api/comments/posts/${postId}?sortBy=time`)
       if (response.ok) {
         const commentsData = await response.json()
         const transformedComments = commentsData.map(transformComment)
@@ -724,10 +727,12 @@ export default function PostDetailPage() {
 
   const handleLikeComment = async (commentId: number) => {
     try {
+      const token = localStorage.getItem('token')
       const response = await fetch(`/api/comments/${commentId}/like`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
       })
 

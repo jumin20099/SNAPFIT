@@ -50,12 +50,8 @@ export function CommentsModal({
   const [replyingTo, setReplyingTo] = useState<number | null>(null)
   const [replyContent, setReplyContent] = useState("")
 
-  // 댓글을 인기순으로 정렬 (좋아요 + 대댓글 수)
-  const sortedComments = [...comments].sort((a, b) => {
-    const aScore = (a.likes || a.likeCount) + (a.replies?.length || 0)
-    const bScore = (b.likes || b.likeCount) + (b.replies?.length || 0)
-    return bScore - aScore
-  })
+  // 댓글을 시간순으로 유지 (백엔드에서 이미 정렬됨)
+  const sortedComments = comments
 
   const handleSubmitComment = () => {
     if (newComment.trim()) {
