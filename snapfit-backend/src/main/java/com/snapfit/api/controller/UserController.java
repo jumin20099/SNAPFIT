@@ -49,6 +49,9 @@ public class UserController {
                 userInfo.put("email", user.getEmail());
                 userInfo.put("role", user.getRole().name());
                 userInfo.put("nickname", user.getNickname());
+                userInfo.put("profileImage", user.getProfileImage()); // 프로필 이미지 추가
+                userInfo.put("createdAt", user.getCreatedAt()); // 생성일 추가
+                userInfo.put("updatedAt", user.getUpdatedAt()); // 수정일 추가
                 var apps = partnerApplicationRepository.findByUserIdx(user.getUserIdx());
                 if (!apps.isEmpty()) {
                     userInfo.put("partner_application_id", apps.get(0).getId());

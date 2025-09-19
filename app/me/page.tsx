@@ -269,8 +269,40 @@ export default function MePage() {
       if (uploadResponse.ok) {
         const result = await uploadResponse.json()
         if (result.success) {
+          // 1. 로컬 상태 업데이트
           setUser(prev => prev ? { ...prev, profileImage: result.data.url } : null)
-          alert('프로필 이미지가 성공적으로 업데이트되었습니다.')
+          
+          // 2. 서버에 프로필 이미지 URL 업데이트
+          try {
+            const profileUpdateResponse = await fetch('/api/user/profile', {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                profileImage: result.data.url
+              })
+            })
+
+            if (profileUpdateResponse.ok) {
+              const profileResult = await profileUpdateResponse.json()
+              if (profileResult.success) {
+                // 서버에서 최신 사용자 정보로 업데이트
+                setUser(prev => prev ? { ...prev, ...profileResult.user } : null)
+                alert('프로필 이미지가 성공적으로 업데이트되었습니다.')
+              } else {
+                throw new Error(profileResult.error || '프로필 업데이트 실패')
+              }
+            } else {
+              const errorData = await profileUpdateResponse.json()
+              throw new Error(errorData.error || '프로필 업데이트 실패')
+            }
+          } catch (profileError) {
+            console.error('프로필 업데이트 실패:', profileError)
+            // 이미지는 업로드되었지만 프로필 업데이트 실패
+            alert('이미지는 업로드되었지만 프로필 업데이트에 실패했습니다. 새로고침 후 다시 시도해주세요.')
+          }
         } else {
           throw new Error(result.error || '업로드 실패')
         }
