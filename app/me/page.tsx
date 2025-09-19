@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   User, 
@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { MyCodyList } from '@/components/ui/MyCodyList'
 import { Badge } from '@/components/ui/badge'
+import ProfileImageEditor from '@/components/ProfileImageEditor'
 // import { useTheme } from 'next-themes'
 
 interface UserProfile {
@@ -73,7 +74,11 @@ export default function MePage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editNickname, setEditNickname] = useState('')
   const [showImageUpload, setShowImageUpload] = useState(false)
+  const [showImageEditor, setShowImageEditor] = useState(false)
+  const [selectedImageUrl, setSelectedImageUrl] = useState('')
+  const [isUploading, setIsUploading] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'cody' | 'orders'>('profile')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 사용자 정보 가져오기
   const fetchUserInfo = async () => {
@@ -215,19 +220,45 @@ export default function MePage() {
     }
   }
 
-  // 프로필 이미지 변경
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // 프로필 이미지 파일 선택
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
+    // 파일 유효성 검사
+    if (file.size > 5 * 1024 * 1024) {
+      alert('파일 크기는 5MB 이하여야 합니다.')
+      return
+    }
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('JPG, PNG, WEBP 형식만 지원됩니다.')
+      return
+    }
+
+    // 이미지 URL 생성하여 편집기로 전달
+    const imageUrl = URL.createObjectURL(file)
+    setSelectedImageUrl(imageUrl)
+    setShowImageEditor(true)
+    setShowImageUpload(false)
+  }
+
+  // 편집된 이미지 업로드
+  const handleCroppedImageUpload = async (croppedImageUrl: string) => {
+    setIsUploading(true)
     try {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const formData = new FormData()
-      formData.append('image', file)
+      // Blob URL을 File로 변환
+      const response = await fetch(croppedImageUrl)
+      const blob = await response.blob()
+      const file = new File([blob], 'profile-image.jpg', { type: 'image/jpeg' })
 
-      const response = await fetch('/api/media/upload/profile', {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const uploadResponse = await fetch('/api/media/upload/profile', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -235,13 +266,39 @@ export default function MePage() {
         body: formData
       })
 
-      if (response.ok) {
-        const result = await response.json()
-        setUser(prev => prev ? { ...prev, profileImage: result.imageUrl } : null)
-        setShowImageUpload(false)
+      if (uploadResponse.ok) {
+        const result = await uploadResponse.json()
+        if (result.success) {
+          setUser(prev => prev ? { ...prev, profileImage: result.data.url } : null)
+          alert('프로필 이미지가 성공적으로 업데이트되었습니다.')
+        } else {
+          throw new Error(result.error || '업로드 실패')
+        }
+      } else {
+        const errorData = await uploadResponse.json()
+        throw new Error(errorData.error || '업로드 실패')
       }
     } catch (error) {
       console.error('프로필 이미지 업로드 실패:', error)
+      alert(`프로필 이미지 업로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
+    } finally {
+      setIsUploading(false)
+      setShowImageEditor(false)
+      setSelectedImageUrl('')
+      // 파일 입력 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  // 이미지 편집 취소
+  const handleImageEditCancel = () => {
+    setShowImageEditor(false)
+    setSelectedImageUrl('')
+    // 파일 입력 초기화
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
@@ -371,21 +428,17 @@ export default function MePage() {
               <Button
                 size="sm"
                 className="absolute bottom-0 left-0 w-8 h-8 rounded-full p-0 bg-blue-500 hover:bg-blue-600 shadow-lg border-2 border-white z-10"
-                onClick={() => setShowImageUpload(true)}
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
               >
                 <Camera className="w-4 h-4 text-black" />
               </Button>
               <input
+                ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 className="absolute opacity-0 w-0 h-0 overflow-hidden"
-                onChange={handleImageUpload}
-                ref={(input) => {
-                  if (input && showImageUpload) {
-                    input.click()
-                    setShowImageUpload(false)
-                  }
-                }}
+                onChange={handleImageSelect}
               />
             </div>
             
@@ -601,6 +654,27 @@ export default function MePage() {
               >
                 저장
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 프로필 이미지 편집기 */}
+      {showImageEditor && selectedImageUrl && (
+        <ProfileImageEditor
+          imageUrl={selectedImageUrl}
+          onCropComplete={handleCroppedImageUpload}
+          onCancel={handleImageEditCancel}
+        />
+      )}
+
+      {/* 업로드 중 로딩 */}
+      {isUploading && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">프로필 이미지를 업로드하는 중...</p>
             </div>
           </div>
         </div>
