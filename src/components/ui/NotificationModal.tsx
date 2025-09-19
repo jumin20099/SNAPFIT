@@ -4,14 +4,17 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Bell, Check, Trash2 } from 'lucide-react'
 import { Button } from './button'
+import { getAuthToken } from '@/lib/auth-utils'
 
 interface Notification {
-  id: string
+  id: string | number
   title: string
   message: string
-  isRead: boolean
-  createdAt: string
-  type: 'info' | 'success' | 'warning' | 'error'
+  isRead?: boolean
+  read?: boolean
+  createdAt?: string
+  timestamp?: string
+  type: 'info' | 'success' | 'warning' | 'error' | 'LIKE'
 }
 
 interface NotificationModalProps {
@@ -33,12 +36,33 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
 
   const fetchNotifications = async () => {
     try {
-      const response = await fetch('/api/notifications')
+      // JWT 토큰 가져오기
+      const token = getAuthToken()
+      if (!token) {
+        console.error('인증 토큰이 없습니다')
+        setNotifications([])
+        return
+      }
+
+      const response = await fetch('/api/notifications', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
       if (response.ok) {
         const data = await response.json()
-        setNotifications(data.content || [])
+        console.log('알림 API 응답:', data)
+        console.log('알림 데이터 타입:', typeof data)
+        console.log('알림 데이터 길이:', Array.isArray(data) ? data.length : 'not array')
+        
+        // API 응답이 배열인 경우와 객체인 경우 모두 처리
+        const notifications = Array.isArray(data) ? data : (data.content || [])
+        console.log('처리된 알림 데이터:', notifications)
+        setNotifications(notifications)
       } else {
-        console.error('알림 데이터 로드 실패')
+        console.error('알림 데이터 로드 실패:', response.status)
         setNotifications([])
       }
     } catch (error) {
@@ -51,51 +75,106 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
 
   const markAsRead = async (id: string) => {
     try {
+      const token = getAuthToken()
+      if (!token) {
+        console.error('인증 토큰이 없습니다')
+        return
+      }
+
+      // 백엔드 API 호출 시도
       const response = await fetch(`/api/notifications/${id}`, {
         method: 'PUT',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ isRead: true }),
       })
       
       if (response.ok) {
+        // 서버에서 성공적으로 처리된 경우
         setNotifications(prev => 
           prev.map(notification => 
             notification.id === id 
-              ? { ...notification, isRead: true }
+              ? { ...notification, isRead: true, read: true }
+              : notification
+          )
+        )
+      } else {
+        // 서버 오류 시 프론트엔드에서만 처리 (임시 해결)
+        console.warn('서버 읽음 처리 실패, 프론트엔드에서 처리:', response.status)
+        setNotifications(prev => 
+          prev.map(notification => 
+            notification.id === id 
+              ? { ...notification, isRead: true, read: true }
               : notification
           )
         )
       }
     } catch (error) {
       console.error('알림 읽음 처리 실패:', error)
+      // 에러 발생 시에도 프론트엔드에서 처리 (임시 해결)
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id 
+            ? { ...notification, isRead: true, read: true }
+            : notification
+        )
+      )
     }
   }
 
   const markAllAsRead = async () => {
     try {
+      const token = getAuthToken()
+      if (!token) {
+        console.error('인증 토큰이 없습니다')
+        return
+      }
+
       const response = await fetch('/api/notifications/read-all', {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       })
       
       if (response.ok) {
+        // 서버에서 성공적으로 처리된 경우
         setNotifications(prev => 
-          prev.map(notification => ({ ...notification, isRead: true }))
+          prev.map(notification => ({ ...notification, isRead: true, read: true }))
+        )
+      } else {
+        // 서버 오류 시 프론트엔드에서만 처리 (임시 해결)
+        console.warn('서버 전체 읽음 처리 실패, 프론트엔드에서 처리:', response.status)
+        setNotifications(prev => 
+          prev.map(notification => ({ ...notification, isRead: true, read: true }))
         )
       }
     } catch (error) {
       console.error('전체 읽음 처리 실패:', error)
+      // 에러 발생 시에도 프론트엔드에서 처리 (임시 해결)
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, isRead: true, read: true }))
+      )
     }
   }
 
   const deleteNotification = async (id: string) => {
     try {
+      const token = getAuthToken()
+      if (!token) {
+        console.error('인증 토큰이 없습니다')
+        return
+      }
+
       const response = await fetch(`/api/notifications/${id}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       })
       
       if (response.ok) {
@@ -106,9 +185,10 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
     }
   }
 
-  const unreadCount = notifications.filter(n => !n.isRead).length
+  const unreadCount = notifications.filter(n => !(n.isRead || n.read)).length
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return '시간 정보 없음'
     const date = new Date(dateString)
     const now = new Date()
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
@@ -124,6 +204,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
       case 'success': return 'text-green-500'
       case 'warning': return 'text-yellow-500'
       case 'error': return 'text-red-500'
+      case 'LIKE': return 'text-pink-500'
       default: return 'text-blue-500'
     }
   }
@@ -212,7 +293,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
                       <motion.div
                         key={notification.id}
                         className={`p-4 hover:bg-gray-50 dark:hover:bg-dark-border transition-colors ${
-                          !notification.isRead ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
+                          !(notification.isRead || notification.read) ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
                         }`}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -223,7 +304,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between">
                               <h3 className={`text-sm font-medium ${
-                                !notification.isRead 
+                                !(notification.isRead || notification.read)
                                   ? 'text-gray-900 dark:text-dark-text' 
                                   : 'text-gray-600 dark:text-gray-400'
                               }`}>
@@ -231,7 +312,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
                               </h3>
                               <div className="flex items-center gap-1 ml-2">
                                 <span className="text-xs text-gray-400">
-                                  {formatDate(notification.createdAt)}
+                                  {formatDate(notification.createdAt || notification.timestamp)}
                                 </span>
                                 <Button
                                   variant="ghost"
@@ -246,7 +327,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
                               {notification.message}
                             </p>
-                            {!notification.isRead && (
+                            {!(notification.isRead || notification.read) && (
                               <Button
                                 variant="ghost"
                                 size="sm"

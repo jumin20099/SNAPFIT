@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return new Response(JSON.stringify({ code: 'UNAUTHORIZED', message: 'Missing access token' }), { status: 401 })
     }
 
-    const response = await fetch(`${BACKEND}/api/notifications/${params.id}/read`, {
+    const response = await fetch(`${BACKEND}/api/notifications/${params.id}`, {
       method: 'PUT',
       headers: { ...passThroughHeaders(req), Authorization: `Bearer ${token}` },
       cache: 'no-store',

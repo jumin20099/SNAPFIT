@@ -34,11 +34,23 @@ export function decodeJWTToken(token: string): UserInfo | null {
 }
 
 /**
+ * localStorage에서 JWT 토큰을 가져옴
+ */
+export function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem('token');
+  } catch (error) {
+    console.error('JWT 토큰 가져오기 실패:', error);
+    return null;
+  }
+}
+
+/**
  * localStorage에서 현재 사용자 정보를 가져옴
  */
 export function getCurrentUser(): UserInfo | null {
   try {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     if (!token) {
       return null;
     }
