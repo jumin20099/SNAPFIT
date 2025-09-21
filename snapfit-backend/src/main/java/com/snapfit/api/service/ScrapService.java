@@ -8,6 +8,7 @@ import com.snapfit.api.dto.scrap.ScrapResponseDto;
 import com.snapfit.api.repository.PostRepository;
 import com.snapfit.api.repository.ScrapRepository;
 import com.snapfit.api.repository.UserRepository;
+import com.snapfit.community.service.PostViewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,6 +38,7 @@ public class ScrapService {
     private final ScrapRepository scrapRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final PostViewService postViewService;
 
     /**
      * 스크랩 토글 (추가/제거)
@@ -200,8 +203,9 @@ public class ScrapService {
                     ScrapResponseDto dto = new ScrapResponseDto();
                     dto.setScrapId((long) (scrap.getId().getUserId().hashCode() + scrap.getId().getPostId().intValue())); // 임시 ID
                     dto.setPostId(post.getPostId());
-                    dto.setPostTitle(""); // Post 엔티티에는 title이 없음
+                    dto.setPostTitle(post.getTitle() != null ? post.getTitle() : ""); // Post 엔티티의 title 필드 사용
                     dto.setPostContent(post.getContent());
+                    dto.setPostMediaUrls(post.getMediaUrls() != null ? new ArrayList<>(post.getMediaUrls()) : List.of()); // 이미지 URL 추가
                     dto.setPostTags(post.getTags().stream()
                         .map(Tag::getName)
                         .collect(Collectors.toList()));
@@ -209,6 +213,7 @@ public class ScrapService {
                     dto.setPostAuthorName(author.getNickname());
                     dto.setPostLikeCount(post.getCalculatedLikeCount() != null ? post.getCalculatedLikeCount().longValue() : 0L);
                     dto.setPostCommentCount(post.getCommentCount());
+                    dto.setPostViewCount(postViewService.getViewCount(post.getPostId())); // Redis에서 조회수 가져오기
                     dto.setScrapedAt(scrap.getCreatedAt());
                     
                     return dto;

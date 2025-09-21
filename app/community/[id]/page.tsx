@@ -434,26 +434,32 @@ export default function PostDetailPage() {
         const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
         
         // Post 타입에 맞게 데이터 변환
-        const transformedPosts = newPosts.map((post: any) => ({
-          postId: post.postId,
-          title: post.title || "",
-          content: post.content,
-          authorName: post.authorName || "익명",
-          authorProfileImage: post.authorProfileImage || "/placeholder.svg",
-          mediaUrls: post.mediaUrls || [],
-          likeCount: post.likeCount || 0, // 백엔드에서 받은 좋아요 개수 유지
-          commentCount: post.commentCount || 0,
-          scrapCount: post.scrapCount || 0,
-          viewCount: viewCounts[post.postId] || post.viewCount || 0, // localStorage에서 조회수 복원
-          createdAt: post.createdAt,
-          tags: post.tags || [],
-          // 백엔드 응답 필드명을 프론트엔드 기대 형식으로 변환
-          liked: post.isLiked || false,
-          scraped: post.isScrapped || false,
-          type: post.type || "fashion-tip",
-          outfitId: post.outfitId,
-          codyData: post.codyData
-        }))
+        const transformedPosts = newPosts.map((post: any) => {
+          // 배치 상태에서 현재 게시글의 상태 가져오기
+          const statusKey = `post_${post.postId}`;
+          const status = batchReactionStatus?.[statusKey];
+          
+          return {
+            postId: post.postId,
+            title: post.title || "",
+            content: post.content,
+            authorName: post.authorName || "익명",
+            authorProfileImage: post.authorProfileImage || "/placeholder.svg",
+            mediaUrls: post.mediaUrls || [],
+            likeCount: (status?.likeCount ?? post.likeCount) || 0, // 배치 상태 우선, 없으면 백엔드 값
+            commentCount: post.commentCount || 0,
+            scrapCount: (status?.scrapCount ?? post.scrapCount) || 0, // 배치 상태 우선, 없으면 백엔드 값
+            viewCount: viewCounts[post.postId] || post.viewCount || 0, // localStorage에서 조회수 복원
+            createdAt: post.createdAt,
+            tags: post.tags || [],
+            // 배치 상태 우선, 없으면 백엔드 응답 필드명을 프론트엔드 기대 형식으로 변환
+            liked: status?.liked ?? (post.isLiked || false),
+            scraped: status?.scraped ?? (post.isScrapped || false),
+            type: post.type || "fashion-tip",
+            outfitId: post.outfitId,
+            codyData: post.codyData
+          };
+        })
         
         if (page === 0) {
           // 선택한 게시글을 제일 위에 오도록 정렬
@@ -493,6 +499,8 @@ export default function PostDetailPage() {
           }
         } else {
           setPosts(prev => [...prev, ...transformedPosts])
+          // 무한 스크롤로 새 게시글이 추가되면 useBatchReactionStatus 훅이 자동으로 실행됨
+          console.log('무한 스크롤로 새 게시글 추가됨')
         }
         
         setHasMore(!data.last)
@@ -549,13 +557,46 @@ export default function PostDetailPage() {
     if (node) observer.current.observe(node)
   }, [loading, hasMore, currentPage, fetchPosts])
 
-  // 통합 배치 상태 조회 (게시글 + 댓글)
+  // 통합 배치 상태 조회 (게시글 + 댓글) - 게시글 변경 시 자동 실행
   const allCommentIds = Object.values(commentsByPost).flat().map(comment => comment.commentId)
-  const { data: batchReactionStatus } = useBatchReactionStatus({
+  const { data: batchReactionStatus, refetch: refetchBatchStatus } = useBatchReactionStatus({
     postIds: posts.map(p => p.postId),
     commentIds: allCommentIds,
-    enabled: posts.length > 0 || allCommentIds.length > 0
+    enabled: posts.length > 0 // 게시글이 있을 때 자동 실행
   })
+
+  // 배치 상태 조회 결과를 게시글 상태에 즉시 적용
+  useEffect(() => {
+    if (batchReactionStatus && posts.length > 0) {
+      console.log('배치 상태 조회 결과 적용 시작:', batchReactionStatus);
+      
+      setPosts(prevPosts => {
+        const updatedPosts = prevPosts.map(post => {
+          const statusKey = `post_${post.postId}`;
+          const status = batchReactionStatus[statusKey];
+          
+          if (status) {
+            console.log(`게시글 ${post.postId} 상태 업데이트:`, {
+              기존: { liked: post.liked, scraped: post.scraped, likeCount: post.likeCount, scrapCount: post.scrapCount },
+              새로운: { liked: status.liked, scraped: status.scraped, likeCount: status.likeCount, scrapCount: status.scrapCount }
+            });
+            
+            return {
+              ...post,
+              liked: status.liked ?? post.liked,
+              scraped: status.scraped ?? post.scraped,
+              likeCount: status.likeCount ?? post.likeCount,
+              scrapCount: status.scrapCount ?? post.scrapCount
+            };
+          }
+          return post;
+        });
+        
+        console.log('게시글 상태 동기화 완료:', updatedPosts.length, '개');
+        return updatedPosts;
+      });
+    }
+  }, [batchReactionStatus]);
 
   // 통합 데이터 로딩 (한 번만 실행)
   useEffect(() => {

@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useBatchReactionStatus } from './useBatchReactionStatus';
 
 interface Post {
   postId: number;
@@ -58,6 +59,12 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
   
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // 배치 상태 조회 훅
+  const { data: batchReactionStatus } = useBatchReactionStatus({
+    postIds: posts.map(p => p.postId),
+    enabled: posts.length > 0
+  });
+
   const buildApiUrl = useCallback((page: number) => {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -105,10 +112,34 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       const data: PostsResponse = await response.json();
       console.log('useInfinitePosts: 게시글 조회 성공', data);
 
+      // 게시글 데이터에 좋아요/스크랩 상태 적용 (배치 상태가 있을 때만)
+      const postsWithStatus = data.content.map(post => {
+        // 배치 상태가 로드된 경우에만 적용, 없으면 백엔드 기본값 사용
+        if (batchReactionStatus) {
+          const statusKey = `post_${post.postId}`;
+          const status = batchReactionStatus[statusKey];
+          
+          return {
+            ...post,
+            isLiked: status?.liked ?? post.isLiked ?? false,
+            isScrapped: status?.scraped ?? post.isScrapped ?? false,
+            likeCount: status?.likeCount ?? post.likeCount,
+            scrapCount: status?.scrapCount ?? post.scrapCount
+          };
+        } else {
+          // 배치 상태가 아직 로드되지 않은 경우 백엔드 기본값 사용
+          return {
+            ...post,
+            isLiked: post.isLiked ?? false,
+            isScrapped: post.isScrapped ?? false
+          };
+        }
+      });
+
       if (append) {
-        setPosts(prev => [...prev, ...data.content]);
+        setPosts(prev => [...prev, ...postsWithStatus]);
       } else {
-        setPosts(data.content);
+        setPosts(postsWithStatus);
       }
 
       setHasMore(!data.last);
@@ -141,6 +172,29 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
   const resetError = useCallback(() => {
     setError(null);
   }, []);
+
+  // 배치 상태가 업데이트될 때 게시글 상태 동기화
+  useEffect(() => {
+    if (batchReactionStatus && posts.length > 0) {
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          const statusKey = `post_${post.postId}`;
+          const status = batchReactionStatus[statusKey];
+          
+          if (status) {
+            return {
+              ...post,
+              isLiked: status.liked ?? post.isLiked,
+              isScrapped: status.scraped ?? post.isScrapped,
+              likeCount: status.likeCount ?? post.likeCount,
+              scrapCount: status.scrapCount ?? post.scrapCount
+            };
+          }
+          return post;
+        })
+      );
+    }
+  }, [batchReactionStatus]);
 
   // 초기 로드
   useEffect(() => {

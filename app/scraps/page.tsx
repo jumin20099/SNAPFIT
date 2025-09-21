@@ -89,7 +89,7 @@ export default function ScrapsPage() {
           content: scrap.postContent,
           authorName: scrap.postAuthorName,
           authorProfileImage: '', // ScrapResponseDto에 없음
-          mediaUrls: [], // ScrapResponseDto에 없음
+          mediaUrls: scrap.postMediaUrls || [], // 이미지 URL 사용
           likeCount: scrap.postLikeCount || 0,
           commentCount: scrap.postCommentCount || 0,
           scrapCount: 1, // 스크랩한 게시글이므로 1

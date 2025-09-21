@@ -15,10 +15,12 @@ public class ScrapResponseDto {
     private Long postId;
     private String postTitle;
     private String postContent;
+    private List<String> postMediaUrls;
     private List<String> postTags;
     private Long postAuthorId;
     private String postAuthorName;
     private Long postLikeCount;
     private Long postCommentCount;
+    private Long postViewCount;
     private LocalDateTime scrapedAt;
 }
