@@ -9,6 +9,7 @@ import { useRecentProducts } from '@/hooks/useRecentProducts'
 import { usePortOnePayment } from '@/hooks/usePortOnePayment'
 import dynamic from 'next/dynamic'
 import { LikeButton } from '@/features/reactions/LikeButton'
+import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
 
 interface CartItem {
   id: string
@@ -51,6 +52,17 @@ export function CartPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [likedProducts, setLikedProducts] = useState<Set<string>>(new Set())
   const [user, setUser] = useState<any>(null)
+  
+  // 장바구니 아이템과 최근 본 상품 ID 추출
+  const cartProductIds = cartItems.map(item => parseInt(item.productId)).filter(id => !isNaN(id))
+  const recentProductIds = recentProducts.map(product => parseInt(product.id)).filter(id => !isNaN(id))
+  const allProductIds = [...new Set([...cartProductIds, ...recentProductIds])]
+  
+  // 배치 상태 조회
+  const { data: batchReactionStatus } = useBatchReactionStatus({
+    productIds: allProductIds,
+    enabled: allProductIds.length > 0
+  })
 
   useEffect(() => {
     setIsMounted(true)
@@ -372,17 +384,27 @@ export function CartPage() {
                           <p className="text-xs text-gray-500 mb-2">색상: {item.color}</p>
                         )}
                       </div>
-                      <LikeButton
-                        targetIdx={parseInt(item.productId)}
-                        targetType="product"
-                        initialActive={item.isLiked}
-                        initialCount={0}
-                        className={`p-1 angular-rounded transition-colors ${
-                          !isLoggedIn 
-                            ? 'cursor-not-allowed opacity-50' 
-                            : 'hover:bg-gray-100'
-                        }`}
-                      />
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <LikeButton
+                          targetIdx={parseInt(item.productId)}
+                          targetType="product"
+                          initialActive={
+                            batchReactionStatus?.[`product_${item.productId}`]?.liked ?? 
+                            item.isLiked
+                          }
+                          initialCount={
+                            batchReactionStatus?.[`product_${item.productId}`]?.likeCount ?? 
+                            0
+                          }
+                          className={`p-1 angular-rounded transition-colors ${
+                            !isLoggedIn 
+                              ? 'cursor-not-allowed opacity-50' 
+                              : 'hover:bg-gray-100'
+                          }`}
+                        />
+                      </div>
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-2">
@@ -490,8 +512,14 @@ export function CartPage() {
                       <LikeButton
                         targetIdx={parseInt(product.id)}
                         targetType="product"
-                        initialActive={likedProducts.has(product.id)}
-                        initialCount={0}
+                        initialActive={
+                          batchReactionStatus?.[`product_${product.id}`]?.liked ?? 
+                          likedProducts.has(product.id)
+                        }
+                        initialCount={
+                          batchReactionStatus?.[`product_${product.id}`]?.likeCount ?? 
+                          0
+                        }
                         className={`w-6 h-6 flex items-center justify-center ${
                           !isLoggedIn ? 'cursor-not-allowed opacity-50' : ''
                         }`}
