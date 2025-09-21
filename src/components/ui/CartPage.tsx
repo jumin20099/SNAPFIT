@@ -8,6 +8,7 @@ import { useCart } from '@/contexts/CartContext'
 import { useRecentProducts } from '@/hooks/useRecentProducts'
 import { usePortOnePayment } from '@/hooks/usePortOnePayment'
 import dynamic from 'next/dynamic'
+import { LikeButton } from '@/features/reactions/LikeButton'
 
 interface CartItem {
   id: string
@@ -371,24 +372,17 @@ export function CartPage() {
                           <p className="text-xs text-gray-500 mb-2">색상: {item.color}</p>
                         )}
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          toggleLike(item.productId)
-                        }}
-                        disabled={!isLoggedIn}
+                      <LikeButton
+                        targetIdx={parseInt(item.productId)}
+                        targetType="product"
+                        initialActive={item.isLiked}
+                        initialCount={0}
                         className={`p-1 angular-rounded transition-colors ${
                           !isLoggedIn 
                             ? 'cursor-not-allowed opacity-50' 
                             : 'hover:bg-gray-100'
                         }`}
-                        title={!isLoggedIn ? '로그인이 필요합니다' : ''}
-                      >
-                        <Heart
-                          size={16}
-                          className={item.isLiked ? 'text-red-500 fill-red-500' : 'text-gray-400'}
-                        />
-                      </button>
+                      />
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex items-center gap-2">
@@ -489,22 +483,15 @@ export function CartPage() {
                     )}
 
                     {/* 좋아요 버튼 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleLike(product.id)
-                      }}
-                      disabled={!isLoggedIn}
+                    <LikeButton
+                      targetIdx={parseInt(product.id)}
+                      targetType="product"
+                      initialActive={likedProducts.has(product.id)}
+                      initialCount={0}
                       className={`absolute bottom-2 right-2 w-6 h-6 flex items-center justify-center ${
                         !isLoggedIn ? 'cursor-not-allowed opacity-50' : ''
                       }`}
-                      title={!isLoggedIn ? '로그인이 필요합니다' : ''}
-                    >
-                      <Heart
-                        size={12}
-                        className={likedProducts.has(product.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'}
-                      />
-                    </button>
+                    />
                   </div>
 
                   <div className="mt-2 space-y-1">

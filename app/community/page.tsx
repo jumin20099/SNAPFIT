@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { LikeButton } from '@/features/reactions/LikeButton'
+import { ScrapButton } from '@/features/reactions/ScrapButton'
 
 interface Post {
   postId: number
@@ -140,31 +142,7 @@ export default function CommunityPage() {
   }, [posts, searchTerm, sortBy, activeTab])
 
 
-  // 좋아요 토글
-  const handleLike = async (postId: number) => {
-    try {
-      const response = await fetch('/api/likes/toggle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          targetId: postId,
-          targetType: 'POST'
-        })
-      })
-
-      if (response.ok) {
-        setPosts(prev => prev.map(post => 
-            post.postId === postId
-            ? { ...post, liked: !post.liked, likeCount: post.liked ? post.likeCount - 1 : post.likeCount + 1 }
-            : post
-        ))
-      }
-    } catch (error) {
-      console.error('좋아요 토글 실패:', error)
-    }
-  }
+  // 좋아요 토글은 이제 LikeButton 컴포넌트에서 처리
 
   // 게시글 클릭 시 상세 페이지로 이동
   const handlePostClick = (postId: number) => {
@@ -316,7 +294,7 @@ export default function CommunityPage() {
                   <PostCard
                     key={post.postId}
                     post={post}
-                    onLike={() => handleLike(post.postId)}
+                    onLike={() => {}} // 더 이상 필요하지 않음
                     onClick={() => handlePostClick(post.postId)}
                   />
                 ))}
@@ -410,25 +388,28 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
         )}
       </div>
         
-      {/* 우측 하단 좋아요 버튼 */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onLike()
-        }}
-        className="absolute top-2 right-2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-sm transition-all duration-200 hover:scale-110 border border-gray-200"
-      >
-        <Heart 
-          className={`w-4 h-4 ${post.liked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
+      {/* 우측 하단 좋아요/스크랩 버튼 */}
+      <div className="absolute top-2 right-2 flex gap-1">
+        <LikeButton
+          targetIdx={post.postId}
+          targetType="outfit"
+          initialActive={post.liked}
+          initialCount={post.likeCount}
+          className="bg-white/90 hover:bg-white rounded-full p-1.5 shadow-sm transition-all duration-200 hover:scale-110 border border-gray-200"
         />
-      </button>
+        <ScrapButton
+          postId={post.postId}
+          initialActive={post.scraped}
+          initialCount={post.scrapCount}
+          className="bg-white/90 hover:bg-white rounded-full p-1.5 shadow-sm transition-all duration-200 hover:scale-110 border border-gray-200"
+        />
+      </div>
 
       {/* 게시글 정보 */}
       <div className="p-3">
         <div className="flex items-center justify-between mb-2">
           <span className="font-medium text-sm">{post.authorName}</span>
           <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span>좋아요 {post.likeCount}</span>
             <span>조회 {post.viewCount || 0}</span>
           </div>
         </div>

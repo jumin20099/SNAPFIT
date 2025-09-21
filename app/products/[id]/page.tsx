@@ -9,6 +9,7 @@ import { ShoppingCart, Heart, Check } from 'lucide-react'
 import CartSuccessModal from '@/components/ui/CartSuccessModal'
 import { useRecentProducts } from '@/hooks/useRecentProducts'
 import { StickyHeader } from '@/components/ui/StickyHeader'
+import { LikeButton } from '@/features/reactions/LikeButton'
 
 type Product = {
   productIdx: number
@@ -153,50 +154,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
   }
 
-  const handleToggleLike = async () => {
-    if (!detail || isLiking) return
-    
-    // 로그인 상태 확인
-    const token = localStorage.getItem('token')
-    if (!token) {
-      alert('좋아요 기능을 사용하려면 로그인이 필요합니다.')
-      return
-    }
-    
-    try {
-      setIsLiking(true)
-      
-      const response = await fetch('/api/likes/toggle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          targetIdx: detail.product.productIdx,
-          targetType: 'PRODUCT'
-        })
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setDetail(prev => prev ? {
-          ...prev,
-          likedByUser: data.liked,
-          likesCount: data.count
-        } : null)
-      } else {
-        console.error('좋아요 토글 실패:', response.status)
-        if (response.status === 401) {
-          alert('로그인이 필요합니다.')
-        }
-      }
-    } catch (error) {
-      console.error('좋아요 토글 중 오류:', error)
-    } finally {
-      setIsLiking(false)
-    }
-  }
+  // 좋아요 토글은 이제 LikeButton 컴포넌트에서 처리
 
   if (loading || !detail) {
     return (
@@ -288,22 +246,13 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               <ShoppingCart className="w-4 h-4" />
               {isAddingToCart ? '추가 중...' : '장바구니 담기'}
             </Button>
-            <Button 
-              variant="outline"
-              onClick={handleToggleLike}
-              disabled={isLiking || !isLoggedIn}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                !isLoggedIn 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : detail.likedByUser 
-                    ? 'bg-red-100 hover:bg-red-200 text-red-700 border-red-300' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-              }`}
-              title={!isLoggedIn ? '로그인이 필요합니다' : ''}
-            >
-              <Heart className={`w-4 h-4 ${detail.likedByUser ? 'fill-red-500' : ''}`} />
-              {isLiking ? '처리 중...' : (detail.likesCount || 0)}
-            </Button>
+            <LikeButton
+              targetIdx={detail.product.productIdx}
+              targetType="product"
+              initialActive={detail.likedByUser}
+              initialCount={detail.likesCount || 0}
+              className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700"
+            />
           </div>
 
           <ul className="text-sm text-gray-500 space-y-1">

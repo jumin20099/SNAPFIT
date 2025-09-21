@@ -10,9 +10,13 @@ class ApiClient {
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     
+    // localStorage에서 토큰 가져오기
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    
     const defaultOptions: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
         ...options.headers,
       },
       credentials: 'include',
@@ -22,6 +26,14 @@ class ApiClient {
     const response = await fetch(url, defaultOptions);
     
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API Error: ${response.status} ${response.statusText}`, {
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
 
@@ -76,24 +88,20 @@ class ApiClient {
 
   // 좋아요 관련 API
   async toggleLike(targetIdx: number, targetType: 'product' | 'brand' | 'outfit'): Promise<{ liked: boolean; count: number }> {
-    const params = new URLSearchParams({ 
-      targetIdx: targetIdx.toString(), 
-      targetType 
-    });
-    
     return this.request<{ liked: boolean; count: number }>('/api/likes/toggle', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params.toString(),
+      body: JSON.stringify({ 
+        targetIdx, 
+        targetType 
+      }),
     });
   }
 
   // 스크랩 관련 API
-  async toggleScrap(postId: number): Promise<{ isScrapped: boolean; scrapCount: number }> {
-    return this.request<{ isScrapped: boolean; scrapCount: number }>(`/api/posts/${postId}/scrap`, {
+  async toggleScrap(postId: number): Promise<{ scraped: boolean; count: number }> {
+    return this.request<{ scraped: boolean; count: number }>('/api/scraps/toggle', {
       method: 'POST',
+      body: JSON.stringify({ postId }),
     });
   }
 

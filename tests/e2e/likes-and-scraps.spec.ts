@@ -18,29 +18,26 @@ test.describe('좋아요 및 스크랩 기능 E2E 테스트', () => {
     await page.waitForLoadState('networkidle');
     
     // 첫 번째 게시글 카드 찾기
-    const firstPostCard = page.locator('.grid.grid-cols-3 > div').first();
+    const firstPostCard = page.locator('.grid.grid-cols-2 > div').first();
     await expect(firstPostCard).toBeVisible({ timeout: 10000 });
     
-    // 좋아요 버튼과 카운트 찾기
+    // 좋아요 버튼 찾기
     const likeButton = firstPostCard.locator('[data-testid="like-button"]');
-    const likeCount = firstPostCard.locator('[data-testid="like-count"]');
     
     // 초기 좋아요 상태 확인
-    const initialLikeText = await likeCount.textContent();
-    const initialCount = parseInt(initialLikeText?.replace('❤️ ', '') || '0');
+    const initialLiked = await likeButton.getAttribute('data-liked');
     
     // 좋아요 버튼 클릭
     await likeButton.click();
     
-    // 좋아요 수 변경 대기 (UI 업데이트 시간 고려)
+    // 좋아요 상태 변경 대기 (UI 업데이트 시간 고려)
     await page.waitForTimeout(1000);
     
-    // 좋아요 수 변경 확인
-    const newLikeText = await likeCount.textContent();
-    const newCount = parseInt(newLikeText?.replace('❤️ ', '') || '0');
+    // 좋아요 상태 변경 확인
+    const newLiked = await likeButton.getAttribute('data-liked');
     
-    // 좋아요 수가 변경되었는지 확인 (증가 또는 감소)
-    expect(newCount).not.toBe(initialCount);
+    // 좋아요 상태가 변경되었는지 확인
+    expect(newLiked).not.toBe(initialLiked);
   });
 
   test('스크랩 토글이 정상적으로 작동하고 DB에 반영된다', async ({ page }) => {
@@ -48,29 +45,26 @@ test.describe('좋아요 및 스크랩 기능 E2E 테스트', () => {
     await page.waitForLoadState('networkidle');
     
     // 첫 번째 게시글 카드 찾기
-    const firstPostCard = page.locator('.grid.grid-cols-3 > div').first();
+    const firstPostCard = page.locator('.grid.grid-cols-2 > div').first();
     await expect(firstPostCard).toBeVisible({ timeout: 10000 });
     
-    // 스크랩 버튼과 카운트 찾기
+    // 스크랩 버튼 찾기
     const scrapButton = firstPostCard.locator('[data-testid="scrap-button"]');
-    const scrapCount = firstPostCard.locator('[data-testid="scrap-count"]');
     
     // 초기 스크랩 상태 확인
-    const initialScrapText = await scrapCount.textContent();
-    const initialCount = parseInt(initialScrapText?.replace('🔖 ', '') || '0');
+    const initialScraped = await scrapButton.getAttribute('data-scraped');
     
     // 스크랩 버튼 클릭
     await scrapButton.click();
     
-    // 스크랩 수 변경 대기 (UI 업데이트 시간 고려)
+    // 스크랩 상태 변경 대기 (UI 업데이트 시간 고려)
     await page.waitForTimeout(1000);
     
-    // 스크랩 수 변경 확인
-    const newScrapText = await scrapCount.textContent();
-    const newCount = parseInt(newScrapText?.replace('🔖 ', '') || '0');
+    // 스크랩 상태 변경 확인
+    const newScraped = await scrapButton.getAttribute('data-scraped');
     
-    // 스크랩 수가 변경되었는지 확인 (증가 또는 감소)
-    expect(newCount).not.toBe(initialCount);
+    // 스크랩 상태가 변경되었는지 확인
+    expect(newScraped).not.toBe(initialScraped);
   });
 
   test('좋아요/스크랩 상태가 사용자별로 독립적으로 관리된다', async ({ page, context }) => {
@@ -98,7 +92,7 @@ test.describe('좋아요 및 스크랩 기능 E2E 테스트', () => {
     await page.waitForLoadState('networkidle');
     
     // 첫 번째 게시글 카드 찾기
-    const firstPostCard = page.locator('.grid.grid-cols-3 > div').first();
+    const firstPostCard = page.locator('.grid.grid-cols-2 > div').first();
     await expect(firstPostCard).toBeVisible({ timeout: 10000 });
     
     // 좋아요/스크랩 버튼 찾기

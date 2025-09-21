@@ -36,7 +36,7 @@ export function useToggleScrap({
       queryClient.invalidateQueries({ queryKey: ['posts'] });
       
       // 성공 토스트
-      toast.success(data.isScrapped ? '스크랩했습니다' : '스크랩을 취소했습니다');
+      toast.success(data.scraped ? '스크랩했습니다' : '스크랩을 취소했습니다');
       
       onSuccess?.(data);
     },

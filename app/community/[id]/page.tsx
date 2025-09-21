@@ -12,6 +12,8 @@ import { CommentsModal } from "@/components/ui/CommentsModal"
 import { useRouter, useParams } from "next/navigation"
 import { isCurrentUserPostAuthor } from "@/lib/auth-utils"
 import { useDeletePost } from "@/hooks/useDeletePost"
+import { LikeButton } from "@/features/reactions/LikeButton"
+import { ScrapButton } from "@/features/reactions/ScrapButton"
 
 interface Comment {
   commentId: number
@@ -476,122 +478,9 @@ export default function PostDetailPage() {
     }
   }, [currentPost, fetchUserInteractions])
 
-  const toggleLike = async (postId: number) => {
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setError('로그인이 필요합니다.')
-        return
-      }
-      
-      const response = await fetch('/api/likes/toggle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          targetIdx: postId,
-          targetType: 'POST'
-        })
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        console.log('좋아요 토글 응답:', data)
-        
-        // 모든 게시글의 좋아요 상태와 개수 업데이트
-        setPosts(prev => {
-          const updatedPosts = prev.map(post => 
-            post.postId === postId 
-              ? { 
-                  ...post, 
-                  liked: data.liked, 
-                  likeCount: data.count // 서버에서 받은 정확한 개수 사용
-                }
-              : post
-          )
-          
-          const updatedPost = updatedPosts.find(p => p.postId === postId)
-          console.log('업데이트된 게시글:', updatedPost)
-          console.log('좋아요 개수 변경:', { 
-            이전: prev.find(p => p.postId === postId)?.likeCount, 
-            이후: data.count 
-          })
-          
-          return updatedPosts
-        })
-        
-        // 현재 게시글 상태도 업데이트
-        setIsLiked(data.liked)
-        
-        console.log('좋아요 상태 업데이트 완료:', { postId, liked: data.liked, count: data.count })
-      } else {
-        console.error('좋아요 토글 실패:', response.status)
-        setError('좋아요 토글에 실패했습니다.')
-      }
-    } catch (error) {
-      console.error('좋아요 토글 중 오류:', error)
-      setError('좋아요 토글 중 오류가 발생했습니다.')
-    }
-  }
+  // 좋아요 토글 함수는 이제 LikeButton 컴포넌트에서 처리
 
-  const toggleScrap = async (postId: number) => {
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setError('로그인이 필요합니다.')
-        return
-      }
-      
-      const response = await fetch('/api/scraps/toggle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ postId })
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        console.log('스크랩 토글 응답:', data)
-        
-        // 모든 게시글의 스크랩 상태와 개수 업데이트
-        setPosts(prev => {
-          const updatedPosts = prev.map(post => 
-            post.postId === postId 
-              ? { 
-                  ...post, 
-                  scraped: data.scraped, 
-                  scrapCount: data.count // 서버에서 받은 정확한 개수 사용
-                }
-              : post
-          )
-          
-          const updatedPost = updatedPosts.find(p => p.postId === postId)
-          console.log('업데이트된 게시글:', updatedPost)
-          console.log('스크랩 개수 변경:', { 
-            이전: prev.find(p => p.postId === postId)?.scrapCount, 
-            이후: data.count 
-          })
-          
-          return updatedPosts
-        })
-        
-        // 현재 게시글 상태도 업데이트
-        setIsScraped(data.scraped)
-        
-        console.log('스크랩 상태 업데이트 완료:', { postId, scraped: data.scraped, count: data.count })
-      } else {
-        console.error('스크랩 토글 실패:', response.status)
-        setError('스크랩 토글에 실패했습니다.')
-      }
-    } catch (error) {
-      console.error('스크랩 토글 중 오류:', error)
-      setError('스크랩 토글 중 오류가 발생했습니다.')
-    }
-  }
+  // 스크랩 토글 함수는 이제 ScrapButton 컴포넌트에서 처리
 
   const toggleFollow = () => {
     setIsFollowing(!isFollowing)
@@ -964,14 +853,13 @@ export default function PostDetailPage() {
             {/* Interaction Buttons */}
             <div className="p-4 border-b">
               <div className="flex items-center gap-4 mb-3">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => toggleLike(post.postId)} 
+                <LikeButton
+                  targetIdx={post.postId}
+                  targetType="outfit"
+                  initialActive={post.liked}
+                  initialCount={post.likeCount}
                   className="p-2"
-                >
-                  <Heart className={`w-6 h-6 ${post.liked ? "fill-red-500 text-red-500" : ""}`} />
-                </Button>
+                />
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -987,14 +875,12 @@ export default function PostDetailPage() {
                   <Share2 className="w-6 h-6" />
                 </Button>
                 <div className="ml-auto">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => toggleScrap(post.postId)} 
+                  <ScrapButton
+                    postId={post.postId}
+                    initialActive={post.scraped}
+                    initialCount={post.scrapCount}
                     className="p-2"
-                  >
-                    <Bookmark className={`w-6 h-6 ${post.scraped ? "fill-blue-500 text-blue-500" : ""}`} />
-                  </Button>
+                  />
                 </div>
               </div>
               <div className="text-sm font-medium">

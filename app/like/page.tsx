@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from "next/navigation"
+import { LikeButton } from "@/features/reactions/LikeButton"
 
 interface LikedPost {
   postId: number
@@ -218,80 +219,7 @@ export default function LikedItemsPage() {
     }
   }
 
-  // 좋아요 토글 (게시글)
-  const togglePostLike = async (postId: number) => {
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
-      const response = await fetch('/api/likes/toggle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ postId })
-      })
-
-      if (response.ok) {
-        setLikedPosts(prev => prev.filter(post => post.postId !== postId))
-      }
-    } catch (error) {
-      console.error('좋아요 토글 실패:', error)
-    }
-  }
-
-  // 좋아요 토글 (상품)
-  const toggleProductLike = async (productId: number) => {
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
-      const response = await fetch('/api/likes/toggle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          targetIdx: productId, 
-          targetType: 'PRODUCT' 
-        })
-      })
-
-      if (response.ok) {
-        setLikedProducts(prev => prev.filter(product => product.productId !== productId))
-      }
-    } catch (error) {
-      console.error('상품 좋아요 토글 실패:', error)
-    }
-  }
-
-  // 좋아요 토글 (브랜드)
-  const toggleBrandLike = async (brandId: number) => {
-    try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
-      const response = await fetch('/api/likes/toggle', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ 
-          targetIdx: brandId, 
-          targetType: 'BRAND' 
-        })
-      })
-
-      if (response.ok) {
-        setLikedBrands(prev => prev.filter(brand => brand.brandId !== brandId))
-      }
-    } catch (error) {
-      console.error('브랜드 좋아요 토글 실패:', error)
-    }
-  }
+  // 좋아요 토글은 이제 LikeButton 컴포넌트에서 처리
 
   useEffect(() => {
     const loadData = async () => {
@@ -405,17 +333,13 @@ export default function LikedItemsPage() {
                         <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{post.authorName}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">{formatDate(post.createdAt)}</div>
                       </div>
-                                             <Button 
-                         variant="ghost" 
-                         size="sm" 
-                         onClick={(e) => {
-                           e.stopPropagation()
-                           togglePostLike(post.postId)
-                         }}
+                                             <LikeButton
+                         targetIdx={post.postId}
+                         targetType="outfit"
+                         initialActive={true}
+                         initialCount={post.likeCount}
                          className="p-1 h-8 w-8"
-                       >
-                         <Heart className="w-5 h-5 fill-red-500 text-red-500" />
-                       </Button>
+                       />
                     </div>
 
                     {/* 게시글 내용 */}
@@ -497,17 +421,13 @@ export default function LikedItemsPage() {
                         alt={product.name}
                         className="w-full h-32 object-cover rounded-lg mb-2"
                       />
-                                             <Button 
-                         variant="ghost" 
-                         size="sm" 
-                         onClick={(e) => {
-                           e.stopPropagation()
-                           toggleProductLike(product.productId)
-                         }}
+                                             <LikeButton
+                         targetIdx={product.productId}
+                         targetType="product"
+                         initialActive={true}
+                         initialCount={product.likeCount || 0}
                          className="absolute top-2 right-2 p-1 h-6 w-6 bg-white/80 hover:bg-white"
-                       >
-                         <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-                       </Button>
+                       />
                     </div>
                     
                     <div className="space-y-1">
@@ -560,14 +480,13 @@ export default function LikedItemsPage() {
                         </div>
                       </div>
                       
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => toggleBrandLike(brand.brandId)}
+                      <LikeButton
+                        targetIdx={brand.brandId}
+                        targetType="brand"
+                        initialActive={true}
+                        initialCount={brand.likeCount || 0}
                         className="p-2 h-10 w-10"
-                      >
-                        <Heart className="w-5 h-5 fill-red-500 text-red-500" />
-                      </Button>
+                      />
                     </div>
                   </div>
                 ))}
