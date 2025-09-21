@@ -16,10 +16,12 @@ export async function GET(
     // 백엔드 API 호출
     const backendUrl = `${BACKEND_URL}/api/comments/posts/${params.postId}?page=${page}&size=${size}&sortBy=${sortBy}`
     
+    const auth = request.headers.get('authorization') || ''
     const response = await fetch(backendUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...(auth && { Authorization: auth }),
       },
     })
 

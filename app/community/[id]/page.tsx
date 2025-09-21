@@ -661,7 +661,12 @@ export default function PostDetailPage() {
         const sortParam = usePopularSort ? '?sortBy=popular' : '?sortBy=time'
         console.log(`댓글 API 호출: /api/comments/posts/${post.postId}${sortParam}`)
         
-        const response = await fetch(`/api/comments/posts/${post.postId}${sortParam}`)
+        const token = localStorage.getItem('token')
+        const response = await fetch(`/api/comments/posts/${post.postId}${sortParam}`, {
+          headers: {
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        })
         if (response.ok) {
           const commentsData = await response.json()
           console.log(`게시글 ${post.postId} 댓글 데이터:`, commentsData)

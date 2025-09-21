@@ -30,14 +30,14 @@ export function CommentLikeButton({
       setActive(initialActive);
       prevInitialActive.current = initialActive;
     }
-  });
+  }, [initialActive]);
 
   React.useEffect(() => {
     if (prevInitialCount.current !== initialCount) {
       setCount(initialCount);
       prevInitialCount.current = initialCount;
     }
-  });
+  }, [initialCount]);
 
   const { mutate, isPending } = useToggleCommentLike({
     commentId,

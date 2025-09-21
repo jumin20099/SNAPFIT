@@ -20,10 +20,12 @@ export async function GET(request: NextRequest) {
 
 
 
+    const auth = request.headers.get('authorization') || ''
     const response = await fetch(backendUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...(auth && { Authorization: auth }),
       },
     })
 

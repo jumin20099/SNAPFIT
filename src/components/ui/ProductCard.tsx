@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Heart, Star } from 'lucide-react'
+import { Star } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { LikeButton } from '@/features/reactions/LikeButton'
 import type { Product } from '@/shared/types'
 
 interface ProductCardProps {
@@ -14,15 +15,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onLike, onClick, variant = 'grid' }: ProductCardProps) {
-  const [isLiked, setIsLiked] = useState(false)
   const [imageError, setImageError] = useState(false)
   const router = useRouter()
-
-  const handleLike = (e: React.MouseEvent) => {
-    e.stopPropagation() // 상품 카드 클릭 이벤트와 분리
-    setIsLiked(!isLiked)
-    onLike?.(product.id)
-  }
 
   const handleProductClick = () => {
     if (onClick) {
@@ -74,17 +68,15 @@ export function ProductCard({ product, onLike, onClick, variant = 'grid' }: Prod
 
 
         {/* 우상단 좋아요 버튼 */}
-        <motion.button
-          onClick={handleLike}
-          className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center"
-          whileTap={{ scale: 0.9 }}
-          transition={{ duration: 0.1 }}
-        >
-          <Heart
-            size={16}
-            className={isLiked ? 'text-red-500 fill-red-500' : 'text-gray-400'}
+        <div className="absolute top-2 right-2">
+          <LikeButton
+            targetIdx={product.productIdx || parseInt(product.id) || 0}
+            targetType="product"
+            initialActive={product.isLiked || product.likedByUser || false}
+            initialCount={product.likeCount || product.likesCount || 0}
+            className="w-8 h-8 flex items-center justify-center"
           />
-        </motion.button>
+        </div>
       </div>
 
       {/* 상품 정보 */}
