@@ -329,7 +329,7 @@ export default function PostDetailPage() {
             // 상태 업데이트
             setPosts(prevPosts => {
               const updatedPosts = prevPosts.map(post => {
-                const status = statusData[post.postId]
+                const status = statusData[`post_${post.postId}`]
                 if (status) {
                   return {
                     ...post,
@@ -384,7 +384,7 @@ export default function PostDetailPage() {
           
           if (statusResponse.ok) {
             const statusData = await statusResponse.json()
-            const status = statusData[currentPost.postId]
+            const status = statusData[`post_${currentPost.postId}`]
             if (status) {
               console.log('현재 게시글 배치 상태 조회 결과:', { postId: currentPost.postId, ...status })
               setIsLiked(status.liked)
@@ -585,31 +585,53 @@ export default function PostDetailPage() {
       // 이전 상태와 비교하여 변경된 경우에만 업데이트
       const statusString = JSON.stringify(batchReactionStatus)
       if (prevBatchStatusRef.current === statusString) {
+        console.log('댓글 상태 변경 없음, 스킵')
         return
       }
       
-      console.log('댓글 상태 업데이트 시작:', { batchReactionStatus, allCommentIds })
+      console.log('댓글 상태 업데이트 시작:', { 
+        batchReactionStatus, 
+        allCommentIds,
+        commentKeys: Object.keys(batchReactionStatus).filter(key => key.startsWith('comment_'))
+      })
       
       setCommentsByPost(prevComments => {
         const updatedComments = { ...prevComments }
+        let hasChanges = false
         
         Object.keys(updatedComments).forEach(postId => {
           updatedComments[parseInt(postId)] = updatedComments[parseInt(postId)].map(comment => {
             const status = batchReactionStatus[`comment_${comment.commentId}`]
             if (status) {
-              return {
+              const newComment = {
                 ...comment,
                 liked: status.liked || false,
                 likeCount: status.likeCount || 0,
                 isLiked: status.liked || false,
                 likes: status.likeCount || 0
               }
+              
+              // 실제로 변경된 경우에만 hasChanges를 true로 설정
+              if (comment.liked !== newComment.liked || comment.likeCount !== newComment.likeCount) {
+                hasChanges = true
+                console.log(`댓글 ${comment.commentId} 상태 변경:`, {
+                  liked: `${comment.liked} → ${newComment.liked}`,
+                  likeCount: `${comment.likeCount} → ${newComment.likeCount}`
+                })
+              }
+              
+              return newComment
             }
             return comment
           })
         })
         
-        console.log('댓글 상태 업데이트 완료:', updatedComments)
+        if (hasChanges) {
+          console.log('댓글 상태 업데이트 완료 (변경사항 있음):', updatedComments)
+        } else {
+          console.log('댓글 상태 업데이트 완료 (변경사항 없음)')
+        }
+        
         return updatedComments
       })
       

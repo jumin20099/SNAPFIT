@@ -50,7 +50,7 @@ export function useBatchReactionStatus({
       return response.json();
     },
     enabled: enabled && hasIds,
-    staleTime: 5 * 60 * 1000, // 5분
-    cacheTime: 10 * 60 * 1000, // 10분
+    staleTime: 30 * 1000, // 30초 (댓글 상태 변경 시 빠른 반영)
+    cacheTime: 2 * 60 * 1000, // 2분
   });
 }

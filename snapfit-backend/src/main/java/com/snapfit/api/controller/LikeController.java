@@ -52,7 +52,7 @@ public class LikeController {
             
             // POST 타입을 OUTFIT_SHARE로 매핑 (게시글용)
             TargetType type;
-            if ("POST".equalsIgnoreCase(targetType)) {
+            if ("POST".equalsIgnoreCase(targetType) || "outfit".equalsIgnoreCase(targetType)) {
                 type = TargetType.OUTFIT_SHARE;
             } else {
                 type = TargetType.valueOf(targetType.toUpperCase());

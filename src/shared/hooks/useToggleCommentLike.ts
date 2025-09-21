@@ -45,6 +45,8 @@ export function useToggleCommentLike({
     onSuccess: (data) => {
       // 관련 쿼리 무효화
       queryClient.invalidateQueries({ queryKey: ['comments'] });
+      // 배치 상태 조회도 무효화하여 최신 상태 반영
+      queryClient.invalidateQueries({ queryKey: ['batchReactionStatus'] });
       
       // 성공 토스트
       toast.success(data.liked ? '댓글을 좋아요했습니다' : '댓글 좋아요를 취소했습니다');

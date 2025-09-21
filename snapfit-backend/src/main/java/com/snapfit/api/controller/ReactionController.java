@@ -3,9 +3,12 @@ package com.snapfit.api.controller;
 import com.snapfit.api.entity.Like;
 import com.snapfit.api.entity.Scrap;
 import com.snapfit.api.entity.User;
+import com.snapfit.api.entity.Comment;
 import com.snapfit.api.repository.LikeRepository;
 import com.snapfit.api.repository.ScrapRepository;
 import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.repository.CommentRepository;
+import com.snapfit.api.repository.CommentLikeRepository;
 import com.snapfit.api.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +30,8 @@ public class ReactionController {
     private final LikeRepository likeRepository;
     private final ScrapRepository scrapRepository;
     private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
+    private final CommentLikeRepository commentLikeRepository;
 
     private User current(@AuthenticationPrincipal CustomUserDetails principal) {
         if (principal == null) throw new IllegalArgumentException("인증 필요");
@@ -92,11 +97,18 @@ public class ReactionController {
                 result.put("product_" + productId, status);
             }
             
-            // 댓글 상태 조회
+            // 댓글 상태 조회 (CommentLike 테이블 사용)
             for (Long commentId : commentIds) {
-                boolean liked = likeRepository.existsByUserUserIdxAndTargetIdxAndTargetType(
-                    user.getUserIdx(), commentId, com.snapfit.api.entity.Like.TargetType.COMMENT);
-                long likeCount = likeRepository.countByTargetIdxAndTargetType(commentId, com.snapfit.api.entity.Like.TargetType.COMMENT);
+                Comment comment = commentRepository.findById(commentId).orElse(null);
+                boolean liked = false;
+                long likeCount = 0;
+                
+                if (comment != null) {
+                    // CommentLike 테이블에서 좋아요 상태 확인
+                    liked = commentLikeRepository.findByCommentAndUser(comment, user).isPresent();
+                    // 댓글의 좋아요 수 조회
+                    likeCount = commentLikeRepository.countByComment(comment);
+                }
                 
                 Map<String, Object> status = new HashMap<>();
                 status.put("liked", liked);

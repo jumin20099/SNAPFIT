@@ -134,7 +134,7 @@ export default function CommunityPage() {
                 
                 // 상태 업데이트
                 const updatedPosts = postsWithViewCount.map(post => {
-                  const status = statusData[post.postId]
+                  const status = statusData[`post_${post.postId}`]
                   if (status) {
                     return {
                       ...post,
