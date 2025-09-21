@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Send } from "lucide-react"
+import { CommentLikeButton } from "@/features/reactions/CommentLikeButton"
 
 interface Comment {
   commentId: number
@@ -105,15 +106,12 @@ export function CommentsModal({
                   </div>
                   <p className="text-sm text-gray-900 mb-2">{comment.content}</p>
                   <div className="flex items-center gap-4">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <CommentLikeButton
+                      commentId={comment.commentId}
+                      initialActive={comment.liked || comment.isLiked || false}
+                      initialCount={comment.likes || comment.likeCount || 0}
                       className="p-1 h-6"
-                      onClick={() => onLikeComment(comment.commentId)}
-                    >
-                      <Heart className={`w-4 h-4 ${(comment.liked || comment.isLiked) ? "fill-red-500 text-red-500" : ""}`} />
-                    </Button>
-                    <span className="text-xs text-gray-500">{comment.likes || comment.likeCount}개</span>
+                    />
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -161,15 +159,12 @@ export function CommentsModal({
                             </div>
                             <p className="text-xs text-gray-900 mb-2">{reply.content}</p>
                             <div className="flex items-center gap-4">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
+                              <CommentLikeButton
+                                commentId={reply.commentId}
+                                initialActive={reply.liked || reply.isLiked || false}
+                                initialCount={reply.likes || reply.likeCount || 0}
                                 className="p-1 h-5"
-                                onClick={() => onLikeComment(reply.commentId)}
-                              >
-                                <Heart className={`w-3 h-3 ${(reply.liked || reply.isLiked) ? "fill-red-500 text-red-500" : ""}`} />
-                              </Button>
-                              <span className="text-xs text-gray-500">{reply.likes || reply.likeCount}개</span>
+                              />
                             </div>
                           </div>
                         </div>

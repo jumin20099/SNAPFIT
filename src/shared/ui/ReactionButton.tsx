@@ -25,8 +25,8 @@ export function ReactionButton({
   const testId = kind === 'like' ? 'like-button' : 'scrap-button';
   const countId = kind === 'like' ? 'like-count' : 'scrap-count';
 
-  // 디버깅용 로그
-  console.log(`${kind} 버튼 상태:`, { active, count, pending });
+  // 디버깅용 로그 (개발 환경에서만)
+  // 디버깅 로그 제거 (무한 렌더링 방지)
 
   return (
     <button

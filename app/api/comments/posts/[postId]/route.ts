@@ -11,9 +11,10 @@ export async function GET(
     const { searchParams } = new URL(request.url)
     const page = searchParams.get('page') || '0'
     const size = searchParams.get('size') || '20'
+    const sortBy = searchParams.get('sortBy') || 'time'
 
     // 백엔드 API 호출
-    const backendUrl = `${BACKEND_URL}/api/comments/posts/${params.postId}?page=${page}&size=${size}`
+    const backendUrl = `${BACKEND_URL}/api/comments/posts/${params.postId}?page=${page}&size=${size}&sortBy=${sortBy}`
     
     const response = await fetch(backendUrl, {
       method: 'GET',

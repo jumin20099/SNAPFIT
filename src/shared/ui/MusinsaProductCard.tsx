@@ -5,6 +5,7 @@ import { MusinsaCard } from './MusinsaCard';
 import { MusinsaButton } from './MusinsaButton';
 import { MusinsaBadge } from './MusinsaBadge';
 import { OptimizedImage, ImagePresets } from './OptimizedImage';
+import { LikeButton } from '@/features/reactions/LikeButton';
 
 interface MusinsaProductCardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onClick'> {
   product: {
@@ -120,19 +121,13 @@ export const MusinsaProductCard = forwardRef<HTMLDivElement, MusinsaProductCardP
           {/* 액션 버튼들 */}
           {showActions && (
             <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <MusinsaButton
-                size="sm"
-                variant="ghost"
-                onClick={handleLike}
+              <LikeButton
+                targetIdx={parseInt(product.id)}
+                targetType="product"
+                initialActive={product.isLiked || false}
+                initialCount={product.likeCount || 0}
                 className="w-8 h-8 p-0 hover:bg-white/20"
-              >
-                <Heart 
-                  className={cn(
-                    'w-4 h-4',
-                    product.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600'
-                  )} 
-                />
-              </MusinsaButton>
+              />
               
               <MusinsaButton
                 size="sm"

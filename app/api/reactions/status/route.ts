@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { postIds } = await request.json()
+    const { postIds, productIds, commentIds } = await request.json()
     
-    if (!postIds || !Array.isArray(postIds)) {
-      return NextResponse.json({ error: 'postIds is required and must be an array' }, { status: 400 })
+    if ((!postIds || !Array.isArray(postIds)) && 
+        (!productIds || !Array.isArray(productIds)) && 
+        (!commentIds || !Array.isArray(commentIds))) {
+      return NextResponse.json({ error: 'At least one of postIds, productIds, or commentIds is required and must be an array' }, { status: 400 })
     }
 
     // Authorization 헤더에서 토큰 추출
@@ -24,7 +26,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ postIds })
+      body: JSON.stringify({ postIds, productIds, commentIds })
     })
 
     if (!response.ok) {

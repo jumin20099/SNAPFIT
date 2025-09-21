@@ -6,6 +6,7 @@ import { Search, ArrowLeft, Filter, Grid, List } from 'lucide-react'
 import { Product } from '@/shared/types'
 import { ProductCard } from '@/components/ui/ProductCard'
 import { StickyHeader } from '@/components/ui/StickyHeader'
+import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
 
 export default function SearchPage() {
   const searchParams = useSearchParams()
@@ -21,6 +22,13 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // 통합 배치 상태 조회
+  const productIds = products.map(p => parseInt(p.id)).filter(id => !isNaN(id))
+  const { data: reactionStatus } = useBatchReactionStatus({
+    productIds,
+    enabled: products.length > 0
+  })
+
   useEffect(() => {
     if (!query.trim()) return
 
@@ -35,7 +43,15 @@ export default function SearchPage() {
         }
         
         const data = await response.json()
-        setProducts(data.products || [])
+        const productsWithStatus = (data.products || []).map((product: Product) => {
+          const status = reactionStatus?.[`product_${product.id}`]
+          return {
+            ...product,
+            isLiked: status?.liked || false,
+            likeCount: status?.likeCount || 0
+          }
+        })
+        setProducts(productsWithStatus)
       } catch (err) {
         console.error('검색 오류:', err)
         setError(err instanceof Error ? err.message : '검색 중 오류가 발생했습니다.')
@@ -47,6 +63,25 @@ export default function SearchPage() {
 
     searchProducts()
   }, [query])
+
+  // 반응 상태가 변경될 때 상품 목록 업데이트
+  useEffect(() => {
+    if (reactionStatus && products.length > 0) {
+      setProducts(prevProducts => 
+        prevProducts.map(product => {
+          const status = reactionStatus[`product_${product.id}`]
+          if (status) {
+            return {
+              ...product,
+              isLiked: status.liked || false,
+              likeCount: status.likeCount || 0
+            }
+          }
+          return product
+        })
+      )
+    }
+  }, [reactionStatus])
 
   // 정렬 옵션 변경 감지
   useEffect(() => {

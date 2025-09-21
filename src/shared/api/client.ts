@@ -113,6 +113,32 @@ class ApiClient {
     });
   }
 
+  // 댓글 좋아요 API
+  async toggleCommentLike(commentId: number): Promise<{ liked: boolean; likeCount: number }> {
+    // Next.js API 라우트를 통해 호출
+    const response = await fetch(`/api/comments/${commentId}/like`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(typeof window !== 'undefined' && localStorage.getItem('token') && { 
+          'Authorization': `Bearer ${localStorage.getItem('token')}` 
+        }),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    
+    // 백엔드 응답을 프론트엔드 기대 형식으로 변환
+    return {
+      liked: data.isLiked || false,
+      likeCount: data.likeCount || 0
+    };
+  }
+
   // 알림 관련 API
   async getNotifications(): Promise<{ notifications: Notification[]; unreadCount: number }> {
     return this.request<{ notifications: Notification[]; unreadCount: number }>('/api/notifications');

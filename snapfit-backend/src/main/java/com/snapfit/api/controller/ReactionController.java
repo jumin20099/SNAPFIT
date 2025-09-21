@@ -35,43 +35,39 @@ public class ReactionController {
     }
 
     @PostMapping("/status")
-    public ResponseEntity<Map<Long, Map<String, Object>>> getReactionStatus(
+    public ResponseEntity<Map<String, Map<String, Object>>> getReactionStatus(
             @RequestBody Map<String, Object> request,
             @AuthenticationPrincipal CustomUserDetails principal) {
         
         @SuppressWarnings("unchecked")
         List<Integer> postIdsRaw = (List<Integer>) request.get("postIds");
-        List<Long> postIds = postIdsRaw.stream().map(Integer::longValue).collect(java.util.stream.Collectors.toList());
+        @SuppressWarnings("unchecked")
+        List<Integer> productIdsRaw = (List<Integer>) request.get("productIds");
+        @SuppressWarnings("unchecked")
+        List<Integer> commentIdsRaw = (List<Integer>) request.get("commentIds");
         
-        if (postIds == null || postIds.isEmpty()) {
-            log.warn("postIds가 비어있음");
+        List<Long> postIds = postIdsRaw != null ? postIdsRaw.stream().map(Integer::longValue).collect(java.util.stream.Collectors.toList()) : List.of();
+        List<Long> productIds = productIdsRaw != null ? productIdsRaw.stream().map(Integer::longValue).collect(java.util.stream.Collectors.toList()) : List.of();
+        List<Long> commentIds = commentIdsRaw != null ? commentIdsRaw.stream().map(Integer::longValue).collect(java.util.stream.Collectors.toList()) : List.of();
+        
+        if (postIds.isEmpty() && productIds.isEmpty() && commentIds.isEmpty()) {
+            log.warn("모든 ID가 비어있음");
             return ResponseEntity.ok(new HashMap<>());
         }
 
-        Map<Long, Map<String, Object>> result = new HashMap<>();
+        Map<String, Map<String, Object>> result = new HashMap<>();
         
         try {
             User user = current(principal);
-            log.info("인증된 사용자로 배치 상태 조회: 사용자={}, 게시글 수={}", user.getUserIdx(), postIds.size());
+            log.info("인증된 사용자로 통합 배치 상태 조회: 사용자={}, 게시글={}, 상품={}, 댓글={}", 
+                user.getUserIdx(), postIds.size(), productIds.size(), commentIds.size());
             
+            // 게시글 상태 조회
             for (Long postId : postIds) {
-                // 좋아요 상태 확인 (OUTFIT_SHARE 타입으로 가정)
                 boolean liked = likeRepository.existsByUserUserIdxAndTargetIdxAndTargetType(
-                    user.getUserIdx(), 
-                    postId, 
-                    com.snapfit.api.entity.Like.TargetType.OUTFIT_SHARE
-                );
-                
-                // 스크랩 상태 확인
+                    user.getUserIdx(), postId, com.snapfit.api.entity.Like.TargetType.OUTFIT_SHARE);
                 boolean scraped = scrapRepository.existsByUserIdAndPostId(user.getUserIdx(), postId);
-                
-                // 좋아요 개수 조회
-                long likeCount = likeRepository.countByTargetIdxAndTargetType(
-                    postId, 
-                    com.snapfit.api.entity.Like.TargetType.OUTFIT_SHARE
-                );
-                
-                // 스크랩 개수 조회
+                long likeCount = likeRepository.countByTargetIdxAndTargetType(postId, com.snapfit.api.entity.Like.TargetType.OUTFIT_SHARE);
                 long scrapCount = scrapRepository.countByPostId(postId);
                 
                 Map<String, Object> status = new HashMap<>();
@@ -80,10 +76,36 @@ public class ReactionController {
                 status.put("likeCount", likeCount);
                 status.put("scrapCount", scrapCount);
                 
-                result.put(postId, status);
+                result.put("post_" + postId, status);
             }
             
-            log.info("배치 상태 조회 완료: 사용자={}, 게시글 수={}", user.getUserIdx(), postIds.size());
+            // 상품 상태 조회
+            for (Long productId : productIds) {
+                boolean liked = likeRepository.existsByUserUserIdxAndTargetIdxAndTargetType(
+                    user.getUserIdx(), productId, com.snapfit.api.entity.Like.TargetType.PRODUCT);
+                long likeCount = likeRepository.countByTargetIdxAndTargetType(productId, com.snapfit.api.entity.Like.TargetType.PRODUCT);
+                
+                Map<String, Object> status = new HashMap<>();
+                status.put("liked", liked);
+                status.put("likeCount", likeCount);
+                
+                result.put("product_" + productId, status);
+            }
+            
+            // 댓글 상태 조회
+            for (Long commentId : commentIds) {
+                boolean liked = likeRepository.existsByUserUserIdxAndTargetIdxAndTargetType(
+                    user.getUserIdx(), commentId, com.snapfit.api.entity.Like.TargetType.COMMENT);
+                long likeCount = likeRepository.countByTargetIdxAndTargetType(commentId, com.snapfit.api.entity.Like.TargetType.COMMENT);
+                
+                Map<String, Object> status = new HashMap<>();
+                status.put("liked", liked);
+                status.put("likeCount", likeCount);
+                
+                result.put("comment_" + commentId, status);
+            }
+            
+            log.info("통합 배치 상태 조회 완료: 사용자={}, 총 항목={}", user.getUserIdx(), result.size());
             
         } catch (Exception e) {
             log.warn("인증 실패, 기본 상태로 반환: {}", e.getMessage());
@@ -93,13 +115,23 @@ public class ReactionController {
                 Map<String, Object> status = new HashMap<>();
                 status.put("liked", false);
                 status.put("scraped", false);
-                status.put("likeCount", likeRepository.countByTargetIdxAndTargetType(
-                    postId, 
-                    com.snapfit.api.entity.Like.TargetType.OUTFIT_SHARE
-                ));
+                status.put("likeCount", likeRepository.countByTargetIdxAndTargetType(postId, com.snapfit.api.entity.Like.TargetType.OUTFIT_SHARE));
                 status.put("scrapCount", scrapRepository.countByPostId(postId));
-                
-                result.put(postId, status);
+                result.put("post_" + postId, status);
+            }
+            
+            for (Long productId : productIds) {
+                Map<String, Object> status = new HashMap<>();
+                status.put("liked", false);
+                status.put("likeCount", likeRepository.countByTargetIdxAndTargetType(productId, com.snapfit.api.entity.Like.TargetType.PRODUCT));
+                result.put("product_" + productId, status);
+            }
+            
+            for (Long commentId : commentIds) {
+                Map<String, Object> status = new HashMap<>();
+                status.put("liked", false);
+                status.put("likeCount", likeRepository.countByTargetIdxAndTargetType(commentId, com.snapfit.api.entity.Like.TargetType.COMMENT));
+                result.put("comment_" + commentId, status);
             }
         }
         

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, Send, Plus, MoreVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -14,6 +14,8 @@ import { isCurrentUserPostAuthor } from "@/lib/auth-utils"
 import { useDeletePost } from "@/hooks/useDeletePost"
 import { LikeButton } from "@/features/reactions/LikeButton"
 import { ScrapButton } from "@/features/reactions/ScrapButton"
+import { CommentLikeButton } from "@/features/reactions/CommentLikeButton"
+import { useBatchReactionStatus } from "@/shared/hooks/useBatchReactionStatus"
 
 interface Comment {
   commentId: number
@@ -496,11 +498,7 @@ export default function PostDetailPage() {
         setHasMore(!data.last)
         setCurrentPage(page)
         
-        console.log('게시글 로드 성공:', transformedPosts.map((p: Post) => ({ 
-          postId: p.postId, 
-          likeCount: p.likeCount, 
-          scrapCount: p.scrapCount 
-        }))) // 디버깅: 좋아요/스크랩 개수 확인
+        // 게시글 로드 완료
         
         // 게시글이 로드된 후 즉시 사용자 상호작용 상태 확인
         if (page === 0) {
@@ -509,11 +507,15 @@ export default function PostDetailPage() {
             fetchUserInteractions()
           }, 200)
         }
+        
+        // 로드된 게시글 반환 (모든 경우에 반환)
+        return transformedPosts
       } else {
         console.error('게시글 로드 실패:', response.status)
         setError(`게시글을 불러오는데 실패했습니다. (${response.status})`)
         // 에러 발생 시 hasMore를 false로 설정하여 더 이상 시도하지 않음
         setHasMore(false)
+        return []
       }
     } catch (error) {
       console.error('게시글 로드 중 오류:', error)
@@ -526,6 +528,7 @@ export default function PostDetailPage() {
       } else {
         setError('게시글을 불러오는 중 오류가 발생했습니다.')
       }
+      return []
     } finally {
       setLoading(false)
     }
@@ -546,28 +549,83 @@ export default function PostDetailPage() {
     if (node) observer.current.observe(node)
   }, [loading, hasMore, currentPage, fetchPosts])
 
-  // 컴포넌트 마운트 시 게시글 로드 (한 번만 실행)
+  // 통합 배치 상태 조회 (게시글 + 댓글)
+  const allCommentIds = Object.values(commentsByPost).flat().map(comment => comment.commentId)
+  const { data: batchReactionStatus } = useBatchReactionStatus({
+    postIds: posts.map(p => p.postId),
+    commentIds: allCommentIds,
+    enabled: posts.length > 0 || allCommentIds.length > 0
+  })
+
+  // 통합 데이터 로딩 (한 번만 실행)
   useEffect(() => {
     if (postId) {
-      fetchPosts(0)
-    }
-  }, [postId]) // fetchPosts를 의존성에서 제거하여 무한루프 방지
-
-  // posts가 변경될 때마다 모든 댓글 로드
-  useEffect(() => {
-    if (posts.length > 0) {
-      // 새로고침인지 확인 (performance.navigation.type === 1은 새로고침)
+      const loadData = async () => {
+        // 1. 게시글 로드
+        const loadedPosts = await fetchPosts(0)
+        
+        // 2. 게시글 로딩 완료 후 댓글 로드
+        if (loadedPosts && loadedPosts.length > 0) {
+          console.log('댓글 로딩 시작 - 게시글 로딩 완료 후')
       const isRefresh = performance.navigation && performance.navigation.type === 1
-      fetchAllComments(isRefresh) // 새로고침 시에만 인기순 정렬 사용
+          await fetchAllComments(isRefresh, loadedPosts)
+          await fetchUserInteractions()
+        }
+      }
+      
+      loadData()
     }
-  }, [posts])
+  }, [postId]) // postId만 의존성으로 설정
 
-  // currentPost가 변경될 때마다 사용자 상호작용 상태 확인
+  // 배치 상태 조회 결과로 댓글 상태 업데이트 (무한루프 방지)
+  const prevBatchStatusRef = useRef(null)
+  
   useEffect(() => {
-    if (currentPost) {
-      fetchUserInteractions()
+    if (batchReactionStatus && allCommentIds.length > 0) {
+      // 이전 상태와 비교하여 변경된 경우에만 업데이트
+      const statusString = JSON.stringify(batchReactionStatus)
+      if (prevBatchStatusRef.current === statusString) {
+        return
+      }
+      
+      console.log('댓글 상태 업데이트 시작:', { batchReactionStatus, allCommentIds })
+      
+      setCommentsByPost(prevComments => {
+        const updatedComments = { ...prevComments }
+        
+        Object.keys(updatedComments).forEach(postId => {
+          updatedComments[parseInt(postId)] = updatedComments[parseInt(postId)].map(comment => {
+            const status = batchReactionStatus[`comment_${comment.commentId}`]
+            if (status) {
+              return {
+                ...comment,
+                liked: status.liked || false,
+                likeCount: status.likeCount || 0,
+                isLiked: status.liked || false,
+                likes: status.likeCount || 0
+              }
+            }
+            return comment
+          })
+        })
+        
+        console.log('댓글 상태 업데이트 완료:', updatedComments)
+        return updatedComments
+      })
+      
+      // 현재 상태를 저장
+      prevBatchStatusRef.current = statusString
     }
-  }, [currentPost, fetchUserInteractions])
+  }, [batchReactionStatus, allCommentIds])
+
+  // 댓글 상태 디버깅
+  useEffect(() => {
+    console.log('댓글 상태 변경:', { 
+      commentsByPost, 
+      allCommentIds, 
+      batchReactionStatus: !!batchReactionStatus 
+    })
+  }, [commentsByPost, allCommentIds, batchReactionStatus])
 
   // 좋아요 토글 함수는 이제 LikeButton 컴포넌트에서 처리
 
@@ -590,26 +648,42 @@ export default function PostDetailPage() {
   })
 
   // 모든 게시글의 댓글 목록 로드 (새로고침 시에만 인기순 정렬)
-  const fetchAllComments = async (usePopularSort = false) => {
+  const fetchAllComments = async (usePopularSort = false, postsToLoad = posts) => {
     try {
-      const commentPromises = posts.map(async (post) => {
+      console.log('댓글 로딩 시작:', { postsCount: postsToLoad.length, usePopularSort, posts: postsToLoad.map(p => p.postId) })
+      
+      if (postsToLoad.length === 0) {
+        console.log('게시글이 없어서 댓글을 로드할 수 없습니다')
+        return
+      }
+      
+      const commentPromises = postsToLoad.map(async (post) => {
         const sortParam = usePopularSort ? '?sortBy=popular' : '?sortBy=time'
+        console.log(`댓글 API 호출: /api/comments/posts/${post.postId}${sortParam}`)
+        
         const response = await fetch(`/api/comments/posts/${post.postId}${sortParam}`)
         if (response.ok) {
           const commentsData = await response.json()
+          console.log(`게시글 ${post.postId} 댓글 데이터:`, commentsData)
           const transformedComments = commentsData.map(transformComment)
           return { postId: post.postId, comments: transformedComments }
+        } else {
+          console.error(`댓글 API 실패: ${post.postId}`, response.status, response.statusText)
         }
         return { postId: post.postId, comments: [] }
       })
       
       const results = await Promise.all(commentPromises)
+      console.log('댓글 로딩 결과:', results)
+      
       const commentsMap: Record<number, Comment[]> = {}
       results.forEach(({ postId, comments }) => {
         commentsMap[postId] = comments
+        console.log(`게시글 ${postId} 댓글 수:`, comments.length)
       })
       
       setCommentsByPost(commentsMap)
+      console.log('댓글 상태 설정 완료:', commentsMap)
     } catch (error) {
       console.error('댓글 로드 실패:', error)
     }
@@ -1018,15 +1092,12 @@ export default function PostDetailPage() {
                         </div>
                         <p className="text-sm text-gray-900">{mostPopularComment.content}</p>
                         <div className="flex items-center gap-4 mt-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <CommentLikeButton
+                            commentId={mostPopularComment.commentId}
+                            initialActive={mostPopularComment.liked || mostPopularComment.isLiked || false}
+                            initialCount={mostPopularComment.likes || mostPopularComment.likeCount || 0}
                             className="p-1 h-6"
-                            onClick={() => handleLikeComment(mostPopularComment.commentId)}
-                          >
-                            <Heart className={`w-4 h-4 ${(mostPopularComment.liked || mostPopularComment.isLiked) ? "fill-red-500 text-red-500" : ""}`} />
-                          </Button>
-                          <span className="text-xs text-gray-500">{(mostPopularComment.likes || mostPopularComment.likeCount)}개</span>
+                          />
                         </div>
                         </div>
                       </div>
@@ -1099,7 +1170,11 @@ export default function PostDetailPage() {
           setIsCommentsModalOpen(false)
           setSelectedPostId(null)
         }}
-        comments={selectedPostId ? (commentsByPost[selectedPostId] || []) : []}
+        comments={(() => {
+          const comments = selectedPostId ? (commentsByPost[selectedPostId] || []) : []
+          console.log('댓글 모달에 전달되는 댓글:', { selectedPostId, commentsCount: comments.length, comments })
+          return comments
+        })()}
         onAddComment={handleAddComment}
         onLikeComment={handleLikeComment}
         onReplyComment={handleReplyComment}

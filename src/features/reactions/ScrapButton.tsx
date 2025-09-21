@@ -20,20 +20,30 @@ export function ScrapButton({
   const [active, setActive] = React.useState(initialActive);
   const [count, setCount] = React.useState(initialCount);
 
-  // initialActive가 변경되면 active 상태 업데이트
-  React.useEffect(() => {
-    setActive(initialActive);
-  }, [initialActive]);
+  // initialActive와 initialCount가 변경될 때만 상태 업데이트 (무한 루프 방지)
+  const prevInitialActive = React.useRef(initialActive);
+  const prevInitialCount = React.useRef(initialCount);
 
-  // initialCount가 변경되면 count 상태 업데이트
   React.useEffect(() => {
-    setCount(initialCount);
-  }, [initialCount]);
+    if (prevInitialActive.current !== initialActive) {
+      setActive(initialActive);
+      prevInitialActive.current = initialActive;
+    }
+  });
+
+  React.useEffect(() => {
+    if (prevInitialCount.current !== initialCount) {
+      setCount(initialCount);
+      prevInitialCount.current = initialCount;
+    }
+  });
 
   const { mutate, isPending } = useToggleScrap({
     postId,
     onSuccess: (data) => {
-      console.log('스크랩 성공:', data);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('스크랩 성공:', data);
+      }
       setActive(data.scraped);
       setCount(data.count);
     },

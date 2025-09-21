@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Loader2, Heart, ShoppingBag } from 'lucide-react'
 import { useInfiniteScroll } from '@/shared/hooks/useInfiniteScroll'
+import { LikeButton } from '@/features/reactions/LikeButton'
 
 interface Product {
   productIdx: number
@@ -97,33 +98,7 @@ export function CodyProductGrid({
     onProductSelect(product)
   }
 
-  // 좋아요 토글
-  const handleLikeToggle = async (productIdx: number) => {
-    try {
-      const response = await fetch('/api/likes/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetIdx: productIdx,
-          targetType: 'PRODUCT'
-        })
-      })
-
-      if (response.ok) {
-        setProducts(prev => prev.map(product => 
-          product.productIdx === productIdx 
-            ? { 
-                ...product, 
-                isLiked: !product.isLiked,
-                likeCount: product.isLiked ? product.likeCount - 1 : product.likeCount + 1
-              }
-            : product
-        ))
-      }
-    } catch (error) {
-      console.error('Error toggling like:', error)
-    }
-  }
+  // 좋아요 토글 (이제 LikeButton에서 처리하므로 제거)
 
   if (loading && products.length === 0) {
     return (
@@ -164,18 +139,13 @@ export function CodyProductGrid({
               />
               
               {/* 좋아요 버튼 */}
-              <button
-                onClick={() => handleLikeToggle(product.productIdx)}
+              <LikeButton
+                targetIdx={product.productIdx}
+                targetType="product"
+                initialActive={product.isLiked}
+                initialCount={product.likeCount}
                 className="absolute top-2 right-2 p-2 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-colors"
-              >
-                <Heart 
-                  className={`w-4 h-4 ${
-                    product.isLiked 
-                      ? 'fill-red-500 text-red-500' 
-                      : 'text-gray-400 hover:text-red-500'
-                  }`} 
-                />
-              </button>
+              />
 
               {/* 코디하기 버튼 */}
               <button

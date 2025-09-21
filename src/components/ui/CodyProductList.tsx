@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -34,13 +34,16 @@ export function CodyProductList({
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
 
+  // items 배열 메모이제이션
+  const memoizedItems = useMemo(() => items, [items])
+
   // 상품 정보 가져오기
   useEffect(() => {
     const fetchProductInfos = async () => {
       setLoading(true)
       const infos: ProductInfo[] = []
       
-      for (const item of items) {
+      for (const item of memoizedItems) {
         try {
           // itemId가 있고 유효한 값(0이 아닌 양수)이면 API 호출, 아니면 기본 정보 사용
           if (item.itemId && parseInt(item.itemId) > 0) {
@@ -89,10 +92,10 @@ export function CodyProductList({
       setLoading(false)
     }
 
-    if (items.length > 0) {
+    if (memoizedItems.length > 0) {
       fetchProductInfos()
     }
-  }, [items])
+  }, [memoizedItems])
 
   // 스크롤 가능 여부 업데이트
   useEffect(() => {
