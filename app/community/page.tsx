@@ -17,6 +17,7 @@ interface Post {
   postId: number
   content: string
   authorName: string
+  authorId?: string
   authorProfileImage?: string
   createdAt: string
   likeCount: number
@@ -97,7 +98,8 @@ export default function CommunityPage() {
               viewCount: viewCounts[post.postId] || post.viewCount || 0,
               // 백엔드 응답 필드명을 프론트엔드 기대 형식으로 변환
               liked: post.isLiked || false,
-              scraped: post.isScrapped || false
+              scraped: post.isScrapped || false,
+              authorId: post.authorId || post.userId || null
             };
           })
           
@@ -114,7 +116,7 @@ export default function CommunityPage() {
           // 임시: 토큰이 없어도 배치 상태 조회 실행 (디버깅용)
           if (postsWithViewCount.length > 0) {
             try {
-              const postIds = postsWithViewCount.map(post => post.postId)
+              const postIds = postsWithViewCount.map((post: any) => post.postId)
               console.log('배치 상태 조회 요청:', { postIds, token: token ? token.substring(0, 10) + '...' : 'null' })
               
               const statusResponse = await fetch('/api/reactions/status', {
@@ -133,7 +135,7 @@ export default function CommunityPage() {
                 console.log('배치 상태 조회 결과:', statusData)
                 
                 // 상태 업데이트
-                const updatedPosts = postsWithViewCount.map(post => {
+                const updatedPosts = postsWithViewCount.map((post: any) => {
                   const status = statusData[`post_${post.postId}`]
                   if (status) {
                     return {
@@ -219,6 +221,45 @@ export default function CommunityPage() {
     router.push(`/community/${postId}`)
   }
 
+  // 프로필 버튼 클릭 핸들러
+  const handleProfileClick = () => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('로그인 후 사용 가능합니다.')
+      return
+    }
+    
+    // 토큰이 있으면 사용자 정보를 가져와서 프로필 페이지로 이동
+    fetchUserProfile()
+  }
+
+  // 사용자 프로필 정보 가져오기
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/user/info', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const userData = await response.json()
+        const userId = userData.userIdx || userData.id
+        if (userId) {
+          router.push(`/profile/${userId}`)
+        } else {
+          alert('사용자 정보를 가져올 수 없습니다.')
+        }
+      } else {
+        alert('로그인 후 사용 가능합니다.')
+      }
+    } catch (error) {
+      console.error('사용자 정보 조회 실패:', error)
+      alert('로그인 후 사용 가능합니다.')
+    }
+  }
+
   // 로딩 상태
   if (isLoading) {
     return (
@@ -277,7 +318,10 @@ export default function CommunityPage() {
                 {/* 알림 배지 */}
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
               </button>
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors">
+              <button 
+                onClick={handleProfileClick}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
+              >
                 <User className="w-5 h-5 text-gray-600 dark:text-dark-text" />
               </button>
             </div>
@@ -438,6 +482,8 @@ interface PostCardProps {
 }
 
 function PostCard({ post, onLike, onClick }: PostCardProps) {
+  const router = useRouter()
+  
   return (
     <div 
       className="relative cursor-pointer group"
@@ -481,7 +527,18 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
       {/* 게시글 정보 */}
       <div className="p-3">
         <div className="flex items-center justify-between mb-2">
-          <span className="font-medium text-sm">{post.authorName}</span>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation()
+              if (post.authorId && post.authorId !== 'anonymous') {
+                router.push(`/profile/${post.authorId}`)
+              }
+            }}
+            className="text-left hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-1 -m-1 transition-colors"
+            disabled={!post.authorId || post.authorId === 'anonymous'}
+          >
+            <span className="font-medium text-sm">{post.authorName}</span>
+          </button>
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <span>조회 {post.viewCount || 0}</span>
           </div>

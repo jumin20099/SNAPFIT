@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, Send, Plus, MoreVertical } from "lucide-react"
+import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, Send, Plus, MoreVertical, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
@@ -42,6 +42,7 @@ interface Post {
   title: string
   content: string
   authorName: string
+  authorId?: string
   authorProfileImage: string
   mediaUrls: string[]
   likeCount: number
@@ -444,6 +445,7 @@ export default function PostDetailPage() {
             title: post.title || "",
             content: post.content,
             authorName: post.authorName || "익명",
+            authorId: post.authorId || post.userId || null,
             authorProfileImage: post.authorProfileImage || "/placeholder.svg",
             mediaUrls: post.mediaUrls || [],
             likeCount: (status?.likeCount ?? post.likeCount) || 0, // 배치 상태 우선, 없으면 백엔드 값
@@ -944,6 +946,45 @@ export default function PostDetailPage() {
     }
   }
 
+  // 프로필 버튼 클릭 핸들러
+  const handleProfileClick = () => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('로그인 후 사용 가능합니다.')
+      return
+    }
+    
+    // 토큰이 있으면 사용자 정보를 가져와서 프로필 페이지로 이동
+    fetchUserProfile()
+  }
+
+  // 사용자 프로필 정보 가져오기
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/user/info', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const userData = await response.json()
+        const userId = userData.userIdx || userData.id
+        if (userId) {
+          router.push(`/profile/${userId}`)
+        } else {
+          alert('사용자 정보를 가져올 수 없습니다.')
+        }
+      } else {
+        alert('로그인 후 사용 가능합니다.')
+      }
+    } catch (error) {
+      console.error('사용자 정보 조회 실패:', error)
+      alert('로그인 후 사용 가능합니다.')
+    }
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -964,9 +1005,14 @@ export default function PostDetailPage() {
           ←
         </Button>
         <div className="font-bold text-lg">커뮤니티</div>
-        <Button variant="ghost" size="sm">
-          <MoreHorizontal className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={handleProfileClick}>
+            <User className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="sm">
+            <MoreHorizontal className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Posts Feed */}
@@ -1002,8 +1048,18 @@ export default function PostDetailPage() {
                   <AvatarFallback>{post.authorName?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <div className="font-medium">{post.authorName}</div>
-                  <div className="text-sm text-gray-500">171cm/63kg · 봄 원돈</div>
+                  <button 
+                    onClick={() => {
+                      if (post.authorId && post.authorId !== 'anonymous') {
+                        router.push(`/profile/${post.authorId}`)
+                      }
+                    }}
+                    className="text-left hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-2 -m-2 transition-colors"
+                    disabled={!post.authorId || post.authorId === 'anonymous'}
+                  >
+                    <div className="font-medium">{post.authorName}</div>
+                    <div className="text-sm text-gray-500">171cm/63kg · 봄 원돈</div>
+                  </button>
                 </div>
                 {/* 자신의 게시글인지 확인 후 버튼 선택 */}
                 {isCurrentUserPostAuthor(post.authorName) ? (

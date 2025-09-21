@@ -40,6 +40,16 @@ public class User {
 
     private String nickname;
     private String profileImage;
+    
+    // 프로필 관련 필드
+    @Column(columnDefinition = "TEXT")
+    private String bio; // 소개글
+    
+    @Builder.Default
+    private Integer followerCount = 0; // 팔로워 수
+    
+    @Builder.Default
+    private Integer followingCount = 0; // 팔로잉 수
 
     @Column(nullable = false)
     private String provider;

@@ -97,9 +97,9 @@ public class CommunityService {
             // 스크랩 수
             long scrapCount = scrapRepository.countByUserId(userId);
             
-            // 팔로워/팔로잉 수
-            long followerCount = followRepository.countFollowersByFolloweeId(userId);
-            long followingCount = followRepository.countFollowingByFollowerId(userId);
+            // 팔로워/팔로잉 수 (임시 비활성화)
+            long followerCount = 0L;
+            long followingCount = 0L;
             
             // 읽지 않은 알림 수
             long unreadNotificationCount = notificationRepository.countUnreadByUserId(userId);

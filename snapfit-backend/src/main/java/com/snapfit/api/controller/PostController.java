@@ -15,7 +15,6 @@ import com.snapfit.api.repository.OutfitRepository;
 import com.snapfit.api.security.JwtUtil;
 import com.snapfit.api.service.PostService;
 import com.snapfit.api.service.TagService;
-import com.snapfit.api.service.FollowService;
 import com.snapfit.api.service.AnonymousUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +56,6 @@ public class PostController {
     private final ScrapRepository scrapRepository;
     private final OutfitRepository outfitRepository;
     private final JwtUtil jwtUtil;
-    private final FollowService followService;
 
     /**
      * 게시글 생성

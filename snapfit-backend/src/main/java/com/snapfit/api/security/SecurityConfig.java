@@ -61,7 +61,8 @@ public class SecurityConfig {
                     "/api/ranking/**", "/api/health/**", "/api/notifications/stream", "/api/likes/**", "/api/scraps/**", "/api/outfits/**", "/api/reactions/**", "/error",
                     "/ws/**", "/sse/**", "/api/media/image/**"
                 ).permitAll()
-                .requestMatchers("/api/media/upload/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/profiles/**").permitAll()
+                .requestMatchers("/api/media/upload/**", "/api/profiles/me", "/api/profiles/*/follow", "/api/profiles/*/unfollow").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

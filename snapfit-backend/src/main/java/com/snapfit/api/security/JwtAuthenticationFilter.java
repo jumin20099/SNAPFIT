@@ -63,9 +63,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         System.out.println("Authorization 헤더: " + header);
         String token = null;
         
-        if (header != null && header.startsWith("Bearer ")) {
+        if (header != null && header.startsWith("Bearer ") && header.length() > 7) {
             token = header.substring(7);
-            System.out.println("헤더에서 토큰 읽기 성공: " + token.substring(0, 20) + "...");
+            if (token != null && !token.trim().isEmpty() && !"null".equals(token)) {
+                System.out.println("헤더에서 토큰 읽기 성공: " + (token.length() > 20 ? token.substring(0, 20) + "..." : token));
+            } else {
+                token = null;
+                System.out.println("토큰이 null이거나 비어있음");
+            }
         } else {
             // 헤더에 토큰이 없으면 쿼리 파라미터에서 확인 (WebSocket 연결용)
             String queryToken = request.getParameter("token");

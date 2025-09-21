@@ -137,6 +137,11 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Page<Post> findByAuthor_UserIdxOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     /**
+     * 사용자별 게시글 조회 (User 엔티티로)
+     */
+    Page<Post> findByAuthorOrderByCreatedAtDesc(com.snapfit.api.entity.User author, Pageable pageable);
+
+    /**
      * 검색어 기반 게시글 조회 (제목 + 내용)
      * 성능: pg_trgm 인덱스 활용
      */
