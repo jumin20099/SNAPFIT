@@ -36,6 +36,8 @@ export function useToggleLike({
       // 관련 쿼리 무효화
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['posts'] });
+      // 배치 상태 조회도 무효화하여 최신 상태 반영
+      queryClient.invalidateQueries({ queryKey: ['batchReactionStatus'] });
       
       // 성공 토스트
       toast.success(data.liked ? '좋아요를 눌렀습니다' : '좋아요를 취소했습니다');

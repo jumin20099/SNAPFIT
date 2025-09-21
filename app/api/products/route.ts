@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
 
 
     const auth = request.headers.get('authorization') || ''
+    console.log('상품 목록 API - Authorization 헤더:', auth ? '존재함' : '없음')
+    
     const response = await fetch(backendUrl, {
       method: 'GET',
       headers: {

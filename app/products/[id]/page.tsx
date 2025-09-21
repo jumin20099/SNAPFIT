@@ -10,6 +10,7 @@ import CartSuccessModal from '@/components/ui/CartSuccessModal'
 import { useRecentProducts } from '@/hooks/useRecentProducts'
 import { StickyHeader } from '@/components/ui/StickyHeader'
 import { LikeButton } from '@/features/reactions/LikeButton'
+import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
 
 type Product = {
   productIdx: number
@@ -42,6 +43,13 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const { addItem } = useCart()
   const { addRecentProduct } = useRecentProducts()
   const hasFetched = useRef<string | null>(null)
+  
+  // 상품 ID로 배치 상태 조회
+  const productId = detail?.product?.productIdx
+  const { data: batchReactionStatus } = useBatchReactionStatus({
+    productIds: productId ? [productId] : [],
+    enabled: !!productId
+  })
 
   useEffect(() => {
     // 중복 호출 방지 - 같은 상품 ID에 대해서만
@@ -249,8 +257,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <LikeButton
               targetIdx={detail.product.productIdx}
               targetType="product"
-              initialActive={detail.likedByUser}
-              initialCount={detail.likesCount || 0}
+              initialActive={
+                batchReactionStatus?.[`product_${detail.product.productIdx}`]?.liked ?? 
+                detail.likedByUser
+              }
+              initialCount={
+                batchReactionStatus?.[`product_${detail.product.productIdx}`]?.likeCount ?? 
+                detail.likesCount || 0
+              }
               className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700"
             />
           </div>

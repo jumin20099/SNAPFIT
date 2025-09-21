@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ProductCard } from './ProductCard'
 import { useCategoryProducts } from '@/shared/api/queries'
 import { useStores } from '@/hooks/useStores'
+import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
 import { mapCategoryIdToBackend } from '@/constants/categories'
 import type { Product } from '@/shared/types'
 
@@ -38,6 +39,15 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
   // 모든 상품을 가져온 후 클라이언트에서 필터링
   const { data: apiProducts, isLoading, error } = useCategoryProducts('all')
   const { data: stores } = useStores()
+  
+  // 상품 ID 목록 추출
+  const productIds = apiProducts?.map(product => product.productIdx) || []
+  
+  // 배치 상태 조회
+  const { data: batchReactionStatus } = useBatchReactionStatus({
+    productIds,
+    enabled: productIds.length > 0
+  })
 
   // 상점 ID로 상점 이름을 찾는 함수
   const getStoreName = (storeIdx?: number): string | undefined => {
@@ -46,13 +56,21 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
     return store?.storeName;
   };
 
-  // API 데이터를 UI 형태로 변환 (상점 이름 포함)
+  // API 데이터를 UI 형태로 변환 (상점 이름 및 좋아요 상태 포함)
   const allProducts = apiProducts ? apiProducts.map(apiProduct => {
     const transformed = transformApiProduct(apiProduct);
     // 실제 상점 이름으로 업데이트
     if (transformed.storeIdx) {
       transformed.storeName = getStoreName(transformed.storeIdx);
     }
+    
+    // 배치 상태 조회 결과로 좋아요 상태 업데이트
+    const status = batchReactionStatus?.[`product_${apiProduct.productIdx}`]
+    if (status) {
+      transformed.isLiked = status.liked
+      transformed.likeCount = status.likeCount
+    }
+    
     return transformed;
   }) : []
   
