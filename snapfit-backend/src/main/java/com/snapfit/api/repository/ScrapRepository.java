@@ -98,6 +98,7 @@ public interface ScrapRepository extends JpaRepository<Scrap, Scrap.ScrapId> {
            "FROM Scrap s " +
            "WHERE s.post.postId = :postId")
     Object[] getScrapStatisticsByPostId(@Param("postId") Long postId);
+    
 
     /**
      * 사용자별 스크랩 트렌드 조회 (최근 N일)

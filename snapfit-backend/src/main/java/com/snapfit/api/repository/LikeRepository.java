@@ -28,4 +28,14 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
      */
     @Query("SELECT CASE WHEN COUNT(l) > 0 THEN true ELSE false END FROM Like l WHERE l.user.userIdx = :userId AND l.targetIdx = :postId AND l.targetType = 'POST'")
     boolean existsByUserIdAndPostId(@Param("userId") UUID userId, @Param("postId") Long postId);
+    
+    /**
+     * 특정 사용자의 특정 타겟 좋아요 여부 확인
+     */
+    boolean existsByUserUserIdxAndTargetIdxAndTargetType(UUID userIdx, Long targetIdx, TargetType targetType);
+    
+    /**
+     * 특정 타겟의 좋아요 개수 조회
+     */
+    long countByTargetIdxAndTargetType(Long targetIdx, TargetType targetType);
 } 

@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 interface UseToggleScrapOptions {
   postId: number;
-  onSuccess?: (data: { isScrapped: boolean; scrapCount: number }) => void;
+  onSuccess?: (data: { scraped: boolean; count: number }) => void;
   onError?: (error: Error) => void;
 }
 

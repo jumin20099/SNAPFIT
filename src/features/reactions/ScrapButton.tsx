@@ -20,6 +20,16 @@ export function ScrapButton({
   const [active, setActive] = React.useState(initialActive);
   const [count, setCount] = React.useState(initialCount);
 
+  // initialActive가 변경되면 active 상태 업데이트
+  React.useEffect(() => {
+    setActive(initialActive);
+  }, [initialActive]);
+
+  // initialCount가 변경되면 count 상태 업데이트
+  React.useEffect(() => {
+    setCount(initialCount);
+  }, [initialCount]);
+
   const { mutate, isPending } = useToggleScrap({
     postId,
     onSuccess: (data) => {

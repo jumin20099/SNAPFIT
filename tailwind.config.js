@@ -4,9 +4,8 @@ const { fontFamily } = require("tailwindcss/defaultTheme");
 module.exports = {
   darkMode: ["class"],
   content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/**/*.{js,ts,jsx,tsx,mdx}',         // 모든 소스 스캔
+    './app/**/*.{js,ts,jsx,tsx,mdx}',         // Next.js app 디렉토리
   ],
   theme: {
     container: {

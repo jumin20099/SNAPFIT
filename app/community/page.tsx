@@ -67,7 +67,14 @@ export default function CommunityPage() {
         setIsLoading(true)
         setError(null)
         
-        const response = await fetch('/api/posts')
+        // 토큰 가져오기
+        const token = localStorage.getItem('token')
+        
+        const response = await fetch('/api/posts', {
+          headers: {
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        })
         if (response.ok) {
           const data = await response.json()
           // 데이터가 배열인지 확인하고 안전하게 설정
@@ -76,14 +83,77 @@ export default function CommunityPage() {
           // localStorage에서 조회수 가져오기
           const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
           
-          // 조회수 복원
-          const postsWithViewCount = postsArray.map((post: any) => ({
-            ...post,
-            viewCount: viewCounts[post.postId] || post.viewCount || 0
-          }))
+          // 조회수 복원 및 필드명 통일
+          const postsWithViewCount = postsArray.map((post: any) => {
+            console.log(`게시글 ${post.postId} 상태:`, {
+              isLiked: post.isLiked,
+              isScrapped: post.isScrapped,
+              likeCount: post.likeCount,
+              scrapCount: post.scrapCount
+            });
+            
+            return {
+              ...post,
+              viewCount: viewCounts[post.postId] || post.viewCount || 0,
+              // 백엔드 응답 필드명을 프론트엔드 기대 형식으로 변환
+              liked: post.isLiked || false,
+              scraped: post.isScrapped || false
+            };
+          })
           
           setPosts(postsWithViewCount)
           setFilteredPosts(postsWithViewCount)
+          
+          // 배치 상태 조회로 정확한 상태 업데이트
+          console.log('배치 상태 조회 조건 확인:', { 
+            hasToken: !!token, 
+            postsLength: postsWithViewCount.length,
+            token: token ? token.substring(0, 10) + '...' : 'null'
+          })
+          
+          // 임시: 토큰이 없어도 배치 상태 조회 실행 (디버깅용)
+          if (postsWithViewCount.length > 0) {
+            try {
+              const postIds = postsWithViewCount.map(post => post.postId)
+              console.log('배치 상태 조회 요청:', { postIds, token: token ? token.substring(0, 10) + '...' : 'null' })
+              
+              const statusResponse = await fetch('/api/reactions/status', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(token && { 'Authorization': `Bearer ${token}` })
+                },
+                body: JSON.stringify({ postIds })
+              })
+              
+              console.log('배치 상태 조회 응답:', statusResponse.status, statusResponse.statusText)
+              
+              if (statusResponse.ok) {
+                const statusData = await statusResponse.json()
+                console.log('배치 상태 조회 결과:', statusData)
+                
+                // 상태 업데이트
+                const updatedPosts = postsWithViewCount.map(post => {
+                  const status = statusData[post.postId]
+                  if (status) {
+                    return {
+                      ...post,
+                      liked: status.liked,
+                      scraped: status.scraped,
+                      likeCount: status.likeCount,
+                      scrapCount: status.scrapCount
+                    }
+                  }
+                  return post
+                })
+                
+                setPosts(updatedPosts)
+                setFilteredPosts(updatedPosts)
+              }
+            } catch (statusError) {
+              console.error('배치 상태 조회 실패, 기본 상태 사용:', statusError)
+            }
+          }
       } else {
           throw new Error(`게시글 로드 실패: ${response.status}`)
       }

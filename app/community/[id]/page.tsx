@@ -296,6 +296,64 @@ export default function PostDetailPage() {
         
         return updatedPosts
       })
+
+      // 배치 상태 조회로 정확한 상태 업데이트
+      if (posts.length > 0) {
+        try {
+          const postIds = posts.map(post => post.postId)
+          console.log('개별 게시글 페이지 배치 상태 조회 요청:', { postIds, token: token.substring(0, 10) + '...' })
+          
+          const statusResponse = await fetch('/api/reactions/status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ postIds })
+          })
+          
+          console.log('개별 게시글 페이지 배치 상태 조회 응답:', statusResponse.status, statusResponse.statusText)
+          
+          if (!statusResponse.ok) {
+            const errorText = await statusResponse.text()
+            console.error('배치 상태 조회 실패:', errorText)
+            return
+          }
+          
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json()
+            console.log('개별 게시글 페이지 배치 상태 조회 결과:', statusData)
+            
+            // 상태 업데이트
+            setPosts(prevPosts => {
+              const updatedPosts = prevPosts.map(post => {
+                const status = statusData[post.postId]
+                if (status) {
+                  return {
+                    ...post,
+                    liked: status.liked,
+                    scraped: status.scraped,
+                    likeCount: status.likeCount,
+                    scrapCount: status.scrapCount
+                  }
+                }
+                return post
+              })
+              
+              console.log('배치 상태 조회로 업데이트된 게시글 목록:', updatedPosts.map((p: Post) => ({ 
+                postId: p.postId, 
+                liked: p.liked, 
+                scraped: p.scraped,
+                likeCount: p.likeCount,
+                scrapCount: p.scrapCount
+              })))
+              return updatedPosts
+            })
+          }
+        } catch (statusError) {
+          console.error('개별 게시글 페이지 배치 상태 조회 실패, 기본 상태 사용:', statusError)
+        }
+      }
       
       // 현재 게시글의 상태도 업데이트
       if (currentPost) {
@@ -310,6 +368,30 @@ export default function PostDetailPage() {
           liked: isLiked,
           scraped: isScraped
         })
+
+        // 배치 상태 조회로 현재 게시글 상태도 정확히 업데이트
+        try {
+          const statusResponse = await fetch('/api/reactions/status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ postIds: [currentPost.postId] })
+          })
+          
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json()
+            const status = statusData[currentPost.postId]
+            if (status) {
+              console.log('현재 게시글 배치 상태 조회 결과:', { postId: currentPost.postId, ...status })
+              setIsLiked(status.liked)
+              setIsScraped(status.scraped)
+            }
+          }
+        } catch (statusError) {
+          console.error('현재 게시글 배치 상태 조회 실패:', statusError)
+        }
       }
       
       console.log('사용자 상호작용 상태 로드 완료:', {
@@ -333,7 +415,15 @@ export default function PostDetailPage() {
     try {
       // 백엔드 API URL (환경 변수 사용)
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
-      const response = await fetch(`${API_BASE_URL}/api/posts?page=${page}&size=10`)
+      
+      // 토큰 가져오기
+      const token = localStorage.getItem('token')
+      
+      const response = await fetch(`${API_BASE_URL}/api/posts?page=${page}&size=10`, {
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+      })
       if (response.ok) {
         const data = await response.json()
         const newPosts = data.content || []
@@ -355,8 +445,9 @@ export default function PostDetailPage() {
           viewCount: viewCounts[post.postId] || post.viewCount || 0, // localStorage에서 조회수 복원
           createdAt: post.createdAt,
           tags: post.tags || [],
-          liked: false, // 초기값은 false로 설정, fetchUserInteractions에서 실제 상태로 업데이트
-          scraped: false, // 초기값은 false로 설정, fetchUserInteractions에서 실제 상태로 업데이트
+          // 백엔드 응답 필드명을 프론트엔드 기대 형식으로 변환
+          liked: post.isLiked || false,
+          scraped: post.isScrapped || false,
           type: post.type || "fashion-tip",
           outfitId: post.outfitId,
           codyData: post.codyData

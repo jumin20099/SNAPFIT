@@ -105,6 +105,14 @@ class ApiClient {
     });
   }
 
+  // 배치 상태 조회 API
+  async getReactionStatus(postIds: number[]): Promise<Record<number, { liked: boolean; scraped: boolean; likeCount: number; scrapCount: number }>> {
+    return this.request<Record<number, { liked: boolean; scraped: boolean; likeCount: number; scrapCount: number }>>('/api/reactions/status', {
+      method: 'POST',
+      body: JSON.stringify({ postIds }),
+    });
+  }
+
   // 알림 관련 API
   async getNotifications(): Promise<{ notifications: Notification[]; unreadCount: number }> {
     return this.request<{ notifications: Notification[]; unreadCount: number }>('/api/notifications');
