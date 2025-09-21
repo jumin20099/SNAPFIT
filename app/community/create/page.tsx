@@ -156,10 +156,12 @@ export default function CreatePostPage() {
       // 실제 API 호출
       console.log('게시글 작성 요청 데이터:', postData)
       
+      const token = localStorage.getItem('token')
       const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: JSON.stringify(postData),
       })

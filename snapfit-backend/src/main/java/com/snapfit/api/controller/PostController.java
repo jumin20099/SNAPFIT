@@ -144,9 +144,18 @@ public class PostController {
             response.setContent(savedPost.getContent());
             response.setTags(request.getTags());
             response.setMediaUrls(new ArrayList<>(savedPost.getMediaUrls()));
-            response.setAuthorId(savedPost.getAuthor().getUserIdx().toString());
-            response.setAuthorName(savedPost.getAuthor().getNickname());
-            response.setAuthorProfileImage("");
+            // 익명 게시글 처리
+            if (savedPost.getAuthor() != null) {
+                // 로그인 사용자 게시글
+                response.setAuthorId(savedPost.getAuthor().getUserIdx().toString());
+                response.setAuthorName(savedPost.getAuthor().getNickname());
+                response.setAuthorProfileImage(savedPost.getAuthor().getProfileImage() != null ? savedPost.getAuthor().getProfileImage() : "");
+            } else {
+                // 익명 게시글
+                response.setAuthorId("anonymous");
+                response.setAuthorName("익명" + savedPost.getAnonymousIndex());
+                response.setAuthorProfileImage("");
+            }
             response.setLikeCount(savedPost.getLikeCount());
             response.setScrapCount(savedPost.getScrapCount());
             response.setCommentCount(savedPost.getCommentCount());
@@ -163,7 +172,7 @@ public class PostController {
             }
             
             log.info("게시글 생성 성공: postId={}, userId={}, outfitId={}", 
-                savedPost.getPostId(), savedUser.getUserIdx(), outfitId);
+                savedPost.getPostId(), savedUser != null ? savedUser.getUserIdx() : "anonymous", outfitId);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
             
         } catch (Exception e) {
@@ -512,10 +521,16 @@ public class PostController {
             dto.setAuthorId("anonymous");
             dto.setAuthorName(anonymousUserService.generateAnonymousName(post.getAnonymousIndex()));
             dto.setAuthorProfileImage("/placeholder.svg");
-        } else {
+        } else if (post.getAuthor() != null) {
+            // 로그인 사용자 게시글
             dto.setAuthorId(post.getAuthor().getUserIdx().toString()); // UUID를 String으로 변환
             dto.setAuthorName(post.getAuthor().getNickname());
             dto.setAuthorProfileImage(post.getAuthor().getProfileImage() != null ? post.getAuthor().getProfileImage() : "");
+        } else {
+            // author가 null인 경우 (예외 상황)
+            dto.setAuthorId("unknown");
+            dto.setAuthorName("알 수 없음");
+            dto.setAuthorProfileImage("");
         }
         dto.setLikeCount(post.getCalculatedLikeCount() != null ? post.getCalculatedLikeCount().longValue() : 0L);
         dto.setScrapCount(post.getCalculatedScrapCount() != null ? post.getCalculatedScrapCount().longValue() : 0L);

@@ -38,15 +38,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    const authHeader = request.headers.get('authorization') // Authorization 헤더 추출
     
     // 백엔드 API 호출
     const backendUrl = `${BACKEND_URL}/api/posts`
     
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    if (authHeader) { // Authorization 헤더가 있으면 추가
+      headers['Authorization'] = authHeader
+    }
+    
     const response = await fetch(backendUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     })
 
