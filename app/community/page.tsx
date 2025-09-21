@@ -459,7 +459,10 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
       </div>
         
       {/* 우측 하단 좋아요/스크랩 버튼 */}
-      <div className="absolute top-2 right-2 flex gap-1">
+      <div 
+        className="absolute top-2 right-2 flex gap-1"
+        onClick={(e) => e.stopPropagation()}
+      >
         <LikeButton
           targetIdx={post.postId}
           targetType="outfit"

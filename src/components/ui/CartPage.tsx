@@ -483,15 +483,20 @@ export function CartPage() {
                     )}
 
                     {/* 좋아요 버튼 */}
-                    <LikeButton
-                      targetIdx={parseInt(product.id)}
-                      targetType="product"
-                      initialActive={likedProducts.has(product.id)}
-                      initialCount={0}
-                      className={`absolute bottom-2 right-2 w-6 h-6 flex items-center justify-center ${
-                        !isLoggedIn ? 'cursor-not-allowed opacity-50' : ''
-                      }`}
-                    />
+                    <div
+                      className="absolute bottom-2 right-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <LikeButton
+                        targetIdx={parseInt(product.id)}
+                        targetType="product"
+                        initialActive={likedProducts.has(product.id)}
+                        initialCount={0}
+                        className={`w-6 h-6 flex items-center justify-center ${
+                          !isLoggedIn ? 'cursor-not-allowed opacity-50' : ''
+                        }`}
+                      />
+                    </div>
                   </div>
 
                   <div className="mt-2 space-y-1">

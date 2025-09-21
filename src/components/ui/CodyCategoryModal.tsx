@@ -256,7 +256,10 @@ export function CodyCategoryModal({
                               <Card key={product.id} className="group bg-white dark:bg-dark-sub hover:shadow-md dark:hover:shadow-lg transition-all duration-200 overflow-hidden border-0 rounded-none">
                                 <CardContent className="p-0 relative">
                                   {/* 좋아요 버튼 - 우상단 */}
-                                  <button className="absolute top-2 right-2 z-10 p-1 hover:bg-white/80 dark:hover:bg-dark-border/80 rounded-full transition-colors">
+                                  <button 
+                                    className="absolute top-2 right-2 z-10 p-1 hover:bg-white/80 dark:hover:bg-dark-border/80 rounded-full transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
                                     <Heart className="h-4 w-4 text-gray-600 dark:text-dark-text hover:text-red-500" />
                                   </button>
                                   

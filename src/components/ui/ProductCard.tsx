@@ -68,7 +68,10 @@ export function ProductCard({ product, onLike, onClick, variant = 'grid' }: Prod
 
 
         {/* 우상단 좋아요 버튼 */}
-        <div className="absolute top-2 right-2">
+        <div 
+          className="absolute top-2 right-2"
+          onClick={(e) => e.stopPropagation()}
+        >
           <LikeButton
             targetIdx={product.productIdx || parseInt(product.id) || 0}
             targetType="product"

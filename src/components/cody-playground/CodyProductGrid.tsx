@@ -139,13 +139,18 @@ export function CodyProductGrid({
               />
               
               {/* 좋아요 버튼 */}
-              <LikeButton
-                targetIdx={product.productIdx}
-                targetType="product"
-                initialActive={product.isLiked}
-                initialCount={product.likeCount}
-                className="absolute top-2 right-2 p-2 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-colors"
-              />
+              <div
+                className="absolute top-2 right-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <LikeButton
+                  targetIdx={product.productIdx}
+                  targetType="product"
+                  initialActive={product.isLiked}
+                  initialCount={product.likeCount}
+                  className="p-2 hover:bg-white/20 dark:hover:bg-gray-800/20 transition-colors"
+                />
+              </div>
 
               {/* 코디하기 버튼 */}
               <button
