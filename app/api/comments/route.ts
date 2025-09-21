@@ -8,14 +8,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { postId, content, parentId } = body
 
+    // Authorization 헤더 추출
+    const authHeader = request.headers.get('authorization')
+    
     // 백엔드 API 호출
     const backendUrl = `${BACKEND_URL}/api/comments/posts/${postId}`
     
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    
+    // Authorization 헤더가 있으면 추가
+    if (authHeader) {
+      headers['Authorization'] = authHeader
+    }
+    
     const response = await fetch(backendUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         content,
         parentId: parentId || null

@@ -48,6 +48,9 @@ public class Comment {
     @Builder.Default
     private Long likeCount = 0L;
     
+    @Column(name = "anonymous_index")
+    private Integer anonymousIndex;
+    
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

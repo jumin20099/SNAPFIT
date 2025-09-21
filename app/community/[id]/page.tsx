@@ -737,10 +737,12 @@ export default function PostDetailPage() {
     const commentText = commentTexts[postId] || ""
     if (commentText.trim()) {
       try {
+        const token = localStorage.getItem('token')
         const response = await fetch('/api/comments', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` }),
           },
           body: JSON.stringify({
             postId: postId,
@@ -989,6 +991,15 @@ export default function PostDetailPage() {
               </div>
             </div>
 
+            {/* Post Title */}
+            {post.title && (
+              <div className="px-4 py-3 border-b">
+                <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  {post.title}
+                </h1>
+              </div>
+            )}
+
             {/* Main Image */}
             <div className="relative">
               {post.codyData && post.codyData.items && post.codyData.items.length > 0 ? (
@@ -996,7 +1007,7 @@ export default function PostDetailPage() {
                   {/* 코디 이미지 */}
                   <img
                     src={post.mediaUrls?.[0] || "/placeholder.svg"}
-                    alt={post.content.substring(0, 20)}
+                    alt={post.title || post.content.substring(0, 20)}
                     className="w-full h-auto"
                   />
                   
@@ -1029,7 +1040,7 @@ export default function PostDetailPage() {
               ) : (
                 <img
                   src={post.mediaUrls?.[0] || "/placeholder.svg"}
-                  alt={post.content.substring(0, 20)}
+                  alt={post.title || post.content.substring(0, 20)}
                   className="w-full h-auto"
                 />
               )}

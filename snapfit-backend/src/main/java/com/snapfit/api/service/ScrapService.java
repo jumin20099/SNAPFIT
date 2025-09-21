@@ -3,6 +3,8 @@ package com.snapfit.api.service;
 import com.snapfit.api.entity.Post;
 import com.snapfit.api.entity.Scrap;
 import com.snapfit.api.entity.User;
+import com.snapfit.api.entity.Tag;
+import com.snapfit.api.dto.scrap.ScrapResponseDto;
 import com.snapfit.api.repository.PostRepository;
 import com.snapfit.api.repository.ScrapRepository;
 import com.snapfit.api.repository.UserRepository;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 스크랩 서비스
@@ -175,6 +178,49 @@ public class ScrapService {
         } catch (Exception e) {
             log.error("사용자 스크랩 게시글 ID 목록 조회 실패: 사용자={}", userId, e);
             throw new RuntimeException("스크랩 게시글 ID 목록 조회 중 오류가 발생했습니다", e);
+        }
+    }
+
+    /**
+     * 사용자별 스크랩한 게시글 상세 정보 조회
+     * 성능: JOIN 최적화
+     */
+    public List<ScrapResponseDto> getUserScrapedPostsDetailed(UUID userId) {
+        log.info("사용자 스크랩 게시글 상세 정보 조회 시작: 사용자={}", userId);
+        
+        try {
+            List<Object[]> results = scrapRepository.findScrapsWithPostsAndAuthorsByUserId(userId, Pageable.unpaged()).getContent();
+            
+            List<ScrapResponseDto> scrapedPosts = results.stream()
+                .map(result -> {
+                    Scrap scrap = (Scrap) result[0];
+                    Post post = (Post) result[1];
+                    User author = (User) result[2];
+                    
+                    ScrapResponseDto dto = new ScrapResponseDto();
+                    dto.setScrapId((long) (scrap.getId().getUserId().hashCode() + scrap.getId().getPostId().intValue())); // 임시 ID
+                    dto.setPostId(post.getPostId());
+                    dto.setPostTitle(""); // Post 엔티티에는 title이 없음
+                    dto.setPostContent(post.getContent());
+                    dto.setPostTags(post.getTags().stream()
+                        .map(Tag::getName)
+                        .collect(Collectors.toList()));
+                    dto.setPostAuthorId((long) author.getUserIdx().hashCode()); // UUID를 Long으로 변환
+                    dto.setPostAuthorName(author.getNickname());
+                    dto.setPostLikeCount(post.getCalculatedLikeCount() != null ? post.getCalculatedLikeCount().longValue() : 0L);
+                    dto.setPostCommentCount(post.getCommentCount());
+                    dto.setScrapedAt(scrap.getCreatedAt());
+                    
+                    return dto;
+                })
+                .collect(Collectors.toList());
+            
+            log.info("사용자 스크랩 게시글 상세 정보 조회 완료: 사용자={}, {}개", userId, scrapedPosts.size());
+            return scrapedPosts;
+            
+        } catch (Exception e) {
+            log.error("사용자 스크랩 게시글 상세 정보 조회 실패: 사용자={}", userId, e);
+            throw new RuntimeException("스크랩 게시글 상세 정보 조회 중 오류가 발생했습니다", e);
         }
     }
 

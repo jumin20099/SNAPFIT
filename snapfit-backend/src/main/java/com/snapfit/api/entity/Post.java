@@ -95,6 +95,20 @@ public class Post {
     }
 
     /**
+     * 게시글 제목 (선택사항, 1-100자)
+     * 보안: XSS 방지를 위한 제목 검증
+     */
+    @Size(max = 100, message = "게시글 제목은 100자 이하여야 합니다")
+    @Column(name = "title", length = 100)
+    private String title;
+    
+    /**
+     * 익명 사용자 인덱스 (익명 게시글인 경우)
+     */
+    @Column(name = "anonymous_index")
+    private Integer anonymousIndex;
+
+    /**
      * 게시글 내용 (필수, 1-10000자)
      * 보안: XSS 방지를 위한 내용 검증
      */

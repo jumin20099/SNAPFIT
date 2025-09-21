@@ -2,6 +2,7 @@ package com.snapfit.api.controller;
 
 import com.snapfit.api.entity.Scrap;
 import com.snapfit.api.entity.User;
+import com.snapfit.api.dto.scrap.ScrapResponseDto;
 import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.security.CustomUserDetails;
 import com.snapfit.api.service.ScrapService;
@@ -53,6 +54,18 @@ public class ScrapController {
             User user = current(principal);
             List<Long> scrapedPostIds = scrapService.getUserScrapedPostIds(user.getUserIdx());
             return ResponseEntity.ok(scrapedPostIds);
+        } catch (Exception e) {
+            // 오류 발생 시 빈 리스트 반환
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    @GetMapping("/my/detailed")
+    public ResponseEntity<List<ScrapResponseDto>> myScrapsDetailed(@AuthenticationPrincipal CustomUserDetails principal) {
+        try {
+            User user = current(principal);
+            List<ScrapResponseDto> scrapedPosts = scrapService.getUserScrapedPostsDetailed(user.getUserIdx());
+            return ResponseEntity.ok(scrapedPosts);
         } catch (Exception e) {
             // 오류 발생 시 빈 리스트 반환
             return ResponseEntity.ok(List.of());

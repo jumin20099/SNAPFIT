@@ -16,6 +16,7 @@ import com.snapfit.api.security.JwtUtil;
 import com.snapfit.api.service.PostService;
 import com.snapfit.api.service.TagService;
 import com.snapfit.api.service.FollowService;
+import com.snapfit.api.service.AnonymousUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -49,6 +50,7 @@ public class PostController {
 
     private final PostService postService;
     private final TagService tagService;
+    private final AnonymousUserService anonymousUserService;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final LikeRepository likeRepository;
@@ -63,38 +65,62 @@ public class PostController {
      * @return 생성된 게시글 정보
      */
     @PostMapping
-    public ResponseEntity<PostResponseDto> createPost(@Valid @RequestBody CreatePostRequestDto request) {
+    public ResponseEntity<PostResponseDto> createPost(
+            @Valid @RequestBody CreatePostRequestDto request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String clientIp,
+            @RequestHeader(value = "X-Real-IP", required = false) String realIp) {
         log.info("게시글 생성 요청: {}", request.getTitle());
         
         try {
-            // 1. 기존 사용자 찾기 또는 새로 생성
-            User savedUser = userRepository.findByEmail("temp@test.com")
-                .orElseGet(() -> {
-                    // 사용자가 없으면 새로 생성
-                    User tempUser = new User();
-                    tempUser.setNickname("임시사용자");
-                    tempUser.setEmail("temp@test.com");
-                    tempUser.setProvider("test");
-                    tempUser.setProviderId("test-id");
-                    return userRepository.save(tempUser);
-                });
+            User savedUser = null;
+            String authorName = "익명";
+            String authorProfileImage = "/placeholder.svg";
             
-            log.info("User 엔티티 저장 성공: userId={}", savedUser.getUserIdx());
+            // 익명 인덱스 변수 선언
+            Integer anonymousIndex = null;
             
-            // 2. 코디 데이터 처리 (있는 경우)
+            // 1. 인증된 사용자인지 확인
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    if (email != null) {
+                        savedUser = userRepository.findByEmail(email).orElse(null);
+                        if (savedUser != null) {
+                            authorName = savedUser.getNickname();
+                            authorProfileImage = savedUser.getProfileImage() != null ? savedUser.getProfileImage() : "/placeholder.svg";
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("JWT 토큰 파싱 실패: {}", e.getMessage());
+                }
+            }
+            
+            // 2. 익명 사용자인 경우 익명 인덱스 할당
+            if (savedUser == null) {
+                String userIdentifier = getClientIp(clientIp, realIp);
+                anonymousIndex = anonymousUserService.getOrAssignAnonymousIndex(0L, userIdentifier); // 임시로 postId 0 사용
+                authorName = anonymousUserService.generateAnonymousName(anonymousIndex);
+                log.info("익명 사용자 게시글 작성: userIdentifier={}, anonymousIndex={}", userIdentifier, anonymousIndex);
+            }
+            
+            // 3. 코디 데이터 처리 (있는 경우)
             Long outfitId = null;
-            if (request.getCodyData() != null) {
+            if (request.getCodyData() != null && savedUser != null) {
                 outfitId = createOutfitFromCodyData(request.getCodyData(), savedUser);
                 log.info("코디 데이터 저장 성공: outfitId={}", outfitId);
             }
             
-            // 3. Post 엔티티 생성 및 저장
+            // 4. Post 엔티티 생성 및 저장
             Post post = Post.builder()
+                .title(request.getTitle())
                 .content(request.getContent())
                 .mediaUrls(request.getMediaUrls().stream().collect(Collectors.toSet()))
+                .anonymousIndex(anonymousIndex)
                 .build();
             
-            // 4. 작성자 설정
+            // 5. 작성자 설정 (익명 사용자는 null)
             post.setAuthor(savedUser);
             
             // 5. 코디 연결 (있는 경우)
@@ -114,7 +140,7 @@ public class PostController {
             // 7. 응답 DTO 생성
             PostResponseDto response = new PostResponseDto();
             response.setPostId(savedPost.getPostId());
-            response.setTitle(""); // Post 엔티티에는 title 필드가 없음
+            response.setTitle(savedPost.getTitle() != null ? savedPost.getTitle() : ""); // Post 엔티티의 title 필드 사용
             response.setContent(savedPost.getContent());
             response.setTags(request.getTags());
             response.setMediaUrls(new ArrayList<>(savedPost.getMediaUrls()));
@@ -462,7 +488,7 @@ public class PostController {
     private PostResponseDto convertToDto(Post post) {
         PostResponseDto dto = new PostResponseDto();
         dto.setPostId(post.getPostId());
-        dto.setTitle(""); // Post 엔티티에는 title이 없음
+        dto.setTitle(post.getTitle() != null ? post.getTitle() : ""); // Post 엔티티의 title 필드 사용
         dto.setContent(post.getContent());
         
         // tags 컬렉션을 안전하게 처리
@@ -480,9 +506,17 @@ public class PostController {
         }
         
         dto.setMediaUrls(new ArrayList<>(post.getMediaUrls())); // Set을 List로 변환
-        dto.setAuthorId(post.getAuthor().getUserIdx().toString()); // UUID를 String으로 변환
-        dto.setAuthorName(post.getAuthor().getNickname());
-        dto.setAuthorProfileImage(post.getAuthor().getProfileImage() != null ? post.getAuthor().getProfileImage() : "");
+        
+        // 익명 사용자인 경우 익명 이름 사용
+        if (post.getAnonymousIndex() != null) {
+            dto.setAuthorId("anonymous");
+            dto.setAuthorName(anonymousUserService.generateAnonymousName(post.getAnonymousIndex()));
+            dto.setAuthorProfileImage("/placeholder.svg");
+        } else {
+            dto.setAuthorId(post.getAuthor().getUserIdx().toString()); // UUID를 String으로 변환
+            dto.setAuthorName(post.getAuthor().getNickname());
+            dto.setAuthorProfileImage(post.getAuthor().getProfileImage() != null ? post.getAuthor().getProfileImage() : "");
+        }
         dto.setLikeCount(post.getCalculatedLikeCount() != null ? post.getCalculatedLikeCount().longValue() : 0L);
         dto.setScrapCount(post.getCalculatedScrapCount() != null ? post.getCalculatedScrapCount().longValue() : 0L);
         dto.setCommentCount(post.getCommentCount());
@@ -648,5 +682,18 @@ public class PostController {
             log.error("코디 데이터 변환 실패", e);
             return null;
         }
+    }
+    
+    /**
+     * 클라이언트 IP 주소 추출
+     */
+    private String getClientIp(String forwardedFor, String realIp) {
+        if (forwardedFor != null && !forwardedFor.isEmpty()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        if (realIp != null && !realIp.isEmpty()) {
+            return realIp;
+        }
+        return "unknown";
     }
 }

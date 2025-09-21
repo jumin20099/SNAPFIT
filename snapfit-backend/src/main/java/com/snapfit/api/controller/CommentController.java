@@ -10,6 +10,8 @@ import com.snapfit.api.repository.CommentLikeRepository;
 import com.snapfit.api.repository.CommentRepository;
 import com.snapfit.api.repository.PostRepository;
 import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.service.AnonymousUserService;
+import com.snapfit.api.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -36,28 +38,78 @@ public class CommentController {
     private final CommentLikeRepository commentLikeRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final AnonymousUserService anonymousUserService;
+    private final JwtUtil jwtUtil;
     
     // 댓글 작성
     @PostMapping("/posts/{postId}")
     public ResponseEntity<CommentResponseDto> createComment(
             @PathVariable Long postId,
-            @Valid @RequestBody CommentRequestDto request) {
+            @Valid @RequestBody CommentRequestDto request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String clientIp,
+            @RequestHeader(value = "X-Real-IP", required = false) String realIp) {
         
         try {
             // 게시글 조회
             Post post = postRepository.findById(postId)
                     .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다: " + postId));
             
-            // 작성자 조회 (임시로 고정 사용자 사용)
-            User author = userRepository.findByEmail("temp@test.com")
-                    .orElseGet(() -> {
-                        User tempUser = new User();
-                        tempUser.setNickname("임시사용자");
-                        tempUser.setEmail("temp@test.com");
-                        tempUser.setProvider("test");
-                        tempUser.setProviderId("test-id");
-                        return userRepository.save(tempUser);
-                    });
+            User author = null;
+            String authorName = "익명";
+            String authorProfileImage = "/placeholder.svg";
+            Integer anonymousIndex = null;
+            
+            // 1. JWT 토큰으로 인증된 사용자 조회
+            log.info("댓글 작성 요청 - authHeader: {}", authHeader != null ? "있음" : "없음");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    log.info("JWT 토큰 추출 성공: {}", token.substring(0, Math.min(20, token.length())) + "...");
+                    // JWT 토큰에서 이메일 추출 (PostController와 동일한 방식)
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    log.info("JWT에서 추출된 이메일: {}", email);
+                    if (email != null) {
+                        author = userRepository.findByEmail(email).orElse(null);
+                        if (author != null) {
+                            authorName = author.getNickname();
+                            authorProfileImage = author.getProfileImage() != null ? author.getProfileImage() : "/placeholder.svg";
+                            log.info("인증된 사용자 댓글 작성: email={}, nickname={}", email, authorName);
+                        } else {
+                            log.warn("이메일로 사용자를 찾을 수 없음: {}", email);
+                        }
+                    } else {
+                        log.warn("JWT 토큰에서 이메일 추출 실패");
+                    }
+                } catch (Exception e) {
+                    log.warn("JWT 토큰 파싱 실패: {}", e.getMessage());
+                }
+            } else {
+                log.info("JWT 토큰이 없거나 Bearer 형식이 아님: {}", authHeader);
+            }
+            
+            // 2. JWT 토큰이 없거나 유효하지 않은 경우 SecurityContext 확인
+            if (author == null) {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                if (authentication != null && authentication.isAuthenticated() && 
+                    !"anonymousUser".equals(authentication.getName())) {
+                    String email = authentication.getName();
+                    author = userRepository.findByEmail(email).orElse(null);
+                    if (author != null) {
+                        authorName = author.getNickname();
+                        authorProfileImage = author.getProfileImage() != null ? author.getProfileImage() : "/placeholder.svg";
+                        log.info("SecurityContext 사용자 댓글 작성: email={}, nickname={}", email, authorName);
+                    }
+                }
+            }
+            
+            // 익명 사용자인 경우 익명 인덱스 할당
+            if (author == null) {
+                String userIdentifier = getClientIp(clientIp, realIp);
+                anonymousIndex = anonymousUserService.getOrAssignAnonymousIndex(postId, userIdentifier);
+                authorName = anonymousUserService.generateAnonymousName(anonymousIndex);
+                log.info("익명 사용자 댓글 작성: postId={}, userIdentifier={}, anonymousIndex={}", postId, userIdentifier, anonymousIndex);
+            }
             
             // 댓글 생성
             Comment comment = Comment.builder()
@@ -65,6 +117,7 @@ public class CommentController {
                     .author(author)
                     .content(request.getContent())
                     .likeCount(0L)
+                    .anonymousIndex(anonymousIndex)
                     .build();
             
             // 대댓글인 경우 부모 댓글 설정
@@ -217,8 +270,21 @@ public class CommentController {
         CommentResponseDto dto = new CommentResponseDto();
         dto.setCommentId(comment.getCommentId());
         dto.setContent(comment.getContent());
-        dto.setAuthorName(comment.getAuthor().getNickname());
-        dto.setAuthorProfileImage(comment.getAuthor().getProfileImage() != null ? comment.getAuthor().getProfileImage() : "/placeholder.svg");
+        
+        // 익명 사용자인 경우 익명 이름 사용
+        if (comment.getAnonymousIndex() != null) {
+            dto.setAuthorName(anonymousUserService.generateAnonymousName(comment.getAnonymousIndex()));
+            dto.setAuthorProfileImage("/placeholder.svg");
+        } else if (comment.getAuthor() != null) {
+            dto.setAuthorName(comment.getAuthor().getNickname());
+            dto.setAuthorProfileImage(comment.getAuthor().getProfileImage() != null ? comment.getAuthor().getProfileImage() : "/placeholder.svg");
+        } else {
+            // author가 null인 경우 (데이터 무결성 문제)
+            dto.setAuthorName("알 수 없음");
+            dto.setAuthorProfileImage("/placeholder.svg");
+            log.warn("댓글 {}의 author가 null입니다. anonymousIndex: {}", comment.getCommentId(), comment.getAnonymousIndex());
+        }
+        
         dto.setParentId(comment.getParent() != null ? comment.getParent().getCommentId() : null);
         dto.setLikeCount(comment.getLikeCount());
         dto.setCreatedAt(comment.getCreatedAt());
@@ -258,4 +324,18 @@ public class CommentController {
         post.setCommentCount(commentCount);
         postRepository.save(post);
     }
+    
+    /**
+     * 클라이언트 IP 주소 추출
+     */
+    private String getClientIp(String forwardedFor, String realIp) {
+        if (forwardedFor != null && !forwardedFor.isEmpty()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        if (realIp != null && !realIp.isEmpty()) {
+            return realIp;
+        }
+        return "unknown";
+    }
+    
 }

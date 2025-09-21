@@ -15,13 +15,15 @@ import java.util.List;
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Long> {
 
-    // 게시글의 댓글 조회 (대댓글 제외) - User 엔티티 함께 로드
+    // 게시글의 댓글 조회 (대댓글 제외) - User 엔티티 함께 로드 (author가 null인 경우도 포함)
     @EntityGraph(attributePaths = {"author", "replies", "replies.author"})
-    Page<Comment> findByPostAndParentIsNullOrderByCreatedAtDesc(Post post, Pageable pageable);
+    @Query("SELECT c FROM Comment c LEFT JOIN FETCH c.author WHERE c.post = :post AND c.parent IS NULL ORDER BY c.createdAt DESC")
+    Page<Comment> findByPostAndParentIsNullOrderByCreatedAtDesc(@Param("post") Post post, Pageable pageable);
     
-    // 게시글의 댓글 조회 (인기순 정렬) - User 엔티티 함께 로드
+    // 게시글의 댓글 조회 (인기순 정렬) - User 엔티티 함께 로드 (author가 null인 경우도 포함)
     @EntityGraph(attributePaths = {"author", "replies", "replies.author"})
-    Page<Comment> findByPostAndParentIsNullOrderByLikeCountDesc(Post post, Pageable pageable);
+    @Query("SELECT c FROM Comment c LEFT JOIN FETCH c.author WHERE c.post = :post AND c.parent IS NULL ORDER BY c.likeCount DESC")
+    Page<Comment> findByPostAndParentIsNullOrderByLikeCountDesc(@Param("post") Post post, Pageable pageable);
     
     // 게시글의 모든 댓글 조회 (대댓글 포함)
     List<Comment> findByPostOrderByCreatedAtAsc(Post post);
