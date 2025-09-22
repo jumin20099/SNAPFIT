@@ -75,4 +75,27 @@ public class OutfitController {
         List<Outfit> outfits = outfitService.listPublicOutfits();
         return ResponseEntity.ok(outfits);
     }
+
+    @GetMapping("/product/{productId}")
+    public ResponseEntity<List<Outfit>> getOutfitsByProduct(@PathVariable Long productId,
+                                                           @RequestParam(defaultValue = "0") int page,
+                                                           @RequestParam(defaultValue = "10") int size) {
+        List<Outfit> outfits = outfitService.getOutfitsByProduct(productId, page, size);
+        return ResponseEntity.ok(outfits);
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Outfit>> getUserOutfits(@PathVariable String userId,
+                                                      @RequestParam(defaultValue = "0") int page,
+                                                      @RequestParam(defaultValue = "10") int size) {
+        List<Outfit> outfits = outfitService.getUserPublicOutfits(userId, page, size);
+        return ResponseEntity.ok(outfits);
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<Outfit>> getAllOutfits(@RequestParam(defaultValue = "0") int page,
+                                                      @RequestParam(defaultValue = "10") int size) {
+        List<Outfit> outfits = outfitService.getAllOutfits(page, size);
+        return ResponseEntity.ok(outfits);
+    }
 } 

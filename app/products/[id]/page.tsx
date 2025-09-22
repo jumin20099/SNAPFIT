@@ -14,6 +14,7 @@ import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ReviewSection from '@/components/product/ReviewSection'
 import InquirySection from '@/components/product/InquirySection'
+import OutfitSection from '@/components/product/OutfitSection'
 
 type Product = {
   productIdx: number
@@ -385,10 +386,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </TabsContent>
           
           <TabsContent value="outfits" className="mt-6">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h2 className="text-lg font-semibold mb-4">이 상품을 사용한 코디</h2>
-              <p className="text-gray-500">코디 기능이 곧 추가될 예정입니다.</p>
-            </div>
+            <OutfitSection
+              productId={parseInt(params.id)}
+              productName={p.productName}
+            />
           </TabsContent>
           
           <TabsContent value="recommend" className="mt-6">

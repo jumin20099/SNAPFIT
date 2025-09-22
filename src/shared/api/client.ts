@@ -259,6 +259,15 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // 사용자별 공개 코디 조회
+  async getUserOutfits(userId: string, page: number = 0, size: number = 10): Promise<any> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString()
+    });
+    return this.request<any>(`/api/outfits/user/${userId}?${params.toString()}`);
+  }
 }
 
 export const apiClient = new ApiClient();

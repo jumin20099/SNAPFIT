@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { apiClient } from '@/shared/api/client'
 
 interface ProfileData {
   userId: string
@@ -28,6 +29,20 @@ interface PostSummary {
   createdAt: string
 }
 
+interface Outfit {
+  outfitIdx: number
+  outfitName: string
+  outfitThumbnail?: string
+  outfitItem: any
+  isPublic: boolean
+  createdAt: string
+  user: {
+    userIdx: string
+    nickname: string
+    profileImage?: string
+  }
+}
+
 export default function ProfilePage() {
   const params = useParams()
   const router = useRouter()
@@ -36,10 +51,26 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [loading, setLoading] = useState(true)
   const [following, setFollowing] = useState(false)
+  const [outfits, setOutfits] = useState<Outfit[]>([])
+  const [outfitsLoading, setOutfitsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'posts' | 'outfits'>('posts')
 
   useEffect(() => {
     fetchProfile()
+    fetchOutfits()
   }, [userId])
+
+  const fetchOutfits = async () => {
+    try {
+      setOutfitsLoading(true)
+      const data = await apiClient.getUserOutfits(userId, 0, 20)
+      setOutfits(data || [])
+    } catch (error) {
+      console.error('코디 조회 실패:', error)
+    } finally {
+      setOutfitsLoading(false)
+    }
+  }
 
   const fetchProfile = async () => {
     try {
@@ -204,13 +235,40 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* 작성한 글 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        {/* 탭 메뉴 */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm mb-6">
+          <div className="flex border-b border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setActiveTab('posts')}
+              className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+                activeTab === 'posts'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
               작성한 글 ({profile.posts.length})
-            </h3>
+            </button>
+            <button
+              onClick={() => setActiveTab('outfits')}
+              className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
+                activeTab === 'outfits'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              코디 ({outfits.length})
+            </button>
           </div>
+        </div>
+
+        {/* 작성한 글 */}
+        {activeTab === 'posts' && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                작성한 글 ({profile.posts.length})
+              </h3>
+            </div>
           
           {profile.posts.length === 0 ? (
             <div className="p-6 text-center text-gray-500 dark:text-gray-400">
@@ -256,7 +314,70 @@ export default function ProfilePage() {
               ))}
             </div>
           )}
-        </div>
+          </div>
+        )}
+
+        {/* 코디 섹션 */}
+        {activeTab === 'outfits' && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                코디 ({outfits.length})
+              </h3>
+            </div>
+            
+            {outfitsLoading ? (
+              <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="mt-2">코디를 불러오는 중...</p>
+              </div>
+            ) : outfits.length === 0 ? (
+              <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">👗</span>
+                </div>
+                <p>아직 공개된 코디가 없습니다.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+                {outfits.map((outfit) => (
+                  <div
+                    key={outfit.outfitIdx}
+                    className="group block bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+                  >
+                    {outfit.outfitThumbnail ? (
+                      <div className="aspect-square relative">
+                        <Image
+                          src={outfit.outfitThumbnail}
+                          alt={outfit.outfitName}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                      </div>
+                    ) : (
+                      <div className="aspect-square bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                        <span className="text-gray-400 dark:text-gray-500 text-sm">이미지 없음</span>
+                      </div>
+                    )}
+                    
+                    <div className="p-4">
+                      <h4 className="font-medium text-gray-900 dark:text-white line-clamp-2 mb-2">
+                        {outfit.outfitName}
+                      </h4>
+                      
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>{new Date(outfit.createdAt).toLocaleDateString()}</span>
+                        <span className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
+                          공개
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

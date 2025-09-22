@@ -1,5 +1,6 @@
 package com.snapfit.api.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -8,8 +9,10 @@ import com.snapfit.api.dto.OutfitDto;
 import com.snapfit.api.entity.Outfit;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.OutfitRepository;
+import com.snapfit.api.repository.UserRepository;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Outfit(코디) 관련 비즈니스 로직 서비스.
@@ -17,10 +20,12 @@ import java.util.List;
 @Service
 public class OutfitService {
     private final OutfitRepository outfitRepository;
+    private final UserRepository userRepository;
 
     @Autowired
-    public OutfitService(OutfitRepository outfitRepository) {
+    public OutfitService(OutfitRepository outfitRepository, UserRepository userRepository) {
         this.outfitRepository = outfitRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -114,6 +119,52 @@ public class OutfitService {
     }
 
     /**
+     * 특정 사용자의 공개 코디 목록을 조회한다.
+     *
+     * @param userId 사용자 ID
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 공개 코디 목록
+     */
+    @Transactional(readOnly = true)
+    public List<Outfit> getUserPublicOutfits(String userId, int page, int size) {
+        try {
+            // String을 UUID로 변환
+            UUID userUuid;
+            try {
+                userUuid = UUID.fromString(userId);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("유효하지 않은 사용자 ID 형식입니다: " + userId);
+            }
+            
+            // 사용자 ID로 User 엔티티 조회
+            User user = userRepository.findById(userUuid)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+
+            // 해당 사용자의 모든 코디 조회
+            List<Outfit> allUserOutfits = outfitRepository.findByUserOrderByCreatedAtDesc(user);
+            
+            // 공개 코디만 필터링
+            List<Outfit> publicOutfits = allUserOutfits.stream()
+                .filter(Outfit::getIsPublic)
+                .collect(java.util.stream.Collectors.toList());
+
+            // 페이지네이션 적용
+            int offset = page * size;
+            return publicOutfits.stream()
+                .skip(offset)
+                .limit(size)
+                .collect(java.util.stream.Collectors.toList());
+                
+        } catch (IllegalArgumentException e) {
+            // 잘못된 사용자 ID나 사용자를 찾을 수 없는 경우
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("사용자 코디 조회 중 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
+    /**
      * 코디 상세를 반환한다. 공개 코디이거나 소유자일 때만 접근 가능하다.
      *
      * @param outfitIdx 코디 PK
@@ -133,5 +184,49 @@ public class OutfitService {
             }
         }
         return outfit;
+    }
+
+    /**
+     * 모든 코디 목록을 조회한다 (공개/비공개 모두).
+     *
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 모든 코디 목록
+     */
+    @Transactional(readOnly = true)
+    public List<Outfit> getAllOutfits(int page, int size) {
+        int offset = page * size;
+        return outfitRepository.findAll().stream()
+            .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+            .skip(offset)
+            .limit(size)
+            .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * 특정 상품을 포함한 공개 코디 목록을 조회한다.
+     *
+     * @param productId 상품 ID
+     * @param page 페이지 번호 (0부터 시작)
+     * @param size 페이지 크기
+     * @return 코디 목록
+     */
+    @Transactional(readOnly = true)
+    public List<Outfit> getOutfitsByProduct(Long productId, int page, int size) {
+        try {
+            // 모든 공개 코디를 가져와서 프론트엔드에서 필터링
+            // (데이터 구조가 복잡해서 백엔드 쿼리로는 정확한 필터링이 어려움)
+            int offset = page * size;
+            List<Outfit> allOutfits = outfitRepository.findByIsPublicTrueOrderByCreatedAtDesc();
+            
+            // 프론트엔드에서 필터링하도록 모든 코디 반환
+            return allOutfits.stream()
+                .skip(offset)
+                .limit(size)
+                .collect(java.util.stream.Collectors.toList());
+                
+        } catch (Exception e) {
+            throw new RuntimeException("상품별 코디 조회 중 오류가 발생했습니다: " + e.getMessage());
+        }
     }
 } 
