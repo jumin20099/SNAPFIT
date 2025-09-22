@@ -185,7 +185,11 @@ public class ProductService {
         // 신상 카테고리 처리 - 신상은 내부적인 태그이므로 subCategory를 변경하지 않음
         // 신상 여부는 isNewProduct() 필드로만 확인
 
-        return new ProductDetailDto(product, cumulativeViews, actualViews, likesCount, likedByUser, liveViewers);
+        // 리뷰 통계 조회
+        Double ratingAvg = product.getRatingAvg() != null ? product.getRatingAvg() : 0.0;
+        Integer reviewCount = product.getReviewCount() != null ? product.getReviewCount() : 0;
+
+        return new ProductDetailDto(product, cumulativeViews, actualViews, likesCount, likedByUser, liveViewers, ratingAvg, reviewCount);
     }
 
     public Product saveProduct(Product product) {

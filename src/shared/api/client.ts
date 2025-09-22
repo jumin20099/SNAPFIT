@@ -37,7 +37,23 @@ class ApiClient {
       throw new Error(`API Error: ${response.status} ${response.statusText}`);
     }
 
-    return response.json();
+    // DELETE 요청의 경우 빈 응답이므로 JSON 파싱하지 않음
+    if (options.method === 'DELETE' || response.status === 204) {
+      return {} as T;
+    }
+
+    // 응답이 비어있는 경우 빈 객체 반환
+    const text = await response.text();
+    if (!text.trim()) {
+      return {} as T;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      console.warn('JSON 파싱 실패, 빈 객체 반환:', error);
+      return {} as T;
+    }
   }
 
   // 상품 관련 API
@@ -171,6 +187,76 @@ class ApiClient {
     return this.request<User>('/api/user/profile', {
       method: 'PUT',
       body: JSON.stringify(data),
+    });
+  }
+
+  // 리뷰 관련 API
+  async createReview(productId: string | number, data: { rating: number; content: string; images: string[] }): Promise<any> {
+    const id = typeof productId === 'string' ? parseInt(productId) : productId;
+    return this.request<any>(`/api/products/${id}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getReviews(productId: string | number, page: number = 0, size: number = 10): Promise<any> {
+    const id = typeof productId === 'string' ? parseInt(productId) : productId;
+    const params = new URLSearchParams({ 
+      page: page.toString(), 
+      size: size.toString() 
+    });
+    return this.request<any>(`/api/products/${id}/reviews?${params.toString()}`);
+  }
+
+  async toggleReviewHelpful(productId: string | number, reviewId: number): Promise<any> {
+    const id = typeof productId === 'string' ? parseInt(productId) : productId;
+    return this.request<any>(`/api/products/${id}/reviews/${reviewId}/helpful`, {
+      method: 'POST',
+    });
+  }
+
+  async updateReview(productId: string | number, reviewId: number, data: { rating: number; content: string; images: string[] }): Promise<any> {
+    const id = typeof productId === 'string' ? parseInt(productId) : productId;
+    return this.request<any>(`/api/products/${id}/reviews/${reviewId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteReview(productId: string | number, reviewId: number): Promise<void> {
+    const id = typeof productId === 'string' ? parseInt(productId) : productId;
+    console.log('리뷰 삭제 요청:', { productId: id, reviewId });
+    return this.request<void>(`/api/products/${id}/reviews/${reviewId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // 문의 관련 API
+  async createInquiry(productId: number, data: { title: string; content: string; isPrivate: boolean }): Promise<any> {
+    return this.request<any>(`/api/products/${productId}/inquiries`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getInquiries(productId: number, page: number = 0, size: number = 10): Promise<any> {
+    const params = new URLSearchParams({ 
+      page: page.toString(), 
+      size: size.toString() 
+    });
+    return this.request<any>(`/api/products/${productId}/inquiries?${params.toString()}`);
+  }
+
+  async answerInquiry(productId: number, inquiryId: number, answer: string): Promise<any> {
+    return this.request<any>(`/api/products/${productId}/inquiries/${inquiryId}/answer`, {
+      method: 'POST',
+      body: JSON.stringify({ answer }),
+    });
+  }
+
+  async deleteInquiry(productId: number, inquiryId: number): Promise<void> {
+    return this.request<void>(`/api/products/${productId}/inquiries/${inquiryId}`, {
+      method: 'DELETE',
     });
   }
 }

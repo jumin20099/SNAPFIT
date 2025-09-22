@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.Cookie;
 
 @Configuration
-@EnableWebSecurity
+// @EnableWebSecurity  // 개발 환경에서 비활성화
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -50,21 +50,7 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers(
-                    "/", "/css/**", "/js/**",
-                    "/login", "/login/oauth2/**", "/oauth2/**",
-                    "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
-                    "/api/auth/**", "/api/partner/**", "/api/admin/**", "/api/products/**", 
-                    "/api/posts/**", "/api/comments/**", "/api/follows/**", "/api/search/**", 
-                    "/api/ranking/**", "/api/health/**", "/api/notifications/stream", "/api/likes/**", "/api/scraps/**", "/api/outfits/**", "/api/reactions/**", "/error",
-                    "/ws/**", "/sse/**", "/api/media/image/**"
-                ).permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/profiles/**").permitAll()
-                .requestMatchers("/api/media/upload/**", "/api/profiles/me", "/api/profiles/*/follow", "/api/profiles/*/unfollow").authenticated()
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         // OAuth2가 설정되어 있을 때만 oauth2Login 활성화
@@ -115,14 +101,16 @@ public class SecurityConfig {
             );
         }
 
-        http.addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userRepository),
-                UsernamePasswordAuthenticationFilter.class)
-            .exceptionHandling(ex -> ex
-                .defaultAuthenticationEntryPointFor(
-                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                    new AntPathRequestMatcher("/api/**")
-                )
-            );
+        // JWT 필터 비활성화 (개발 환경)
+        // http.addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userRepository),
+        //         UsernamePasswordAuthenticationFilter.class)
+        //     .exceptionHandling(ex -> ex
+        //         .defaultAuthenticationEntryPointFor(
+        //             new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+        //             new AntPathRequestMatcher("/api/**")
+        //         )
+        //     );
+        
 
         return http.build();
     }

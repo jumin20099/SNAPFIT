@@ -45,6 +45,12 @@ public class Product {
   @Column(name = "actual_view_count")
   private Long actualViewCount; // 실제 조회수(12시간 중복 방지)
 
+  @Column(name = "rating_avg")
+  private Double ratingAvg; // 평균 평점
+
+  @Column(name = "review_count")
+  private Integer reviewCount; // 리뷰 개수
+
     @Column(updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;

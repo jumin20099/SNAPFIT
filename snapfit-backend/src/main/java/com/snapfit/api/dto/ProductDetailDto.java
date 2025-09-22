@@ -16,4 +16,7 @@ public class ProductDetailDto {
     private boolean likedByUser;
     // 실시간 시청자 수 (Redis)
     private long liveViewers;
+    // 리뷰 통계
+    private Double ratingAvg;
+    private Integer reviewCount;
 }

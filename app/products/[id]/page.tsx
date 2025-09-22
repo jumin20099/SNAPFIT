@@ -11,6 +11,9 @@ import { useRecentProducts } from '@/hooks/useRecentProducts'
 import { StickyHeader } from '@/components/ui/StickyHeader'
 import { LikeButton } from '@/features/reactions/LikeButton'
 import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import ReviewSection from '@/components/product/ReviewSection'
+import InquirySection from '@/components/product/InquirySection'
 
 type Product = {
   productIdx: number
@@ -29,6 +32,8 @@ type ProductDetailDto = {
   likesCount: number
   likedByUser: boolean
   liveViewers: number
+  ratingAvg: number
+  reviewCount: number
 }
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
@@ -292,51 +297,107 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         </div>
       </section>
 
-      {/* 상세/연관 */}
-      <section className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-        <article className="md:col-span-2 space-y-4">
-          <h2 className="text-lg font-semibold">상세 설명</h2>
-          <p className="whitespace-pre-wrap text-gray-700">
-            {p.productContent || '상품 설명이 없습니다.'}
-          </p>
-        </article>
-        <aside className="space-y-4">
-          <h3 className="font-semibold">연관 상품</h3>
-          {related.length === 0 ? (
-            <p className="text-sm text-gray-500">연관 상품이 없습니다.</p>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {related.slice(0, 8).map((rp: any) => (
-                <div key={rp.productIdx} className="group">
-                  <a href={`/products/${rp.productIdx}`} className="block">
-                    <div className="relative w-full aspect-square mb-2">
-                      <Image src={rp.productImage || '/placeholder.svg'} alt={rp.productName} fill sizes="(max-width:640px) 50vw, (max-width:1024px) 25vw, 320px" className="object-cover rounded" />
-                    </div>
-                    <div className="text-sm font-medium line-clamp-2">{rp.productName}</div>
-                    <div className="text-xs text-blue-600 font-semibold">{formatCurrencyKRW(rp.productPrice)}</div>
-                  </a>
-                  <Button
-                    size="sm"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      addItem({
-                        id: rp.productIdx,
-                        name: rp.productName,
-                        price: rp.productPrice,
-                        image: rp.productImage
-                      })
-                      setShowCartModal(true)
-                    }}
-                    className="w-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <ShoppingCart className="w-3 h-3 mr-1" />
-                    담기
-                  </Button>
-                </div>
-              ))}
+      {/* 탭 구조 */}
+      <section className="mt-8">
+        <Tabs defaultValue="info" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="info">상품정보</TabsTrigger>
+            <TabsTrigger value="size">사이즈</TabsTrigger>
+            <TabsTrigger value="reviews">후기</TabsTrigger>
+            <TabsTrigger value="qa">문의</TabsTrigger>
+            <TabsTrigger value="outfits">코디</TabsTrigger>
+            <TabsTrigger value="recommend">추천</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="info" className="mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <article className="md:col-span-2 space-y-4">
+                <h2 className="text-lg font-semibold">상세 설명</h2>
+                <p className="whitespace-pre-wrap text-gray-700">
+                  {p.productContent || '상품 설명이 없습니다.'}
+                </p>
+              </article>
+              <aside className="space-y-4">
+                <h3 className="font-semibold">연관 상품</h3>
+                {related.length === 0 ? (
+                  <p className="text-sm text-gray-500">연관 상품이 없습니다.</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {related.slice(0, 8).map((rp: any) => (
+                      <div key={rp.productIdx} className="group">
+                        <a href={`/products/${rp.productIdx}`} className="block">
+                          <div className="relative w-full aspect-square mb-2">
+                            <Image src={rp.productImage || '/placeholder.svg'} alt={rp.productName} fill sizes="(max-width:640px) 50vw, (max-width:1024px) 25vw, 320px" className="object-cover rounded" />
+                          </div>
+                          <div className="text-sm font-medium line-clamp-2">{rp.productName}</div>
+                          <div className="text-xs text-blue-600 font-semibold">{formatCurrencyKRW(rp.productPrice)}</div>
+                        </a>
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            addItem({
+                              id: rp.productIdx,
+                              name: rp.productName,
+                              price: rp.productPrice,
+                              image: rp.productImage
+                            })
+                            setShowCartModal(true)
+                          }}
+                          className="w-full mt-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <ShoppingCart className="w-3 h-3 mr-1" />
+                          담기
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </aside>
             </div>
-          )}
-        </aside>
+          </TabsContent>
+          
+          <TabsContent value="reviews" className="mt-6">
+            <ReviewSection
+              productId={params.id}
+              productName={p.productName}
+              productPrice={p.productPrice}
+              productImage={p.productImage}
+              ratingAvg={detail.ratingAvg || 0}
+              reviewCount={detail.reviewCount || 0}
+            />
+          </TabsContent>
+          
+          <TabsContent value="size" className="mt-6">
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h2 className="text-lg font-semibold mb-4">사이즈 정보</h2>
+              <p className="text-gray-500">사이즈 정보가 곧 추가될 예정입니다.</p>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="qa" className="mt-6">
+            <InquirySection
+              productId={params.id}
+              productName={p.productName}
+              productPrice={p.productPrice}
+              productImage={p.productImage}
+            />
+          </TabsContent>
+          
+          <TabsContent value="outfits" className="mt-6">
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h2 className="text-lg font-semibold mb-4">이 상품을 사용한 코디</h2>
+              <p className="text-gray-500">코디 기능이 곧 추가될 예정입니다.</p>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="recommend" className="mt-6">
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h2 className="text-lg font-semibold mb-4">추천 상품</h2>
+              <p className="text-gray-500">추천 상품 기능이 곧 추가될 예정입니다.</p>
+            </div>
+          </TabsContent>
+        </Tabs>
       </section>
       
         {/* 장바구니 성공 모달 */}

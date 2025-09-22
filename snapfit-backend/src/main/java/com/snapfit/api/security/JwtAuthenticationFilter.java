@@ -102,6 +102,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         
+        // 리뷰/문의 엔드포인트는 완전 우회
+        if (requestPath.contains("/reviews") || requestPath.contains("/inquiries")) {
+            System.out.println("=== 리뷰/문의 엔드포인트 완전 우회: " + requestPath + " ===");
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         try {
             System.out.println("=== JWT 필터 요청 경로: " + requestPath + " ===");
             
