@@ -264,12 +264,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               targetIdx={detail.product.productIdx}
               targetType="product"
               initialActive={
-                batchReactionStatus?.[`product_${detail.product.productIdx}`]?.liked ?? 
+                (batchReactionStatus as any)?.[`product_${detail.product.productIdx}`]?.liked ?? 
                 detail.likedByUser
               }
               initialCount={
-                batchReactionStatus?.[`product_${detail.product.productIdx}`]?.likeCount ?? 
-                detail.likesCount || 0
+                (batchReactionStatus as any)?.[`product_${detail.product.productIdx}`]?.likeCount ?? 
+                (detail.likesCount || 0)
               }
               className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700"
             />
@@ -301,13 +301,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       {/* 탭 구조 */}
       <section className="mt-8">
         <Tabs defaultValue="info" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="info">상품정보</TabsTrigger>
             <TabsTrigger value="size">사이즈</TabsTrigger>
             <TabsTrigger value="reviews">후기</TabsTrigger>
             <TabsTrigger value="qa">문의</TabsTrigger>
             <TabsTrigger value="outfits">코디</TabsTrigger>
-            <TabsTrigger value="recommend">추천</TabsTrigger>
           </TabsList>
           
           <TabsContent value="info" className="mt-6">
@@ -390,13 +389,6 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               productId={parseInt(params.id)}
               productName={p.productName}
             />
-          </TabsContent>
-          
-          <TabsContent value="recommend" className="mt-6">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h2 className="text-lg font-semibold mb-4">추천 상품</h2>
-              <p className="text-gray-500">추천 상품 기능이 곧 추가될 예정입니다.</p>
-            </div>
           </TabsContent>
         </Tabs>
       </section>
