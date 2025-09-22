@@ -98,4 +98,14 @@ public class OutfitController {
         List<Outfit> outfits = outfitService.getAllOutfits(page, size);
         return ResponseEntity.ok(outfits);
     }
+
+    @PostMapping("/update-thumbnails")
+    public ResponseEntity<String> updateThumbnails() {
+        try {
+            outfitService.updateAllThumbnails();
+            return ResponseEntity.ok("썸네일 업데이트 완료");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("썸네일 업데이트 실패: " + e.getMessage());
+        }
+    }
 } 

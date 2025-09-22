@@ -165,6 +165,65 @@ public class OutfitService {
     }
 
     /**
+     * 모든 코디의 썸네일을 업데이트한다.
+     */
+    @Transactional
+    public void updateAllThumbnails() {
+        List<Outfit> allOutfits = outfitRepository.findAll();
+        int updatedCount = 0;
+        
+        for (Outfit outfit : allOutfits) {
+            if (outfit.getOutfitThumbnail() == null && outfit.getOutfitItem() != null) {
+                try {
+                    String thumbnailUrl = generateThumbnailFromOutfitItem(outfit.getOutfitItem());
+                    if (thumbnailUrl != null) {
+                        outfit.setOutfitThumbnail(thumbnailUrl);
+                        outfitRepository.save(outfit);
+                        updatedCount++;
+                    }
+                } catch (Exception e) {
+                    System.err.println("코디 " + outfit.getOutfitIdx() + " 썸네일 생성 실패: " + e.getMessage());
+                }
+            }
+        }
+        
+        System.out.println("썸네일 업데이트 완료: " + updatedCount + "개 코디");
+    }
+
+    /**
+     * outfitItem에서 썸네일을 생성한다.
+     */
+    private String generateThumbnailFromOutfitItem(com.fasterxml.jackson.databind.JsonNode outfitItem) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode items = outfitItem.get("items");
+            if (items != null && items.isArray()) {
+                // 상의(slot: top) 아이템을 우선적으로 찾기
+                for (com.fasterxml.jackson.databind.JsonNode item : items) {
+                    com.fasterxml.jackson.databind.JsonNode slot = item.get("slot");
+                    if (slot != null && "top".equals(slot.asText())) {
+                        com.fasterxml.jackson.databind.JsonNode src = item.get("src");
+                        if (src != null) {
+                            return src.asText();
+                        }
+                    }
+                }
+                
+                // 상의가 없으면 첫 번째 아이템 사용
+                if (items.size() > 0) {
+                    com.fasterxml.jackson.databind.JsonNode firstItem = items.get(0);
+                    com.fasterxml.jackson.databind.JsonNode src = firstItem.get("src");
+                    if (src != null) {
+                        return src.asText();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("썸네일 생성 중 오류: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
      * 코디 상세를 반환한다. 공개 코디이거나 소유자일 때만 접근 가능하다.
      *
      * @param outfitIdx 코디 PK

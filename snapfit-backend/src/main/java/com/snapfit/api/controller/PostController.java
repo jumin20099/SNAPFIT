@@ -632,11 +632,39 @@ public class PostController {
             
             JsonNode outfitItemJson = objectMapper.valueToTree(outfitItemMap);
             
+            // 썸네일 이미지 생성 (상의 아이템 우선, 없으면 첫 번째 아이템)
+            String thumbnailUrl = null;
+            if (codyData.getItems() != null && !codyData.getItems().isEmpty()) {
+                // 상의(slot: top) 아이템을 우선적으로 찾기
+                for (Object item : codyData.getItems()) {
+                    if (item instanceof Map) {
+                        Map<String, Object> itemMap = (Map<String, Object>) item;
+                        String slot = (String) itemMap.get("slot");
+                        if ("top".equals(slot)) {
+                            thumbnailUrl = (String) itemMap.get("src");
+                            log.info("코디 썸네일 생성 (상의): {}", thumbnailUrl);
+                            break;
+                        }
+                    }
+                }
+                
+                // 상의가 없으면 첫 번째 아이템 사용
+                if (thumbnailUrl == null) {
+                    Object firstItem = codyData.getItems().get(0);
+                    if (firstItem instanceof Map) {
+                        Map<String, Object> firstItemMap = (Map<String, Object>) firstItem;
+                        thumbnailUrl = (String) firstItemMap.get("src");
+                        log.info("코디 썸네일 생성 (첫 번째 아이템): {}", thumbnailUrl);
+                    }
+                }
+            }
+            
             // Outfit 엔티티 생성
             Outfit outfit = Outfit.builder()
                 .user(user)
                 .outfitName(codyData.getName() != null ? codyData.getName() : "코디")
                 .outfitItem(outfitItemJson)
+                .outfitThumbnail(thumbnailUrl)
                 .isPublic(true)
                 .build();
             

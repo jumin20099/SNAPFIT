@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Heart, Eye, Calendar } from 'lucide-react'
 import Image from 'next/image'
+import { generateCodyThumbnail } from '@/lib/image-utils'
 
 interface OutfitSectionProps {
   productId: number
@@ -37,6 +36,8 @@ export default function OutfitSection({
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
   const hasFetched = useRef(false)
+  const [thumbnails, setThumbnails] = useState<Record<string, string>>({})
+  const [thumbnailLoading, setThumbnailLoading] = useState<Record<string, boolean>>({})
 
   // 코디 목록 조회
   const fetchOutfits = async (reset = false) => {
@@ -53,9 +54,10 @@ export default function OutfitSection({
       if (response.ok) {
         const data = await response.json()
         const allOutfits = data || []
+        console.log(`상품 ${productId} 코디 필터링 시작 - 전체 코디 수: ${allOutfits.length}`)
 
         // 상품 ID를 포함한 코디만 필터링
-        const filteredOutfits = allOutfits.filter(outfit => {
+        const filteredOutfits = allOutfits.filter((outfit: any) => {
           const outfitItem = outfit.outfitItem
           if (!outfitItem) return false
 
@@ -85,7 +87,7 @@ export default function OutfitSection({
               return true
             }
             // 3. 잘못된 경로 상품들 (products/0/ 경로 사용)
-            const wrongPathProducts = {
+            const wrongPathProducts: Record<number, string> = {
               28: '039c4ff9-b9df-4517-8876-6da29afe235b_', // 가방
               29: '2626cbaf-eeb5-441c-b27a-bde1a23b5681_', // 모자
               30: '1b291969-93b9-4ea2-b1b9-c6185b446f1d_', // 목걸이
@@ -103,7 +105,7 @@ export default function OutfitSection({
           })
           
           if (!hasProduct) {
-            console.log(`상품 ${productId} 없음 - 코디 ${outfit.outfitName}:`, items.map(i => ({
+            console.log(`상품 ${productId} 없음 - 코디 ${outfit.outfitName}:`, items.map((i: any) => ({
               itemId: i.itemId,
               src: i.src,
               name: i.name,
@@ -114,8 +116,8 @@ export default function OutfitSection({
           
           return hasProduct
         })
-
-        // 디버깅 로그 제거
+        
+        console.log(`상품 ${productId} 필터링 결과: ${filteredOutfits.length}개 코디`)
         
         if (reset) {
           setOutfits(filteredOutfits)
@@ -150,87 +152,114 @@ export default function OutfitSection({
     }
   }, [productId, hasFetched.current])
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
+  // 코디 썸네일 생성
+  const generateThumbnail = async (outfit: Outfit) => {
+    const outfitId = outfit.outfitIdx.toString()
+    
+    // 이미 로딩 중이거나 썸네일이 있으면 스킵
+    if (thumbnailLoading[outfitId] || thumbnails[outfitId]) {
+      return
+    }
+
+    try {
+      setThumbnailLoading(prev => ({ ...prev, [outfitId]: true }))
+      
+      let codyData
+      if (typeof outfit.outfitItem === 'string') {
+        codyData = JSON.parse(outfit.outfitItem)
+      } else {
+        codyData = outfit.outfitItem
+      }
+      
+      console.log(`썸네일 생성 시작: 코디 #${outfitId}`, codyData)
+      
+      const thumbnailBlob = await generateCodyThumbnail(codyData)
+      const thumbnailUrl = URL.createObjectURL(thumbnailBlob)
+      
+      console.log(`썸네일 생성 완료: 코디 #${outfitId}`, thumbnailUrl)
+      setThumbnails(prev => ({ ...prev, [outfitId]: thumbnailUrl }))
+    } catch (error) {
+      console.error(`썸네일 생성 실패: 코디 #${outfitId}`, error)
+    } finally {
+      setThumbnailLoading(prev => ({ ...prev, [outfitId]: false }))
+    }
   }
 
-  const renderOutfitCard = (outfit: Outfit) => (
-    <Card key={outfit.outfitIdx} className="group hover:shadow-lg transition-shadow">
-      <CardHeader className="p-0">
-        <div className="relative aspect-square overflow-hidden rounded-t-lg">
-          {outfit.outfitThumbnail ? (
+  // 코디 목록이 로드되면 썸네일 생성
+  useEffect(() => {
+    if (outfits.length > 0) {
+      outfits.forEach(outfit => {
+        generateThumbnail(outfit)
+      })
+    }
+  }, [outfits])
+
+  // 컴포넌트 언마운트 시 메모리 정리
+  useEffect(() => {
+    return () => {
+      Object.values(thumbnails).forEach(url => {
+        URL.revokeObjectURL(url)
+      })
+    }
+  }, [thumbnails])
+
+  const renderOutfitCard = (outfit: Outfit) => {
+    const outfitId = outfit.outfitIdx.toString()
+    const generatedThumbnail = thumbnails[outfitId]
+    const isLoading = thumbnailLoading[outfitId]
+    
+    // 생성된 썸네일이 있으면 사용, 없으면 백엔드 썸네일 사용
+    const imageUrl = generatedThumbnail || outfit.outfitThumbnail;
+    
+    console.log(`코디 ${outfit.outfitName} 썸네일:`, {
+      outfitThumbnail: outfit.outfitThumbnail,
+      generatedThumbnail,
+      finalImageUrl: imageUrl,
+      isLoading
+    });
+
+    return (
+      <Card key={outfit.outfitIdx} className="group hover:shadow-lg transition-shadow overflow-hidden">
+        <div className="relative aspect-square">
+          {isLoading ? (
+            <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+          ) : imageUrl ? (
             <Image
-              src={outfit.outfitThumbnail}
+              src={imageUrl}
               alt={outfit.outfitName}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e) => {
+                // 이미지 로드 실패 시 fallback 처리
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  parent.innerHTML = `
+                    <div class="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                      <span class="text-gray-400 dark:text-gray-500 text-sm">이미지 없음</span>
+                    </div>
+                  `;
+                }
+              }}
             />
           ) : (
-            <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-              <span className="text-gray-400 text-sm">이미지 없음</span>
+            <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <span className="text-gray-400 dark:text-gray-500 text-sm">이미지 없음</span>
             </div>
           )}
         </div>
-      </CardHeader>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="font-semibold text-sm line-clamp-2">{outfit.outfitName}</h3>
-          <Badge variant="secondary" className="text-xs">
-            공개
-          </Badge>
-        </div>
-        
-        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-          <div className="flex items-center gap-1">
-            <div className="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center">
-              <span className="text-xs">👤</span>
-            </div>
-            <span>{outfit.user.nickname}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
-            <span>{formatDate(outfit.createdAt)}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <div className="flex items-center gap-1">
-              <Heart className="w-3 h-3" />
-              <span>0</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Eye className="w-3 h-3" />
-              <span>0</span>
-            </div>
-          </div>
-          <Button size="sm" variant="outline" className="text-xs">
-            자세히 보기
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  )
+      </Card>
+    );
+  }
 
   const renderSkeleton = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 gap-4">
       {Array.from({ length: 6 }).map((_, i) => (
-        <Card key={i}>
-          <CardHeader className="p-0">
-            <Skeleton className="aspect-square rounded-t-lg" />
-          </CardHeader>
-          <CardContent className="p-4">
-            <Skeleton className="h-4 w-3/4 mb-2" />
-            <Skeleton className="h-3 w-1/2 mb-3" />
-            <div className="flex justify-between items-center">
-              <Skeleton className="h-3 w-1/3" />
-              <Skeleton className="h-8 w-20" />
-            </div>
-          </CardContent>
+        <Card key={i} className="overflow-hidden">
+          <Skeleton className="aspect-square" />
         </Card>
       ))}
     </div>
@@ -256,10 +285,10 @@ export default function OutfitSection({
              {loading ? (
                renderSkeleton()
              ) : outfits.length > 0 ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {outfits.map(renderOutfitCard)}
-          </div>
+               <>
+                 <div className="grid grid-cols-2 gap-4">
+                   {outfits.map(renderOutfitCard)}
+                 </div>
           
           {/* 더보기 버튼 */}
           {hasMore && (

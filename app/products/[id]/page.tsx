@@ -181,7 +181,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           selectedSubCategory=""
           onCategorySelect={() => {}}
         />
-        <main className="mx-auto max-w-screen-lg p-4">
+        <main className="mx-auto max-w-screen-lg p-4 pb-24">
           <div className="flex items-center justify-center h-64">
             <div className="text-lg">로딩 중...</div>
           </div>
@@ -218,7 +218,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         onCategorySelect={() => {}}
       />
       
-      <main className="mx-auto max-w-screen-lg p-4">
+      <main className="mx-auto max-w-screen-lg p-4 pb-24">
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
