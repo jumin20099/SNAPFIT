@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { LikeButton } from '@/features/reactions/LikeButton'
-import { ScrapButton } from '@/features/reactions/ScrapButton'
 
 interface Post {
   postId: number
@@ -504,57 +503,22 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
         )}
       </div>
         
-      {/* 우측 하단 좋아요/스크랩 버튼 */}
+      {/* 우측 하단 좋아요 버튼만 */}
       <div 
-        className="absolute top-2 right-2 flex gap-1"
+        className="absolute top-2 right-2"
         onClick={(e) => e.stopPropagation()}
       >
         <LikeButton
           targetIdx={post.postId}
           targetType="outfit"
           initialActive={post.liked}
-          initialCount={post.likeCount}
-          className="bg-white/90 hover:bg-white rounded-full p-1.5 shadow-sm transition-all duration-200 hover:scale-110 border border-gray-200"
-        />
-        <ScrapButton
-          postId={post.postId}
-          initialActive={post.scraped}
-          initialCount={post.scrapCount}
-          className="bg-white/90 hover:bg-white rounded-full p-1.5 shadow-sm transition-all duration-200 hover:scale-110 border border-gray-200"
+          initialCount={0}
+          showCount={false}
+          className="p-1 transition-all duration-200 hover:scale-110"
         />
       </div>
 
-      {/* 게시글 정보 */}
-      <div className="p-3">
-        <div className="flex items-center justify-between mb-2">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation()
-              if (post.authorId && post.authorId !== 'anonymous') {
-                router.push(`/profile/${post.authorId}`)
-              }
-            }}
-            className="text-left hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg p-1 -m-1 transition-colors"
-            disabled={!post.authorId || post.authorId === 'anonymous'}
-          >
-            <span className="font-medium text-sm">{post.authorName}</span>
-          </button>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span>조회 {post.viewCount || 0}</span>
-          </div>
-        </div>
-        
-        {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {post.tags.slice(0, 2).map((tag, index) => (
-              <Badge key={index} variant="secondary" className="text-xs">
-                #{tag}
-              </Badge>
-            ))}
-          </div>
-        )}
-
-      </div>
+      {/* 게시글 정보 - 좋아요 버튼만 유지 */}
     </div>
   )
 }

@@ -12,6 +12,7 @@ interface LikeButtonProps {
   initialActive: boolean;   // 서버 DTO isLiked
   initialCount: number;     // 서버 likeCount
   className?: string;
+  showCount?: boolean;
 }
 
 export function LikeButton({
@@ -20,6 +21,7 @@ export function LikeButton({
   initialActive,
   initialCount,
   className,
+  showCount = true,
 }: LikeButtonProps) {
   const [active, setActive] = React.useState(initialActive);
   const [count, setCount] = React.useState(initialCount);
@@ -65,6 +67,7 @@ export function LikeButton({
       pending={isPending}
       onToggle={() => mutate()}
       className={className}
+      showCount={showCount}
     />
   );
 }

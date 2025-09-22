@@ -12,6 +12,7 @@ interface ReactionButtonProps {
   pending?: boolean;
   onToggle: () => void;
   className?: string;
+  showCount?: boolean;
 }
 
 export function ReactionButton({
@@ -21,6 +22,7 @@ export function ReactionButton({
   pending,
   onToggle,
   className = '',
+  showCount = true,
 }: ReactionButtonProps) {
   const testId = kind === 'like' ? 'like-button' : 'scrap-button';
   const countId = kind === 'like' ? 'like-count' : 'scrap-count';
@@ -58,7 +60,7 @@ export function ReactionButton({
       ) : (
         <Bookmark className={`h-4 w-4 ${active ? 'text-amber-500 fill-amber-500' : 'text-gray-400'}`} />
       )}
-      <span data-testid={countId}>{count}</span>
+      {showCount && <span data-testid={countId}>{count}</span>}
     </button>
   );
 }
