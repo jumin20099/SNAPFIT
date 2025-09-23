@@ -1,3 +1,5 @@
+import { BASE_W, BASE_H } from '@/entities/cody/model'
+
 // 코디 이미지 변환 유틸리티
 
 export interface CodyImageData {
@@ -248,15 +250,25 @@ export async function downloadCodyAsImage(codyData: CodyImageData, filename?: st
 /**
  * 가상 코디 컨테이너 생성 (썸네일용)
  */
-function createVirtualCodyContainer(codyData: CodyImageData): HTMLElement {
+function clamp01(value: number | undefined): number {
+  if (typeof value !== 'number') {
+    return 0.5;
+  }
+  return Math.min(1, Math.max(0, value));
+}
+
+function createVirtualCodyContainer(codyData: CodyImageData, height: number): HTMLElement {
+  const stageAspect = BASE_W / BASE_H
+  const containerHeight = height
+  const containerWidth = Math.round(height * stageAspect)
   const container = document.createElement('div')
   container.setAttribute('data-cody-container', 'true')
   container.style.cssText = `
     position: fixed;
     top: -9999px;
     left: -9999px;
-    width: 300px;
-    height: 300px;
+    width: ${containerWidth}px;
+    height: ${containerHeight}px;
     background: ${codyData.background?.type === 'color' 
       ? (codyData.background?.customColor || codyData.background?.selectedBackground || '#ffffff')
       : '#ffffff'};
@@ -274,54 +286,97 @@ function createVirtualCodyContainer(codyData: CodyImageData): HTMLElement {
   }
   
   // 코디 아이템들 추가
+  const maxDimension = Math.min(containerWidth, containerHeight) * 0.6
+
   codyData.items?.forEach((item, index) => {
     console.log(`아이템 ${index} 데이터:`, item)
-    
-    // PlacedItem 타입에 맞는 속성 접근
-    const nx = item.nx || 0.5  // 정규화된 x 좌표 (0~1)
-    const ny = item.ny || 0.5  // 정규화된 y 좌표 (0~1)
-    const rotation = item.rotation || 0
-    const z = item.z || 1
-    const scale = item.scale || 1
+
+    const nx = clamp01(item.nx)
+    const ny = clamp01(item.ny)
+    const rotation = typeof item.rotation === 'number' ? item.rotation : 0
+    const z = typeof item.z === 'number' ? item.z : 1
+    const scale = typeof item.scale === 'number' ? item.scale : 1
     const imageUrl = item.src || item.imageUrl || ''
     const name = item.name || `아이템 ${index}`
-    
+
     if (!imageUrl) {
       console.warn(`아이템 ${index}에 이미지 URL이 없습니다:`, item)
       return
     }
-    
-    // 정규화 좌표를 실제 픽셀 좌표로 변환 (300x300 정사각형 컨테이너 기준)
-    const containerWidth = 300
-    const containerHeight = 300
-    const x = nx * containerWidth
-    const y = ny * containerHeight
-    
-    // 기본 크기 (정사각형 썸네일에 맞게 조정)
-    const baseSize = 60
-    const width = baseSize * scale
-    const height = baseSize * scale
-    
-    // 아이템이 컨테이너 경계를 벗어나지 않도록 조정
-    const halfWidth = width / 2
-    const halfHeight = height / 2
-    const left = Math.max(halfWidth, Math.min(containerWidth - halfWidth, x - halfWidth))
-    const top = Math.max(halfHeight, Math.min(containerHeight - halfHeight, y - halfHeight))
-    
+
+    const intrinsicWidth = item.assetMeta?.intrinsicWidth
+      ?? item.metadata?.intrinsicWidth
+      ?? item.width
+      ?? maxDimension
+    const intrinsicHeight = item.assetMeta?.intrinsicHeight
+      ?? item.metadata?.intrinsicHeight
+      ?? item.height
+      ?? maxDimension
+    const aspectRatio = intrinsicHeight ? intrinsicWidth / intrinsicHeight : 1
+
+    const scaledBase = maxDimension * scale
+    let targetWidth: number
+    let targetHeight: number
+
+    if (aspectRatio >= 1) {
+      targetWidth = scaledBase
+      targetHeight = scaledBase / (aspectRatio || 1)
+    } else {
+      targetHeight = scaledBase
+      targetWidth = scaledBase * aspectRatio
+    }
+
+    // 최소 크기 보장
+    const minDimension = Math.min(containerWidth, containerHeight) * 0.1
+    if (targetWidth < minDimension) {
+      const factor = minDimension / targetWidth
+      targetWidth *= factor
+      targetHeight *= factor
+    }
+    if (targetHeight < minDimension) {
+      const factor = minDimension / targetHeight
+      targetWidth *= factor
+      targetHeight *= factor
+    }
+
+    // 최대 크기 제한
+    const absoluteMax = Math.min(containerWidth, containerHeight) * 0.9
+    if (targetWidth > absoluteMax || targetHeight > absoluteMax) {
+      const factor = absoluteMax / Math.max(targetWidth, targetHeight)
+      targetWidth *= factor
+      targetHeight *= factor
+    }
+
+    const anchor = item.anchor as string | undefined
+    const anchorOriginMap: Record<string, { x: number; y: number }> = {
+      'top-left': { x: 0, y: 0 },
+      'top-right': { x: 1, y: 0 },
+      'bottom-left': { x: 0, y: 1 },
+      'bottom-right': { x: 1, y: 1 },
+      center: { x: 0.5, y: 0.5 },
+      'top-center': { x: 0.5, y: 0 },
+      'bottom-center': { x: 0.5, y: 1 },
+      'middle-left': { x: 0, y: 0.5 },
+      'middle-right': { x: 1, y: 0.5 },
+    }
+    const origin = anchorOriginMap[anchor ?? 'center'] ?? anchorOriginMap.center
+
     const img = document.createElement('img')
     img.src = imageUrl
     img.alt = name
-    img.style.cssText = `
-      position: absolute;
-      left: ${left}px;
-      top: ${top}px;
-      width: ${width}px;
-      height: ${height}px;
-      transform: rotate(${rotation}deg);
-      transform-origin: center center;
-      z-index: ${z};
-      pointer-events: none;
-    `
+    img.style.position = 'absolute'
+    img.style.left = `${nx * containerWidth}px`
+    img.style.top = `${ny * containerHeight}px`
+    img.style.width = `${targetWidth}px`
+    img.style.height = `${targetHeight}px`
+    const translateX = -origin.x * 100
+    const translateY = -origin.y * 100
+    img.style.transform = `translate(${translateX}%, ${translateY}%) rotate(${rotation}deg)`
+    img.style.transformOrigin = `${origin.x * 100}% ${origin.y * 100}%`
+    img.style.zIndex = String(z)
+    img.style.pointerEvents = 'none'
+    img.style.objectFit = 'contain'
+    img.style.imageRendering = 'auto'
     container.appendChild(img)
   })
   
@@ -334,16 +389,45 @@ function createVirtualCodyContainer(codyData: CodyImageData): HTMLElement {
 /**
  * 코디를 썸네일 이미지로 변환 (작은 크기)
  */
-export async function generateCodyThumbnail(codyData: CodyImageData, size: number = 200): Promise<Blob> {
+export async function generateCodyThumbnail(codyData: CodyImageData, height: number = 640): Promise<Blob> {
   console.log('=== generateCodyThumbnail 시작 ===', { codyData })
   
-  // 코디 플레이그라운드 컨테이너 찾기 또는 가상 컨테이너 생성
-  let codyContainer = document.querySelector('[data-cody-container]') as HTMLElement
+  let codyContainer = document.querySelector('[data-cody-container]') as HTMLElement | null
+  const hiddenElements: Array<{ el: HTMLElement; visibility: string; pointer: string; attr: string | null }> = []
+  const activeItemStyles: Array<{ el: HTMLElement; outline: string; outlineOffset: string; transform: string }> = []
   let isVirtualContainer = false
-  
-  if (!codyContainer) {
+
+  if (codyContainer) {
+    const uiElements = Array.from(document.querySelectorAll('[data-thumbnail-ignore]')) as HTMLElement[]
+    uiElements.forEach((el) => {
+      hiddenElements.push({
+        el,
+        visibility: el.style.visibility,
+        pointer: el.style.pointerEvents,
+        attr: el.getAttribute('data-html2canvas-ignore')
+      })
+      el.setAttribute('data-html2canvas-ignore', 'true')
+      el.style.visibility = 'hidden'
+      el.style.pointerEvents = 'none'
+    })
+
+    const activeItems = Array.from(codyContainer.querySelectorAll('[data-cody-item][data-active="true"]')) as HTMLElement[]
+    activeItems.forEach((el) => {
+      activeItemStyles.push({
+        el,
+        outline: el.style.outline,
+        outlineOffset: el.style.outlineOffset,
+        transform: el.style.transform
+      })
+      el.style.outline = 'none'
+      el.style.outlineOffset = '0px'
+      if (el.style.transform?.includes('scale')) {
+        el.style.transform = el.style.transform.replace(/scale\([^\)]+\)/, 'scale(1)')
+      }
+    })
+  } else {
     console.log('실제 DOM에서 코디 컨테이너를 찾을 수 없음. 가상 DOM 생성...')
-    codyContainer = createVirtualCodyContainer(codyData)
+    codyContainer = createVirtualCodyContainer(codyData, height)
     isVirtualContainer = true
   }
 
@@ -442,17 +526,20 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
     // html2canvas 라이브러리 동적 로드
     const html2canvas = await import('html2canvas')
     
-    // 코디 영역 캡처 (정사각형 썸네일)
-    const canvas = await html2canvas.default(codyContainer, {
+    const captureWidth = codyContainer.offsetWidth || Math.round(height * (BASE_W / BASE_H))
+    const captureHeight = codyContainer.offsetHeight || height
+    
+    // 코디 영역 캡처 (원본 비율 유지)
+    const portraitCanvas = await html2canvas.default(codyContainer, {
       backgroundColor: codyData.background.type === 'color' 
         ? (codyData.background.customColor || codyData.background.selectedBackground)
         : '#ffffff',
-      scale: 1,
+      scale: 2,
       useCORS: true, // CORS 활성화 (프록시 이미지 처리)
       allowTaint: false, // tainted canvas 비활성화
       logging: false, // 성능을 위해 로깅 비활성화
-      width: size,
-      height: size,
+      width: captureWidth,
+      height: captureHeight,
       foreignObjectRendering: false, // 외부 객체 렌더링 비활성화 (이미지 처리 개선)
       removeContainer: true, // 컨테이너 제거
       imageTimeout: 15000, // 이미지 로딩 타임아웃 증가
@@ -495,26 +582,88 @@ export async function generateCodyThumbnail(codyData: CodyImageData, size: numbe
       }
     })
 
-    // 가상 컨테이너 정리
+    const stageAspect = BASE_W / BASE_H
+    const targetHeight = height
+    const targetWidth = Math.round(targetHeight * stageAspect)
+
+    const outputCanvas = document.createElement('canvas')
+    outputCanvas.width = targetWidth
+    outputCanvas.height = targetHeight
+    const outputCtx = outputCanvas.getContext('2d')
+    if (!outputCtx) {
+      throw new Error('Canvas context 생성 실패')
+    }
+
+    const fallbackColor = codyData.background.type === 'color'
+      ? (codyData.background.customColor || codyData.background.selectedBackground || '#ffffff')
+      : '#ffffff'
+    outputCtx.fillStyle = fallbackColor
+    outputCtx.fillRect(0, 0, targetWidth, targetHeight)
+
+    const scaleFactor = Math.min(
+      targetWidth / portraitCanvas.width,
+      targetHeight / portraitCanvas.height
+    )
+    const drawWidth = portraitCanvas.width * scaleFactor
+    const drawHeight = portraitCanvas.height * scaleFactor
+    const offsetX = (targetWidth - drawWidth) / 2
+    const offsetY = (targetHeight - drawHeight) / 2
+    outputCtx.imageSmoothingEnabled = true
+    outputCtx.imageSmoothingQuality = 'high'
+    outputCtx.drawImage(portraitCanvas, offsetX, offsetY, drawWidth, drawHeight)
+
     if (isVirtualContainer && codyContainer.parentNode) {
       codyContainer.parentNode.removeChild(codyContainer)
     }
 
+    if (!isVirtualContainer) {
+      hiddenElements.forEach(({ el, visibility, pointer, attr }) => {
+        if (attr === null) {
+          el.removeAttribute('data-html2canvas-ignore')
+        } else {
+          el.setAttribute('data-html2canvas-ignore', attr)
+        }
+        el.style.visibility = visibility
+        el.style.pointerEvents = pointer
+      })
+      activeItemStyles.forEach(({ el, outline, outlineOffset, transform }) => {
+        el.style.outline = outline
+        el.style.outlineOffset = outlineOffset
+        el.style.transform = transform
+      })
+    }
+
     // Canvas를 Blob으로 변환
     return new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((blob) => {
+      outputCanvas.toBlob((blob) => {
         if (blob) {
           resolve(blob)
         } else {
           reject(new Error('썸네일 Blob 생성 실패'))
         }
-      }, 'image/png', 0.8)
+      }, 'image/png', 0.9)
     })
   } catch (error) {
     console.error('썸네일 생성 실패:', error)
     // 가상 컨테이너 정리 (에러 시에도)
     if (isVirtualContainer && codyContainer && codyContainer.parentNode) {
       codyContainer.parentNode.removeChild(codyContainer)
+    }
+    if (!isVirtualContainer) {
+      hiddenElements.forEach(({ el, visibility, pointer, attr }) => {
+        if (attr === null) {
+          el.removeAttribute('data-html2canvas-ignore')
+        } else {
+          el.setAttribute('data-html2canvas-ignore', attr)
+        }
+        el.style.visibility = visibility
+        el.style.pointerEvents = pointer
+      })
+      activeItemStyles.forEach(({ el, outline, outlineOffset, transform }) => {
+        el.style.outline = outline
+        el.style.outlineOffset = outlineOffset
+        el.style.transform = transform
+      })
     }
     throw error
   }

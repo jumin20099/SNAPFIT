@@ -52,9 +52,7 @@ function buildViewTransform(containerW: number, containerH: number): ViewTransfo
 // 단일 변환 함수: (nx,ny,scale,hotspot) → (x,y,w,h) 유일 진입점
 function computePixelRect(
   item: PlacedItem,
-  transform: ViewTransform,
-  baseImgW: number,
-  baseImgH: number
+  transform: ViewTransform
 ) {
   // 정규화 좌표를 BASE 기준 픽셀 좌표로 변환
   const xBase = item.nx * BASE_W
@@ -62,9 +60,9 @@ function computePixelRect(
 
   // 자산 메타데이터에서 실제 크기와 핫스팟 가져오기
   const assetMeta = item.assetMeta
-  // ITEM_SIZES를 우선적으로 사용 (실시간 크기 조정을 위해)
-  const intrinsicW = baseImgW
-  const intrinsicH = baseImgH
+  const { width: baseWidth, height: baseHeight } = resolveBaseSize(item)
+  const intrinsicW = baseWidth
+  const intrinsicH = baseHeight
   const hotspot = assetMeta?.hotspot || { x: 0.5, y: 0.5 } // 기본값: 중앙
   const trimOffset = assetMeta?.trimOffset || { x: 0, y: 0 }
 
@@ -186,29 +184,64 @@ const BACKGROUND_THEMES = {
 // 코디 아이템 설정 (위치, 크기, 레이어)
 // ===========================
 
-// 카테고리별 이미지 크기 설정 (px 단위)
-const ITEM_SIZES: Record<Major, { width: number; height: number }> = {
-  // 의류 아이템들 (큰 크기)
-  top: { width: 500, height: 500 },        // 상의: 더 크게
-  outer: { width: 700, height: 700 },      // 아우터: 더 크게
-  bottom: { width: 700, height: 700 },     // 하의: 더 크게
-  dresses: { width: 250, height: 350 },    // 원피스: 더 크게
-  shoes: { width: 350, height: 350 },      // 신발: 더 크게
-  
-  // 액세서리 아이템들 (중간 크기)
-  bag: { width: 400, height: 400 },        // 가방: 세로로 길게
-  hat: { width: 300, height: 300 },        // 모자: 가로로 넓게
-  glasses: { width: 300, height: 300 },    // 선글라스: 작고 가로로 넓게
-  watch: { width: 250, height: 250 },      // 시계: 작은 정사각형
-  belt: { width: 100, height: 40 },        // 벨트: 가로로 매우 길게
-  socks: { width: 80, height: 120 },       // 양말: 세로로 길게
-  
-  // 주얼리 아이템들 (작은 크기)
-  jewelry: { width: 300, height: 300 },     // 주얼리: 작은 정사각형
-  accessory: { width: 200, height: 200 },   // 기타 액세서리: 작은 정사각형
-  ring: { width: 200, height: 200 },        // 반지: 매우 작은 정사각형
-  bracelet: { width: 200, height: 200 },    // 팔찌: 작은 정사각형
-  necklace: { width: 200, height: 200 },    // 목걸이: 작은 정사각형
+type SizeBasis = 'height' | 'width'
+
+// 카테고리별 기준 크기 규칙 (단위 px). 실제 출력은 원본 비율을 유지하며 이 규칙을 기준으로 스케일링된다.
+const ITEM_SIZE_RULES: Record<Major, { basis: SizeBasis; value: number }> = {
+  top: { basis: 'height', value: 540 },
+  outer: { basis: 'height', value: 640 },
+  bottom: { basis: 'height', value: 680 },
+  dresses: { basis: 'height', value: 720 },
+  shoes: { basis: 'width', value: 360 },
+  bag: { basis: 'height', value: 420 },
+  hat: { basis: 'width', value: 320 },
+  glasses: { basis: 'width', value: 300 },
+  watch: { basis: 'width', value: 240 },
+  belt: { basis: 'width', value: 420 },
+  socks: { basis: 'height', value: 260 },
+  jewelry: { basis: 'width', value: 220 },
+  accessory: { basis: 'width', value: 220 },
+  ring: { basis: 'width', value: 180 },
+  bracelet: { basis: 'width', value: 200 },
+  necklace: { basis: 'width', value: 220 },
+}
+
+const DEFAULT_SIZE_RULE: { basis: SizeBasis; value: number } = { basis: 'height', value: 400 }
+
+const getSizeRule = (slot?: Major | string | null) => {
+  if (!slot) return DEFAULT_SIZE_RULE
+  return ITEM_SIZE_RULES[slot as Major] || DEFAULT_SIZE_RULE
+}
+
+const getFallbackSize = (slot?: Major | string | null) => {
+  const rule = getSizeRule(slot)
+  if (rule.basis === 'width') {
+    return { width: rule.value, height: rule.value }
+  }
+  return { width: rule.value, height: rule.value }
+}
+
+const resolveBaseSize = (item: PlacedItem) => {
+  const slot = (item.slot as Major) || 'accessory'
+  const rule = getSizeRule(slot)
+  const meta = item.assetMeta
+
+  if (meta && meta.loaded !== false && meta.intrinsicWidth > 0 && meta.intrinsicHeight > 0) {
+    let aspect = meta.intrinsicWidth / meta.intrinsicHeight
+    if (!isFinite(aspect) || aspect <= 0) {
+      aspect = 1
+    }
+    if (rule.basis === 'width') {
+      const width = rule.value
+      return { width, height: width / aspect }
+    }
+    const height = rule.value
+    return { width: height * aspect, height }
+  }
+
+  // 메타데이터가 없을 때의 안전한 기본값 (정사각형)
+  const fallback = getFallbackSize(item.slot as Major)
+  return { width: fallback.width, height: fallback.height }
 }
 
 // 상세한 코디 배치 규칙에 따른 ANCHOR 설정 (정규화 좌표와 앵커)
@@ -400,6 +433,7 @@ export function NewCodyPlayground() {
   // 캔버스 참조와 안정된 크기
   const canvasRef = useRef<HTMLDivElement>(null)
   const stableRect = useStableRect(canvasRef, 3)
+  const metaLoadQueue = useRef<Set<string>>(new Set())
   
   // 뷰 변환 계산
   const viewTransform = useMemo(() => {
@@ -411,12 +445,17 @@ export function NewCodyPlayground() {
   const migrateLegacyItem = (item: any): PlacedItem => {
     // 이미 정규화 좌표가 있으면 그대로 사용
     if (item.nx !== undefined && item.ny !== undefined) {
+      const fallbackSize = getFallbackSize(item.slot as Major)
       // 자산 메타데이터가 없으면 생성
-      const assetMeta = item.assetMeta || AssetMetaManager.getDefaultAssetMeta(
-        item.src || '/placeholder.svg',
-        ITEM_SIZES[item.slot as Major]?.width || 100,
-        ITEM_SIZES[item.slot as Major]?.height || 100
-      );
+      const assetMeta = item.assetMeta || (() => {
+        const meta = AssetMetaManager.getDefaultAssetMeta(
+          item.src || '/placeholder.svg',
+          fallbackSize.width,
+          fallbackSize.height
+        )
+        meta.loaded = false
+        return meta
+      })();
       
       // 카테고리별 핫스팟 적용
       if (!assetMeta.hotspot || assetMeta.hotspot.x === 0.5 && assetMeta.hotspot.y === 0.5) {
@@ -438,6 +477,8 @@ export function NewCodyPlayground() {
     let nx = basePosition.nx;
     let ny = basePosition.ny;
     
+    const fallbackSize = getFallbackSize(item.slot as Major)
+
     if (item.x !== undefined && item.y !== undefined) {
       // 현재 뷰 변환을 사용하여 px를 정규화 좌표로 변환
       if (viewTransform) {
@@ -449,8 +490,8 @@ export function NewCodyPlayground() {
           viewTransform.offsetX,
           viewTransform.offsetY,
           item.anchor || basePosition.anchor,
-          ITEM_SIZES[item.slot as Major]?.width || 100,
-          ITEM_SIZES[item.slot as Major]?.height || 100
+          fallbackSize.width,
+          fallbackSize.height
         );
         nx = normalized.nx;
         ny = normalized.ny;
@@ -458,11 +499,15 @@ export function NewCodyPlayground() {
     }
     
     // 자산 메타데이터 생성
-    const assetMeta = AssetMetaManager.getDefaultAssetMeta(
-      item.src || '/placeholder.svg',
-      ITEM_SIZES[item.slot as Major]?.width || 100,
-      ITEM_SIZES[item.slot as Major]?.height || 100
-    );
+    const assetMeta = (() => {
+      const meta = AssetMetaManager.getDefaultAssetMeta(
+        item.src || '/placeholder.svg',
+        fallbackSize.width,
+        fallbackSize.height
+      )
+      meta.loaded = false
+      return meta
+    })();
     
     // 카테고리별 핫스팟 적용
     assetMeta.hotspot = AssetMetaManager.getCategoryHotspot(item.slot as Major);
@@ -496,6 +541,36 @@ export function NewCodyPlayground() {
       setCustomBackgroundColor(savedCustomColor)
     }
   }, [])
+
+  React.useEffect(() => {
+    if (!isHydrated) return
+    placed.forEach(item => {
+      if (!item.assetMeta || (item.assetMeta.loaded === false && !item.assetMeta.loadError)) {
+        if (metaLoadQueue.current.has(item.id)) {
+          return
+        }
+        metaLoadQueue.current.add(item.id)
+        AssetMetaManager.loadImageMeta(item.src)
+          .then((meta) => {
+            const normalizedMeta: AssetMeta = {
+              ...meta,
+              hotspot: AssetMetaManager.getCategoryHotspot(item.slot as Major),
+              trimOffset: meta.trimOffset || { x: 0, y: 0 }
+            }
+            setPlaced(prev => prev.map(prevItem => prevItem.id === item.id ? {
+              ...prevItem,
+              assetMeta: normalizedMeta
+            } : prevItem))
+          })
+          .catch(() => {
+            // no-op on failure
+          })
+          .finally(() => {
+            metaLoadQueue.current.delete(item.id)
+          })
+      }
+    })
+  }, [isHydrated, placed])
 
   // 배경 설정 저장
   React.useEffect(() => {
@@ -621,6 +696,7 @@ export function NewCodyPlayground() {
                 : `rgba(${hexToRgb(customBackgroundColor)}, 0.3)`)
             : 'rgba(255, 255, 255, 0.3)',
         }}
+        data-thumbnail-ignore
       >
         <Button variant="ghost" size="icon" aria-label="뒤로가기"><ArrowLeft className="h-5 w-5 text-gray-700 dark:text-dark-text"/></Button>
       <div className="text-sm text-gray-700 dark:text-dark-text">
@@ -639,7 +715,10 @@ export function NewCodyPlayground() {
           </Button>
         <Button 
           className="rounded-lg h-8 px-3 bg-gray-900 dark:bg-dark-accent text-white hover:bg-gray-800 dark:hover:bg-[#2FB88A]"
-          onClick={() => setIsSaveModalOpen(true)}
+          onClick={() => {
+            setActiveId(null)
+            setIsSaveModalOpen(true)
+          }}
           disabled={!isHydrated || placed.length === 0}
         >
           <Save className="mr-2 h-4 w-4"/>저장
@@ -676,6 +755,7 @@ export function NewCodyPlayground() {
             // 스크롤 격리: 내부 스크롤만 허용
             overscrollBehavior: 'contain'
           }}
+          onPointerDown={() => setActiveId(null)}
         >
         {/* 스마트 가이드 */}
         <SmartGuides
@@ -724,7 +804,7 @@ export function NewCodyPlayground() {
           ))}
 
         {/* 설정 버튼 - 좌측 하단 (탭바 위로) */}
-        <div className="absolute bottom-24 left-4 flex gap-2">
+        <div className="absolute bottom-24 left-4 flex gap-2" data-thumbnail-ignore>
           <button
             onClick={() => setIsBackgroundModalOpen(true)}
             className="flex items-center justify-center w-12 h-12 backdrop-blur-sm rounded-full shadow-lg border border-gray-200/50 dark:border-dark-border/50 hover:shadow-xl transition-all duration-200 hover:scale-105 active:scale-95"
@@ -758,7 +838,7 @@ export function NewCodyPlayground() {
         </div>
 
         {/* 카테고리 버튼 - 우측 하단 (탭바 위로) */}
-        <div className="absolute bottom-24 right-4">
+        <div className="absolute bottom-24 right-4" data-thumbnail-ignore>
       <CodyCategoryChips
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
@@ -819,12 +899,14 @@ export function NewCodyPlayground() {
                 ? `/api/image-proxy?url=${encodeURIComponent(originalImageSrc)}`
                 : originalImageSrc;
               
+              const fallbackSize = getFallbackSize(slot)
               // 자산 메타데이터 생성 (비동기 로딩)
               const assetMeta = AssetMetaManager.getDefaultAssetMeta(
                 imageSrc,
-                ITEM_SIZES[slot].width,
-                ITEM_SIZES[slot].height
+                fallbackSize.width,
+                fallbackSize.height
               );
+              assetMeta.loaded = false;
               
               // 카테고리별 핫스팟 적용
               assetMeta.hotspot = AssetMetaManager.getCategoryHotspot(slot);
@@ -998,19 +1080,14 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
   const [hasMoved, setHasMoved] = useState(false);
   
   // 정규화 좌표를 픽셀 좌표로 변환 (안전한 접근)
-  const safeSlot = data.slot || 'accessory'; // 기본값 설정
-  const itemSize = ITEM_SIZES[safeSlot] || { width: 100, height: 100 };
-  
   // viewTransform이 없으면 기본값 사용
   if (!viewTransform) {
     return null;
   }
-  
+
   const pixelRect = computePixelRect(
     data, 
-    viewTransform, 
-    itemSize.width, 
-    itemSize.height
+    viewTransform
   );
 
   // 드래그 시작 핸들러 (모바일 최적화)
@@ -1075,19 +1152,19 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
       const pixelX = rawNx * BASE_W * viewTransform.scale + viewTransform.offsetX
       const pixelY = rawNy * BASE_H * viewTransform.scale + viewTransform.offsetY
       
-      const snapResult = calculateSnapPosition(
-        pixelX, 
-        pixelY, 
-        stableRect,
-        placed.map((p: PlacedItem) => ({
-          id: p.id,
-          x: p.nx * BASE_W * viewTransform.scale + viewTransform.offsetX,
-          y: p.ny * BASE_H * viewTransform.scale + viewTransform.offsetY,
-          width: 100, // 임시값
-          height: 100
-        })),
-        data.id
-      )
+        const snapResult = calculateSnapPosition(
+          pixelX, 
+          pixelY, 
+          stableRect,
+          placed.map((p: PlacedItem) => ({
+            id: p.id,
+            x: p.nx * BASE_W * viewTransform.scale + viewTransform.offsetX,
+            y: p.ny * BASE_H * viewTransform.scale + viewTransform.offsetY,
+            width: resolveBaseSize(p).width * (p.scale || 1) * viewTransform.scale,
+            height: resolveBaseSize(p).height * (p.scale || 1) * viewTransform.scale
+          })),
+          data.id
+        )
       
       if (snapResult.snapped) {
         const snappedNx = (snapResult.x - viewTransform.offsetX) / (BASE_W * viewTransform.scale)
@@ -1165,6 +1242,8 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
         "absolute select-none touch-none", 
         isDragging && "cursor-grabbing opacity-80"
       )}
+      data-cody-item
+      data-active={active ? 'true' : 'false'}
       style={{ 
         left: 0,
         top: 0,
@@ -1196,7 +1275,7 @@ function DraggableItem({ data, active, onActivate, onChange, onRemove, viewTrans
       
       {/* 하단 컨트롤 버튼들 */}
       {active && (
-        <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-md bg-white dark:bg-dark-sub border border-gray-200 dark:border-dark-border px-1.5 py-1">
+        <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-md bg-white dark:bg-dark-sub border border-gray-200 dark:border-dark-border px-1.5 py-1" data-thumbnail-ignore>
           <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-border" aria-label="회전" onClick={(e) => { 
             e.stopPropagation(); 
             const now = Date.now();

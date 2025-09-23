@@ -155,9 +155,9 @@ export default function OutfitSection({
   // 코디 썸네일 생성
   const generateThumbnail = async (outfit: Outfit) => {
     const outfitId = outfit.outfitIdx.toString()
-    
+
     // 이미 로딩 중이거나 썸네일이 있으면 스킵
-    if (thumbnailLoading[outfitId] || thumbnails[outfitId]) {
+    if (outfit.outfitThumbnail || thumbnailLoading[outfitId] || thumbnails[outfitId]) {
       return
     }
 
@@ -209,7 +209,7 @@ export default function OutfitSection({
     const isLoading = thumbnailLoading[outfitId]
     
     // 생성된 썸네일이 있으면 사용, 없으면 백엔드 썸네일 사용
-    const imageUrl = generatedThumbnail || outfit.outfitThumbnail;
+    const imageUrl = outfit.outfitThumbnail ?? generatedThumbnail;
     
     console.log(`코디 ${outfit.outfitName} 썸네일:`, {
       outfitThumbnail: outfit.outfitThumbnail,
@@ -220,7 +220,7 @@ export default function OutfitSection({
 
     return (
       <Card key={outfit.outfitIdx} className="group hover:shadow-lg transition-shadow overflow-hidden">
-        <div className="relative aspect-square">
+        <div className="relative aspect-[9/16] bg-white dark:bg-gray-900">
           {isLoading ? (
             <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -230,7 +230,7 @@ export default function OutfitSection({
               src={imageUrl}
               alt={outfit.outfitName}
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className="object-contain group-hover:scale-105 transition-transform duration-300"
               onError={(e) => {
                 // 이미지 로드 실패 시 fallback 처리
                 const target = e.target as HTMLImageElement;
@@ -259,7 +259,7 @@ export default function OutfitSection({
     <div className="grid grid-cols-2 gap-4">
       {Array.from({ length: 6 }).map((_, i) => (
         <Card key={i} className="overflow-hidden">
-          <Skeleton className="aspect-square" />
+          <Skeleton className="aspect-[9/16]" />
         </Card>
       ))}
     </div>

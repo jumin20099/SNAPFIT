@@ -68,6 +68,13 @@ public class MediaUploadServiceImpl implements MediaUploadService {
                 bucket = userBucket;
                 key = "profiles/" + refId + "/" + uidName;
                 break;
+            case "outfit_thumbnail":
+                bucket = staticBucket;
+                if (refId == 0L) {
+                    refId = System.currentTimeMillis();
+                }
+                key = "outfits/" + refId + "/" + uidName;
+                break;
             default:
                 throw new IllegalArgumentException("Unknown purpose: " + purpose);
         }

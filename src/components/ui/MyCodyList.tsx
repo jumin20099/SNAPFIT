@@ -84,8 +84,13 @@ export function MyCodyList() {
   // 코디 썸네일 생성
   const generateThumbnail = async (cody: OutfitResponse) => {
     const codyId = cody.outfitIdx.toString()
-    
+
     // 이미 로딩 중이거나 썸네일이 있으면 스킵
+    if (cody.outfitThumbnail) {
+      setThumbnails(prev => prev[codyId] ? prev : ({ ...prev, [codyId]: cody.outfitThumbnail! }))
+      return
+    }
+
     if (thumbnailLoading[codyId] || thumbnails[codyId]) {
       return
     }
@@ -198,23 +203,37 @@ export function MyCodyList() {
               >
                 {/* 코디 미리보기 */}
                 <div className="mb-3">
-                  {thumbnails[cody.outfitIdx.toString()] ? (
-                    <img
-                      src={thumbnails[cody.outfitIdx.toString()]}
-                      alt={codyData.name || `코디 #${cody.outfitIdx}`}
-                      className="w-full aspect-square object-cover rounded-lg"
-                    />
-                  ) : thumbnailLoading[cody.outfitIdx.toString()] ? (
-                    <div className="w-full aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-white"></div>
-                    </div>
-                  ) : (
-                    <CodyDisplay
-                      codyData={codyData}
-                      showProductInfo={false}
-                      className="aspect-square"
-                    />
-                  )}
+                  {(() => {
+                    const key = cody.outfitIdx.toString()
+                    const displayThumbnail = thumbnails[key] ?? cody.outfitThumbnail
+                    if (displayThumbnail) {
+                      return (
+                        <div className="relative aspect-[9/16] rounded-lg bg-white dark:bg-gray-900 overflow-hidden">
+                          <img
+                            src={displayThumbnail}
+                            alt={codyData.name || `코디 #${cody.outfitIdx}`}
+                            className="absolute inset-0 w-full h-full object-contain"
+                          />
+                        </div>
+                      )
+                    }
+
+                    if (thumbnailLoading[key]) {
+                      return (
+                        <div className="w-full aspect-[9/16] bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-white"></div>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <CodyDisplay
+                        codyData={codyData}
+                        showProductInfo={false}
+                        className="aspect-[9/16]"
+                      />
+                    )
+                  })()}
                 </div>
 
                 {/* 코디 정보 */}

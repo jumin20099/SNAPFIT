@@ -346,16 +346,16 @@ export default function ProfilePage() {
                     className="group block bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
                   >
                     {outfit.outfitThumbnail ? (
-                      <div className="aspect-square relative">
+                      <div className="aspect-[9/16] relative bg-white dark:bg-gray-900">
                         <Image
                           src={outfit.outfitThumbnail}
                           alt={outfit.outfitName}
                           fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-200"
+                          className="object-contain group-hover:scale-105 transition-transform duration-200"
                         />
                       </div>
                     ) : (
-                      <div className="aspect-square bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                      <div className="aspect-[9/16] bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
                         <span className="text-gray-400 dark:text-gray-500 text-sm">이미지 없음</span>
                       </div>
                     )}

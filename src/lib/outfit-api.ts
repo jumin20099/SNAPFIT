@@ -1,5 +1,7 @@
 // 코디 관련 API 함수들
 
+import { generateCodyThumbnail } from '@/lib/image-utils'
+
 export interface OutfitData {
   name: string
   items: any[]
@@ -35,6 +37,41 @@ export async function saveOutfitToDatabase(outfitData: OutfitData): Promise<Outf
   console.log('Frontend - Token:', token)
   console.log('Frontend - OutfitData:', outfitData)
 
+  let thumbnailUrl: string | null = null
+
+  try {
+    const thumbnailBlob = await generateCodyThumbnail({
+      items: outfitData.items,
+      background: outfitData.background
+    })
+
+    const fileName = `outfit-thumbnail-${Date.now()}.png`
+    const file = new File([thumbnailBlob], fileName, { type: 'image/png' })
+
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('purpose', 'outfit_thumbnail')
+    formData.append('refId', Date.now().toString())
+
+    const uploadResponse = await fetch('/api/media/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: formData
+    })
+
+    if (!uploadResponse.ok) {
+      console.error('Frontend - 썸네일 업로드 실패 상태:', uploadResponse.status)
+    } else {
+      const uploadBody = await uploadResponse.json()
+      thumbnailUrl = uploadBody.url ?? uploadBody.data?.url ?? null
+      console.log('Frontend - 썸네일 업로드 성공:', thumbnailUrl)
+    }
+  } catch (error) {
+    console.error('Frontend - 썸네일 생성 또는 업로드 중 오류:', error)
+  }
+
   const response = await fetch('/api/outfits', {
     method: 'POST',
     headers: {
@@ -44,7 +81,7 @@ export async function saveOutfitToDatabase(outfitData: OutfitData): Promise<Outf
     body: JSON.stringify({
       outfitName: outfitData.name,
       outfitItem: JSON.stringify(outfitData),
-      outfitThumbnail: null, // 썸네일은 나중에 구현
+      outfitThumbnail: thumbnailUrl,
       isPublic: true
     })
   })
