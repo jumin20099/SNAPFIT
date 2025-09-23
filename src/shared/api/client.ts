@@ -1,4 +1,4 @@
-import { Product, Post, User, Store, Notification, ApiResponse, PaginatedResponse } from './types';
+import { Product, Post, User, Store, Notification, ApiResponse, PaginatedResponse, SizeVariant } from './types';
 
 // API 클라이언트 기본 설정
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -267,6 +267,27 @@ class ApiClient {
       size: size.toString()
     });
     return this.request<any>(`/api/outfits/user/${userId}?${params.toString()}`);
+  }
+
+  // 사이즈 관련 API
+  async getProductSizes(productId: number, inStockOnly: boolean = false): Promise<SizeVariant[]> {
+    const params = new URLSearchParams();
+    if (inStockOnly) {
+      params.append('inStockOnly', 'true');
+    }
+    return this.request<SizeVariant[]>(`/api/products/${productId}/sizes?${params.toString()}`);
+  }
+
+  async getSizeVariant(productId: number, sizeVariantId: number): Promise<SizeVariant> {
+    return this.request<SizeVariant>(`/api/products/${productId}/sizes/${sizeVariantId}`);
+  }
+
+  async getSizeVariantBySku(sku: string): Promise<SizeVariant> {
+    return this.request<SizeVariant>(`/api/products/sizes/sku/${sku}`);
+  }
+
+  async getLowStockSizes(productId: number): Promise<SizeVariant[]> {
+    return this.request<SizeVariant[]>(`/api/products/${productId}/sizes/low-stock`);
   }
 }
 

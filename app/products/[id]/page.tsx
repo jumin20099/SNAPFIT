@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ReviewSection from '@/components/product/ReviewSection'
 import InquirySection from '@/components/product/InquirySection'
 import OutfitSection from '@/components/product/OutfitSection'
+import SizeSection from '@/components/product/SizeSection'
 
 type Product = {
   productIdx: number
@@ -369,10 +370,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           </TabsContent>
           
           <TabsContent value="size" className="mt-6">
-            <div className="bg-white rounded-lg p-6 shadow-sm">
-              <h2 className="text-lg font-semibold mb-4">사이즈 정보</h2>
-              <p className="text-gray-500">사이즈 정보가 곧 추가될 예정입니다.</p>
-            </div>
+            <SizeSection
+              productId={parseInt(params.id)}
+              productName={p.productName}
+            />
           </TabsContent>
           
           <TabsContent value="qa" className="mt-6">

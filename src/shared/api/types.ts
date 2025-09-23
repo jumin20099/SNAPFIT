@@ -14,5 +14,8 @@ export type {
   Tag,
   ApiResponse,
   PaginatedResponse,
-  ApiError
+  ApiError,
+  SizeVariant,
+  Inventory,
+  SizeChart
 } from '@/shared/types'

@@ -329,3 +329,50 @@ export interface AnalyticsEvent {
   sessionId?: string;
   timestamp: number;
 }
+
+// 사이즈 관련 타입들
+export interface SizeVariant {
+  sizeVariantId: number;
+  productId: number;
+  sizeLabel: string;
+  sizeValue?: string;
+  sku?: string;
+  additionalPrice: number;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  // 계산된 필드들
+  totalStock: number;
+  availableStock: number;
+  inStock: boolean;
+  lowStock: boolean;
+  inventories?: Inventory[];
+}
+
+export interface Inventory {
+  inventoryId: number;
+  sizeVariantId: number;
+  stockQuantity: number;
+  safetyStock: number;
+  reservedQuantity: number;
+  lastRestockedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  // 계산된 필드들
+  availableQuantity: number;
+  inStock: boolean;
+  lowStock: boolean;
+  stockStatus: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
+}
+
+export interface SizeChart {
+  sizeChartId: number;
+  chartName: string;
+  scopeType: 'BRAND' | 'CATEGORY' | 'PRODUCT';
+  scopeValue?: string;
+  chartData: string; // JSON 문자열
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
