@@ -114,6 +114,46 @@ export function MyCodyList() {
     }
   }
 
+  const persistBackgroundPreference = (background: any) => {
+    if (typeof window === 'undefined') return
+    const bgType = background?.type === 'image' ? 'image' : 'color'
+    const selected = background?.selectedBackground || 'white'
+    const customColor = background?.customColor || '#ffffff'
+
+    localStorage.setItem('cody-background-type', bgType)
+    localStorage.setItem('cody-background', selected)
+    localStorage.setItem('cody-custom-color', customColor)
+  }
+
+  const persistPlaygroundItems = (items: PlacedItem[]) => {
+    if (typeof window === 'undefined') return
+    const metadata = {
+      savedAt: Date.now(),
+      version: '1.0',
+      totalItems: items.length,
+      customPositions: items.filter(item => item.metadata?.isCustomPosition).length,
+      lastModified: items.reduce((acc, item) => Math.max(acc, item.lastModified || 0), 0)
+    }
+
+    const payload = { items, metadata }
+    localStorage.setItem('cody-playground-items', JSON.stringify(payload))
+  }
+
+  const handleLoadCody = (cody: OutfitResponse) => {
+    try {
+      const parsed = JSON.parse(cody.outfitItem)
+      const items: PlacedItem[] = parsed.items || []
+      persistPlaygroundItems(items)
+      persistBackgroundPreference(parsed.background)
+      localStorage.setItem('cody-last-outfit-name', parsed.name || '')
+      localStorage.setItem('cody-last-outfit-id', cody.outfitIdx.toString())
+      window.location.href = '/cody'
+    } catch (error) {
+      console.error('코디 불러오기 실패:', error)
+      alert('코디 데이터를 불러올 수 없습니다.')
+    }
+  }
+
   // 코디 이미지 다운로드
   const handleDownloadImage = async (cody: OutfitResponse) => {
     try {
@@ -199,7 +239,8 @@ export function MyCodyList() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 relative group"
+                className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 relative group cursor-pointer hover:bg-gray-100/70 dark:hover:bg-gray-700/70 transition-colors"
+                onClick={() => handleLoadCody(cody)}
               >
                 {/* 코디 미리보기 */}
                 <div className="mb-3">
@@ -255,7 +296,10 @@ export function MyCodyList() {
                       size="sm"
                       variant="ghost"
                       className="h-6 w-6 p-0"
-                      onClick={() => handleDownloadImage(cody)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleDownloadImage(cody)
+                      }}
                     >
                       <Download className="w-3 h-3" />
                     </Button>
@@ -263,7 +307,10 @@ export function MyCodyList() {
                       size="sm"
                       variant="ghost"
                       className="h-6 w-6 p-0"
-                      onClick={() => handleShareToCommunity(cody)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleShareToCommunity(cody)
+                      }}
                     >
                       <Share2 className="w-3 h-3" />
                     </Button>
@@ -271,7 +318,10 @@ export function MyCodyList() {
                       size="sm"
                       variant="ghost"
                       className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                      onClick={() => handleDeleteCody(cody.outfitIdx)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        handleDeleteCody(cody.outfitIdx)
+                      }}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
