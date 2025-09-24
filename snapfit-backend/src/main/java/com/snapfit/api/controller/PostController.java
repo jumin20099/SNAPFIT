@@ -12,6 +12,7 @@ import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.repository.LikeRepository;
 import com.snapfit.api.repository.ScrapRepository;
 import com.snapfit.api.repository.OutfitRepository;
+import com.snapfit.api.repository.UserMeasurementsRepository;
 import com.snapfit.api.security.JwtUtil;
 import com.snapfit.api.service.PostService;
 import com.snapfit.api.service.TagService;
@@ -59,6 +60,7 @@ public class PostController {
     private final LikeRepository likeRepository;
     private final ScrapRepository scrapRepository;
     private final OutfitRepository outfitRepository;
+    private final UserMeasurementsRepository userMeasurementsRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
@@ -626,7 +628,9 @@ public class PostController {
             dto.setOutfitId(post.getOutfit().getOutfitIdx());
             dto.setCodyData(convertOutfitToCodyData(post.getOutfit()));
         }
-        
+
+        applyAuthorMeasurements(post, dto, null);
+
         return dto;
     }
 
@@ -653,6 +657,8 @@ public class PostController {
                         // DTO에 상태 설정
                         dto.setIsLiked(userLiked);
                         dto.setIsScrapped(userScrapped);
+
+                        applyAuthorMeasurements(post, dto, currentUser.getUserIdx());
                     });
                 }
             } catch (Exception e) {
@@ -668,6 +674,21 @@ public class PostController {
         }
 
         return dto;
+    }
+
+    private void applyAuthorMeasurements(Post post, PostResponseDto dto, UUID viewerId) {
+        if (post.getAuthor() == null) {
+            return;
+        }
+
+        userMeasurementsRepository.findByUserId(post.getAuthor().getUserIdx())
+            .ifPresent(measurements -> {
+                boolean isOwner = viewerId != null && viewerId.equals(post.getAuthor().getUserIdx());
+                if (Boolean.TRUE.equals(measurements.getIsPublic()) || isOwner) {
+                    dto.setAuthorHeightCm(measurements.getHeightCm());
+                    dto.setAuthorWeightKg(measurements.getWeightKg());
+                }
+            });
     }
 
     private String extractToken(String authHeader) {

@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -30,4 +31,6 @@ public class ProductReviewDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Boolean isHelpfulByUser; // 현재 사용자가 도움됨으로 표시했는지 여부
+    private Integer userHeightCm;
+    private BigDecimal userWeightKg;
 }

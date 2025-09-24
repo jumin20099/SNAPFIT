@@ -55,6 +55,8 @@ interface Post {
   scraped?: boolean
   type?: string
   outfitId?: number
+  authorHeightCm?: number | null
+  authorWeightKg?: number | string | null
   codyData?: {
     name: string
     items: Array<{
@@ -466,6 +468,8 @@ export default function PostDetailPage() {
             viewCount: viewCounts[post.postId] || post.viewCount || 0, // localStorage에서 조회수 복원
             createdAt: createdAtRaw,
             updatedAt: updatedAtRaw,
+            authorHeightCm: post.authorHeightCm ?? post.author_height_cm ?? null,
+            authorWeightKg: post.authorWeightKg ?? post.author_weight_kg ?? null,
             tags: post.tags || [],
             // 배치 상태 우선, 없으면 백엔드 응답 필드명을 프론트엔드 기대 형식으로 변환
             liked: status?.liked ?? (post.isLiked || false),
@@ -1142,6 +1146,29 @@ export default function PostDetailPage() {
     return formatted
   }
 
+  const formatWeightValue = (value?: number | string | null) => {
+    if (value === null || value === undefined || value === '') return null
+    const numeric = typeof value === 'string' ? parseFloat(value) : value
+    if (!Number.isFinite(numeric)) return null
+    return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(1).replace(/\.0$/, '')
+  }
+
+  const buildBodySpecLabel = (post: Post) => {
+    const height = post.authorHeightCm
+    const weightLabel = formatWeightValue(post.authorWeightKg)
+    const hasHeight = typeof height === 'number' && Number.isFinite(height)
+    if (!hasHeight && !weightLabel) return null
+
+    const parts: string[] = []
+    if (hasHeight) {
+      parts.push(`키 ${height}cm`)
+    }
+    if (weightLabel) {
+      parts.push(`몸무게 ${weightLabel}kg`)
+    }
+    return parts.join(' · ')
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -1207,7 +1234,12 @@ export default function PostDetailPage() {
                     disabled={!post.authorId || post.authorId === 'anonymous'}
                   >
                     <div className="font-medium">{post.authorName}</div>
-                    <div className="text-sm text-gray-500">171cm/63kg · 봄 원돈</div>
+                    {(() => {
+                      const specLabel = buildBodySpecLabel(post)
+                      return specLabel ? (
+                        <div className="text-sm text-gray-500">{specLabel}</div>
+                      ) : null
+                    })()}
                   </button>
                 </div>
                 {isOwner ? (

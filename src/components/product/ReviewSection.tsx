@@ -23,6 +23,8 @@ interface Review {
   createdAt: string
   updatedAt: string
   isHelpfulByUser: boolean
+  userHeightCm?: number | null
+  userWeightKg?: number | string | null
 }
 
 interface ReviewSectionProps {
@@ -187,6 +189,29 @@ export default function ReviewSection({
     ))
   }
 
+  const formatWeightValue = (value?: number | string | null) => {
+    if (value === null || value === undefined || value === '') return null
+    const numeric = typeof value === 'string' ? parseFloat(value) : value
+    if (!Number.isFinite(numeric)) return null
+    return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(1).replace(/\.0$/, '')
+  }
+
+  const buildBodySpecLabel = (review: Review) => {
+    const height = review.userHeightCm
+    const weightLabel = formatWeightValue(review.userWeightKg)
+    const hasHeight = typeof height === 'number' && Number.isFinite(height)
+    if (!hasHeight && !weightLabel) return null
+
+    const parts: string[] = []
+    if (hasHeight) {
+      parts.push(`키 ${height}cm`)
+    }
+    if (weightLabel) {
+      parts.push(`몸무게 ${weightLabel}kg`)
+    }
+    return parts.join(' · ')
+  }
+
   return (
     <div className="space-y-6">
       {/* 리뷰 통계 */}
@@ -324,6 +349,12 @@ export default function ReviewSection({
                       {new Date(review.createdAt).toLocaleDateString()}
                     </span>
                   </div>
+                  {(() => {
+                    const specLabel = buildBodySpecLabel(review)
+                    return specLabel ? (
+                      <div className="text-xs text-gray-500 mt-1">{specLabel}</div>
+                    ) : null
+                  })()}
                 </div>
               </div>
               <div className="flex gap-2">

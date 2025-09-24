@@ -28,6 +28,8 @@ interface Post {
   mediaUrls?: string[]
   tags?: string[]
   outfitId?: number
+  authorHeightCm?: number | null
+  authorWeightKg?: number | string | null
   codyData?: {
     name: string
     items: Array<{
@@ -98,7 +100,9 @@ export default function CommunityPage() {
               // 백엔드 응답 필드명을 프론트엔드 기대 형식으로 변환
               liked: post.isLiked || false,
               scraped: post.isScrapped || false,
-              authorId: post.authorId || post.userId || null
+              authorId: post.authorId || post.userId || null,
+              authorHeightCm: post.authorHeightCm ?? post.author_height_cm ?? null,
+              authorWeightKg: post.authorWeightKg ?? post.author_weight_kg ?? null,
             };
           })
           
@@ -510,7 +514,7 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
       >
         <LikeButton
           targetIdx={post.postId}
-          targetType="outfit"
+          targetType="post"
           initialActive={post.liked}
           initialCount={0}
           showCount={false}

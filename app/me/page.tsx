@@ -19,7 +19,10 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { MyCodyList } from '@/components/ui/MyCodyList'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import ProfileImageEditor from '@/components/ProfileImageEditor'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 // import { useTheme } from 'next-themes'
 
 interface UserProfile {
@@ -79,6 +82,13 @@ export default function MePage() {
   const [isUploading, setIsUploading] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'cody' | 'orders'>('profile')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [measurements, setMeasurements] = useState<{ heightCm?: number | null; weightKg?: number | string | null; isPublic?: boolean } | null>(null)
+  const [measurementLoading, setMeasurementLoading] = useState(false)
+  const [measurementError, setMeasurementError] = useState<string | null>(null)
+  const [heightInput, setHeightInput] = useState('')
+  const [weightInput, setWeightInput] = useState('')
+  const [isMeasurementPublic, setIsMeasurementPublic] = useState(false)
+  const [measurementSaving, setMeasurementSaving] = useState(false)
 
   // 사용자 정보 가져오기
   const fetchUserInfo = async () => {
@@ -109,6 +119,33 @@ export default function MePage() {
     } catch (error) {
       console.error('사용자 정보 로드 실패:', error)
     }
+  }
+
+  const formatWeightForInput = (value?: number | string | null) => {
+    if (value === null || value === undefined || value === '') return ''
+    const numeric = typeof value === 'string' ? parseFloat(value) : value
+    if (!Number.isFinite(numeric)) return ''
+    return Number.isInteger(numeric) ? numeric.toString() : numeric.toFixed(1).replace(/\.0$/, '')
+  }
+
+  const buildMeasurementSummary = () => {
+    if (!measurements) return '등록된 신체 정보가 없습니다.'
+
+    const parts: string[] = []
+    if (typeof measurements.heightCm === 'number' && Number.isFinite(measurements.heightCm)) {
+      parts.push(`키 ${measurements.heightCm}cm`)
+    }
+    const weightLabel = formatWeightForInput(measurements.weightKg)
+    if (weightLabel) {
+      parts.push(`몸무게 ${weightLabel}kg`)
+    }
+
+    const visibility = measurements.isPublic ? '공개' : '비공개'
+    if (parts.length === 0) {
+      return `기본 신체 정보가 입력되어 있지 않습니다. (현재 설정: ${visibility})`
+    }
+
+    return `${parts.join(' · ')} (현재 설정: ${visibility})`
   }
 
   // 스크랩한 게시글 가져오기
@@ -160,6 +197,108 @@ export default function MePage() {
       }
     } catch (error) {
       console.error('스크랩 게시글 로드 실패:', error)
+    }
+  }
+
+  const fetchMeasurements = async (userId: string) => {
+    try {
+      setMeasurementLoading(true)
+      setMeasurementError(null)
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setMeasurements(null)
+        return
+      }
+
+      const response = await fetch(`/api/users/${userId}/measurements`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (response.status === 404) {
+        setMeasurements(null)
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || '신체 정보를 불러오지 못했습니다.')
+      }
+
+      const data = await response.json()
+      setMeasurements(data)
+    } catch (error) {
+      console.error('신체 정보 조회 실패:', error)
+      setMeasurements(null)
+      setMeasurementError('신체 정보를 불러오지 못했습니다.')
+    } finally {
+      setMeasurementLoading(false)
+    }
+  }
+
+  const handleSaveMeasurements = async () => {
+    if (!user?.id) {
+      alert('로그인이 필요합니다.')
+      return
+    }
+
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('로그인이 필요합니다.')
+      return
+    }
+
+    const payload: Record<string, unknown> = {
+      isPublic: isMeasurementPublic,
+    }
+
+    if (heightInput.trim()) {
+      const heightValue = parseInt(heightInput, 10)
+      if (Number.isNaN(heightValue) || heightValue <= 0) {
+        alert('키는 0보다 큰 숫자로 입력해주세요.')
+        return
+      }
+      payload.heightCm = heightValue
+    }
+
+    if (weightInput.trim()) {
+      const weightValue = parseFloat(weightInput)
+      if (Number.isNaN(weightValue) || weightValue <= 0) {
+        alert('몸무게는 0보다 큰 숫자로 입력해주세요.')
+        return
+      }
+      payload.weightKg = parseFloat(weightValue.toFixed(1))
+    }
+
+    setMeasurementSaving(true)
+    setMeasurementError(null)
+
+    try {
+      const response = await fetch(`/api/users/${user.id}/measurements`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || '신체 정보 저장에 실패했습니다.')
+      }
+
+      const data = await response.json()
+      setMeasurements(data)
+      alert('신체 정보가 저장되었습니다.')
+    } catch (error) {
+      console.error('신체 정보 저장 실패:', error)
+      const message = error instanceof Error ? error.message : '신체 정보 저장에 실패했습니다.'
+      setMeasurementError(message)
+      alert(message)
+    } finally {
+      setMeasurementSaving(false)
     }
   }
 
@@ -375,6 +514,28 @@ export default function MePage() {
     setLoading(false)
   }, [])
 
+  useEffect(() => {
+    if (user?.id) {
+      fetchMeasurements(user.id)
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (measurements) {
+      setHeightInput(
+        typeof measurements.heightCm === 'number' && Number.isFinite(measurements.heightCm)
+          ? measurements.heightCm.toString()
+          : ''
+      )
+      setWeightInput(formatWeightForInput(measurements.weightKg))
+      setIsMeasurementPublic(Boolean(measurements.isPublic))
+    } else {
+      setHeightInput('')
+      setWeightInput('')
+      setIsMeasurementPublic(false)
+    }
+  }, [measurements])
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('ko-KR', {
@@ -562,6 +723,73 @@ export default function MePage() {
               {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               {theme === 'dark' ? '라이트모드' : '다크모드'}
             </Button>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-dark-sub rounded-lg p-6 shadow-sm space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">신체 정보</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              키와 몸무게를 입력하면 커뮤니티 게시글과 상품 리뷰에서 내 신체 스펙이 함께 표시됩니다.
+            </p>
+          </div>
+
+          {measurementError && (
+            <div className="text-sm text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-md p-3">
+              {measurementError}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="user-height">키 (cm)</Label>
+              <Input
+                id="user-height"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                placeholder="예: 172"
+                value={heightInput}
+                onChange={(e) => setHeightInput(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="user-weight">몸무게 (kg)</Label>
+              <Input
+                id="user-weight"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.1"
+                placeholder="예: 65.5"
+                value={weightInput}
+                onChange={(e) => setWeightInput(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="measurement-public"
+                checked={isMeasurementPublic}
+                onCheckedChange={(checked) => setIsMeasurementPublic(checked)}
+              />
+              <Label htmlFor="measurement-public" className="text-sm text-gray-600 dark:text-gray-300">
+                커뮤니티와 리뷰에 내 신체 스펙을 공개합니다
+              </Label>
+            </div>
+            <Button
+              onClick={handleSaveMeasurements}
+              disabled={measurementSaving}
+              className="w-full sm:w-auto"
+            >
+              {measurementSaving ? '저장 중...' : '신체 정보 저장'}
+            </Button>
+          </div>
+
+          <div className="text-sm text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-dark-border rounded-md p-3 bg-gray-50 dark:bg-dark-border/30">
+            {measurementLoading ? '신체 정보를 불러오는 중...' : buildMeasurementSummary()}
           </div>
         </div>
           </>

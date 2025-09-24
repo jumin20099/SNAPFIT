@@ -9,6 +9,7 @@ import com.snapfit.api.repository.ProductReviewRepository;
 import com.snapfit.api.repository.ReviewHelpfulRepository;
 import com.snapfit.api.repository.OrderItemRepository;
 import com.snapfit.api.repository.UserRepository;
+import com.snapfit.api.repository.UserMeasurementsRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class ProductReviewService {
     private final ReviewHelpfulRepository reviewHelpfulRepository;
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
+    private final UserMeasurementsRepository userMeasurementsRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     /**
@@ -83,7 +85,7 @@ public class ProductReviewService {
         review = reviewRepository.save(review);
         log.info("리뷰 작성 완료: reviewId={}", review.getReviewId());
         
-        return convertToDto(review, false);
+        return convertToDto(review, false, userId);
     }
     
     /**
@@ -108,7 +110,7 @@ public class ProductReviewService {
                 break;
         }
         
-        return reviews.map(review -> convertToDto(review, false));
+        return reviews.map(review -> convertToDto(review, false, currentUserId));
     }
     
     /**
@@ -145,7 +147,7 @@ public class ProductReviewService {
         // 사용자가 현재 도움됨으로 표시했는지 확인
         boolean isHelpfulByUser = reviewHelpfulRepository.existsByReviewIdAndUserUserIdx(reviewId, userId);
         
-        return convertToDto(review, isHelpfulByUser);
+        return convertToDto(review, isHelpfulByUser, userId);
     }
     
     /**
@@ -195,7 +197,7 @@ public class ProductReviewService {
         
         log.info("리뷰 수정 완료: reviewId={}", review.getReviewId());
         
-        return convertToDto(review, false);
+        return convertToDto(review, false, userId);
     }
     
     /**
@@ -241,8 +243,8 @@ public class ProductReviewService {
     /**
      * 엔티티를 DTO로 변환
      */
-    private ProductReviewDto convertToDto(ProductReview review, boolean isHelpfulByUser) {
-        return ProductReviewDto.builder()
+    private ProductReviewDto convertToDto(ProductReview review, boolean isHelpfulByUser, UUID viewerId) {
+        ProductReviewDto.ProductReviewDtoBuilder builder = ProductReviewDto.builder()
             .reviewId(review.getReviewId())
             .productId(review.getProductId())
             .userId(review.getUser().getUserIdx())
@@ -256,8 +258,26 @@ public class ProductReviewService {
             .status(review.getStatus())
             .createdAt(review.getCreatedAt())
             .updatedAt(review.getUpdatedAt())
-            .isHelpfulByUser(isHelpfulByUser)
-            .build();
+            .isHelpfulByUser(isHelpfulByUser);
+
+        applyReviewerMeasurements(review, builder, viewerId);
+
+        return builder.build();
+    }
+
+    private void applyReviewerMeasurements(ProductReview review, ProductReviewDto.ProductReviewDtoBuilder builder, UUID viewerId) {
+        if (review.getUser() == null) {
+            return;
+        }
+
+        userMeasurementsRepository.findByUserId(review.getUser().getUserIdx())
+            .ifPresent(measurements -> {
+                boolean isOwner = viewerId != null && viewerId.equals(review.getUser().getUserIdx());
+                if (Boolean.TRUE.equals(measurements.getIsPublic()) || isOwner) {
+                    builder.userHeightCm(measurements.getHeightCm());
+                    builder.userWeightKg(measurements.getWeightKg());
+                }
+            });
     }
     
     /**
