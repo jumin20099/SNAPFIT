@@ -435,7 +435,19 @@ export default function PostDetailPage() {
         const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
         
         // Post 타입에 맞게 데이터 변환
-        const transformedPosts = newPosts.map((post: any) => {
+        const transformedPosts = newPosts.map((post: any, index: number) => {
+          const createdAtRaw = post.createdAt ?? post.created_at ?? post.created_at ?? null
+          const updatedAtRaw = post.updatedAt ?? post.updated_at ?? null
+
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[community:post] raw timestamps', {
+              index,
+              postId: post.postId,
+              createdAt: createdAtRaw,
+              updatedAt: updatedAtRaw
+            })
+          }
+
           // 배치 상태에서 현재 게시글의 상태 가져오기
           const statusKey = `post_${post.postId}`;
           const status = batchReactionStatus?.[statusKey];
@@ -452,7 +464,8 @@ export default function PostDetailPage() {
             commentCount: post.commentCount || 0,
             scrapCount: (status?.scrapCount ?? post.scrapCount) || 0, // 배치 상태 우선, 없으면 백엔드 값
             viewCount: viewCounts[post.postId] || post.viewCount || 0, // localStorage에서 조회수 복원
-            createdAt: post.createdAt,
+            createdAt: createdAtRaw,
+            updatedAt: updatedAtRaw,
             tags: post.tags || [],
             // 배치 상태 우선, 없으면 백엔드 응답 필드명을 프론트엔드 기대 형식으로 변환
             liked: status?.liked ?? (post.isLiked || false),
@@ -1006,16 +1019,127 @@ export default function PostDetailPage() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffTime = Math.abs(now.getTime() - date.getTime())
-    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60))
+  const logDateDebug = (label: string, payload: Record<string, unknown>) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[community:date] ${label}`, payload)
+    }
+  }
 
-    if (diffHours < 1) return "방금 전"
-    if (diffHours === 1) return "1시간 전"
-    if (diffHours < 24) return `${diffHours}시간 전`
-    return `${Math.ceil(diffHours / 24)}일 전`
+  const parseDate = (value?: string | number | null) => {
+    if (value === null || value === undefined) return null
+
+    if (typeof value === 'number') {
+      const date = new Date(value)
+      const valid = !Number.isNaN(date.getTime())
+      logDateDebug('parse-number', { value, valid })
+      return valid ? date : null
+    }
+
+    const trimmed = String(value).trim()
+    if (!trimmed) return null
+
+    let date = new Date(trimmed)
+    if (!Number.isNaN(date.getTime())) {
+      logDateDebug('parse-native', { value: trimmed, iso: date.toISOString() })
+      return date
+    }
+
+    // Safari는 'YYYY-MM-DD HH:mm:ss' 형식을 지원하지 않으므로 직접 파싱
+    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/)
+    if (match) {
+      const [, year, month, day, hour, minute, second] = match
+      date = new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        Number(hour),
+        Number(minute),
+        Number(second ?? '0')
+      )
+      if (!Number.isNaN(date.getTime())) {
+        logDateDebug('parse-manual', { value: trimmed, iso: date.toISOString() })
+        return date
+      }
+    }
+
+    const timestamp = Number(trimmed)
+    if (!Number.isNaN(timestamp)) {
+      date = new Date(timestamp)
+      if (!Number.isNaN(date.getTime())) {
+        logDateDebug('parse-timestamp', { value: trimmed, iso: date.toISOString() })
+        return date
+      }
+    }
+
+    logDateDebug('parse-failed', { value })
+    return null
+  }
+
+  const formatDate = (dateString: string | number | null | undefined) => {
+    const date = parseDate(dateString)
+    if (!date) {
+      logDateDebug('format-fallback', { input: dateString })
+      if (typeof dateString === 'string' && dateString.trim()) {
+        return dateString
+      }
+      return ''
+    }
+
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+
+    if (diffMs < 0) {
+      return formatAbsoluteDate(date)
+    }
+
+    const diffSeconds = Math.floor(diffMs / 1000)
+    const diffMinutes = Math.floor(diffSeconds / 60)
+    const diffHours = Math.floor(diffMinutes / 60)
+
+    let result: string
+    if (diffSeconds < 5) result = '방금 전'
+    else if (diffSeconds < 60) result = `${diffSeconds}초 전`
+    else if (diffMinutes < 60) result = `${diffMinutes}분 전`
+    else if (diffHours < 24) result = `${diffHours}시간 전`
+    else result = formatAbsoluteDate(date)
+
+    logDateDebug('format-success', { input: dateString, result })
+    return result
+  }
+
+  const formatAbsoluteDate = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const formatPostTimestamp = (post: Post) => {
+    const raw = post.createdAt ?? (post as any).created_at ?? null
+
+    if (raw === null || raw === undefined || raw === '') {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[community:date] post timestamp missing', {
+          postId: post.postId,
+          createdAt: post.createdAt,
+          created_at: (post as any).created_at
+        })
+      }
+      return '날짜 정보 없음'
+    }
+
+    const formatted = formatDate(raw)
+    if (!formatted) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[community:date] post format failure', {
+          postId: post.postId,
+          raw
+        })
+      }
+      return raw
+    }
+
+    return formatted
   }
 
   return (
@@ -1233,6 +1357,9 @@ export default function PostDetailPage() {
                 <Button variant="ghost" size="sm" className="p-2">
                   <Share2 className="w-6 h-6" />
                 </Button>
+                <span className="ml-auto text-xs text-gray-500">
+                  {formatPostTimestamp(post)}
+                </span>
                 <div className="ml-auto">
                   <ScrapButton
                     postId={post.postId}
@@ -1314,11 +1441,6 @@ export default function PostDetailPage() {
                   )}
                 </div>
               )}
-            </div>
-
-            {/* Post Time */}
-            <div className="p-4 text-sm text-gray-500">
-              {formatDate(post.createdAt)}
             </div>
 
             {/* Comment Input for each post */}

@@ -613,6 +613,8 @@ public class PostController {
         dto.setScrapCount(post.getCalculatedScrapCount() != null ? post.getCalculatedScrapCount().longValue() : 0L);
         dto.setCommentCount(post.getCommentCount());
         dto.setViewCount(post.getViewCount());
+        dto.setCreatedAt(post.getCreatedAt());
+        dto.setUpdatedAt(post.getUpdatedAt());
         
         log.info("Post {} DTO 변환 완료: likeCount={}, scrapCount={}, calculatedLikeCount={}, calculatedScrapCount={}", 
             post.getPostId(), dto.getLikeCount(), dto.getScrapCount(), post.getCalculatedLikeCount(), post.getCalculatedScrapCount());
