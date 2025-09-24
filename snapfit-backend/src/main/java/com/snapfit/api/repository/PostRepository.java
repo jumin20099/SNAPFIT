@@ -117,6 +117,12 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.tags WHERE p.createdAt > :createdAt ORDER BY p.createdAt DESC")
     List<Post> findByCreatedAtAfterOrderByCreatedAtDesc(@Param("createdAt") LocalDateTime createdAt);
 
+    @Query("SELECT p FROM Post p " +
+           "LEFT JOIN FETCH p.author " +
+           "LEFT JOIN FETCH p.tags " +
+           "WHERE p.postId = :postId")
+    Optional<Post> findByIdWithAuthorAndTags(@Param("postId") Long postId);
+
     /**
      * 코디 연관 게시글 조회 (페이징)
      * 성능: outfit_id 인덱스 활용

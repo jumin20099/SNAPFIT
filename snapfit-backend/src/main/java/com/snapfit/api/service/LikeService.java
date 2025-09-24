@@ -69,40 +69,44 @@ public class LikeService {
      * 좋아요/취소 토글.
      */
     @Transactional
-    public boolean toggleLike(User user, Long targetIdx, TargetType targetType) {
-        Optional<Like> existing = likeRepository.findByUserAndTargetIdxAndTargetType(user, targetIdx, targetType);
+    public boolean toggleLike(User user, String guestIdx, Long targetIdx, TargetType targetType) {
+        Optional<Like> existing;
+
+        if (user != null) {
+            existing = likeRepository.findByUserAndTargetIdxAndTargetType(user, targetIdx, targetType);
+        } else {
+            existing = likeRepository.findByGuestIdxAndTargetIdxAndTargetType(guestIdx, targetIdx, targetType);
+        }
+
         if (existing.isPresent()) {
-            // 좋아요 취소
             likeRepository.delete(existing.get());
-            
-            // POST 타입인 경우 Post의 likeCount 감소
+
             if (targetType == TargetType.OUTFIT_SHARE) {
                 postRepository.decrementLikeCount(targetIdx);
             }
-            
-            return false; // 취소됨
-        } else {
-            // 좋아요 등록
-            Like like = Like.builder()
-                    .user(user)
-                    .targetIdx(targetIdx)
-                    .targetType(targetType)
-                    .isLike(true)
-                    .build();
-            likeRepository.save(like);
-            
-            // POST 타입인 경우 Post의 likeCount 증가
-            if (targetType == TargetType.OUTFIT_SHARE) {
-                postRepository.incrementLikeCount(targetIdx);
-            }
-            
-            // 좋아요 알림 생성 (자신의 게시글이 아닌 경우에만)
-            if (targetType == TargetType.OUTFIT_SHARE) {
-                createLikeNotification(user, targetIdx, like);
-            }
-            
-            return true; // 좋아요 등록
+
+            return false;
         }
+
+        Like like = Like.builder()
+                .user(user)
+                .guestIdx(guestIdx)
+                .targetIdx(targetIdx)
+                .targetType(targetType)
+                .isLike(true)
+                .build();
+
+        likeRepository.save(like);
+
+        if (targetType == TargetType.OUTFIT_SHARE) {
+            postRepository.incrementLikeCount(targetIdx);
+        }
+
+        if (user != null && targetType == TargetType.OUTFIT_SHARE) {
+            createLikeNotification(user, targetIdx, like);
+        }
+
+        return true;
     }
 
     /**

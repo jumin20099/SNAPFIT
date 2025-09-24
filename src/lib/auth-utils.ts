@@ -77,12 +77,42 @@ export function getDisplayNameFromEmail(email: string): string {
 /**
  * 현재 사용자가 특정 게시글의 작성자인지 확인
  */
-export function isCurrentUserPostAuthor(postAuthorName: string): boolean {
+export function getCurrentUserId(): string | null {
+  try {
+    const storedId = localStorage.getItem('userIdx');
+    if (storedId) {
+      return storedId;
+    }
+
+    const currentUser = getCurrentUser();
+    return currentUser?.sub ?? null;
+  } catch (error) {
+    console.error('현재 사용자 ID 가져오기 실패:', error);
+    return null;
+  }
+}
+
+export function isCurrentUserPostAuthor({
+  authorId,
+  authorName,
+}: {
+  authorId?: string | null;
+  authorName?: string;
+}): boolean {
+  const currentUserId = getCurrentUserId();
+  if (currentUserId && authorId) {
+    return currentUserId === authorId;
+  }
+
+  if (!authorName) {
+    return false;
+  }
+
   const currentUser = getCurrentUser();
   if (!currentUser) {
     return false;
   }
 
   const currentUserDisplayName = getDisplayNameFromEmail(currentUser.sub);
-  return currentUserDisplayName === postAuthorName;
+  return currentUserDisplayName === authorName;
 }

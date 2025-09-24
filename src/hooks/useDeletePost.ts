@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 
 interface UseDeletePostResult {
   isDeleting: boolean;
-  deletePost: (postId: number) => Promise<boolean>;
+  deletePost: (postId: number, anonymousPassword?: string) => Promise<boolean>;
 }
 
 /**
@@ -11,28 +11,33 @@ interface UseDeletePostResult {
 export function useDeletePost(): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const getAuthHeaders = useCallback(() => {
+  const getAuthHeaders = useCallback((hasBody: boolean) => {
     const token = localStorage.getItem('token');
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+    const headers: Record<string, string> = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
+    if (hasBody) {
+      headers['Content-Type'] = 'application/json';
+    }
+    return headers;
   }, []);
 
-  const deletePost = useCallback(async (postId: number): Promise<boolean> => {
+  const deletePost = useCallback(async (postId: number, anonymousPassword?: string): Promise<boolean> => {
     setIsDeleting(true);
     
     try {
       console.log('게시글 삭제 요청:', postId);
+      const hasBody = typeof anonymousPassword === 'string' && anonymousPassword.trim().length > 0;
       
-      const response = await fetch(`http://localhost:8080/api/posts/${postId}`, {
+      const response = await fetch(`/api/posts/${postId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(hasBody),
+        credentials: 'include',
+        ...(hasBody ? { body: JSON.stringify({ anonymousPassword: anonymousPassword?.trim() }) } : {}),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        console.log('게시글 삭제 성공:', data);
+        console.log('게시글 삭제 성공');
         return true;
       } else {
         const errorData = await response.json().catch(() => ({}));

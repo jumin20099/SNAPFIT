@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ArrowLeft, Image as ImageIcon, Tag, Send, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,9 @@ interface CodyData {
 
 export default function CreatePostPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editPostId = searchParams.get('edit')
+  const isEditMode = Boolean(editPostId)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [tags, setTags] = useState<string[]>([])
@@ -31,11 +34,18 @@ export default function CreatePostPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [codyData, setCodyData] = useState<CodyData | null>(null)
   const [codyImage, setCodyImage] = useState<string | null>(null)
+  const [isLoadingPost, setIsLoadingPost] = useState(false)
+  const [anonymousPassword, setAnonymousPassword] = useState('')
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [requiresAnonymousPassword, setRequiresAnonymousPassword] = useState(false)
+  const needsPasswordForSubmit = !isLoggedIn || requiresAnonymousPassword
 
   // localStorage에서 코디 데이터 로드
   useEffect(() => {
     const loadExportData = () => {
       try {
+        const token = localStorage.getItem('token')
+        setIsLoggedIn(!!token)
         const exportDataStr = localStorage.getItem('cody-export-data')
         if (exportDataStr) {
           const exportData = JSON.parse(exportDataStr)
@@ -77,6 +87,53 @@ export default function CreatePostPage() {
     
     loadExportData()
   }, [])
+
+  // 수정 모드일 경우 기존 게시글 데이터 불러오기
+  useEffect(() => {
+    const loadPostDetail = async () => {
+      if (!isEditMode || !editPostId) return
+
+      try {
+        setIsLoadingPost(true)
+        const token = localStorage.getItem('token')
+        setIsLoggedIn(!!token)
+        const response = await fetch(`/api/posts/${editPostId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: 'include',
+        })
+
+        if (!response.ok) {
+          throw new Error('게시글 정보를 불러오지 못했습니다.')
+        }
+
+        const data = await response.json()
+        setTitle(data.title || '')
+        setContent(data.content || '')
+        setTags(Array.isArray(data.tags) ? data.tags : [])
+        setImages(Array.isArray(data.mediaUrls) ? data.mediaUrls : [])
+        setRequiresAnonymousPassword(data.authorId === 'anonymous')
+        setAnonymousPassword('')
+
+        if (data.codyData) {
+          setCodyData(data.codyData)
+        }
+
+        if (Array.isArray(data.mediaUrls) && data.mediaUrls.length > 0) {
+          setCodyImage(data.mediaUrls[0])
+        }
+      } catch (error) {
+        console.error('게시글 불러오기 실패:', error)
+        alert(error instanceof Error ? error.message : '게시글 정보를 불러오지 못했습니다.')
+      } finally {
+        setIsLoadingPost(false)
+      }
+    }
+
+    loadPostDetail()
+  }, [isEditMode, editPostId])
 
   // 태그 추가
   const handleAddTag = () => {
@@ -140,10 +197,22 @@ export default function CreatePostPage() {
 
     setIsSubmitting(true)
     try {
-      const postData = {
+      const needsPassword = !isLoggedIn || requiresAnonymousPassword
+      let trimmedPassword: string | undefined
+
+      if (needsPassword) {
+        trimmedPassword = anonymousPassword.trim()
+        if (trimmedPassword.length < 4) {
+          alert('비밀번호는 4자 이상 입력해주세요.')
+          setIsSubmitting(false)
+          return
+        }
+      }
+
+      const postData: Record<string, any> = {
         title: title.trim(),
         content: content.trim(),
-        tags: tags,
+        tags,
         mediaUrls: images,
         codyData: codyData ? {
           name: codyData.name,
@@ -153,16 +222,24 @@ export default function CreatePostPage() {
         } : undefined
       }
 
+      if (needsPassword && trimmedPassword) {
+        postData.anonymousPassword = trimmedPassword
+      }
+
       // 실제 API 호출
       console.log('게시글 작성 요청 데이터:', postData)
       
       const token = localStorage.getItem('token')
-      const response = await fetch('/api/posts', {
-        method: 'POST',
+      const endpoint = isEditMode && editPostId ? `/api/posts/${editPostId}` : '/api/posts'
+      const method = isEditMode ? 'PUT' : 'POST'
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           ...(token && { 'Authorization': `Bearer ${token}` }),
         },
+        credentials: 'include',
         body: JSON.stringify(postData),
       })
 
@@ -177,8 +254,12 @@ export default function CreatePostPage() {
       const result = await response.json()
       console.log('게시글 작성 성공:', result)
       
-      alert('게시글이 성공적으로 작성되었습니다! 🎉')
-      router.push('/community')
+      alert(isEditMode ? '게시글이 성공적으로 수정되었습니다.' : '게시글이 성공적으로 작성되었습니다! 🎉')
+      if (isEditMode && editPostId) {
+        router.push(`/community/${editPostId}`)
+      } else {
+        router.push('/community')
+      }
     } catch (error) {
       console.error('게시글 작성 실패:', error)
       alert(`게시글 작성에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`)
@@ -189,6 +270,12 @@ export default function CreatePostPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-dark-bg">
+      {isEditMode && isLoadingPost ? (
+        <div className="flex h-full items-center justify-center">
+          <span className="text-gray-500">게시글 정보를 불러오는 중...</span>
+        </div>
+      ) : (
+        <>
       {/* 헤더 */}
       <div className="bg-white dark:bg-dark-sub border-b border-gray-200 dark:border-dark-border sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -202,15 +289,15 @@ export default function CreatePostPage() {
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <h1 className="text-lg font-semibold">글 작성</h1>
+              <h1 className="text-lg font-semibold">{isEditMode ? '글 수정' : '글 작성'}</h1>
             </div>
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting || !title.trim() || !content.trim()}
+              disabled={isSubmitting || isLoadingPost || !title.trim() || !content.trim() || (needsPasswordForSubmit && anonymousPassword.trim().length < 4)}
               size="sm"
             >
               <Send className="w-4 h-4 mr-2" />
-              {isSubmitting ? '게시 중...' : '게시'}
+              {isSubmitting ? '처리 중...' : isEditMode ? '수정 완료' : '게시'}
             </Button>
           </div>
         </div>
@@ -218,6 +305,23 @@ export default function CreatePostPage() {
 
       {/* 메인 컨텐츠 */}
       <div className="max-w-2xl mx-auto px-4 py-6">
+        {needsPasswordForSubmit && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              게시글 비밀번호 <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="password"
+              value={anonymousPassword}
+              onChange={(e) => setAnonymousPassword(e.target.value)}
+              placeholder="4자 이상 입력하세요"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              익명으로 작성한 게시글은 비밀번호가 있어야 수정과 삭제가 가능합니다.
+            </p>
+          </div>
+        )}
+
         {/* 코디에 사용된 상품 정보 */}
         {codyData && codyData.items.length > 0 && (
           <div className="mb-6">
@@ -359,6 +463,8 @@ export default function CreatePostPage() {
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   )
 }

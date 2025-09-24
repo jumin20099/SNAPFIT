@@ -103,12 +103,13 @@ class ApiClient {
   }
 
   // 좋아요 관련 API
-  async toggleLike(targetIdx: number, targetType: 'product' | 'brand' | 'outfit'): Promise<{ liked: boolean; count: number }> {
+  async toggleLike(targetIdx: number, targetType: 'product' | 'brand' | 'outfit' | 'post'): Promise<{ liked: boolean; count: number }> {
+    const payloadType = targetType === 'post' ? 'POST' : targetType;
     return this.request<{ liked: boolean; count: number }>('/api/likes/toggle', {
       method: 'POST',
       body: JSON.stringify({ 
         targetIdx, 
-        targetType 
+        targetType: payloadType 
       }),
     });
   }

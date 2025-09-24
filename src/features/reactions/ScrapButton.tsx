@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { ReactionButton } from '@/shared/ui/ReactionButton';
 import { useToggleScrap } from '@/shared/hooks/useToggleScrap';
+import { toast } from 'sonner';
 
 interface ScrapButtonProps {
   postId: number;
@@ -52,13 +53,23 @@ export function ScrapButton({
     },
   });
 
+  const handleToggle = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      toast.info('로그인 후 이용 가능합니다.');
+      return;
+    }
+
+    mutate();
+  };
+
   return (
     <ReactionButton
       kind="scrap"
       active={active}
       count={count}
       pending={isPending}
-      onToggle={() => mutate()}
+      onToggle={handleToggle}
       className={className}
     />
   );

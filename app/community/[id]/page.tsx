@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, Send, Plus, MoreVertical, User } from "lucide-react"
+import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, Send, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
@@ -936,14 +936,35 @@ export default function PostDetailPage() {
     })
   }
 
-  const handleDeletePost = async () => {
-    if (confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
-      const success = await deletePost(postId)
-      if (success) {
-        // 게시글 삭제 성공 시 커뮤니티 메인으로 이동
-        router.push('/community')
+  const handleDeletePost = async (targetPostId: number, requiresPassword: boolean) => {
+    let password: string | undefined
+
+    if (requiresPassword) {
+      const input = window.prompt('게시글 작성 시 설정한 비밀번호를 입력해주세요.')
+      if (!input || !input.trim()) {
+        alert('비밀번호를 입력해야 삭제할 수 있습니다.')
+        return
+      }
+      password = input.trim()
+      if (!confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+        return
+      }
+    } else {
+      if (!confirm('정말로 이 게시글을 삭제하시겠습니까?')) {
+        return
       }
     }
+
+    const success = await deletePost(targetPostId, password)
+    if (success) {
+      setPosts(prev => prev.filter(post => post.postId !== targetPostId))
+      setCurrentPost(prev => (prev && prev.postId === targetPostId ? null : prev))
+      router.push('/community')
+    }
+  }
+
+  const handleEditPost = (targetPostId: number) => {
+    router.push(`/community/create?edit=${targetPostId}`)
   }
 
   // 프로필 버튼 클릭 핸들러
@@ -1034,7 +1055,11 @@ export default function PostDetailPage() {
           </div>
         )}
         
-        {posts.map((post, index) => (
+        {posts.map((post, index) => {
+          const isOwner = isCurrentUserPostAuthor({ authorId: post.authorId, authorName: post.authorName })
+          const isAnonymousAuthor = post.authorId === 'anonymous'
+
+          return (
           <div 
             key={post.postId} 
             ref={index === posts.length - 1 ? lastPostElementRef : undefined}
@@ -1061,21 +1086,55 @@ export default function PostDetailPage() {
                     <div className="text-sm text-gray-500">171cm/63kg · 봄 원돈</div>
                   </button>
                 </div>
-                {/* 자신의 게시글인지 확인 후 버튼 선택 */}
-                {isCurrentUserPostAuthor(post.authorName) ? (
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleDeletePost()
-                    }}
-                    disabled={isDeleting}
-                    className="p-2 hover:bg-gray-100"
-                    data-testid="delete-post-button"
-                  >
-                    <MoreVertical className="w-4 h-4 text-gray-600" />
-                  </Button>
+                {isOwner ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleEditPost(post.postId)
+                      }}
+                    >
+                      수정
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeletePost(post.postId, false)
+                      }}
+                      disabled={isDeleting}
+                      data-testid="delete-post-button"
+                    >
+                      {isDeleting ? '삭제 중...' : '삭제'}
+                    </Button>
+                  </div>
+                ) : isAnonymousAuthor ? (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleEditPost(post.postId)
+                      }}
+                    >
+                      수정
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeletePost(post.postId, true)
+                      }}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? '삭제 중...' : '삭제'}
+                    </Button>
+                  </div>
                 ) : (
                   <Button 
                     variant={isFollowing ? "outline" : "default"} 
@@ -1155,7 +1214,7 @@ export default function PostDetailPage() {
               <div className="flex items-center gap-4 mb-3">
                 <LikeButton
                   targetIdx={post.postId}
-                  targetType="outfit"
+                  targetType="post"
                   initialActive={post.liked}
                   initialCount={post.likeCount}
                   className="p-2"
@@ -1281,7 +1340,7 @@ export default function PostDetailPage() {
               </div>
             </div>
           </div>
-        ))}
+        )})}
         
         {/* Loading Indicator */}
         {loading && (

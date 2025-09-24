@@ -6,6 +6,7 @@ interface CreatePostData {
   content: string;
   tags: string[];
   mediaUrls: string[];
+  anonymousPassword?: string;
 }
 
 interface CreatePostResponse {
@@ -45,13 +46,25 @@ export function useCreatePost(): UseCreatePostReturn {
     try {
       console.log('useCreatePost: 게시글 생성 시작', data);
 
-      const response = await fetch('http://localhost:8080/api/posts', {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+      if (!token && (!data.anonymousPassword || data.anonymousPassword.trim().length < 4)) {
+        throw new Error('비밀번호는 4자 이상 입력해주세요.');
+      }
+
+      const payload = {
+        ...data,
+        ...(data.anonymousPassword ? { anonymousPassword: data.anonymousPassword.trim() } : {}),
+      };
+
+      const response = await fetch('/api/posts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: 'include',
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {

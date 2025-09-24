@@ -3,8 +3,9 @@
 import * as React from 'react';
 import { ReactionButton } from '@/shared/ui/ReactionButton';
 import { useToggleLike } from '@/shared/hooks/useToggleLike';
+import { toast } from 'sonner';
 
-type TargetType = 'product' | 'brand' | 'outfit';
+type TargetType = 'product' | 'brand' | 'outfit' | 'post';
 
 interface LikeButtonProps {
   targetIdx: number;
@@ -59,13 +60,24 @@ export function LikeButton({
     },
   });
 
+  const handleToggle = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+    if (!token && targetType === 'product') {
+      toast.info('로그인 후 이용 가능합니다.');
+      return;
+    }
+
+    mutate();
+  };
+
   return (
     <ReactionButton
       kind="like"
       active={active}
       count={count}
       pending={isPending}
-      onToggle={() => mutate()}
+      onToggle={handleToggle}
       className={className}
       showCount={showCount}
     />

@@ -18,6 +18,8 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
 
     Optional<Like> findByUserAndTargetIdxAndTargetType(User user, Long targetIdx, TargetType targetType);
 
+    Optional<Like> findByGuestIdxAndTargetIdxAndTargetType(String guestIdx, Long targetIdx, TargetType targetType);
+
     Long countByTargetIdxAndTargetTypeAndIsLikeTrue(Long targetIdx, TargetType targetType);
 
     List<Like> findByUserAndIsLikeTrue(User user);
@@ -33,6 +35,8 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
      * 특정 사용자의 특정 타겟 좋아요 여부 확인
      */
     boolean existsByUserUserIdxAndTargetIdxAndTargetType(UUID userIdx, Long targetIdx, TargetType targetType);
+
+    boolean existsByGuestIdxAndTargetIdxAndTargetType(String guestIdx, Long targetIdx, TargetType targetType);
     
     /**
      * 특정 타겟의 좋아요 개수 조회

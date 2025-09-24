@@ -56,6 +56,10 @@ export interface Store {
   storeName: string;
   storeDescription?: string;
   storeImage?: string;
+  storeLogo?: string;
+  storeLink?: string;
+  contact?: string;
+  royaltyRate?: number;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;

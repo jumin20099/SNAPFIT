@@ -108,6 +108,10 @@ public class Post {
     @Column(name = "anonymous_index")
     private Integer anonymousIndex;
 
+    @Column(name = "anonymous_password_hash", length = 255)
+    @JsonIgnore
+    private String anonymousPasswordHash;
+
     /**
      * 게시글 내용 (필수, 1-10000자)
      * 보안: XSS 방지를 위한 내용 검증

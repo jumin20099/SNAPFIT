@@ -87,16 +87,29 @@ public class PostService {
      * 보안: 소유자 확인, 입력 검증
      */
     @Transactional
-    public Post updatePost(Long postId, Post updateData, User user, String tagString) {
-        log.info("게시글 수정 시작: ID={}, 수정자={}", postId, user.getUserIdx());
+    public Post updatePost(Long postId, Post updateData, User user, String tagString, boolean skipAuthorCheck) {
+        log.info("게시글 수정 시작: ID={}, 수정자={}", postId, user != null ? user.getUserIdx() : "anonymous");
         
         try {
             Post existingPost = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
             
-            // 권한 확인
-            if (!existingPost.getAuthor().getUserIdx().equals(user.getUserIdx())) {
-                throw new RuntimeException("게시글 수정 권한이 없습니다");
+            boolean postHasAuthor = existingPost.getAuthor() != null;
+
+            if (!skipAuthorCheck) {
+                if (postHasAuthor) {
+                    if (user == null || !existingPost.getAuthor().getUserIdx().equals(user.getUserIdx())) {
+                        throw new RuntimeException("게시글 수정 권한이 없습니다");
+                    }
+                } else {
+                    if (user != null) {
+                        throw new RuntimeException("게시글 수정 권한이 없습니다");
+                    }
+                }
+            } else {
+                if (postHasAuthor) {
+                    throw new RuntimeException("게시글 수정 권한이 없습니다");
+                }
             }
             
             // 입력 검증
@@ -104,9 +117,15 @@ public class PostService {
             
             // 기존 태그 제거
             Set<Tag> oldTags = existingPost.getTags();
-            for (Tag tag : oldTags) {
-                tag.setPostCount(tag.getPostCount() - 1);
-                tagRepository.save(tag);
+            if (oldTags != null) {
+                for (Tag tag : oldTags) {
+                    if (tag.getPostCount() != null && tag.getPostCount() > 0) {
+                        tag.setPostCount(tag.getPostCount() - 1);
+                    } else {
+                        tag.setPostCount(0L);
+                    }
+                    tagRepository.save(tag);
+                }
             }
             
             // 새 태그 처리
@@ -114,10 +133,17 @@ public class PostService {
             existingPost.setTags(newTags);
             
             // 내용 업데이트
+            existingPost.setTitle(updateData.getTitle());
             existingPost.setContent(updateData.getContent());
-            existingPost.setMediaUrls(updateData.getMediaUrls());
-            existingPost.setOutfit(updateData.getOutfit());
-            existingPost.setIsSponsored(updateData.getIsSponsored());
+            if (updateData.getMediaUrls() != null) {
+                existingPost.setMediaUrls(new HashSet<>(updateData.getMediaUrls()));
+            }
+            if (updateData.getOutfit() != null) {
+                existingPost.setOutfit(updateData.getOutfit());
+            }
+            if (updateData.getIsSponsored() != null) {
+                existingPost.setIsSponsored(updateData.getIsSponsored());
+            }
             existingPost.setUpdatedAt(LocalDateTime.now());
             
             // 게시글 저장
@@ -130,7 +156,7 @@ public class PostService {
             return updatedPost;
             
         } catch (Exception e) {
-            log.error("게시글 수정 실패: ID={}, 수정자={}", postId, user.getUserIdx(), e);
+            log.error("게시글 수정 실패: ID={}, 수정자={}", postId, user != null ? user.getUserIdx() : "anonymous", e);
             throw new RuntimeException("게시글 수정 중 오류가 발생했습니다", e);
         }
     }
@@ -140,31 +166,50 @@ public class PostService {
      * 보안: 소유자 확인, 연관 데이터 정리
      */
     @Transactional
-    public void deletePost(Long postId, User user) {
-        log.info("게시글 삭제 시작: ID={}, 삭제자={}", postId, user.getUserIdx());
+    public void deletePost(Long postId, User user, boolean skipAuthorCheck) {
+        log.info("게시글 삭제 시작: ID={}, 삭제자={}", postId, user != null ? user.getUserIdx() : "anonymous");
         
         try {
             Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
             
-            // 권한 확인
-            if (!post.getAuthor().getUserIdx().equals(user.getUserIdx())) {
-                throw new RuntimeException("게시글 삭제 권한이 없습니다");
+            boolean postHasAuthor = post.getAuthor() != null;
+
+            if (!skipAuthorCheck) {
+                if (postHasAuthor) {
+                    if (user == null || !post.getAuthor().getUserIdx().equals(user.getUserIdx())) {
+                        throw new RuntimeException("게시글 삭제 권한이 없습니다");
+                    }
+                } else {
+                    if (user != null) {
+                        throw new RuntimeException("게시글 삭제 권한이 없습니다");
+                    }
+                }
+            } else {
+                if (postHasAuthor) {
+                    throw new RuntimeException("게시글 삭제 권한이 없습니다");
+                }
             }
             
             // Soft Delete
             postRepository.softDeletePost(postId, LocalDateTime.now());
             
             // 태그별 게시글 수 감소
-            for (Tag tag : post.getTags()) {
-                tag.setPostCount(tag.getPostCount() - 1);
-                tagRepository.save(tag);
+            if (post.getTags() != null) {
+                for (Tag tag : post.getTags()) {
+                    if (tag.getPostCount() != null && tag.getPostCount() > 0) {
+                        tag.setPostCount(tag.getPostCount() - 1);
+                    } else {
+                        tag.setPostCount(0L);
+                    }
+                    tagRepository.save(tag);
+                }
             }
             
             log.info("게시글 삭제 완료: ID={}", postId);
             
         } catch (Exception e) {
-            log.error("게시글 삭제 실패: ID={}, 삭제자={}", postId, user.getUserIdx(), e);
+            log.error("게시글 삭제 실패: ID={}, 삭제자={}", postId, user != null ? user.getUserIdx() : "anonymous", e);
             throw new RuntimeException("게시글 삭제 중 오류가 발생했습니다", e);
         }
     }

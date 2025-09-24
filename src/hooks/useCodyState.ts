@@ -284,17 +284,33 @@ export function useCodyState() {
     // 마네킹과 상품 이미지 그리기 (위와 동일한 로직)
     const mannequinImage = canvas.toDataURL('image/png')
 
-    const postData = {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    let anonymousPassword: string | undefined
+
+    if (!token) {
+      const input = window.prompt('게시글 비밀번호를 입력해주세요 (4자 이상).')
+      if (!input || input.trim().length < 4) {
+        throw new Error('비밀번호는 4자 이상이어야 합니다')
+      }
+      anonymousPassword = input.trim()
+    }
+
+    const postData: Record<string, any> = {
       title,
       content,
       selectedProducts: selectedProductsList,
       mannequinImage,
-      tags: ['코디', '패션', '스타일']
+      tags: ['코디', '패션', '스타일'],
+      ...(anonymousPassword ? { anonymousPassword } : {})
     }
 
     const response = await fetch('/api/posts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: 'include',
       body: JSON.stringify(postData)
     })
 

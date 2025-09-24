@@ -25,4 +25,7 @@ public class UpdatePostRequestDto {
 
     @Size(max = 10, message = "이미지는 최대 10개까지 가능합니다")
     private List<String> mediaUrls;
+
+    // 익명 게시글 수정용 비밀번호
+    private String anonymousPassword;
 }

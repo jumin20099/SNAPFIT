@@ -16,6 +16,7 @@ import com.snapfit.api.security.JwtUtil;
 import com.snapfit.api.service.PostService;
 import com.snapfit.api.service.TagService;
 import com.snapfit.api.service.AnonymousUserService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -33,9 +34,12 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Optional;
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.util.StringUtils;
 
 /**
  * 게시글 API 컨트롤러
@@ -56,6 +60,7 @@ public class PostController {
     private final ScrapRepository scrapRepository;
     private final OutfitRepository outfitRepository;
     private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 게시글 생성
@@ -63,7 +68,7 @@ public class PostController {
      * @return 생성된 게시글 정보
      */
     @PostMapping
-    public ResponseEntity<PostResponseDto> createPost(
+    public ResponseEntity<?> createPost(
             @Valid @RequestBody CreatePostRequestDto request,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestHeader(value = "X-Forwarded-For", required = false) String clientIp,
@@ -77,6 +82,7 @@ public class PostController {
             
             // 익명 인덱스 변수 선언
             Integer anonymousIndex = null;
+            String anonymousPassword = request.getAnonymousPassword();
             
             // 1. 인증된 사용자인지 확인
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -97,10 +103,16 @@ public class PostController {
             
             // 2. 익명 사용자인 경우 익명 인덱스 할당
             if (savedUser == null) {
+                String trimmedPassword = anonymousPassword != null ? anonymousPassword.trim() : null;
+                if (!StringUtils.hasText(trimmedPassword) || trimmedPassword.length() < 4) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body(Map.of("error", "익명 게시글 비밀번호는 4자 이상이어야 합니다."));
+                }
                 String userIdentifier = getClientIp(clientIp, realIp);
                 anonymousIndex = anonymousUserService.getOrAssignAnonymousIndex(0L, userIdentifier); // 임시로 postId 0 사용
                 authorName = anonymousUserService.generateAnonymousName(anonymousIndex);
                 log.info("익명 사용자 게시글 작성: userIdentifier={}, anonymousIndex={}", userIdentifier, anonymousIndex);
+                anonymousPassword = trimmedPassword;
             }
             
             // 3. 코디 데이터 처리 (있는 경우)
@@ -114,12 +126,15 @@ public class PostController {
             Post post = Post.builder()
                 .title(request.getTitle())
                 .content(request.getContent())
-                .mediaUrls(request.getMediaUrls().stream().collect(Collectors.toSet()))
+                .mediaUrls(request.getMediaUrls() != null ? request.getMediaUrls().stream().collect(Collectors.toSet()) : new java.util.HashSet<>())
                 .anonymousIndex(anonymousIndex)
                 .build();
             
             // 5. 작성자 설정 (익명 사용자는 null)
             post.setAuthor(savedUser);
+            if (savedUser == null && anonymousPassword != null) {
+                post.setAnonymousPasswordHash(passwordEncoder.encode(anonymousPassword));
+            }
             
             // 5. 코디 연결 (있는 경우)
             if (outfitId != null) {
@@ -343,20 +358,77 @@ public class PostController {
      * @return 수정된 게시글 정보
      */
     @PutMapping("/{postId}")
-    public ResponseEntity<PostResponseDto> updatePost(
+    public ResponseEntity<?> updatePost(
             @PathVariable Long postId,
-            @Valid @RequestBody UpdatePostRequestDto request) {
+            @Valid @RequestBody UpdatePostRequestDto request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
         log.info("게시글 수정 요청: {}", postId);
-        
-        // TODO: 실제 게시글 수정 로직 구현
-        PostResponseDto response = new PostResponseDto();
-        response.setPostId(postId);
-        response.setTitle(request.getTitle());
-        response.setContent(request.getContent());
-        response.setTags(request.getTags());
-        response.setMediaUrls(request.getMediaUrls());
-        
-        return ResponseEntity.ok(response);
+
+        String token = extractToken(authHeader);
+        User currentUser = resolveUserFromAuthHeader(authHeader).orElse(null);
+
+        Post existingPost = postRepository.findByIdWithAuthorAndTags(postId)
+                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
+
+        boolean isAnonymousPost = existingPost.getAuthor() == null;
+        boolean isAnonymousRequest = currentUser == null;
+
+        String providedPassword = request.getAnonymousPassword() != null ? request.getAnonymousPassword().trim() : null;
+
+        if (isAnonymousRequest) {
+            if (!isAnonymousPost) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "인증이 필요합니다."));
+            }
+            if (!StringUtils.hasText(providedPassword)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "비밀번호를 입력해주세요."));
+            }
+            if (existingPost.getAnonymousPasswordHash() == null ||
+                !passwordEncoder.matches(providedPassword, existingPost.getAnonymousPasswordHash())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "비밀번호가 올바르지 않습니다."));
+            }
+        }
+
+        Post updateData = Post.builder().build();
+        updateData.setTitle(request.getTitle().trim());
+        updateData.setContent(request.getContent().trim());
+        if (request.getMediaUrls() != null) {
+            updateData.setMediaUrls(new HashSet<>(request.getMediaUrls()));
+        }
+        String tagString = request.getTags() != null
+                ? request.getTags().stream()
+                    .map(String::trim)
+                    .filter(tag -> !tag.isBlank())
+                    .collect(Collectors.joining(","))
+                : "";
+
+        try {
+            Post updatedPost = postService.updatePost(postId, updateData, currentUser, tagString, isAnonymousRequest);
+
+            Post postForDto = postRepository.findByIdWithAuthorAndTags(postId)
+                    .orElse(updatedPost);
+            if (postForDto.getAuthor() != null) {
+                postForDto.getAuthor().getUserIdx();
+                postForDto.getAuthor().getNickname();
+                postForDto.getAuthor().getProfileImage();
+            }
+
+            return ResponseEntity.ok(convertToDtoWithUserStatus(postForDto, token));
+        } catch (RuntimeException e) {
+            log.error("게시글 수정 실패: {}", e.getMessage());
+            HttpStatus status = HttpStatus.BAD_REQUEST;
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("권한")) {
+                    status = HttpStatus.FORBIDDEN;
+                } else if (e.getMessage().contains("찾을 수 없습니다")) {
+                    status = HttpStatus.NOT_FOUND;
+                }
+            }
+            return ResponseEntity.status(status)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**
@@ -365,48 +437,55 @@ public class PostController {
      * @return 삭제 완료 응답
      */
     @DeleteMapping("/{postId}")
-    public ResponseEntity<?> deletePost(@PathVariable Long postId, 
-                                       @RequestParam(required = false) String token) {
+    public ResponseEntity<?> deletePost(@PathVariable Long postId,
+                                        @RequestHeader(value = "Authorization", required = false) String authHeader,
+                                        @RequestBody(required = false) DeletePostRequestDto request) {
         log.info("게시글 삭제 요청: {}", postId);
-        
-        try {
-            // 임시로 인증 우회 - 현재 사용자를 김주민으로 설정
-            String currentUserId = "87b18a9c-d2ba-4318-b9aa-859e03c5aad7";
-            log.info("게시글 삭제 API 호출됨 - 임시 인증 우회");
-            
-            UUID userId = UUID.fromString(currentUserId);
-            User currentUser = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다"));
-            
-            // 게시글 존재 확인
-            Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다"));
-            
-            // 게시글 작성자 확인 (본인만 삭제 가능)
-            if (!post.canDelete(currentUser)) {
-                log.warn("게시글 삭제 권한 없음: 사용자={}, 게시글작성자={}", currentUser.getUserIdx(), post.getAuthor().getUserIdx());
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "게시글 삭제 권한이 없습니다"));
+
+        String token = extractToken(authHeader);
+        User currentUser = resolveUserFromAuthHeader(authHeader).orElse(null);
+
+        Post existingPost = postRepository.findByIdWithAuthorAndTags(postId)
+                .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다"));
+
+        boolean isAnonymousPost = existingPost.getAuthor() == null;
+        boolean isAnonymousRequest = currentUser == null;
+        String providedPassword = request != null && request.getAnonymousPassword() != null
+                ? request.getAnonymousPassword().trim() : null;
+
+        if (isAnonymousRequest) {
+            if (!isAnonymousPost) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "인증이 필요합니다."));
             }
-            
-            // 실제 게시글 삭제 (소프트 삭제)
-            post.setIsDeleted(true);
-            post.setUpdatedAt(LocalDateTime.now());
-            postRepository.save(post);
-            
-            log.info("게시글 삭제 성공: 게시글ID={}, 사용자={}", postId, currentUser.getUserIdx());
-            
-            return ResponseEntity.ok()
-                .body(Map.of("message", "게시글이 삭제되었습니다"));
-            
-        } catch (IllegalArgumentException e) {
-            log.warn("게시글 삭제 실패: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            log.error("게시글 삭제 오류: 게시글={}, 오류={}", postId, e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "게시글 삭제 중 오류가 발생했습니다"));
+            if (!StringUtils.hasText(providedPassword)) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "비밀번호를 입력해주세요."));
+            }
+            if (existingPost.getAnonymousPasswordHash() == null ||
+                !passwordEncoder.matches(providedPassword, existingPost.getAnonymousPasswordHash())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "비밀번호가 올바르지 않습니다."));
+            }
+        }
+
+        try {
+            postService.deletePost(postId, currentUser, isAnonymousRequest);
+            log.info("게시글 삭제 성공: 게시글ID={}, 사용자={}", postId,
+                    currentUser != null ? currentUser.getUserIdx() : "anonymous");
+            return ResponseEntity.ok(Map.of("message", "게시글이 삭제되었습니다"));
+        } catch (RuntimeException e) {
+            log.error("게시글 삭제 실패: {}", e.getMessage());
+            HttpStatus status = HttpStatus.BAD_REQUEST;
+            if (e.getMessage() != null) {
+                if (e.getMessage().contains("권한")) {
+                    status = HttpStatus.FORBIDDEN;
+                } else if (e.getMessage().contains("찾을 수 없습니다")) {
+                    status = HttpStatus.NOT_FOUND;
+                }
+            }
+            return ResponseEntity.status(status)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -587,6 +666,35 @@ public class PostController {
         }
 
         return dto;
+    }
+
+    private String extractToken(String authHeader) {
+        if (authHeader == null || authHeader.isBlank()) {
+            return null;
+        }
+        if (authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7).trim();
+        }
+        return authHeader.trim();
+    }
+
+    private Optional<User> resolveUserFromAuthHeader(String authHeader) {
+        try {
+            String token = extractToken(authHeader);
+            if (token == null) {
+                return Optional.empty();
+            }
+
+            String email = jwtUtil.getSubjectFromToken(token);
+            if (email == null) {
+                return Optional.empty();
+            }
+
+            return userRepository.findByEmail(email);
+        } catch (Exception e) {
+            log.warn("인증 사용자 해석 실패: {}", e.getMessage());
+            return Optional.empty();
+        }
     }
 
     /**

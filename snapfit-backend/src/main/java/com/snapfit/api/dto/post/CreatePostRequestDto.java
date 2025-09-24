@@ -29,6 +29,9 @@ public class CreatePostRequestDto {
     // 코디 관련 필드 (선택사항)
     private CodyData codyData;
 
+    // 익명 사용자 비밀번호 (로그인하지 않은 경우 필수)
+    private String anonymousPassword;
+
     @Data
     public static class CodyData {
         private String name;

@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 interface UseToggleLikeOptions {
   targetIdx: number;
-  targetType: 'product' | 'brand' | 'outfit';
+  targetType: 'product' | 'brand' | 'outfit' | 'post';
   onSuccess?: (data: { liked: boolean; count: number }) => void;
   onError?: (error: Error) => void;
 }

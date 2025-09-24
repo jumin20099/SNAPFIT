@@ -31,19 +31,21 @@ export function useBatchReactionStatus({
     queryFn: async () => {
       if (!hasIds) return {};
 
-      const token = localStorage.getItem('token');
-      if (!token) return {};
-
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const response = await fetch('/api/reactions/status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
+        credentials: 'include',
         body: JSON.stringify({ postIds, productIds, commentIds })
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          return {};
+        }
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
 

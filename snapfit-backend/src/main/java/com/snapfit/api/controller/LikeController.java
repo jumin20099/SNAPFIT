@@ -1,18 +1,24 @@
 package com.snapfit.api.controller;
 
-import com.snapfit.api.entity.Like.TargetType;
 import com.snapfit.api.entity.Like;
+import com.snapfit.api.entity.Like.TargetType;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.security.CustomUserDetails;
 import com.snapfit.api.service.LikeService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/likes")
@@ -30,7 +36,9 @@ public class LikeController {
 
     @PostMapping("/toggle")
     public ResponseEntity<?> toggle(@RequestBody Map<String, Object> request,
-                                    @AuthenticationPrincipal CustomUserDetails principal) {
+                                    @AuthenticationPrincipal CustomUserDetails principal,
+                                    @CookieValue(value = "snapfit_guest_id", required = false) String guestToken,
+                                    HttpServletRequest httpRequest) {
         try {
             // postId 또는 targetIdx 중 하나를 사용
             Long targetIdx = null;
@@ -58,12 +66,42 @@ public class LikeController {
                 type = TargetType.valueOf(targetType.toUpperCase());
             }
             
-            boolean liked = likeService.toggleLike(current(principal), targetIdx, type);
+            User user = null;
+            if (principal != null) {
+                user = current(principal);
+            }
+
+            ResponseCookie responseCookie = null;
+            String resolvedGuestToken = guestToken;
+            if (user == null) {
+                if (!StringUtils.hasText(resolvedGuestToken)) {
+                    resolvedGuestToken = UUID.randomUUID().toString();
+                    responseCookie = ResponseCookie.from("snapfit_guest_id", resolvedGuestToken)
+                            .httpOnly(true)
+                            .secure(httpRequest.isSecure())
+                            .maxAge(Duration.ofDays(30))
+                            .sameSite("Lax")
+                            .path("/")
+                            .build();
+                }
+            }
+
+            String guestIdx = null;
+            if (user == null && StringUtils.hasText(resolvedGuestToken)) {
+                guestIdx = buildGuestIdentifier(resolvedGuestToken);
+            }
+
+            boolean liked = likeService.toggleLike(user, guestIdx, targetIdx, type);
             long count = likeService.countLikes(targetIdx, type);
-            
+
             System.out.println("좋아요 토글 결과 - liked: " + liked + ", count: " + count);
-            
-            return ResponseEntity.ok().body(java.util.Map.of("liked", liked, "count", count));
+
+            ResponseEntity.BodyBuilder builder = ResponseEntity.ok();
+            if (responseCookie != null) {
+                builder.header(HttpHeaders.SET_COOKIE, responseCookie.toString());
+            }
+
+            return builder.body(java.util.Map.of("liked", liked, "count", count));
         } catch (Exception e) {
             System.err.println("좋아요 토글 오류: " + e.getMessage());
             e.printStackTrace();
@@ -170,4 +208,8 @@ public class LikeController {
             return ResponseEntity.ok(List.of());
         }
     }
-} 
+
+    private String buildGuestIdentifier(String guestToken) {
+        return guestToken;
+    }
+}

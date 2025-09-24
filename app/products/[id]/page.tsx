@@ -3,9 +3,10 @@
 import Image from 'next/image'
 import { formatCurrencyKRW } from '@/lib/utils'
 import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useCart } from '@/contexts/CartContext'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, Heart, Check } from 'lucide-react'
+import { ShoppingCart, Heart, Check, ChevronRight } from 'lucide-react'
 import CartSuccessModal from '@/components/ui/CartSuccessModal'
 import { useRecentProducts } from '@/hooks/useRecentProducts'
 import { StickyHeader } from '@/components/ui/StickyHeader'
@@ -16,6 +17,7 @@ import ReviewSection from '@/components/product/ReviewSection'
 import InquirySection from '@/components/product/InquirySection'
 import OutfitSection from '@/components/product/OutfitSection'
 import SizeSection from '@/components/product/SizeSection'
+import { useStores } from '@/hooks/useStores'
 
 type Product = {
   productIdx: number
@@ -26,6 +28,7 @@ type Product = {
   majorCategory?: string
   subCategory?: string
   storeName?: string
+  storeIdx?: number
 }
 
 type ProductDetailDto = {
@@ -50,6 +53,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const { addItem } = useCart()
   const { addRecentProduct } = useRecentProducts()
   const hasFetched = useRef<string | null>(null)
+  const router = useRouter()
+  const { data: stores } = useStores()
   
   // 상품 ID로 배치 상태 조회
   const productId = detail?.product?.productIdx
@@ -193,6 +198,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
   const p = detail.product
   const priceFormatted = formatCurrencyKRW(p.productPrice)
+  const brand = p.storeIdx ? stores?.find((store) => store.storeIdx === p.storeIdx) : undefined
+  const brandName = brand?.storeName || p.storeName || '브랜드 정보'
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -275,6 +282,35 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
               className="px-4 py-2 rounded-lg transition-colors flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700"
             />
           </div>
+
+          {p.storeIdx && (
+            <button
+              type="button"
+              onClick={() => router.push(`/brands/${p.storeIdx}`)}
+              className="group mt-4 w-full rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/60 p-4 shadow-sm transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label={`${brandName} 브랜드 상세 페이지로 이동`}
+            >
+              <div className="flex items-center gap-4">
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-100">
+                  <Image
+                    src={brand?.storeLogo || p.productImage || '/placeholder.svg'}
+                    alt={`${brandName} 로고`}
+                    width={64}
+                    height={64}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-xs uppercase tracking-wide text-blue-500">브랜드</p>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{brandName}</h2>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                    {brand?.storeLink ? '스토어 방문하고 브랜드 스토리를 확인해보세요.' : '브랜드 상세 페이지에서 더 많은 정보를 확인할 수 있어요.'}
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400 transition-colors group-hover:text-blue-500" />
+              </div>
+            </button>
+          )}
 
           <ul className="text-sm text-gray-500 space-y-1">
             <li>
@@ -408,5 +444,3 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     </div>
   )
 }
-
-
