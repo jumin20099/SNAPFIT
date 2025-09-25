@@ -43,8 +43,8 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
   // 상품 ID 목록 추출
   const productIds = apiProducts?.map(product => product.productIdx).filter(id => id !== undefined) as number[] || []
   
-  // 배치 상태 조회
-  const { data: batchReactionStatus } = useBatchReactionStatus({
+  // 배치 상태 조회 (타입 안전)
+  const { data: batchReactionStatus, manager: reactionManager } = useBatchReactionStatus({
     productIds,
     enabled: productIds.length > 0
   })
@@ -64,11 +64,13 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
       transformed.storeName = getStoreName(transformed.storeIdx);
     }
     
-    // 배치 상태 조회 결과로 좋아요 상태 업데이트
-    const status = (batchReactionStatus as any)?.[`product_${apiProduct.productIdx}`]
-    if (status) {
-      transformed.isLiked = status.liked
-      transformed.likeCount = status.likeCount
+    // 배치 상태 조회 결과로 좋아요 상태 업데이트 (타입 안전)
+    if (apiProduct.productIdx) {
+      const status = reactionManager.getProductStatus(apiProduct.productIdx)
+      if (status) {
+        transformed.isLiked = status.liked
+        transformed.likeCount = status.likeCount
+      }
     }
     
     return transformed;

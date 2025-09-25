@@ -60,7 +60,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // 배치 상태 조회 훅
-  const { data: batchReactionStatus } = useBatchReactionStatus({
+  const { data: batchReactionStatus, manager: reactionManager } = useBatchReactionStatus({
     postIds: posts.map(p => p.postId),
     enabled: posts.length > 0
   });
@@ -116,8 +116,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       const postsWithStatus = data.content.map(post => {
         // 배치 상태가 로드된 경우에만 적용, 없으면 백엔드 기본값 사용
         if (batchReactionStatus) {
-          const statusKey = `post_${post.postId}`;
-          const status = (batchReactionStatus as any)[statusKey];
+          const status = reactionManager.getPostStatus(post.postId);
           
           return {
             ...post,
@@ -178,8 +177,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
     if (batchReactionStatus && posts.length > 0) {
       setPosts(prevPosts => 
         prevPosts.map(post => {
-          const statusKey = `post_${post.postId}`;
-          const status = (batchReactionStatus as any)[statusKey];
+          const status = reactionManager.getPostStatus(post.postId);
           
           if (status) {
             return {

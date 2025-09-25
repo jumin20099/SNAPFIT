@@ -32,8 +32,8 @@ export default function ScrapsPage() {
   // 스크랩한 게시글 ID 추출
   const scrapPostIds = scraps.map(scrap => scrap.postId)
   
-  // 배치 상태 조회
-  const { data: batchReactionStatus } = useBatchReactionStatus({
+  // 배치 상태 조회 (타입 안전)
+  const { data: batchReactionStatus, manager: reactionManager } = useBatchReactionStatus({
     postIds: scrapPostIds,
     enabled: scrapPostIds.length > 0
   })
@@ -226,11 +226,11 @@ export default function ScrapsPage() {
                           targetIdx={scrap.postId}
                           targetType="outfit"
                           initialActive={
-                            (batchReactionStatus as any)?.[`post_${scrap.postId}`]?.liked ?? 
+                            reactionManager.getPostStatus(scrap.postId)?.liked ?? 
                             scrap.liked
                           }
                           initialCount={
-                            (batchReactionStatus as any)?.[`post_${scrap.postId}`]?.likeCount ?? 
+                            reactionManager.getPostStatus(scrap.postId)?.likeCount ?? 
                             scrap.likeCount
                           }
                           className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -238,11 +238,11 @@ export default function ScrapsPage() {
                         <ScrapButton
                           postId={scrap.postId}
                           initialActive={
-                            (batchReactionStatus as any)?.[`post_${scrap.postId}`]?.scraped ?? 
+                            reactionManager.getPostStatus(scrap.postId)?.scraped ?? 
                             scrap.scraped
                           }
                           initialCount={
-                            (batchReactionStatus as any)?.[`post_${scrap.postId}`]?.scrapCount ?? 
+                            reactionManager.getPostStatus(scrap.postId)?.scrapCount ?? 
                             scrap.scrapCount
                           }
                           className="p-2 hover:bg-gray-100 rounded-full transition-colors"

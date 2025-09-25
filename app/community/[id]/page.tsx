@@ -450,9 +450,8 @@ export default function PostDetailPage() {
             })
           }
 
-          // 배치 상태에서 현재 게시글의 상태 가져오기
-          const statusKey = `post_${post.postId}`;
-          const status = batchReactionStatus?.[statusKey as keyof typeof batchReactionStatus] as any;
+          // 배치 상태에서 현재 게시글의 상태 가져오기 (타입 안전)
+          const status = reactionManager.getPostStatus(post.postId);
           
           return {
             postId: post.postId,
@@ -578,7 +577,7 @@ export default function PostDetailPage() {
 
   // 통합 배치 상태 조회 (게시글 + 댓글) - 게시글 변경 시 자동 실행
   const allCommentIds = Object.values(commentsByPost).flat().map(comment => comment.commentId)
-  const { data: batchReactionStatus, refetch: refetchBatchStatus } = useBatchReactionStatus({
+  const { data: batchReactionStatus, manager: reactionManager, refetch: refetchBatchStatus } = useBatchReactionStatus({
     postIds: posts.map(p => p.postId),
     commentIds: allCommentIds,
     enabled: posts.length > 0 // 게시글이 있을 때 자동 실행
@@ -591,8 +590,7 @@ export default function PostDetailPage() {
       
       setPosts(prevPosts => {
         const updatedPosts = prevPosts.map(post => {
-          const statusKey = `post_${post.postId}`;
-          const status = (batchReactionStatus as any)[statusKey];
+          const status = reactionManager.getPostStatus(post.postId);
           
           if (status) {
             console.log(`게시글 ${post.postId} 상태 업데이트:`, {
@@ -661,7 +659,7 @@ export default function PostDetailPage() {
         
         Object.keys(updatedComments).forEach(postId => {
           updatedComments[parseInt(postId)] = updatedComments[parseInt(postId)].map(comment => {
-            const status = (batchReactionStatus as any)[`comment_${comment.commentId}`]
+            const status = reactionManager.getCommentStatus(comment.commentId)
             if (status) {
               const newComment = {
                 ...comment,

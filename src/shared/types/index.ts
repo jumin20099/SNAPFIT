@@ -169,6 +169,30 @@ export interface Scrap {
   createdAt: string;
 }
 
+// 배치 반응 상태 타입 정의 (실무 기준)
+export interface ReactionStatusItem {
+  liked: boolean;
+  likeCount: number;
+  scraped?: boolean;
+  scrapCount?: number;
+}
+
+export type BatchReactionStatusKeys = 
+  | `product_${string}` 
+  | `post_${string}` 
+  | `comment_${string}`;
+
+export type BatchReactionStatusResult = {
+  [K in BatchReactionStatusKeys]?: ReactionStatusItem;
+};
+
+// 타입 안전한 배치 상태 접근 유틸리티
+export interface BatchReactionStatusUtils {
+  getProductStatus(productId: string | number): ReactionStatusItem | undefined;
+  getPostStatus(postId: string | number): ReactionStatusItem | undefined;
+  getCommentStatus(commentId: string | number): ReactionStatusItem | undefined;
+}
+
 // 팔로우 타입
 export interface Follow {
   id: number;

@@ -58,8 +58,8 @@ export function CartPage() {
   const recentProductIds = recentProducts.map(product => parseInt(product.id)).filter(id => !isNaN(id))
   const allProductIds = [...new Set([...cartProductIds, ...recentProductIds])]
   
-  // 배치 상태 조회
-  const { data: batchReactionStatus } = useBatchReactionStatus({
+  // 배치 상태 조회 (타입 안전)
+  const { data: batchReactionStatus, manager: reactionManager } = useBatchReactionStatus({
     productIds: allProductIds,
     enabled: allProductIds.length > 0
   })
@@ -391,11 +391,11 @@ export function CartPage() {
                           targetIdx={parseInt(item.productId || item.id)}
                           targetType="product"
                           initialActive={
-                            (batchReactionStatus as any)?.[`product_${item.productId || item.id}`]?.liked ?? 
-                            item.isLiked
+                            reactionManager.getProductStatus(item.productId || item.id)?.liked ?? 
+                            item.isLiked ?? false
                           }
                           initialCount={
-                            (batchReactionStatus as any)?.[`product_${item.productId || item.id}`]?.likeCount ?? 
+                            reactionManager.getProductStatus(item.productId || item.id)?.likeCount ?? 
                             0
                           }
                           className={`p-1 angular-rounded transition-colors ${
@@ -513,11 +513,11 @@ export function CartPage() {
                         targetIdx={parseInt(product.id)}
                         targetType="product"
                         initialActive={
-                          (batchReactionStatus as any)?.[`product_${product.id}`]?.liked ?? 
+                          reactionManager.getProductStatus(product.id)?.liked ?? 
                           likedProducts.has(product.id)
                         }
                         initialCount={
-                          (batchReactionStatus as any)?.[`product_${product.id}`]?.likeCount ?? 
+                          reactionManager.getProductStatus(product.id)?.likeCount ?? 
                           0
                         }
                         className={`w-6 h-6 flex items-center justify-center ${

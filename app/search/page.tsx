@@ -24,7 +24,7 @@ export default function SearchPage() {
 
   // 통합 배치 상태 조회
   const productIds = products.map(p => parseInt(p.id)).filter(id => !isNaN(id))
-  const { data: reactionStatus } = useBatchReactionStatus({
+  const { data: reactionStatus, manager: reactionManager } = useBatchReactionStatus({
     productIds,
     enabled: products.length > 0
   })
@@ -44,7 +44,7 @@ export default function SearchPage() {
         
         const data = await response.json()
         const productsWithStatus = (data.products || []).map((product: Product) => {
-          const status = (reactionStatus as any)?.[`product_${product.id}`]
+          const status = reactionManager.getProductStatus(product.id)
           return {
             ...product,
             isLiked: status?.liked || false,
@@ -69,7 +69,7 @@ export default function SearchPage() {
     if (reactionStatus && products.length > 0) {
       setProducts(prevProducts => 
         prevProducts.map(product => {
-          const status = (reactionStatus as any)[`product_${product.id}`]
+          const status = reactionManager.getProductStatus(product.id)
           if (status) {
             return {
               ...product,
