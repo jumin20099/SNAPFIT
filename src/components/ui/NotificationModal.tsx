@@ -312,12 +312,12 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
                               </h3>
                               <div className="flex items-center gap-1 ml-2">
                                 <span className="text-xs text-gray-400">
-                                  {formatDate(notification.createdAt || notification.timestamp)}
+                                  {formatDate(notification.createdAt || notification.timestamp || '')}
                                 </span>
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => deleteNotification(notification.id)}
+                                  onClick={() => deleteNotification(String(notification.id))}
                                   className="p-1 h-6 w-6 text-gray-400 hover:text-red-500"
                                 >
                                   <Trash2 className="w-3 h-3" />
@@ -331,7 +331,7 @@ export function NotificationModal({ isOpen, onClose }: NotificationModalProps) {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => markAsRead(notification.id)}
+                                onClick={() => markAsRead(String(notification.id))}
                                 className="mt-2 text-xs text-blue-600 hover:text-blue-700 p-0 h-auto"
                               >
                                 읽음 처리

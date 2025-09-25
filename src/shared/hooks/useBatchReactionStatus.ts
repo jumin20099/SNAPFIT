@@ -53,6 +53,6 @@ export function useBatchReactionStatus({
     },
     enabled: enabled && hasIds,
     staleTime: 30 * 1000, // 30초 (댓글 상태 변경 시 빠른 반영)
-    cacheTime: 2 * 60 * 1000, // 2분
+    gcTime: 2 * 60 * 1000, // 2분
   });
 }

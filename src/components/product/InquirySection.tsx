@@ -61,7 +61,7 @@ export default function InquirySection({
     try {
       setLoading(true)
       const currentPage = reset ? 0 : page
-      const data = await apiClient.getInquiries(productId, currentPage, 10)
+      const data = await apiClient.getInquiries(Number(productId), currentPage, 10)
       const newInquiries = data.content || []
       
       if (reset) {
@@ -84,7 +84,7 @@ export default function InquirySection({
     if (!newInquiry.title.trim() || !newInquiry.content.trim()) return
 
     try {
-      await apiClient.createInquiry(productId, newInquiry)
+      await apiClient.createInquiry(Number(productId), newInquiry)
 
       setNewInquiry({ title: '', content: '', isPrivate: false })
       setShowWriteForm(false)
@@ -100,7 +100,7 @@ export default function InquirySection({
     if (!newAnswer.trim()) return
 
     try {
-      await apiClient.answerInquiry(productId, inquiryId, newAnswer)
+      await apiClient.answerInquiry(Number(productId), inquiryId, newAnswer)
 
       setNewAnswer('')
       setShowAnswerForm(null)
@@ -116,7 +116,7 @@ export default function InquirySection({
     if (!confirm('이 문의를 삭제하시겠습니까?')) return
 
     try {
-      await apiClient.deleteInquiry(productId, inquiryId)
+      await apiClient.deleteInquiry(Number(productId), inquiryId)
       fetchInquiries(true) // 문의 목록 새로고침
       alert('문의가 삭제되었습니다.')
     } catch (error) {

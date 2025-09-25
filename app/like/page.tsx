@@ -31,6 +31,7 @@ interface LikedProduct {
   category: string
   storeName: string
   liked: boolean
+  likeCount?: number
 }
 
 interface LikedBrand {
@@ -40,6 +41,7 @@ interface LikedBrand {
   description: string
   followerCount: number
   liked: boolean
+  likeCount?: number
 }
 
 export default function LikedItemsPage() {

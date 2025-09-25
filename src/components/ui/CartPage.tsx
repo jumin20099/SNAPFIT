@@ -13,7 +13,7 @@ import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
 
 interface CartItem {
   id: string
-  productId: string
+  productId?: string
   name: string
   brand: string
   price: number
@@ -54,7 +54,7 @@ export function CartPage() {
   const [user, setUser] = useState<any>(null)
   
   // 장바구니 아이템과 최근 본 상품 ID 추출
-  const cartProductIds = cartItems.map(item => parseInt(item.productId)).filter(id => !isNaN(id))
+  const cartProductIds = cartItems.map(item => parseInt((item as any).productId || item.id)).filter(id => !isNaN(id))
   const recentProductIds = recentProducts.map(product => parseInt(product.id)).filter(id => !isNaN(id))
   const allProductIds = [...new Set([...cartProductIds, ...recentProductIds])]
   
@@ -360,7 +360,7 @@ export function CartPage() {
               <div
                 key={item.id}
                 className="bg-white angular-card p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => goToProduct(item.productId)}
+                onClick={() => goToProduct(item.productId || item.id)}
               >
                 <div className="flex gap-4">
                   <div className="w-20 h-20 bg-gray-100 angular-rounded flex-shrink-0">
@@ -388,14 +388,14 @@ export function CartPage() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         <LikeButton
-                          targetIdx={parseInt(item.productId)}
+                          targetIdx={parseInt(item.productId || item.id)}
                           targetType="product"
                           initialActive={
-                            batchReactionStatus?.[`product_${item.productId}`]?.liked ?? 
+                            (batchReactionStatus as any)?.[`product_${item.productId || item.id}`]?.liked ?? 
                             item.isLiked
                           }
                           initialCount={
-                            batchReactionStatus?.[`product_${item.productId}`]?.likeCount ?? 
+                            (batchReactionStatus as any)?.[`product_${item.productId || item.id}`]?.likeCount ?? 
                             0
                           }
                           className={`p-1 angular-rounded transition-colors ${
@@ -513,11 +513,11 @@ export function CartPage() {
                         targetIdx={parseInt(product.id)}
                         targetType="product"
                         initialActive={
-                          batchReactionStatus?.[`product_${product.id}`]?.liked ?? 
+                          (batchReactionStatus as any)?.[`product_${product.id}`]?.liked ?? 
                           likedProducts.has(product.id)
                         }
                         initialCount={
-                          batchReactionStatus?.[`product_${product.id}`]?.likeCount ?? 
+                          (batchReactionStatus as any)?.[`product_${product.id}`]?.likeCount ?? 
                           0
                         }
                         className={`w-6 h-6 flex items-center justify-center ${

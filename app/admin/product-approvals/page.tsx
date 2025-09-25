@@ -22,6 +22,8 @@ interface PartnerProduct {
   submittedDate: string
   createdAt: string
   updatedAt: string
+  hasPendingUpdateRequest?: boolean
+  updateRequestStatus?: string
 }
 
 export default function ProductApprovalsPage() {

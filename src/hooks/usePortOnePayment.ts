@@ -58,8 +58,7 @@ export function usePortOnePayment() {
         currency: 'KRW',
         payMethod: 'EASY_PAY',
         easyPay: {
-          use: true,
-          easyPayMethod: 'KAKAOPAY'
+          method: 'KAKAOPAY'
         },
         confirmUrl: `${window.location.origin}/orders/success?orderId=${paymentData.orderId}`,
         cancelUrl: `${window.location.origin}/cart`,
@@ -72,12 +71,12 @@ export function usePortOnePayment() {
             primary: '#3C1E1E',
           },
         },
-      })
+      } as any)
 
       console.log('PortOne 결제 응답:', response)
 
       // PortOne v2 SDK는 response.code가 아닌 다른 방식으로 응답 처리
-      if (response.paymentId && response.paymentToken) {
+      if (response && response.paymentId && response.paymentToken) {
         // 결제 성공으로 간주 (실제로는 PortOne이 confirmUrl로 리다이렉트할 것)
         console.log('PortOne 결제 성공:', {
           paymentId: response.paymentId,

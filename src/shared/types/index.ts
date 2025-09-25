@@ -25,6 +25,7 @@ export interface Product {
   reviewCount?: number;
   // API 호환성을 위한 필드들
   product_id?: string;
+  product_idx?: number;
   product_name?: string;
   product_price?: number;
   product_image?: string;
@@ -33,6 +34,12 @@ export interface Product {
   store_name?: string;
   rating_score?: number;
   review_count?: number;
+  // 날짜 필드들
+  createdAt?: string;
+  created_at?: string;
+  // 좋아요 관련 필드들
+  isLiked?: boolean;
+  likeCount?: number;
 }
 
 // 사용자 타입

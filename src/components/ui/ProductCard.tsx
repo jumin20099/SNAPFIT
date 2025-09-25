@@ -75,8 +75,8 @@ export function ProductCard({ product, onLike, onClick, variant = 'grid' }: Prod
           <LikeButton
             targetIdx={product.productIdx || parseInt(product.id) || 0}
             targetType="product"
-            initialActive={product.isLiked || product.likedByUser || false}
-            initialCount={product.likeCount || product.likesCount || 0}
+            initialActive={(product as any).isLiked || (product as any).likedByUser || false}
+            initialCount={(product as any).likeCount || (product as any).likesCount || 0}
             className="w-8 h-8 flex items-center justify-center"
           />
         </div>

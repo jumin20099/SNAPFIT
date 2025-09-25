@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useBatchReactionStatus } from './useBatchReactionStatus';
+import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus';
 
 interface Post {
   postId: number;
@@ -117,7 +117,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
         // 배치 상태가 로드된 경우에만 적용, 없으면 백엔드 기본값 사용
         if (batchReactionStatus) {
           const statusKey = `post_${post.postId}`;
-          const status = batchReactionStatus[statusKey];
+          const status = (batchReactionStatus as any)[statusKey];
           
           return {
             ...post,
@@ -179,7 +179,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       setPosts(prevPosts => 
         prevPosts.map(post => {
           const statusKey = `post_${post.postId}`;
-          const status = batchReactionStatus[statusKey];
+          const status = (batchReactionStatus as any)[statusKey];
           
           if (status) {
             return {

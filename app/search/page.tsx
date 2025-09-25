@@ -44,7 +44,7 @@ export default function SearchPage() {
         
         const data = await response.json()
         const productsWithStatus = (data.products || []).map((product: Product) => {
-          const status = reactionStatus?.[`product_${product.id}`]
+          const status = (reactionStatus as any)?.[`product_${product.id}`]
           return {
             ...product,
             isLiked: status?.liked || false,
@@ -69,7 +69,7 @@ export default function SearchPage() {
     if (reactionStatus && products.length > 0) {
       setProducts(prevProducts => 
         prevProducts.map(product => {
-          const status = reactionStatus[`product_${product.id}`]
+          const status = (reactionStatus as any)[`product_${product.id}`]
           if (status) {
             return {
               ...product,

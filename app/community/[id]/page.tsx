@@ -452,7 +452,7 @@ export default function PostDetailPage() {
 
           // 배치 상태에서 현재 게시글의 상태 가져오기
           const statusKey = `post_${post.postId}`;
-          const status = batchReactionStatus?.[statusKey];
+          const status = batchReactionStatus?.[statusKey as keyof typeof batchReactionStatus] as any;
           
           return {
             postId: post.postId,
@@ -592,7 +592,7 @@ export default function PostDetailPage() {
       setPosts(prevPosts => {
         const updatedPosts = prevPosts.map(post => {
           const statusKey = `post_${post.postId}`;
-          const status = batchReactionStatus[statusKey];
+          const status = (batchReactionStatus as any)[statusKey];
           
           if (status) {
             console.log(`게시글 ${post.postId} 상태 업데이트:`, {
@@ -638,7 +638,7 @@ export default function PostDetailPage() {
   }, [postId]) // postId만 의존성으로 설정
 
   // 배치 상태 조회 결과로 댓글 상태 업데이트 (무한루프 방지)
-  const prevBatchStatusRef = useRef(null)
+  const prevBatchStatusRef = useRef<string | null>(null)
   
   useEffect(() => {
     if (batchReactionStatus && allCommentIds.length > 0) {
@@ -661,7 +661,7 @@ export default function PostDetailPage() {
         
         Object.keys(updatedComments).forEach(postId => {
           updatedComments[parseInt(postId)] = updatedComments[parseInt(postId)].map(comment => {
-            const status = batchReactionStatus[`comment_${comment.commentId}`]
+            const status = (batchReactionStatus as any)[`comment_${comment.commentId}`]
             if (status) {
               const newComment = {
                 ...comment,
@@ -1371,7 +1371,7 @@ export default function PostDetailPage() {
                 <LikeButton
                   targetIdx={post.postId}
                   targetType="post"
-                  initialActive={post.liked}
+                  initialActive={post.liked || false}
                   initialCount={post.likeCount}
                   className="p-2"
                 />
@@ -1395,7 +1395,7 @@ export default function PostDetailPage() {
                 <div className="ml-auto">
                   <ScrapButton
                     postId={post.postId}
-                    initialActive={post.scraped}
+                    initialActive={post.scraped || false}
                     initialCount={post.scrapCount}
                     className="p-2"
                   />

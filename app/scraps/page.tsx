@@ -226,11 +226,11 @@ export default function ScrapsPage() {
                           targetIdx={scrap.postId}
                           targetType="outfit"
                           initialActive={
-                            batchReactionStatus?.[`post_${scrap.postId}`]?.liked ?? 
+                            (batchReactionStatus as any)?.[`post_${scrap.postId}`]?.liked ?? 
                             scrap.liked
                           }
                           initialCount={
-                            batchReactionStatus?.[`post_${scrap.postId}`]?.likeCount ?? 
+                            (batchReactionStatus as any)?.[`post_${scrap.postId}`]?.likeCount ?? 
                             scrap.likeCount
                           }
                           className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -238,11 +238,11 @@ export default function ScrapsPage() {
                         <ScrapButton
                           postId={scrap.postId}
                           initialActive={
-                            batchReactionStatus?.[`post_${scrap.postId}`]?.scraped ?? 
+                            (batchReactionStatus as any)?.[`post_${scrap.postId}`]?.scraped ?? 
                             scrap.scraped
                           }
                           initialCount={
-                            batchReactionStatus?.[`post_${scrap.postId}`]?.scrapCount ?? 
+                            (batchReactionStatus as any)?.[`post_${scrap.postId}`]?.scrapCount ?? 
                             scrap.scrapCount
                           }
                           className="p-2 hover:bg-gray-100 rounded-full transition-colors"
