@@ -41,7 +41,7 @@ class LikeServiceTest {
         when(likeRepository.findByUserAndTargetIdxAndTargetType(user, 20L, Like.TargetType.PRODUCT))
                 .thenReturn(Optional.empty());
 
-        boolean liked = likeService.toggleLike(user, 20L, Like.TargetType.PRODUCT);
+        boolean liked = likeService.toggleLike(user, null, 20L, Like.TargetType.PRODUCT);
 
         assertThat(liked).isTrue();
         verify(likeRepository).save(any(Like.class));
@@ -54,7 +54,7 @@ class LikeServiceTest {
         when(likeRepository.findByUserAndTargetIdxAndTargetType(user, 30L, Like.TargetType.PRODUCT))
                 .thenReturn(Optional.of(existing));
 
-        boolean liked = likeService.toggleLike(user, 30L, Like.TargetType.PRODUCT);
+        boolean liked = likeService.toggleLike(user, null, 30L, Like.TargetType.PRODUCT);
 
         assertThat(liked).isFalse();
         verify(likeRepository).delete(existing);
