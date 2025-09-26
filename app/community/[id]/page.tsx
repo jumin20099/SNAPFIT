@@ -418,13 +418,15 @@ export default function PostDetailPage() {
     setLoading(true)
     setError(null) // 에러 상태 초기화
     try {
-      // 백엔드 API URL (환경 변수 사용)
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
-      
-      // 토큰 가져오기
+      // Next.js API 라우트 사용 (프록시를 통해 백엔드 호출)
       const token = localStorage.getItem('token')
       
-      const response = await fetch(`${API_BASE_URL}/api/posts?page=${page}&size=10`, {
+      // 특정 게시글을 포함한 목록 요청 (첫 페이지인 경우)
+      const url = page === 0 
+        ? `/api/posts?page=${page}&size=10&includePostId=${postId}`
+        : `/api/posts?page=${page}&size=10`
+      
+      const response = await fetch(url, {
         headers: {
           ...(token && { 'Authorization': `Bearer ${token}` })
         }
@@ -529,7 +531,14 @@ export default function PostDetailPage() {
           const sortedNewPosts = transformedPosts.sort((a: Post, b: Post) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           )
-          setPosts(prev => [...prev, ...sortedNewPosts])
+          setPosts(prev => {
+            const updatedPosts = [...prev, ...sortedNewPosts]
+            // 새로 추가된 게시글들의 댓글 로드
+            setTimeout(() => {
+              fetchAllComments(false, sortedNewPosts)
+            }, 100)
+            return updatedPosts
+          })
           // 무한 스크롤로 새 게시글이 추가되면 useBatchReactionStatus 훅이 자동으로 실행됨
           console.log('무한 스크롤로 새 게시글 추가됨')
         }
@@ -749,8 +758,17 @@ export default function PostDetailPage() {
         console.log('게시글이 없어서 댓글을 로드할 수 없습니다')
         return
       }
+
+      // 이미 댓글이 로드된 게시글은 제외 (중복 로딩 방지)
+      const postsNeedingComments = postsToLoad.filter(post => !commentsByPost[post.postId])
+      console.log('댓글이 필요한 게시글:', postsNeedingComments.map(p => p.postId))
       
-      const commentPromises = postsToLoad.map(async (post) => {
+      if (postsNeedingComments.length === 0) {
+        console.log('모든 게시글의 댓글이 이미 로드되어 있습니다')
+        return
+      }
+      
+      const commentPromises = postsNeedingComments.map(async (post) => {
         const sortParam = usePopularSort ? '?sortBy=popular' : '?sortBy=time'
         console.log(`댓글 API 호출: /api/comments/posts/${post.postId}${sortParam}`)
         
@@ -780,7 +798,11 @@ export default function PostDetailPage() {
         console.log(`게시글 ${postId} 댓글 수:`, comments.length)
       })
       
-      setCommentsByPost(commentsMap)
+      // 기존 댓글 상태와 새 댓글 상태를 병합
+      setCommentsByPost(prevComments => ({
+        ...prevComments,
+        ...commentsMap
+      }))
       console.log('댓글 상태 설정 완료:', commentsMap)
     } catch (error) {
       console.error('댓글 로드 실패:', error)
