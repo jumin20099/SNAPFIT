@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Download, Share2, Check, Copy } from 'lucide-react'
+import { X, Download, Share2, Check, Copy, User } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PlacedItem } from '@/entities/cody/model'
 import { saveOutfitToDatabase, type OutfitData } from '@/lib/outfit-api'
@@ -29,10 +30,12 @@ export function CodySaveModal({
   codyData, 
   onSaveToCommunity 
 }: CodySaveModalProps) {
+  const router = useRouter()
   const [isSaved, setIsSaved] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [codyName, setCodyName] = useState('')
+  const [isPublic, setIsPublic] = useState(true) // 공개/비공개 상태
 
   // 코디를 이미지로 다운로드
   const handleDownloadImage = async () => {
@@ -119,7 +122,8 @@ export function CodySaveModal({
         name: codyName.trim(),
         items: codyData.items,
         background: codyData.background,
-        timestamp: codyData.timestamp
+        timestamp: codyData.timestamp,
+        isPublic: isPublic
       }
       
       const savedOutfit = await saveOutfitToDatabase(outfitData)
@@ -198,6 +202,14 @@ export function CodySaveModal({
               {/* 액션 버튼들 */}
               <div className="space-y-3">
                 <Button
+                  onClick={() => router.push('/me')}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  마이페이지에서 확인
+                </Button>
+                
+                <Button
                   onClick={handleDownloadImage}
                   disabled={isDownloading}
                   className="w-full"
@@ -234,6 +246,53 @@ export function CodySaveModal({
                 />
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   {codyName.length}/50
+                </div>
+              </div>
+
+              {/* 공개/비공개 설정 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  공개 여부
+                </label>
+                <div className="space-y-3">
+                  {/* 공개 여부 토글 */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsPublic(!isPublic)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          isPublic ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            isPublic ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                      <div>
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {isPublic ? '공개' : '비공개'}
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {isPublic 
+                            ? '다른 사용자들이 볼 수 있습니다' 
+                            : '나만 볼 수 있습니다'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 공개 시 노출 안내 */}
+                  {isPublic && (
+                    <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        💡 <strong>공개 시 노출 안내:</strong> 이 코디는 커뮤니티 페이지의 프로필과 연관 상품에 노출될 수 있습니다.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 

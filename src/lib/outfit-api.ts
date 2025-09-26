@@ -11,6 +11,7 @@ export interface OutfitData {
     customColor: string
   }
   timestamp: number
+  isPublic?: boolean
 }
 
 export interface OutfitResponse {
@@ -82,7 +83,7 @@ export async function saveOutfitToDatabase(outfitData: OutfitData): Promise<Outf
       outfitName: outfitData.name,
       outfitItem: JSON.stringify(outfitData),
       outfitThumbnail: thumbnailUrl,
-      isPublic: true
+      isPublic: outfitData.isPublic ?? true
     })
   })
 
@@ -148,4 +149,42 @@ export async function deleteOutfit(outfitIdx: number): Promise<void> {
   if (!response.ok) {
     throw new Error('코디 삭제에 실패했습니다')
   }
+}
+
+// 코디 공개/비공개 상태 토글
+export async function toggleOutfitVisibility(outfitIdx: number, isPublic: boolean): Promise<OutfitResponse> {
+  const token = localStorage.getItem('token')
+  if (!token) {
+    throw new Error('로그인이 필요합니다')
+  }
+
+  console.log('=== toggleOutfitVisibility 호출 ===')
+  console.log('outfitIdx:', outfitIdx)
+  console.log('isPublic:', isPublic)
+  console.log('token:', token ? '존재함' : '없음')
+
+  const requestBody = { isPublic }
+  console.log('요청 body:', requestBody)
+
+  const response = await fetch(`/api/outfits/${outfitIdx}/visibility`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(requestBody)
+  })
+
+  console.log('응답 상태:', response.status)
+  console.log('응답 OK:', response.ok)
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('에러 응답:', errorText)
+    throw new Error('코디 공개 상태 변경에 실패했습니다')
+  }
+
+  const result = await response.json()
+  console.log('응답 데이터:', result)
+  return result
 }

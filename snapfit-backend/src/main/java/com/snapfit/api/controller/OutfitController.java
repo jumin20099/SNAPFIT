@@ -7,6 +7,7 @@ import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.security.CustomOAuth2User;
 import com.snapfit.api.security.CustomUserDetails;
 import com.snapfit.api.service.OutfitService;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -106,6 +107,38 @@ public class OutfitController {
             return ResponseEntity.ok("썸네일 업데이트 완료");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("썸네일 업데이트 실패: " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{id}/visibility")
+    public ResponseEntity<Outfit> toggleVisibility(@PathVariable Long id,
+                                                   @RequestBody VisibilityRequest request,
+                                                   @AuthenticationPrincipal Object principal) {
+        System.out.println("=== toggleVisibility 호출 ===");
+        System.out.println("outfitIdx: " + id);
+        System.out.println("요청된 isPublic: " + request.isPublic());
+        System.out.println("principal: " + (principal != null ? "존재함" : "없음"));
+        
+        User user = toUser(principal);
+        System.out.println("user: " + user.getUserIdx());
+        
+        Outfit updated = outfitService.toggleVisibility(id, request.isPublic(), user);
+        System.out.println("업데이트된 코디 isPublic: " + updated.getIsPublic());
+        
+        return ResponseEntity.ok(updated);
+    }
+
+    // Visibility 요청 DTO
+    public static class VisibilityRequest {
+        @JsonProperty("isPublic")
+        private boolean isPublic;
+
+        public boolean isPublic() {
+            return isPublic;
+        }
+
+        public void setPublic(boolean isPublic) {
+            this.isPublic = isPublic;
         }
     }
 } 

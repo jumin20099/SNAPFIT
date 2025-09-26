@@ -288,4 +288,41 @@ public class OutfitService {
             throw new RuntimeException("상품별 코디 조회 중 오류가 발생했습니다: " + e.getMessage());
         }
     }
+
+    /**
+     * 코디의 공개/비공개 상태를 토글한다.
+     *
+     * @param outfitIdx 수정할 코디 PK
+     * @param isPublic  새로운 공개 상태
+     * @param user      소유 사용자(권한 확인)
+     * @return 수정된 Outfit 엔티티
+     * @throws IllegalArgumentException 코디가 없거나 권한이 없을 때
+     */
+    @Transactional
+    public Outfit toggleVisibility(Long outfitIdx, boolean isPublic, User user) {
+        System.out.println("=== OutfitService.toggleVisibility 호출 ===");
+        System.out.println("outfitIdx: " + outfitIdx);
+        System.out.println("isPublic: " + isPublic);
+        System.out.println("user: " + user.getUserIdx());
+        
+        Outfit outfit = outfitRepository.findById(outfitIdx)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 코디입니다."));
+
+        System.out.println("기존 코디 isPublic: " + outfit.getIsPublic());
+        System.out.println("코디 소유자: " + outfit.getUser().getUserIdx());
+
+        // 작성자 확인
+        if (!outfit.getUser().getUserIdx().equals(user.getUserIdx())) {
+            throw new IllegalArgumentException("수정 권한이 없습니다.");
+        }
+
+        // 공개 상태 변경
+        outfit.setIsPublic(isPublic);
+        System.out.println("변경 후 isPublic: " + outfit.getIsPublic());
+        
+        Outfit saved = outfitRepository.save(outfit);
+        System.out.println("저장된 코디 isPublic: " + saved.getIsPublic());
+        
+        return saved;
+    }
 } 
