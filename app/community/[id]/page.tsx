@@ -490,7 +490,11 @@ export default function PostDetailPage() {
                 ? { ...targetPost, viewCount: existingPost.viewCount }
                 : targetPost
               
-              const otherPosts = transformedPosts.filter((p: Post) => p.postId !== postId)
+              // 타겟 게시글을 제외한 나머지 게시글들을 생성일 기준으로 정렬
+              const otherPosts = transformedPosts
+                .filter((p: Post) => p.postId !== postId)
+                .sort((a: Post, b: Post) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              
               return [updatedTargetPost, ...otherPosts]
             })
             
@@ -509,14 +513,23 @@ export default function PostDetailPage() {
             // 선택된 게시글의 조회수 증가
             incrementViewCount(targetPost.postId)
           } else {
-            setPosts(transformedPosts)
-            // 타겟 게시글을 찾지 못한 경우 첫 번째 게시글을 currentPost로 설정
-            if (transformedPosts.length > 0) {
-              setCurrentPost(transformedPosts[0])
+            // 타겟 게시글을 찾지 못한 경우 생성일 기준으로 정렬
+            const sortedPosts = transformedPosts.sort((a: Post, b: Post) => 
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )
+            setPosts(sortedPosts)
+            
+            // 첫 번째 게시글을 currentPost로 설정
+            if (sortedPosts.length > 0) {
+              setCurrentPost(sortedPosts[0])
             }
           }
         } else {
-          setPosts(prev => [...prev, ...transformedPosts])
+          // 추가 페이지 로드 시에도 정렬 유지
+          const sortedNewPosts = transformedPosts.sort((a: Post, b: Post) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+          setPosts(prev => [...prev, ...sortedNewPosts])
           // 무한 스크롤로 새 게시글이 추가되면 useBatchReactionStatus 훅이 자동으로 실행됨
           console.log('무한 스크롤로 새 게시글 추가됨')
         }
