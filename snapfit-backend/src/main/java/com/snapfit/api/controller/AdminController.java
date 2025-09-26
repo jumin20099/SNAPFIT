@@ -2,11 +2,16 @@ package com.snapfit.api.controller;
 
 import com.snapfit.api.dto.ProductApprovalActionDto;
 import com.snapfit.api.service.PartnerService;
+import com.snapfit.api.service.UserService;
+import com.snapfit.api.entity.User;
+import com.snapfit.api.entity.User.Role;
+import com.snapfit.api.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -15,6 +20,12 @@ public class AdminController {
     
     @Autowired
     private PartnerService partnerService;
+    
+    @Autowired
+    private UserService userService;
+    
+    @Autowired
+    private JwtUtil jwtUtil;
     
     // 상품 승인/거절 및 활성화/비활성화
     @PutMapping("/products/{id}/status")
@@ -47,6 +58,55 @@ public class AdminController {
             return ResponseEntity.badRequest().body(Map.of("error", "잘못된 요청입니다."));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+    
+    /**
+     * 임시 사용자로 로그인 (테스트용)
+     * 일반 사용자 권한으로 로그인하여 시스템 점검
+     */
+    @PostMapping("/temp-login")
+    public ResponseEntity<?> tempLogin() {
+        try {
+            // 임시 사용자 이메일
+            String tempEmail = "temp_user@snapfit.com";
+            
+            // 기존 임시 사용자 확인 또는 생성
+            User tempUser = userService.findByEmail(tempEmail);
+            if (tempUser == null) {
+                // 임시 사용자 생성
+                tempUser = User.builder()
+                    .userIdx(UUID.randomUUID())
+                    .email(tempEmail)
+                    .nickname("임시사용자")
+                    .provider("temp")
+                    .providerId("temp_001")
+                    .role(Role.USER)
+                    .bio("테스트용 임시 사용자입니다")
+                    .followerCount(0)
+                    .followingCount(0)
+                    .build();
+                
+                tempUser = userService.save(tempUser);
+            }
+            
+            // JWT 토큰 생성
+            String token = jwtUtil.generateToken(tempUser.getEmail(), tempUser.getRole().name());
+            
+            return ResponseEntity.ok(Map.of(
+                "token", token,
+                "user", Map.of(
+                    "userIdx", tempUser.getUserIdx().toString(),
+                    "email", tempUser.getEmail(),
+                    "nickname", tempUser.getNickname(),
+                    "role", tempUser.getRole().name()
+                ),
+                "message", "임시 사용자로 로그인되었습니다"
+            ));
+            
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(Map.of("error", "임시 로그인 실패: " + e.getMessage()));
         }
     }
 }

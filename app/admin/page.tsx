@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Plus, Edit, Trash2, Store, Package, BarChart3, FileText, Users, CheckCircle, XCircle, Shield, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Plus, Edit, Trash2, Store, Package, BarChart3, FileText, Users, CheckCircle, XCircle, Shield, AlertTriangle, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -86,6 +86,7 @@ export default function AdminPage() {
     resolved: 0,
     rejected: 0
   })
+  const [isTempLoginLoading, setIsTempLoginLoading] = useState(false)
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -399,6 +400,44 @@ export default function AdminPage() {
     }
   }
 
+  // 임시 사용자 로그인 함수
+  const handleTempLogin = async () => {
+    if (confirm("임시 사용자로 로그인하시겠습니까?\n(일반 사용자 권한으로 시스템을 점검할 수 있습니다)")) {
+      setIsTempLoginLoading(true)
+      try {
+        const response = await fetch('/api/admin/temp-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          
+          // 토큰 저장
+          localStorage.setItem('token', data.token)
+          
+          // 사용자 정보 저장
+          localStorage.setItem('userInfo', JSON.stringify(data.user))
+          
+          alert(`임시 사용자로 로그인되었습니다!\n닉네임: ${data.user.nickname}\n권한: ${data.user.role}`)
+          
+          // 페이지 새로고침하여 새로운 권한으로 로드
+          window.location.reload()
+        } else {
+          const errorData = await response.json()
+          alert(`임시 로그인 실패: ${errorData.error || '알 수 없는 오류'}`)
+        }
+      } catch (error) {
+        console.error('임시 로그인 실패:', error)
+        alert('임시 로그인 중 오류가 발생했습니다.')
+      } finally {
+        setIsTempLoginLoading(false)
+      }
+    }
+  }
+
   if (!userInfo || userInfo.role !== 'ADMIN') {
     return null
   }
@@ -416,7 +455,19 @@ export default function AdminPage() {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <h1 className="text-lg font-semibold">관리자 페이지</h1>
-        <Badge variant="secondary">Admin</Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTempLogin}
+            disabled={isTempLoginLoading}
+            className="flex items-center gap-2"
+          >
+            <User className="w-4 h-4" />
+            {isTempLoginLoading ? '로그인 중...' : '임시 사용자 로그인'}
+          </Button>
+          <Badge variant="secondary">Admin</Badge>
+        </div>
       </div>
 
       {/* Main Content */}
