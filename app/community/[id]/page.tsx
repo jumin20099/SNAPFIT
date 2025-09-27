@@ -1365,7 +1365,7 @@ export default function PostDetailPage() {
                       items={post.codyData.items.map(item => ({
                         id: item.productId.toString(),
                         itemId: item.productId.toString(),
-                        name: `상품 ${item.productId}`,
+                        name: `상품 ${item.productId}`, // 임시 이름, CodyProductList에서 실제 상품 정보로 교체됨
                         src: item.src,
                         slot: 'accessory' as const,
                         nx: item.nx,

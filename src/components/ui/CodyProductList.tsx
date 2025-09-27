@@ -41,55 +41,77 @@ export function CodyProductList({
   useEffect(() => {
     const fetchProductInfos = async () => {
       setLoading(true)
-      const infos: ProductInfo[] = []
       
-      for (const item of memoizedItems) {
+      // 병렬로 상품 정보 조회
+      const productPromises = memoizedItems.map(async (item) => {
         try {
           // itemId가 있고 유효한 값(0이 아닌 양수)이면 API 호출, 아니면 기본 정보 사용
           if (item.itemId && parseInt(item.itemId) > 0) {
             const response = await fetch(`/api/products/${item.itemId}`)
             if (response.ok) {
               const product = await response.json()
-              infos.push({
+              
+              // 브랜드 정보 조회 (storeIdx가 있는 경우)
+              let brandName = ''
+              if (product.storeIdx) {
+                try {
+                  const storeResponse = await fetch(`/api/admin/store-malls/${product.storeIdx}`)
+                  if (storeResponse.ok) {
+                    const store = await storeResponse.json()
+                    brandName = store.storeName || ''
+                  }
+                } catch (storeError) {
+                  console.warn(`스토어 정보 조회 실패 (productId: ${item.itemId}):`, storeError)
+                }
+              }
+              
+              return {
                 id: item.itemId,
-                name: product.name || item.name,
-                image: product.imageUrl || item.src,
-                price: product.price,
-                brand: product.brand,
-                category: product.category
-              })
+                name: product.productName || item.name,
+                image: product.productImage || item.src,
+                price: product.productPrice,
+                brand: brandName,
+                category: product.majorCategory || product.productCategory || item.slot
+              }
             } else {
               // API 실패 시 기본 정보 사용
-              infos.push({
+              return {
                 id: item.id,
                 name: item.name,
                 image: item.src,
                 category: item.slot
-              })
+              }
             }
           } else {
             // itemId가 없거나 유효하지 않으면 기본 정보 사용
-            infos.push({
+            return {
               id: item.id,
               name: item.name,
               image: item.src,
               category: item.slot
-            })
+            }
           }
         } catch (error) {
           console.error(`상품 ${item.id} 정보 가져오기 실패:`, error)
           // 에러 시에도 기본 정보는 표시
-          infos.push({
+          return {
             id: item.id,
             name: item.name,
             image: item.src,
             category: item.slot
-          })
+          }
         }
-      }
+      })
       
-      setProductInfos(infos)
-      setLoading(false)
+      try {
+        const infos = await Promise.all(productPromises)
+        setProductInfos(infos)
+      } catch (error) {
+        console.error('상품 정보 조회 중 오류:', error)
+        setProductInfos([])
+      } finally {
+        setLoading(false)
+      }
     }
 
     if (memoizedItems.length > 0) {
