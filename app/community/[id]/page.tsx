@@ -106,12 +106,12 @@ export default function PostDetailPage() {
   const incrementViewCount = useCallback(async (postId: number) => {
     // 중복 호출 방지
     if (hasIncrementedView.current.has(postId)) {
-      console.log('조회수 중복 호출 방지:', postId)
+      // 조회수 중복 호출 방지
       return
     }
     
     hasIncrementedView.current.add(postId)
-    console.log('조회수 증가 시작:', postId)
+    // 조회수 증가 시작
     
     try {
       // 백엔드 Redis API 호출 (원자적 연산)
@@ -128,7 +128,7 @@ export default function PostDetailPage() {
         const data = await response.json()
         const newViewCount = data.viewCount || 0
         
-        console.log('Redis 조회수 증가 성공:', postId, '->', newViewCount)
+        // Redis 조회수 증가 성공
         
         // 상태 업데이트
         setPosts(prev => prev.map(post => 
@@ -223,21 +223,21 @@ export default function PostDetailPage() {
       // 좋아요 상태 파싱
       if (likesResponse.ok) {
         const likesData = await likesResponse.json()
-        console.log('좋아요 API 응답:', likesData)
+        // 좋아요 API 응답
         
         // 백엔드 응답 구조에 따라 데이터 파싱
         if (Array.isArray(likesData)) {
           if (likesData.length > 0) {
             const firstItem = likesData[0]
-            console.log('첫 번째 좋아요 항목:', firstItem)
+            // 첫 번째 좋아요 항목
             
             if (typeof firstItem === 'number') {
               // 숫자 배열인 경우 (게시글 ID 목록)
-              console.log('게시글 ID 배열로 인식')
+              // 게시글 ID 배열로 인식
               likedPostIds = new Set(likesData.map(id => Number(id)))
             } else if (firstItem && typeof firstItem === 'object') {
               // 객체 배열인 경우 (Like 엔티티)
-              console.log('Like 엔티티 배열로 인식')
+              // Like 엔티티 배열로 인식
               likedPostIds = new Set(
                 likesData
                   .filter((like: any) => like?.targetType === 'POST' || like?.targetType === 'OUTFIT_SHARE')
@@ -247,7 +247,7 @@ export default function PostDetailPage() {
           }
         } else if (likesData.content && Array.isArray(likesData.content)) {
           // 페이지네이션된 응답인 경우
-          console.log('페이지네이션된 응답으로 인식')
+          // 페이지네이션된 응답으로 인식
           likedPostIds = new Set(
             likesData.content
               .filter((like: any) => like?.targetType === 'POST' || like?.targetType === 'OUTFIT_SHARE')
@@ -255,7 +255,7 @@ export default function PostDetailPage() {
           )
         }
         
-        console.log('파싱된 좋아요 게시글 ID:', Array.from(likedPostIds))
+        // 파싱된 좋아요 게시글 ID
       } else {
         console.error('좋아요 API 응답 오류:', likesResponse.status)
         throw new Error(`좋아요 API 오류: ${likesResponse.status}`)
@@ -264,12 +264,12 @@ export default function PostDetailPage() {
       // 스크랩 상태 파싱
       if (scrapsResponse.ok) {
         const scrapsData = await scrapsResponse.json()
-        console.log('스크랩 API 응답:', scrapsData)
+        // 스크랩 API 응답
         
         if (Array.isArray(scrapsData)) {
           scrapedPostIds = new Set(scrapsData.map(id => Number(id)))
         }
-        console.log('파싱된 스크랩 게시글 ID:', Array.from(scrapedPostIds))
+        // 파싱된 스크랩 게시글 ID
       } else {
         console.error('스크랩 API 응답 오류:', scrapsResponse.status)
         throw new Error(`스크랩 API 오류: ${scrapsResponse.status}`)
@@ -281,7 +281,7 @@ export default function PostDetailPage() {
           const isLiked = likedPostIds.has(post.postId)
           const isScraped = scrapedPostIds.has(post.postId)
           
-          console.log(`게시글 ${post.postId}: liked=${isLiked}, scraped=${isScraped}, likeCount=${post.likeCount}, scrapCount=${post.scrapCount}`)
+          // 게시글 상태 업데이트
           
           return {
             ...post,
@@ -291,13 +291,7 @@ export default function PostDetailPage() {
           }
         })
         
-        console.log('업데이트된 게시글 목록:', updatedPosts.map((p: Post) => ({ 
-          postId: p.postId, 
-          liked: p.liked, 
-          scraped: p.scraped,
-          likeCount: p.likeCount,
-          scrapCount: p.scrapCount
-        })))
+        // 업데이트된 게시글 목록
         
         return updatedPosts
       })
@@ -327,7 +321,7 @@ export default function PostDetailPage() {
           
           if (statusResponse.ok) {
             const statusData = await statusResponse.json()
-            console.log('개별 게시글 페이지 배치 상태 조회 결과:', statusData)
+            // 개별 게시글 페이지 배치 상태 조회 결과
             
             // 상태 업데이트
             setPosts(prevPosts => {
@@ -345,13 +339,7 @@ export default function PostDetailPage() {
                 return post
               })
               
-              console.log('배치 상태 조회로 업데이트된 게시글 목록:', updatedPosts.map((p: Post) => ({ 
-                postId: p.postId, 
-                liked: p.liked, 
-                scraped: p.scraped,
-                likeCount: p.likeCount,
-                scrapCount: p.scrapCount
-              })))
+              // 배치 상태 조회로 업데이트된 게시글 목록
               return updatedPosts
             })
           }
@@ -368,11 +356,7 @@ export default function PostDetailPage() {
         setIsLiked(isLiked)
         setIsScraped(isScraped)
         
-        console.log('현재 게시글 상태 업데이트:', {
-          postId: currentPost.postId,
-          liked: isLiked,
-          scraped: isScraped
-        })
+        // 현재 게시글 상태 업데이트
 
         // 배치 상태 조회로 현재 게시글 상태도 정확히 업데이트
         try {
@@ -389,7 +373,7 @@ export default function PostDetailPage() {
             const statusData = await statusResponse.json()
             const status = statusData[`post_${currentPost.postId}`]
             if (status) {
-              console.log('현재 게시글 배치 상태 조회 결과:', { postId: currentPost.postId, ...status })
+              // 현재 게시글 배치 상태 조회 결과
               setIsLiked(status.liked)
               setIsScraped(status.scraped)
             }
@@ -399,10 +383,7 @@ export default function PostDetailPage() {
         }
       }
       
-      console.log('사용자 상호작용 상태 로드 완료:', {
-        likedPosts: Array.from(likedPostIds),
-        scrapedPosts: Array.from(scrapedPostIds)
-      })
+      // 사용자 상호작용 상태 로드 완료
       
     } catch (error) {
       console.error('사용자 상호작용 상태 로드 실패:', error)
@@ -444,12 +425,7 @@ export default function PostDetailPage() {
           const updatedAtRaw = post.updatedAt ?? post.updated_at ?? null
 
           if (process.env.NODE_ENV === 'development') {
-            console.log('[community:post] raw timestamps', {
-              index,
-              postId: post.postId,
-              createdAt: createdAtRaw,
-              updatedAt: updatedAtRaw
-            })
+            // raw timestamps
           }
 
           // 배치 상태에서 현재 게시글의 상태 가져오기 (타입 안전)
@@ -615,10 +591,7 @@ export default function PostDetailPage() {
           const status = reactionManager.getPostStatus(post.postId);
           
           if (status) {
-            console.log(`게시글 ${post.postId} 상태 업데이트:`, {
-              기존: { liked: post.liked, scraped: post.scraped, likeCount: post.likeCount, scrapCount: post.scrapCount },
-              새로운: { liked: status.liked, scraped: status.scraped, likeCount: status.likeCount, scrapCount: status.scrapCount }
-            });
+            // 게시글 상태 업데이트
             
             return {
               ...post,
@@ -631,7 +604,7 @@ export default function PostDetailPage() {
           return post;
         });
         
-        console.log('게시글 상태 동기화 완료:', updatedPosts.length, '개');
+        // 게시글 상태 동기화 완료
         return updatedPosts;
       });
     }
@@ -646,7 +619,7 @@ export default function PostDetailPage() {
         
         // 2. 게시글 로딩 완료 후 댓글 로드
         if (loadedPosts && loadedPosts.length > 0) {
-          console.log('댓글 로딩 시작 - 게시글 로딩 완료 후')
+          // 댓글 로딩 시작 - 게시글 로딩 완료 후
       const isRefresh = performance.navigation && performance.navigation.type === 1
           await fetchAllComments(isRefresh, loadedPosts)
           await fetchUserInteractions()
@@ -665,15 +638,11 @@ export default function PostDetailPage() {
       // 이전 상태와 비교하여 변경된 경우에만 업데이트
       const statusString = JSON.stringify(batchReactionStatus)
       if (prevBatchStatusRef.current === statusString) {
-        console.log('댓글 상태 변경 없음, 스킵')
+        // 댓글 상태 변경 없음, 스킵
         return
       }
       
-      console.log('댓글 상태 업데이트 시작:', { 
-        batchReactionStatus, 
-        allCommentIds,
-        commentKeys: Object.keys(batchReactionStatus).filter(key => key.startsWith('comment_'))
-      })
+      // 댓글 상태 업데이트 시작
       
       setCommentsByPost(prevComments => {
         const updatedComments = { ...prevComments }
@@ -694,10 +663,7 @@ export default function PostDetailPage() {
               // 실제로 변경된 경우에만 hasChanges를 true로 설정
               if (comment.liked !== newComment.liked || comment.likeCount !== newComment.likeCount) {
                 hasChanges = true
-                console.log(`댓글 ${comment.commentId} 상태 변경:`, {
-                  liked: `${comment.liked} → ${newComment.liked}`,
-                  likeCount: `${comment.likeCount} → ${newComment.likeCount}`
-                })
+                // 댓글 상태 변경
               }
               
               return newComment
@@ -707,9 +673,9 @@ export default function PostDetailPage() {
         })
         
         if (hasChanges) {
-          console.log('댓글 상태 업데이트 완료 (변경사항 있음):', updatedComments)
+          // 댓글 상태 업데이트 완료 (변경사항 있음)
         } else {
-          console.log('댓글 상태 업데이트 완료 (변경사항 없음)')
+          // 댓글 상태 업데이트 완료 (변경사항 없음)
         }
         
         return updatedComments
@@ -752,25 +718,25 @@ export default function PostDetailPage() {
   // 모든 게시글의 댓글 목록 로드 (새로고침 시에만 인기순 정렬)
   const fetchAllComments = async (usePopularSort = false, postsToLoad = posts) => {
     try {
-      console.log('댓글 로딩 시작:', { postsCount: postsToLoad.length, usePopularSort, posts: postsToLoad.map(p => p.postId) })
+      // 댓글 로딩 시작
       
       if (postsToLoad.length === 0) {
-        console.log('게시글이 없어서 댓글을 로드할 수 없습니다')
+        // 게시글이 없어서 댓글을 로드할 수 없습니다
         return
       }
 
       // 이미 댓글이 로드된 게시글은 제외 (중복 로딩 방지)
       const postsNeedingComments = postsToLoad.filter(post => !commentsByPost[post.postId])
-      console.log('댓글이 필요한 게시글:', postsNeedingComments.map(p => p.postId))
+      // 댓글이 필요한 게시글
       
       if (postsNeedingComments.length === 0) {
-        console.log('모든 게시글의 댓글이 이미 로드되어 있습니다')
+        // 모든 게시글의 댓글이 이미 로드되어 있습니다
         return
       }
       
       const commentPromises = postsNeedingComments.map(async (post) => {
         const sortParam = usePopularSort ? '?sortBy=popular' : '?sortBy=time'
-        console.log(`댓글 API 호출: /api/comments/posts/${post.postId}${sortParam}`)
+        // 댓글 API 호출
         
         const token = localStorage.getItem('token')
         const response = await fetch(`/api/comments/posts/${post.postId}${sortParam}`, {
@@ -780,7 +746,7 @@ export default function PostDetailPage() {
         })
         if (response.ok) {
           const commentsData = await response.json()
-          console.log(`게시글 ${post.postId} 댓글 데이터:`, commentsData)
+          // 게시글 댓글 데이터
           const transformedComments = commentsData.map(transformComment)
           return { postId: post.postId, comments: transformedComments }
         } else {
@@ -790,12 +756,12 @@ export default function PostDetailPage() {
       })
       
       const results = await Promise.all(commentPromises)
-      console.log('댓글 로딩 결과:', results)
+      // 댓글 로딩 결과
       
       const commentsMap: Record<number, Comment[]> = {}
       results.forEach(({ postId, comments }) => {
         commentsMap[postId] = comments
-        console.log(`게시글 ${postId} 댓글 수:`, comments.length)
+        // 게시글 댓글 수
       })
       
       // 기존 댓글 상태와 새 댓글 상태를 병합
@@ -1057,9 +1023,7 @@ export default function PostDetailPage() {
   }
 
   const logDateDebug = (label: string, payload: Record<string, unknown>) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[community:date] ${label}`, payload)
-    }
+    // 디버그 로그 비활성화
   }
 
   const parseDate = (value?: string | number | null) => {
@@ -1363,11 +1327,12 @@ export default function PostDetailPage() {
                     </h4>
                     <CodyProductList
                       items={post.codyData.items.map(item => ({
-                        id: item.productId.toString(),
-                        itemId: item.productId.toString(),
-                        name: `상품 ${item.productId}`, // 임시 이름, CodyProductList에서 실제 상품 정보로 교체됨
+                        id: (item.productId ?? '').toString(),
+                        itemId: (item.productId ?? '').toString(),
+                        productId: item.productId,
+                        name: (item as any).name || '',
                         src: item.src,
-                        slot: 'accessory' as const,
+                        slot: ((item as any).slot as any) || 'accessory',
                         nx: item.nx,
                         ny: item.ny,
                         rotation: item.rotation,
@@ -1376,7 +1341,7 @@ export default function PostDetailPage() {
                         visible: true,
                         anchor: 'center' as const,
                         stateVersion: 1
-                      }))}
+                      }) as any)}
                       showScrollButtons={true}
                       className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3"
                     />
@@ -1553,7 +1518,7 @@ export default function PostDetailPage() {
         }}
         comments={(() => {
           const comments = selectedPostId ? (commentsByPost[selectedPostId] || []) : []
-          console.log('댓글 모달에 전달되는 댓글:', { selectedPostId, commentsCount: comments.length, comments })
+          // 댓글 모달에 전달되는 댓글
           return comments
         })()}
         onAddComment={handleAddComment}

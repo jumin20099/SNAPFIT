@@ -37,6 +37,18 @@ public class OutfitService {
      */
     @Transactional
     public Outfit createOutfit(OutfitDto dto, User user) {
+        // 1) outfitItem 정규화(문자열화)하여 사용자 단위 중복 검사
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            String normalized = mapper.writeValueAsString(dto.getOutfitItem());
+            var dup = outfitRepository.findDuplicateByUserAndNormalizedItem(user.getUserIdx(), normalized);
+            if (dup.isPresent()) {
+                // 기존 레코드가 있으면 그대로 반환(중복 생성 방지)
+                return dup.get();
+            }
+        } catch (Exception ignore) {}
+
+        // 2) 신규 저장
         Outfit outfit = Outfit.builder()
                 .user(user)
                 .outfitName(dto.getOutfitName())

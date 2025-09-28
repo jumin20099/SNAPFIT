@@ -23,7 +23,7 @@ export async function GET(
     const authToken = cookieToken || headerToken.replace('Bearer ', '')
     console.log('상품 상세 API - 최종 사용 토큰:', authToken ? '존재함' : '없음')
 
-    const url = `${API_BASE_URL}/api/products/${productId}`
+    const url = `${API_BASE_URL}/api/products/${productId}?skipIncrement=true`
     const maxAttempts = 3
     let lastErr: any = null
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {

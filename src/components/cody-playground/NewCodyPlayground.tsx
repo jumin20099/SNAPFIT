@@ -848,7 +848,11 @@ export function NewCodyPlayground() {
         onCategorySelect={handleCategorySelect}
         onProductAdd={(product) => {
           // 상품을 마네킹에 추가하는 로직
-              console.log('상품 추가 시도:', product, 'selectedMainCategory:', selectedMainCategory);
+              // console.log('=== 상품 추가 디버깅 ===');
+              // console.log('product:', product);
+              // console.log('product.productIdx:', product.productIdx);
+              // console.log('product.id:', product.id);
+              // console.log('selectedMainCategory:', selectedMainCategory);
               
               // 상세한 카테고리 매핑 (상품명 기반 세부 분류)
               const getTypeFromCategory = (category: string, productName: string): Major => {
@@ -911,9 +915,15 @@ export function NewCodyPlayground() {
               // 카테고리별 핫스팟 적용
               assetMeta.hotspot = AssetMetaManager.getCategoryHotspot(slot);
               
+              // productIdx가 0이거나 undefined인 경우 임시 ID 생성
+              const validProductIdx = product.productIdx && product.productIdx > 0 ? product.productIdx : null;
+              const validProductId = product.id && product.id > 0 ? product.id : null;
+              const itemId = validProductIdx?.toString() || validProductId?.toString() || `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              
               const newItem: PlacedItem = {
                 id: `item-${now}-${Math.random()}`,
-                itemId: product.productIdx?.toString() || product.id?.toString() || '',
+                itemId: itemId,
+                productId: validProductIdx || validProductId || 0, // 백엔드에서 사용하는 productId 필드 추가
                 name: product.productName || product.name || '상품',
                 src: imageSrc,
                 slot: slot,
@@ -943,7 +953,11 @@ export function NewCodyPlayground() {
                 }
               };
               
-              console.log('새 아이템 생성:', newItem);
+              // console.log('=== 새 아이템 생성 디버깅 ===');
+              // console.log('product.productIdx:', product.productIdx);
+              // console.log('product.id:', product.id);
+              // console.log('itemId 설정 결과:', product.productIdx?.toString() || product.id?.toString() || '');
+              // console.log('새 아이템 생성:', newItem);
               
               // 아우터와 상의의 특별한 배치 로직
               if (slot === 'outer') {

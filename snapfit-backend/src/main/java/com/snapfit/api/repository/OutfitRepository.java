@@ -9,6 +9,8 @@ import com.snapfit.api.entity.Outfit;
 import com.snapfit.api.entity.User;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Repository
 public interface OutfitRepository extends JpaRepository<Outfit, Long> {
@@ -29,4 +31,18 @@ public interface OutfitRepository extends JpaRepository<Outfit, Long> {
     List<Outfit> findPublicByContainsProduct(@Param("productIdPattern") String productIdPattern,
                                             @Param("limit") int limit,
                                             @Param("offset") int offset);
+
+    /**
+     * 동일한 outfit_item(JSON 텍스트 기준)의 중복 코디 여부 확인 (사용자 단위)
+     * JSONB를 문자열로 비교하여 구조가 동일한 경우를 감지한다.
+     */
+    @Query(value = """
+        SELECT * FROM outfits o
+        WHERE o.user_idx = :userId
+          AND o.outfit_item::text = :normalized
+        ORDER BY o.created_at DESC
+        LIMIT 1
+    """, nativeQuery = true)
+    Optional<Outfit> findDuplicateByUserAndNormalizedItem(@Param("userId") UUID userId,
+                                                          @Param("normalized") String normalized);
 } 

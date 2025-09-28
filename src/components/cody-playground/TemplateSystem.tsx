@@ -77,8 +77,8 @@ function getFlatlayLayout(
       ...item,
       nx: currentX / 1080, // BASE_W로 정규화
       ny: currentY / 1920, // BASE_H로 정규화
-      scale: getTemplateScale(item.slot, 'flatlay'),
-      z: getTemplateZ(item.slot)
+      scale: getTemplateScale(item.slot || 'accessory', 'flatlay'),
+      z: getTemplateZ(item.slot || 'accessory')
     }
 
     currentX += 200 + spacing
@@ -99,25 +99,25 @@ function getLookbookLayout(
   return items.map(item => {
     let nx = item.nx
     let ny = item.ny
-    let scale = getTemplateScale(item.slot, 'lookbook')
+    let scale = getTemplateScale(item.slot || 'accessory', 'lookbook')
 
     // 상의/아우터는 중앙 상단
-    if (item.slot === 'top' || item.slot === 'outer') {
+    if ((item.slot || 'accessory') === 'top' || (item.slot || 'accessory') === 'outer') {
       nx = (centerX - 100) / 1080
       ny = (centerY - 200) / 1920
     }
     // 하의는 중앙 하단
-    else if (item.slot === 'bottom') {
+    else if ((item.slot || 'accessory') === 'bottom') {
       nx = (centerX - 100) / 1080
       ny = (centerY + 50) / 1920
     }
     // 신발은 하의 아래
-    else if (item.slot === 'shoes') {
+    else if ((item.slot || 'accessory') === 'shoes') {
       nx = (centerX - 80) / 1080
       ny = (centerY + 200) / 1920
     }
     // 액세서리는 좌우 배치
-    else if (item.slot === 'accessory' || item.slot === 'hat' || item.slot === 'glasses') {
+    else if ((item.slot || 'accessory') === 'accessory' || (item.slot || 'accessory') === 'hat' || (item.slot || 'accessory') === 'glasses') {
       const isLeft = items.indexOf(item) % 2 === 0
       nx = (isLeft ? centerX - 200 : centerX + 50) / 1080
       ny = (centerY - 100) / 1920
@@ -128,7 +128,7 @@ function getLookbookLayout(
       nx,
       ny,
       scale,
-      z: getTemplateZ(item.slot)
+      z: getTemplateZ(item.slot || 'accessory')
     }
   })
 }
@@ -156,8 +156,8 @@ function getClusterLayout(
       ...item,
       nx: (centerX + offsetX - 100) / 1080,
       ny: (centerY + offsetY - 100) / 1920,
-      scale: getTemplateScale(item.slot, 'cluster'),
-      z: getTemplateZ(item.slot) + index * 2, // 클러스터에서는 순서대로 z-index
+      scale: getTemplateScale(item.slot || 'accessory', 'cluster'),
+      z: getTemplateZ(item.slot || 'accessory') + index * 2, // 클러스터에서는 순서대로 z-index
       rotation: (angle + 45) % 360 // 약간의 회전 추가
     }
   })

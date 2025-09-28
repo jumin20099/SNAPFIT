@@ -28,6 +28,8 @@ public class CreatePostRequestDto {
 
     // 코디 관련 필드 (선택사항)
     private CodyData codyData;
+    // 기존 Outfit을 게시글에 연결할 때 사용 (중복 저장 방지)
+    private Long outfitId;
 
     // 익명 사용자 비밀번호 (로그인하지 않은 경우 필수)
     private String anonymousPassword;
@@ -38,11 +40,15 @@ public class CreatePostRequestDto {
         private List<CodyItem> items;
         private CodyBackground background;
         private Long timestamp;
+        private String thumbnailUrl;
     }
 
     @Data
     public static class CodyItem {
         private Long productId;
+        private String itemId; // 프론트엔드 호환성을 위해 추가
+        private String name;
+        private String slot;
         private String src;
         private Double nx;
         private Double ny;

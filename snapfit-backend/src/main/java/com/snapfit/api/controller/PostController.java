@@ -119,7 +119,10 @@ public class PostController {
             
             // 3. 코디 데이터 처리 (있는 경우)
             Long outfitId = null;
-            if (request.getCodyData() != null && savedUser != null) {
+            if (request.getOutfitId() != null) {
+                outfitId = request.getOutfitId();
+                log.info("기존 Outfit 연결: outfitId={}", outfitId);
+            } else if (request.getCodyData() != null && savedUser != null) {
                 outfitId = createOutfitFromCodyData(request.getCodyData(), savedUser);
                 log.info("코디 데이터 저장 성공: outfitId={}", outfitId);
             }
@@ -140,17 +143,28 @@ public class PostController {
             
             // 5. 코디 연결 (있는 경우)
             if (outfitId != null) {
-                // Outfit 엔티티를 찾아서 연결
-                final Long finalOutfitId = outfitId;
-                Outfit outfit = outfitRepository.findById(finalOutfitId)
-                    .orElseThrow(() -> new RuntimeException("코디를 찾을 수 없습니다: " + finalOutfitId));
-                post.setOutfit(outfit);
+                Outfit outfit = outfitRepository.findById(outfitId).orElse(null);
+                if (outfit != null) {
+                    // 소유자 검증(로그인된 사용자와 일치하는 경우에만 연결)
+                    if (savedUser == null || outfit.getUser() == null || outfit.getUser().getUserIdx().equals(savedUser.getUserIdx())) {
+                        post.setOutfit(outfit);
+                    } else {
+                        log.warn("Outfit 소유자 불일치로 연결 건너뜀: outfitId={}, user={}", outfitId, savedUser.getUserIdx());
+                    }
+                } else if (request.getCodyData() != null && savedUser != null) {
+                    // outfitId가 유효하지 않으면 codyData로 새로 생성하여 연결
+                    Long newOutfitId = createOutfitFromCodyData(request.getCodyData(), savedUser);
+                    log.info("유효하지 않은 outfitId로 인해 새 Outfit 생성: {} -> {}", outfitId, newOutfitId);
+                    outfitRepository.findById(newOutfitId).ifPresent(post::setOutfit);
+                } else {
+                    log.warn("OutfitId가 유효하지 않고 codyData도 없어 코디 연결 없이 게시글 생성 진행: outfitId={}", outfitId);
+                }
             }
             
             // 6. Post 엔티티 저장
             Post savedPost = postRepository.saveAndFlush(post);
             
-            log.info("Post 엔티티 저장 성공: postId={}, outfitId={}", savedPost.getPostId(), outfitId);
+            log.info("Post 엔티티 저장 성공: postId={}, outfitId={}", savedPost.getPostId(), post.getOutfit() != null ? post.getOutfit().getOutfitIdx() : null);
             
             // 7. 응답 DTO 생성
             PostResponseDto response = new PostResponseDto();
@@ -181,9 +195,17 @@ public class PostController {
             response.setIsScrapped(false);
             
             // 8. 코디 정보 추가 (있는 경우)
-            if (savedPost.getOutfit() != null) {
-                response.setOutfitId(savedPost.getOutfit().getOutfitIdx());
-                response.setCodyData(convertOutfitToCodyData(savedPost.getOutfit()));
+            if (post.getOutfit() != null) {
+                Outfit linkedOutfit = post.getOutfit();
+                response.setOutfitId(linkedOutfit.getOutfitIdx());
+                CreatePostRequestDto.CodyData codyData = convertOutfitToCodyData(linkedOutfit);
+                if (codyData == null) {
+                    codyData = request.getCodyData() != null ? request.getCodyData() : new CreatePostRequestDto.CodyData();
+                }
+                if (linkedOutfit.getOutfitThumbnail() != null && !linkedOutfit.getOutfitThumbnail().isBlank()) {
+                    codyData.setThumbnailUrl(linkedOutfit.getOutfitThumbnail());
+                }
+                response.setCodyData(codyData);
             }
             
             log.info("게시글 생성 성공: postId={}, userId={}, outfitId={}", 
@@ -818,15 +840,50 @@ public class PostController {
             JsonNode outfitItem = outfit.getOutfitItem();
             
             CreatePostRequestDto.CodyData codyData = new CreatePostRequestDto.CodyData();
-            codyData.setName(outfitItem.get("name").asText());
-            codyData.setTimestamp(outfitItem.get("timestamp").asLong());
+            JsonNode nameNode = outfitItem.get("name");
+            codyData.setName(nameNode != null ? nameNode.asText() : null);
+            JsonNode tsNode = outfitItem.get("timestamp");
+            codyData.setTimestamp(tsNode != null ? tsNode.asLong() : null);
             
             // items 변환
             if (outfitItem.has("items")) {
                 List<CreatePostRequestDto.CodyItem> items = new ArrayList<>();
                 for (JsonNode item : outfitItem.get("items")) {
                     CreatePostRequestDto.CodyItem codyItem = new CreatePostRequestDto.CodyItem();
-                    codyItem.setProductId(item.get("productId").asLong());
+                    
+                    // productId 안전하게 추출 (기존 데이터 호환성)
+                    Long productId = null;
+                    if (item.has("productId") && !item.get("productId").isNull()) {
+                        if (item.get("productId").isNumber()) {
+                            Long tempId = item.get("productId").asLong();
+                            if (tempId > 0) {
+                                productId = tempId;
+                            }
+                        }
+                    } else if (item.has("itemId") && !item.get("itemId").isNull()) {
+                        // itemId에서 숫자 추출 시도
+                        String itemIdStr = item.get("itemId").asText();
+                        try {
+                            Long parsedId = Long.parseLong(itemIdStr);
+                            if (parsedId > 0) {
+                                productId = parsedId;
+                            }
+                        } catch (NumberFormatException e) {
+                            // 파싱 실패 시 null 유지
+                        }
+                    }
+                    
+                    codyItem.setProductId(productId);
+                    // itemId도 설정 (프론트엔드 호환성을 위해)
+                    codyItem.setItemId(productId != null ? productId.toString() : "0");
+                    JsonNode nameNodeItem = item.get("name");
+                    if (nameNodeItem != null && !nameNodeItem.isNull()) {
+                        codyItem.setName(nameNodeItem.asText());
+                    }
+                    JsonNode slotNodeItem = item.get("slot");
+                    if (slotNodeItem != null && !slotNodeItem.isNull()) {
+                        codyItem.setSlot(slotNodeItem.asText());
+                    }
                     codyItem.setSrc(item.get("src").asText());
                     codyItem.setNx(item.get("nx").asDouble());
                     codyItem.setNy(item.get("ny").asDouble());

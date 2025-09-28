@@ -45,11 +45,14 @@ export function CodyProductList({
       // 병렬로 상품 정보 조회
       const productPromises = memoizedItems.map(async (item) => {
         try {
-          // itemId가 있고 유효한 값(0이 아닌 양수)이면 API 호출, 아니면 기본 정보 사용
-          if (item.itemId && parseInt(item.itemId) > 0) {
-            const response = await fetch(`/api/products/${item.itemId}`)
+          // productId가 있으면 API 호출, 아니면 기본 정보 사용
+          // temp-로 시작하는 임시 ID는 API 호출하지 않음
+          if (item.productId && item.productId > 0 && !item.id.startsWith('temp-') && item.id !== '0') {
+            const response = await fetch(`/api/products/${item.productId}`)
             if (response.ok) {
-              const product = await response.json()
+              const data = await response.json()
+              // ProductDetailDto인 경우 product 필드에서 실제 상품 정보 추출
+              const product = data.product || data
               
               // 브랜드 정보 조회 (storeIdx가 있는 경우)
               let brandName = ''
@@ -61,34 +64,34 @@ export function CodyProductList({
                     brandName = store.storeName || ''
                   }
                 } catch (storeError) {
-                  console.warn(`스토어 정보 조회 실패 (productId: ${item.itemId}):`, storeError)
+              console.warn(`스토어 정보 조회 실패 (productId: ${item.productId})`, storeError)
                 }
               }
               
               return {
-                id: item.itemId,
-                name: product.productName || item.name,
+                id: item.itemId || item.productId?.toString(),
+                name: product.productName || product.name || '',
                 image: product.productImage || item.src,
                 price: product.productPrice,
                 brand: brandName,
-                category: product.majorCategory || product.productCategory || item.slot
+                category: product.majorCategory || product.productCategory || product.category || undefined
               }
             } else {
               // API 실패 시 기본 정보 사용
               return {
                 id: item.id,
-                name: item.name,
+                name: item.name || '상품 정보 없음',
                 image: item.src,
-                category: item.slot
+                category: item.slot || 'accessory'
               }
             }
           } else {
-            // itemId가 없거나 유효하지 않으면 기본 정보 사용
+            // productId가 없거나 0인 경우 기본 정보 사용
             return {
               id: item.id,
-              name: item.name,
+              name: item.name || '상품 정보 없음',
               image: item.src,
-              category: item.slot
+              category: item.slot || 'accessory'
             }
           }
         } catch (error) {
@@ -96,9 +99,9 @@ export function CodyProductList({
           // 에러 시에도 기본 정보는 표시
           return {
             id: item.id,
-            name: item.name,
+            name: item.name || '상품 정보 없음',
             image: item.src,
-            category: item.slot
+            category: item.slot || 'accessory'
           }
         }
       })

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Heart, Bell, Search, User, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { LikeButton } from '@/features/reactions/LikeButton'
+import { useInfinitePosts } from '@/hooks/useInfinitePosts'
 
 interface Post {
   postId: number
@@ -48,139 +49,102 @@ interface Post {
     }
     timestamp: number
   }
+  // useInfinitePosts에서 사용하는 필드들
+  isLiked?: boolean
+  isScrapped?: boolean
+}
+
+const logScrollDebug = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== 'development') return
+  console.log('[community:scroll]', ...args)
 }
 
 export default function CommunityPage() {
   const router = useRouter()
-  const [posts, setPosts] = useState<Post[]>([])
-  const [filteredPosts, setFilteredPosts] = useState<Post[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('popular')
   const [activeTab, setActiveTab] = useState('snap')
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [showSearch, setShowSearch] = useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
-
-  // 게시글 데이터 로드
-  useEffect(() => {
-    const loadPosts = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        
-        // 토큰 가져오기
-        const token = localStorage.getItem('token')
-        
-        const response = await fetch('/api/posts', {
-          headers: {
-            ...(token && { 'Authorization': `Bearer ${token}` })
-          }
-        })
-        if (response.ok) {
-          const data = await response.json()
-          // 데이터가 배열인지 확인하고 안전하게 설정
-          const postsArray = Array.isArray(data) ? data : (data.content || [])
-          
-          // localStorage에서 조회수 가져오기
-          const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
-          
-          // 조회수 복원 및 필드명 통일
-          const postsWithViewCount = postsArray.map((post: any) => {
-            console.log(`게시글 ${post.postId} 상태:`, {
-              isLiked: post.isLiked,
-              isScrapped: post.isScrapped,
-              likeCount: post.likeCount,
-              scrapCount: post.scrapCount
-            });
-            
-            return {
-              ...post,
-              viewCount: viewCounts[post.postId] || post.viewCount || 0,
-              // 백엔드 응답 필드명을 프론트엔드 기대 형식으로 변환
-              liked: post.isLiked || false,
-              scraped: post.isScrapped || false,
-              authorId: post.authorId || post.userId || null,
-              authorHeightCm: post.authorHeightCm ?? post.author_height_cm ?? null,
-              authorWeightKg: post.authorWeightKg ?? post.author_weight_kg ?? null,
-            };
-          })
-          
-          setPosts(postsWithViewCount)
-          setFilteredPosts(postsWithViewCount)
-          
-          // 배치 상태 조회로 정확한 상태 업데이트
-          console.log('배치 상태 조회 조건 확인:', { 
-            hasToken: !!token, 
-            postsLength: postsWithViewCount.length,
-            token: token ? token.substring(0, 10) + '...' : 'null'
-          })
-          
-          // 임시: 토큰이 없어도 배치 상태 조회 실행 (디버깅용)
-          if (postsWithViewCount.length > 0) {
-            try {
-              const postIds = postsWithViewCount.map((post: any) => post.postId)
-              console.log('배치 상태 조회 요청:', { postIds, token: token ? token.substring(0, 10) + '...' : 'null' })
-              
-              const statusResponse = await fetch('/api/reactions/status', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(token && { 'Authorization': `Bearer ${token}` })
-                },
-                body: JSON.stringify({ postIds })
-              })
-              
-              console.log('배치 상태 조회 응답:', statusResponse.status, statusResponse.statusText)
-              
-              if (statusResponse.ok) {
-                const statusData = await statusResponse.json()
-                console.log('배치 상태 조회 결과:', statusData)
-                
-                // 상태 업데이트
-                const updatedPosts = postsWithViewCount.map((post: any) => {
-                  const status = statusData[`post_${post.postId}`]
-                  if (status) {
-                    return {
-                      ...post,
-                      liked: status.liked,
-                      scraped: status.scraped,
-                      likeCount: status.likeCount,
-                      scrapCount: status.scrapCount
-                    }
-                  }
-                  return post
-                })
-                
-                setPosts(updatedPosts)
-                setFilteredPosts(updatedPosts)
-              }
-            } catch (statusError) {
-              console.error('배치 상태 조회 실패, 기본 상태 사용:', statusError)
-            }
-          }
-      } else {
-          throw new Error(`게시글 로드 실패: ${response.status}`)
-      }
+  
+  // 무한 스크롤 훅 사용
+  const { 
+    posts, 
+    loading: isLoading, 
+    error, 
+    hasMore, 
+    loadMore 
+  } = useInfinitePosts({
+    pageSize: 20,
+    sortBy: sortBy as 'latest' | 'trending' | 'popular'
+  })
+  
+  // 추가 로딩 상태 (초기 로딩과 구분)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  
+  // filteredPosts는 useMemo로 계산되므로 상태로 관리하지 않음
+  const observer = useRef<IntersectionObserver | null>(null)
+  // 스크롤 복원 로직 제거 - 자연스러운 추가만 유지
+  const listContainerRef = useRef<HTMLDivElement | null>(null)
+  
+  // 추가 게시글 로드 함수 - 자연스러운 추가
+  const handleLoadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return
+    
+    logScrollDebug('loadMore:start', {
+      currentScrollY: window.scrollY,
+      postsLength: posts.length
+    })
+    
+    setIsLoadingMore(true)
+    try {
+      await loadMore()
+      logScrollDebug('loadMore:completed')
     } catch (error) {
-        console.error('게시글 로드 실패:', error)
-        setError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다')
-        setPosts([])
-        setFilteredPosts([])
-      } finally {
-        setIsLoading(false)
-      }
+      logScrollDebug('loadMore:error', error)
+    } finally {
+      setIsLoadingMore(false)
+      logScrollDebug('loadMore:finally', {
+        hasMore,
+        postsLength: posts.length
+      })
     }
+  }, [isLoadingMore, hasMore, loadMore, posts.length])
 
-    loadPosts()
-  }, [])
-
-  // 검색 및 필터링
-  useEffect(() => {
-    if (!Array.isArray(posts)) {
-      setFilteredPosts([])
-        return
+  // 무한 스크롤을 위한 마지막 요소 관찰 - 최적화
+  const lastPostElementRef = useCallback((node: HTMLDivElement) => {
+    if (isLoadingMore) return
+    
+    if (observer.current) observer.current.disconnect()
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+        logScrollDebug('intersection:trigger', { hasMore, isLoadingMore })
+        handleLoadMore()
       }
+    }, {
+      rootMargin: '200px', // 200px 전에 미리 로드로 자연스러운 로딩
+      threshold: 0.1
+    })
+    
+    if (node) observer.current.observe(node)
+  }, [isLoadingMore, hasMore, handleLoadMore])
+
+  // 초기 로드 완료 감지
+  useEffect(() => {
+    if (posts.length > 0 && isInitialLoad) {
+      setIsInitialLoad(false)
+    }
+  }, [posts.length, isInitialLoad])
+
+  // 스크롤 복원 로직 제거 - 자연스러운 추가만 유지
+
+  // 검색 및 필터링 - useMemo로 최적화
+  const filteredPosts = useMemo(() => {
+    if (!Array.isArray(posts)) {
+      return []
+    }
 
     let filtered = [...posts]
 
@@ -213,16 +177,21 @@ export default function CommunityPage() {
       }
     })
 
-    setFilteredPosts(filtered)
+    return filtered
   }, [posts, searchTerm, sortBy, activeTab])
 
 
   // 좋아요 토글은 이제 LikeButton 컴포넌트에서 처리
 
-  // 게시글 클릭 시 상세 페이지로 이동
-  const handlePostClick = (postId: number) => {
+  // 게시글 클릭 시 상세 페이지로 이동 - 메모이제이션
+  const handlePostClick = useCallback((postId: number) => {
     router.push(`/community/${postId}`)
-  }
+  }, [router])
+
+  // 좋아요 핸들러 - 빈 함수로 메모이제이션
+  const handleLike = useCallback(() => {
+    // LikeButton 컴포넌트에서 처리
+  }, [])
 
   // 프로필 버튼 클릭 핸들러
   const handleProfileClick = () => {
@@ -406,17 +375,32 @@ export default function CommunityPage() {
 
             {/* 게시글 그리드 */}
             {Array.isArray(filteredPosts) && filteredPosts.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
-                {filteredPosts.map((post) => (
-                  <PostCard
+              <div
+                ref={listContainerRef}
+                className="grid grid-cols-2 gap-2"
+                style={{
+                  transition: 'none', // 애니메이션 제거로 깜빡임 방지
+                  willChange: 'auto'
+                }}
+              >
+                {filteredPosts.map((post, index) => (
+                  <div
                     key={post.postId}
-                    post={post}
-                    onLike={() => {}} // 더 이상 필요하지 않음
-                    onClick={() => handlePostClick(post.postId)}
-                  />
-                ))}
+                    ref={index === filteredPosts.length - 1 ? lastPostElementRef : null}
+                  >
+                    <PostCard
+                      post={{
+                        ...post,
+                        liked: post.isLiked ?? false,
+                        scraped: post.isScrapped ?? false
+                      }}
+                      onLike={handleLike}
+                      onClick={() => handlePostClick(post.postId)}
+                    />
                   </div>
-                ) : (
+                ))}
+              </div>
+            ) : (
               <div className="text-center py-12">
                 <div className="text-gray-400 text-6xl mb-4">📝</div>
                 <p className="text-gray-500 text-lg mb-2">
@@ -427,6 +411,23 @@ export default function CommunityPage() {
                     다른 검색어를 시도해보세요
                   </p>
                 )}
+              </div>
+            )}
+            
+            {/* 추가 로딩 인디케이터 - 하단 고정 */}
+            {isLoadingMore && (
+              <div className="flex justify-center py-6 bg-gray-50 dark:bg-gray-900/50 rounded-lg mt-4">
+                <div className="text-gray-500 text-sm flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                  게시글을 불러오는 중...
+                </div>
+              </div>
+            )}
+            
+            {/* 더 이상 로드할 게시글이 없을 때 */}
+            {!hasMore && filteredPosts.length > 0 && (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                모든 게시글을 불러왔습니다
               </div>
             )}
             </TabsContent>
@@ -484,13 +485,17 @@ interface PostCardProps {
   onClick: () => void
 }
 
-function PostCard({ post, onLike, onClick }: PostCardProps) {
+const PostCard = React.memo(({ post, onLike, onClick }: PostCardProps) => {
   const router = useRouter()
   
   return (
     <div 
       className="relative cursor-pointer group"
       onClick={onClick}
+      style={{
+        contain: 'layout style', // 레이아웃 격리로 리플로우 방지
+        willChange: 'auto'
+      }}
     >
       {/* 게시글 이미지 */}
       <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
@@ -525,4 +530,12 @@ function PostCard({ post, onLike, onClick }: PostCardProps) {
       {/* 게시글 정보 - 좋아요 버튼만 유지 */}
     </div>
   )
-}
+}, (prevProps, nextProps) => {
+  // props 비교 로직으로 불필요한 리렌더링 방지
+  return (
+    prevProps.post.postId === nextProps.post.postId &&
+    prevProps.post.liked === nextProps.post.liked &&
+    prevProps.post.scraped === nextProps.post.scraped &&
+    prevProps.post.mediaUrls?.[0] === nextProps.post.mediaUrls?.[0]
+  )
+})

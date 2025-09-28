@@ -71,18 +71,24 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       size: pageSize.toString(),
     });
 
-          if (sortBy === 'trending') {
-        return `http://localhost:8080/api/posts/trending?${params}`;
-      } else if (userId) {
-        return `http://localhost:8080/api/posts/user/${userId}?${params}`;
-      } else if (tag) {
-        return `http://localhost:8080/api/posts/tag/${tag}?${params}`;
-      } else {
-        return `http://localhost:8080/api/posts?${params}`;
-      }
+    if (sortBy === 'trending') {
+      return `/api/posts/trending?${params}`;
+    } else if (userId) {
+      return `/api/posts/user/${userId}?${params}`;
+    } else if (tag) {
+      return `/api/posts/tag/${tag}?${params}`;
+    } else {
+      return `/api/posts?${params}`;
+    }
   }, [pageSize, sortBy, userId, tag]);
 
   const fetchPosts = useCallback(async (page: number, append: boolean = false) => {
+    // 중복 요청 방지
+    if (loading) {
+      console.log('useInfinitePosts: 이미 로딩 중이므로 요청 건너뜀', { page, append });
+      return;
+    }
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -95,12 +101,15 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       const url = buildApiUrl(page);
       console.log('useInfinitePosts: 게시글 조회 시작', { url, page, append });
 
+      // 토큰 가져오기
+      const token = localStorage.getItem('token');
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
         },
-        credentials: 'include',
         signal: abortControllerRef.current.signal,
       });
 
@@ -112,27 +121,17 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       const data: PostsResponse = await response.json();
       console.log('useInfinitePosts: 게시글 조회 성공', data);
 
-      // 게시글 데이터에 좋아요/스크랩 상태 적용 (배치 상태가 있을 때만)
+      // 게시글 데이터 변환 - 배치 상태 적용
       const postsWithStatus = data.content.map(post => {
-        // 배치 상태가 로드된 경우에만 적용, 없으면 백엔드 기본값 사용
-        if (batchReactionStatus) {
-          const status = reactionManager.getPostStatus(post.postId);
-          
-          return {
-            ...post,
-            isLiked: status?.liked ?? post.isLiked ?? false,
-            isScrapped: status?.scraped ?? post.isScrapped ?? false,
-            likeCount: status?.likeCount ?? post.likeCount,
-            scrapCount: status?.scrapCount ?? post.scrapCount
-          };
-        } else {
-          // 배치 상태가 아직 로드되지 않은 경우 백엔드 기본값 사용
-          return {
-            ...post,
-            isLiked: post.isLiked ?? false,
-            isScrapped: post.isScrapped ?? false
-          };
-        }
+        const status = reactionManager.getPostStatus(post.postId);
+        
+        return {
+          ...post,
+          isLiked: status?.liked ?? post.isLiked ?? false,
+          isScrapped: status?.scraped ?? post.isScrapped ?? false,
+          likeCount: status?.likeCount ?? post.likeCount ?? 0,
+          scrapCount: status?.scrapCount ?? post.scrapCount ?? 0
+        };
       });
 
       if (append) {
@@ -154,7 +153,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
     } finally {
       setLoading(false);
     }
-  }, [buildApiUrl]);
+  }, [buildApiUrl, reactionManager]);
 
   const loadMore = useCallback(() => {
     if (loading || !hasMore) return;
@@ -165,6 +164,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
     setPosts([]);
     setCurrentPage(0);
     setHasMore(true);
+    hasInitialized.current = false;
     fetchPosts(0, false);
   }, [fetchPosts]);
 
@@ -194,10 +194,15 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
     }
   }, [batchReactionStatus]);
 
-  // 초기 로드
+  // 초기 로드 (무한 루프 방지)
+  const hasInitialized = useRef(false);
+  
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (!hasInitialized.current && posts.length === 0 && !loading) {
+      hasInitialized.current = true;
+      refresh();
+    }
+  }, []);
 
   // 컴포넌트 언마운트 시 진행 중인 요청 취소
   useEffect(() => {

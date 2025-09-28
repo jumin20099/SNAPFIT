@@ -118,9 +118,24 @@ export function CodySaveModal({
     }
 
     try {
+      // items에 productId가 포함되도록 변환
+      console.log('=== 코디 저장 전 데이터 확인 ===')
+      console.log('원본 items:', codyData.items)
+      
+      const itemsWithProductId = codyData.items.map(item => {
+        const productId = item.productId || (item.itemId && !isNaN(Number(item.itemId)) ? Number(item.itemId) : null)
+        console.log(`아이템 변환: itemId=${item.itemId}, productId=${item.productId} -> ${productId}`)
+        return {
+          ...item,
+          productId: productId
+        }
+      })
+      
+      console.log('변환된 items:', itemsWithProductId)
+      
       const outfitData: OutfitData = {
         name: codyName.trim(),
-        items: codyData.items,
+        items: itemsWithProductId,
         background: codyData.background,
         timestamp: codyData.timestamp,
         isPublic: isPublic

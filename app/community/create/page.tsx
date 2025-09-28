@@ -40,12 +40,32 @@ export default function CreatePostPage() {
   const [requiresAnonymousPassword, setRequiresAnonymousPassword] = useState(false)
   const needsPasswordForSubmit = !isLoggedIn || requiresAnonymousPassword
 
-  // localStorage에서 코디 데이터 로드
+  // localStorage에서 코디 데이터 로드 또는 URL state에서 로드
   useEffect(() => {
     const loadExportData = () => {
       try {
         const token = localStorage.getItem('token')
         setIsLoggedIn(!!token)
+        
+        // URL state에서 코디 데이터 확인 (마이페이지에서 공유한 경우)
+        const urlParams = new URLSearchParams(window.location.search)
+        const codyDataParam = urlParams.get('codyData')
+        if (codyDataParam) {
+          try {
+            const codyData = JSON.parse(decodeURIComponent(codyDataParam))
+            setCodyData(codyData)
+            if (codyData.name) {
+              setTitle(codyData.name)
+            }
+            setContent(`"${codyData.name || '코디'}" 코디를 공유합니다! 💫\n\n아이템 ${codyData.items.length}개로 구성된 오늘의 코디입니다.`)
+            setTags(['코디', '패션', '스타일'])
+            return
+          } catch (error) {
+            console.error('URL state 코디 데이터 파싱 실패:', error)
+          }
+        }
+        
+        // localStorage에서 코디 데이터 로드 (코디 페이지에서 export한 경우)
         const exportDataStr = localStorage.getItem('cody-export-data')
         if (exportDataStr) {
           const exportData = JSON.parse(exportDataStr)
@@ -222,6 +242,12 @@ export default function CreatePostPage() {
         } : undefined
       }
 
+      // 코디 페이지에서 저장 직후 export한 경우, localStorage에 outfitId가 있을 수 있음
+      const maybeOutfitId = localStorage.getItem('cody-last-outfit-id')
+      if (maybeOutfitId) {
+        postData.outfitId = Number(maybeOutfitId)
+      }
+
       if (needsPassword && trimmedPassword) {
         postData.anonymousPassword = trimmedPassword
       }
@@ -252,6 +278,11 @@ export default function CreatePostPage() {
       }
 
       const result = await response.json()
+
+      // export 경로에서 outfitId를 사용했다면 중복 저장 방지 위해 플래그 제거
+      if (maybeOutfitId) {
+        localStorage.removeItem('cody-last-outfit-id')
+      }
       console.log('게시글 작성 성공:', result)
       
       alert(isEditMode ? '게시글이 성공적으로 수정되었습니다.' : '게시글이 성공적으로 작성되었습니다! 🎉')

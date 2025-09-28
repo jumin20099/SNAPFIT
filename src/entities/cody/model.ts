@@ -142,9 +142,10 @@ export class AssetMetaManager {
 export interface PlacedItem {
   id: string;
   itemId: string;
+  productId?: number; // 백엔드에서 사용하는 productId 필드
   name: string;
   src: string;
-  slot: CodySlot;
+  slot?: CodySlot; // 커뮤니티 표시에서는 백엔드 카테고리로 대체될 수 있어 선택적
   // 정규화 좌표 (0~1 범위, BASE 기준)
   nx: number;  // 0~1 (BASE_W 기준)
   ny: number;  // 0~1 (BASE_H 기준)

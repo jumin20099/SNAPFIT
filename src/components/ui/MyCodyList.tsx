@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Trash2, Download, Share2, Calendar } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { PlacedItem } from '@/entities/cody/model'
 import { CodyDisplay } from './CodyDisplay'
@@ -22,6 +23,7 @@ interface SavedCody {
 }
 
 export function MyCodyList() {
+  const router = useRouter()
   const [savedCodies, setSavedCodies] = useState<OutfitResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({})
@@ -98,6 +100,25 @@ export function MyCodyList() {
     }
   }
 
+  // 커뮤니티에 코디 공유
+  const handleShareToCommunity = async (cody: OutfitResponse) => {
+    try {
+      // 코디 데이터 파싱
+      const codyData = typeof cody.outfitItem === 'string' 
+        ? JSON.parse(cody.outfitItem) 
+        : cody.outfitItem
+
+      // 코디 데이터를 URL 파라미터로 인코딩
+      const encodedCodyData = encodeURIComponent(JSON.stringify(codyData))
+      
+      // 커뮤니티 게시글 생성 페이지로 이동
+      router.push(`/community/create?codyData=${encodedCodyData}`)
+    } catch (error) {
+      console.error('코디 공유 실패:', error)
+      alert('코디 공유에 실패했습니다')
+    }
+  }
+
   // 코디 썸네일 생성
   const generateThumbnail = async (cody: OutfitResponse) => {
     const codyId = cody.outfitIdx.toString()
@@ -115,7 +136,10 @@ export function MyCodyList() {
     try {
       setThumbnailLoading(prev => ({ ...prev, [codyId]: true }))
       
-      const codyData = JSON.parse(cody.outfitItem)
+      // outfitItem이 이미 객체인 경우와 문자열인 경우 모두 처리
+      const codyData = typeof cody.outfitItem === 'string' 
+        ? JSON.parse(cody.outfitItem) 
+        : cody.outfitItem
       console.log(`썸네일 생성 시작: 코디 #${codyId}`, codyData)
       
       const thumbnailBlob = await generateCodyThumbnail(codyData)
@@ -195,11 +219,6 @@ export function MyCodyList() {
     }
   }
 
-  // 커뮤니티에 공유
-  const handleShareToCommunity = (cody: OutfitResponse) => {
-    // 커뮤니티 게시글 생성 로직
-    console.log('커뮤니티 공유:', cody)
-  }
 
   if (loading) {
     return (
@@ -263,7 +282,9 @@ export function MyCodyList() {
             // JSON 문자열을 파싱하여 코디 데이터 추출
             let codyData
             try {
-              codyData = JSON.parse(cody.outfitItem)
+              codyData = typeof cody.outfitItem === 'string' 
+                ? JSON.parse(cody.outfitItem) 
+                : cody.outfitItem
             } catch (error) {
               console.error('코디 데이터 파싱 실패:', error)
               return null
