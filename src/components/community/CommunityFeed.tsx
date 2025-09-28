@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { LikeButton } from '@/features/reactions/LikeButton'
+import { useToggleLike } from '@/shared/hooks/useToggleLike'
 import { useInfinitePosts } from '@/hooks/useInfinitePosts'
 import { ReactionButton } from '@/shared/ui/ReactionButton'
 
@@ -59,6 +59,11 @@ interface Post {
 const logScrollDebug = (...args: unknown[]) => {
   if (process.env.NODE_ENV !== 'development') return
   console.log('[community:scroll]', ...args)
+}
+
+const logReactionDebug = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== 'development') return
+  console.log('[community:reaction]', ...args)
 }
 
 const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activeTab, onPostClick, onTotalCountChange }) => {
@@ -207,6 +212,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
   )
 
   const handleLikeSuccess = useCallback((postId: number, liked: boolean, count: number) => {
+    logReactionDebug('handleLikeSuccess', { postId, liked, count })
     reactionManager.updatePost(postId, { liked, likeCount: count })
   }, [reactionManager])
 
@@ -245,6 +251,14 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
             const status = reactionManager.getPostStatus(post.postId)
             const liked = status?.liked ?? post.isLiked ?? false
             const likeCount = status?.likeCount ?? post.likeCount ?? 0
+            logReactionDebug('renderPost', {
+              postId: post.postId,
+              liked,
+              likeCount,
+              status,
+              fallbackLiked: post.isLiked,
+              fallbackLikeCount: post.likeCount
+            })
             return (
               <div data-post-id={post.postId} key={post.postId}>
                 <PostCard
@@ -299,6 +313,16 @@ interface PostCardProps {
 }
 
 const PostCard = React.memo(({ post, liked, likeCount, onToggle, onClick }: PostCardProps) => {
+  const handleToggle = useCallback((event: React.MouseEvent) => {
+    event.stopPropagation()
+    logReactionDebug('toggleLike:click', {
+      postId: post.postId,
+      beforeLiked: liked,
+      beforeLikeCount: likeCount
+    })
+    onToggle()
+  }, [likeCount, liked, onToggle, post.postId])
+
   return (
     <div className="relative cursor-pointer group" onClick={onClick}>
       <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
@@ -324,10 +348,7 @@ const PostCard = React.memo(({ post, liked, likeCount, onToggle, onClick }: Post
           kind="like"
           active={liked}
           count={likeCount}
-          onToggle={(event) => {
-            event.stopPropagation()
-            onToggle()
-          }}
+          onToggle={handleToggle}
           showCount={false}
           className="p-1 transition-all duration-200 hover:scale-110"
         />

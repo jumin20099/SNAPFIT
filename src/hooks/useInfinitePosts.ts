@@ -51,7 +51,12 @@ interface UseInfinitePostsReturn {
 
 export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfinitePostsReturn {
   const { pageSize = 10, sortBy = 'latest', userId, tag } = options;
-  
+
+  const logReactionDebug = (...args: unknown[]) => {
+    if (process.env.NODE_ENV !== 'development') return;
+    console.log('[community:reaction:hook]', ...args);
+  };
+
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,16 +124,34 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
 
       const postsWithStatus = data.content.map(post => {
         const status = reactionManager.getPostStatus(post.postId);
-        return {
+        const patched = {
           ...post,
           isLiked: status?.liked ?? post.isLiked ?? false,
           isScrapped: status?.scraped ?? post.isScrapped ?? false,
           likeCount: status?.likeCount ?? post.likeCount ?? 0,
           scrapCount: status?.scrapCount ?? post.scrapCount ?? 0
         };
+        logReactionDebug('fetchPage:patched', {
+          postId: post.postId,
+          originalLiked: post.isLiked,
+          patchedLiked: patched.isLiked,
+          managerLiked: status?.liked,
+          originalLikeCount: post.likeCount,
+          patchedLikeCount: patched.likeCount,
+          managerLikeCount: status?.likeCount
+        });
+        return patched;
       });
 
-      setPosts(prev => replace ? postsWithStatus : [...prev, ...postsWithStatus]);
+      setPosts(prev => {
+        const next = replace ? postsWithStatus : [...prev, ...postsWithStatus];
+        logReactionDebug('fetchPage:setPosts', {
+          replace,
+          length: next.length,
+          sample: next.slice(0, 3).map(p => ({ postId: p.postId, isLiked: p.isLiked, likeCount: p.likeCount }))
+        });
+        return next;
+      });
       setHasMore(!data.last);
       setCurrentPage(page);
       fetchedPagesRef.current.add(page);
@@ -147,6 +170,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
   const loadMore = useCallback(() => {
     if (isFetchingRef.current || !hasMore) return;
     const nextPage = currentPage + 1;
+    logReactionDebug('loadMore:trigger', { currentPage, nextPage, hasMore });
     void fetchPage(nextPage, false);
   }, [hasMore, currentPage, fetchPage]);
 
@@ -163,17 +187,31 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
 
   useEffect(() => {
     if (batchReactionStatus && posts.length > 0) {
-      setPosts(prevPosts => 
+      logReactionDebug('batchStatus:update', {
+        size: posts.length,
+        sample: posts.slice(0, 3).map(p => ({ postId: p.postId, beforeLiked: p.isLiked }))
+      });
+      setPosts(prevPosts =>
         prevPosts.map(post => {
           const status = reactionManager.getPostStatus(post.postId);
           if (!status) return post;
-          return {
+          const patched = {
             ...post,
             isLiked: status.liked ?? post.isLiked,
             isScrapped: status.scraped ?? post.isScrapped,
             likeCount: status.likeCount ?? post.likeCount,
             scrapCount: status.scrapCount ?? post.scrapCount
           };
+          logReactionDebug('batchStatus:patched', {
+            postId: post.postId,
+            beforeLiked: post.isLiked,
+            afterLiked: patched.isLiked,
+            statusLiked: status.liked,
+            beforeLikeCount: post.likeCount,
+            afterLikeCount: patched.likeCount,
+            statusLikeCount: status.likeCount
+          });
+          return patched;
         })
       );
     }
