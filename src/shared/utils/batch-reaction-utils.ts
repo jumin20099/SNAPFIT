@@ -69,18 +69,18 @@ export class BatchReactionStatusManager {
   }
 
   /**
-   * 데이터 존재 여부 확인
+   * 특정 게시글 상태를 업데이트 (비동기 이벤트 대응)
    */
-  hasData(): boolean {
-    return Boolean(this.data);
-  }
-
-  /**
-   * 특정 키가 존재하는지 확인
-   */
-  hasStatus(key: string): boolean {
-    if (!this.data) return false;
-    return key in this.data;
+  updatePost(postId: string | number, updates: Partial<ReactionStatusItem>) {
+    if (!this.data) return;
+    const key = `post_${postId}` as const;
+    const current = this.data[key] || { liked: false, likeCount: 0 };
+    this.data[key] = {
+      ...current,
+      ...updates,
+      likeCount: updates.likeCount ?? current.likeCount ?? 0,
+      scrapCount: updates.scrapCount ?? current.scrapCount ?? 0,
+    };
   }
 }
 

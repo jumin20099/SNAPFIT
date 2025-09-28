@@ -46,6 +46,7 @@ interface UseInfinitePostsReturn {
   loadMore: () => void;
   refresh: () => void;
   resetError: () => void;
+  reactionManager: BatchReactionStatusManager;
 }
 
 export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfinitePostsReturn {
@@ -194,5 +195,6 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
     loadMore,
     refresh,
     resetError,
+    reactionManager,
   };
 }

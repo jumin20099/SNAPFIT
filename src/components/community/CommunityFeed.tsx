@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { LikeButton } from '@/features/reactions/LikeButton'
 import { useInfinitePosts } from '@/hooks/useInfinitePosts'
+import { ReactionButton } from '@/shared/ui/ReactionButton'
 
 type SortOption = 'latest' | 'popular' | 'trending' | 'mostCommented'
 
@@ -65,7 +66,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
 
   const normalizedSort = sortBy === 'latest' || sortBy === 'trending' ? sortBy : 'popular'
 
-  const { posts, loading, error, hasMore, loadMore } = useInfinitePosts({
+  const { posts, loading, error, hasMore, loadMore, reactionManager } = useInfinitePosts({
     pageSize: 20,
     sortBy: normalizedSort,
   })
@@ -205,6 +206,10 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
     [onPostClick, router]
   )
 
+  const handleLikeSuccess = useCallback((postId: number, liked: boolean, count: number) => {
+    reactionManager.updatePost(postId, { liked, likeCount: count })
+  }, [reactionManager])
+
   if (loading && posts.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
@@ -236,18 +241,22 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
     <>
       {Array.isArray(filteredPosts) && filteredPosts.length > 0 ? (
         <div className="grid grid-cols-2 gap-2">
-          {filteredPosts.map(post => (
-            <div data-post-id={post.postId} key={post.postId}>
-              <PostCard
-                post={{
-                  ...post,
-                  liked: post.isLiked ?? false,
-                  scraped: post.isScrapped ?? false,
-                }}
-                onClick={() => handleCardClick(post.postId)}
-              />
-            </div>
-          ))}
+          {filteredPosts.map(post => {
+            const status = reactionManager.getPostStatus(post.postId)
+            const liked = status?.liked ?? post.isLiked ?? false
+            const likeCount = status?.likeCount ?? post.likeCount ?? 0
+            return (
+              <div data-post-id={post.postId} key={post.postId}>
+                <PostCard
+                  post={post}
+                  liked={liked}
+                  likeCount={likeCount}
+                  onClick={() => handleCardClick(post.postId)}
+                  onToggle={() => handleLikeSuccess(post.postId, !liked, liked ? Math.max(0, likeCount - 1) : likeCount + 1)}
+                />
+              </div>
+            )
+          })}
         </div>
       ) : (
         <div className="text-center py-12">
@@ -283,10 +292,13 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
 
 interface PostCardProps {
   post: Post
+  liked: boolean
+  likeCount: number
+  onToggle: () => void
   onClick: () => void
 }
 
-const PostCard = React.memo(({ post, onClick }: PostCardProps) => {
+const PostCard = React.memo(({ post, liked, likeCount, onToggle, onClick }: PostCardProps) => {
   return (
     <div className="relative cursor-pointer group" onClick={onClick}>
       <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
@@ -307,12 +319,15 @@ const PostCard = React.memo(({ post, onClick }: PostCardProps) => {
         )}
       </div>
 
-      <div className="absolute top-2 right-2" onClick={e => e.stopPropagation()}>
-        <LikeButton
-          targetIdx={post.postId}
-          targetType="post"
-          initialActive={post.liked}
-          initialCount={0}
+      <div className="absolute top-2 right-2">
+        <ReactionButton
+          kind="like"
+          active={liked}
+          count={likeCount}
+          onToggle={(event) => {
+            event.stopPropagation()
+            onToggle()
+          }}
           showCount={false}
           className="p-1 transition-all duration-200 hover:scale-110"
         />
