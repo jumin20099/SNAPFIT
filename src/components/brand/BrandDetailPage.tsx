@@ -12,7 +12,9 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LikeButton } from '@/features/reactions/LikeButton'
+import { ProductCard } from '@/components/ui/ProductCard'
 import { useStores } from '@/hooks/useStores'
+import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
 import { formatCurrencyKRW } from '@/lib/utils'
 import { ArrowLeft, ExternalLink, Search } from 'lucide-react'
 
@@ -191,6 +193,12 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
   }, [products])
 
   const productIdSet = useMemo(() => new Set(brandProductIds), [brandProductIds])
+
+  // 배치 상태 조회 (타입 안전)
+  const { data: batchReactionStatus, manager: reactionManager } = useBatchReactionStatus({
+    productIds: brandProductIds,
+    enabled: brandProductIds.length > 0
+  })
 
   const {
     data: publicOutfits,
@@ -487,40 +495,30 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
           ) : (
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {sortedProducts.map((product) => (
-                <Card
+                <ProductCard
                   key={product.productIdx}
-                  className="group overflow-hidden transition hover:-translate-y-1 hover:shadow-lg"
-                >
-                  <div className="relative h-48 w-full bg-gray-50">
-                    <Image
-                      src={product.productImage || '/placeholder.svg'}
-                      alt={product.productName}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="space-y-3 p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="text-base font-semibold text-gray-900 dark:text-gray-50 line-clamp-2">
-                        {product.productName}
-                      </h4>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      {product.majorCategory && <Badge variant="secondary">{product.majorCategory}</Badge>}
-                      {product.subCategory && <Badge variant="outline">{product.subCategory}</Badge>}
-                    </div>
-                    <p className="text-lg font-bold text-gray-900 dark:text-gray-50">
-                      {formatCurrencyKRW(product.productPrice)}
-                    </p>
-                    <Button
-                      className="w-full"
-                      onClick={() => router.push(`/products/${product.productIdx}`)}
-                    >
-                      상품 자세히 보기
-                    </Button>
-                  </div>
-                </Card>
+                  product={{
+                    id: product.productIdx?.toString() || '0',
+                    name: product.productName || '상품',
+                    price: product.productPrice || 0,
+                    imageUrl: product.productImage || '/placeholder.svg',
+                    brand: brandDisplayName,
+                    category: product.majorCategory || '',
+                    subCategory: product.subCategory || '',
+                    productIdx: product.productIdx,
+                    productName: product.productName,
+                    productPrice: product.productPrice,
+                    productImage: product.productImage,
+                    majorCategory: product.majorCategory,
+                    subCategory: product.subCategory,
+                    storeName: brandDisplayName,
+                    rating: product.ratingAvg || 0,
+                    reviewCount: product.reviewCount || 0,
+                    isLiked: reactionManager.getProductStatus(product.productIdx)?.liked ?? false,
+                    likeCount: reactionManager.getProductStatus(product.productIdx)?.likeCount ?? 0,
+                  }}
+                  onClick={() => router.push(`/products/${product.productIdx}`)}
+                />
               ))}
             </div>
           )}
