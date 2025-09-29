@@ -27,7 +27,7 @@ const transformApiProduct = (apiProduct: any): Product => {
     category: apiProduct.majorCategory || apiProduct.category || '',
     subCategory: apiProduct.subCategory || apiProduct.sub_category || '',
     storeName: apiProduct.storeName || apiProduct.store_name || '',
-    rating: apiProduct.rating || apiProduct.rating_score,
+    rating: apiProduct.ratingAvg || apiProduct.rating || apiProduct.rating_score,
     reviewCount: apiProduct.reviewCount || apiProduct.review_count,
     tags: apiProduct.tags || [],
     // storeIdx 추가
@@ -59,6 +59,7 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
   // API 데이터를 UI 형태로 변환 (상점 이름 및 좋아요 상태 포함)
   const allProducts = apiProducts ? apiProducts.map(apiProduct => {
     const transformed = transformApiProduct(apiProduct);
+    
     // 실제 상점 이름으로 업데이트
     if (transformed.storeIdx) {
       transformed.storeName = getStoreName(transformed.storeIdx);
