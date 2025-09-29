@@ -528,7 +528,11 @@ export default function LikedItemsPage() {
             ) : (
               <div className="space-y-4">
                 {likedBrands.map((brand) => (
-                  <div key={brand.brandId} className="bg-white dark:bg-dark-sub rounded-lg border border-gray-200 dark:border-dark-border p-4">
+                  <div 
+                    key={brand.brandId} 
+                    className="bg-white dark:bg-dark-sub rounded-lg border border-gray-200 dark:border-dark-border p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => router.push(`/brands/${brand.brandId}`)}
+                  >
                     <div className="flex items-center gap-4">
                       <div className="w-16 h-16 bg-gray-100 dark:bg-dark-border rounded-lg flex items-center justify-center">
                         <img 
@@ -546,13 +550,15 @@ export default function LikedItemsPage() {
                         </div>
                       </div>
                       
-                      <LikeButton
-                        targetIdx={brand.brandId}
-                        targetType="brand"
-                        initialActive={true}
-                        initialCount={brand.likeCount || 0}
-                        className="p-2 h-10 w-10"
-                      />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <LikeButton
+                          targetIdx={brand.brandId}
+                          targetType="brand"
+                          initialActive={true}
+                          initialCount={brand.likeCount || 0}
+                          className="p-2 h-10 w-10"
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
