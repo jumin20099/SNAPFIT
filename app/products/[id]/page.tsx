@@ -256,8 +256,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
 
         {/* 정보 및 CTA */}
         <div className="space-y-4">
-          <h1 className="text-2xl font-semibold">{p.productName}</h1>
-          <p className="text-xl font-bold" data-testid="product-price">{priceFormatted}</p>
+          <h1 className="text-2xl font-semibold text-light-text dark:text-gray-100">{p.productName}</h1>
+          <p className="text-xl font-bold text-light-text dark:text-gray-100" data-testid="product-price">{priceFormatted}</p>
 
           <div className="flex gap-3 items-center">
             <Button 
