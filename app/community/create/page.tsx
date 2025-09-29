@@ -338,7 +338,7 @@ export default function CreatePostPage() {
       <div className="max-w-2xl mx-auto px-4 py-6">
         {needsPasswordForSubmit && (
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-light-text dark:text-gray-300 mb-2">
               게시글 비밀번호 <span className="text-red-500">*</span>
             </label>
             <Input

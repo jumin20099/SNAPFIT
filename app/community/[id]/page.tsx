@@ -81,6 +81,15 @@ export default function PostDetailPage() {
   const router = useRouter()
   const params = useParams()
   const postId = Number(params.id)
+  const initialSort = useMemo(() => {
+    if (typeof window === 'undefined') return 'popular' as const
+    const currentParams = new URLSearchParams(window.location.search)
+    const sortParam = currentParams.get('sort')
+    if (sortParam === 'latest' || sortParam === 'popular' || sortParam === 'mostCommented' || sortParam === 'trending') {
+      return sortParam
+    }
+    return 'popular' as const
+  }, [])
   
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(false)
@@ -403,9 +412,21 @@ export default function PostDetailPage() {
       const token = localStorage.getItem('token')
       
       // 특정 게시글을 포함한 목록 요청 (첫 페이지인 경우)
-      const url = page === 0 
-        ? `/api/posts?page=${page}&size=10&includePostId=${postId}`
-        : `/api/posts?page=${page}&size=10`
+      const params = new URLSearchParams({
+        page: page.toString(),
+        size: '10',
+      })
+
+      if (page === 0) {
+        params.append('includePostId', postId.toString())
+      }
+
+      const serverSortParam = initialSort === 'latest' ? 'createdAt,desc' : undefined
+      if (serverSortParam) {
+        params.append('sort', serverSortParam)
+      }
+
+      const url = `/api/posts?${params.toString()}`
       
       const response = await fetch(url, {
         headers: {
@@ -556,7 +577,7 @@ export default function PostDetailPage() {
     } finally {
       setLoading(false)
     }
-  }, [postId, fetchUserInteractions]) // fetchUserInteractions를 의존성에 추가
+  }, [postId, fetchUserInteractions, initialSort]) // fetchUserInteractions를 의존성에 추가
 
   // 무한 스크롤을 위한 마지막 요소 관찰
   const lastPostElementRef = useCallback((node: HTMLDivElement) => {
@@ -1303,7 +1324,7 @@ export default function PostDetailPage() {
             {/* Post Title */}
             {post.title && (
               <div className="px-4 py-3 border-b">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                <h1 className="text-lg font-semibold text-light-text dark:text-gray-100">
                   {post.title}
                 </h1>
               </div>

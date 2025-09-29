@@ -353,7 +353,7 @@ export default function LikedItemsPage() {
 
                     {/* 게시글 내용 */}
                     <div className="mb-3">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">{post.content}</p>
+                      <p className="text-sm text-light-text dark:text-gray-300 line-clamp-3">{post.content}</p>
                     </div>
 
                     {/* 이미지 */}
