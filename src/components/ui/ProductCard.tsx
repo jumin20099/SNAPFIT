@@ -92,13 +92,6 @@ export function ProductCard({ product, onLike, onClick, variant = 'grid' }: Prod
           {product.productName || product.name || product.product_name}
         </div>
 
-        {/* 쇼핑몰 이름 */}
-        {product.storeName && (
-          <div className="text-xs text-gray-400 truncate">
-            {product.storeName}
-          </div>
-        )}
-
         {/* 별점 및 리뷰 수 */}
         <div className="flex items-center gap-1">
           <div className="flex items-center gap-1">
