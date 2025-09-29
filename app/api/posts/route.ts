@@ -68,18 +68,38 @@ export async function GET(request: NextRequest) {
     if (includePostId && page === '0' && data.content) {
       const targetPostId = parseInt(includePostId)
       const posts = data.content
-      
-      // 타겟 게시글이 목록에 있는지 확인
       const targetPostIndex = posts.findIndex((post: any) => post.postId === targetPostId)
-      
+
       if (targetPostIndex !== -1) {
-        // 타겟 게시글을 첫 번째로 이동
         const targetPost = posts.splice(targetPostIndex, 1)[0]
         posts.unshift(targetPost)
-        
         console.log(`게시글 ${targetPostId}를 최상단으로 이동했습니다.`)
       } else {
-        console.log(`게시글 ${targetPostId}를 목록에서 찾을 수 없습니다.`)
+        console.log(`게시글 ${targetPostId}를 목록에서 찾을 수 없습니다. 개별 조회를 시도합니다.`)
+
+        try {
+          const detailResponse = await fetch(`${BACKEND_URL}/api/posts/${targetPostId}`, {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+          })
+
+          if (detailResponse.ok) {
+            const detailData = await detailResponse.json()
+            if (detailData) {
+              posts.unshift(detailData)
+              const maxSize = parseInt(size, 10)
+              if (Number.isFinite(maxSize) && posts.length > maxSize) {
+                posts.length = maxSize
+              }
+              console.log(`게시글 ${targetPostId}를 개별 조회하여 목록에 추가했습니다.`)
+            }
+          } else {
+            console.warn(`게시글 ${targetPostId} 개별 조회 실패: ${detailResponse.status}`)
+          }
+        } catch (detailError) {
+          console.error(`게시글 ${targetPostId} 개별 조회 중 오류 발생`, detailError)
+        }
       }
     }
     
