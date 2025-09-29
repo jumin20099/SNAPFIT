@@ -150,46 +150,46 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
+    --background: 0 0% 96.1%; /* #f5f5f5 */
+    --foreground: 0 0% 9%; /* #17171b */
+    --card: 0 0% 99.2%; /* #fdfdfd */
+    --card-foreground: 0 0% 9%; /* #17171b */
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --primary: 160 60% 50%; /* #3ed4a2 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 91.4%; /* #e9e9e9 */
+    --secondary-foreground: 0 0% 9%; /* #17171b */
+    --muted: 0 0% 91.4%; /* #e9e9e9 */
+    --muted-foreground: 0 0% 33.3%; /* #555557 */
+    --accent: 160 60% 50%; /* #3ed4a2 */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --border: 0 0% 91.4%; /* #e9e9e9 */
+    --input: 0 0% 91.4%; /* #e9e9e9 */
+    --ring: 160 60% 50%; /* #3ed4a2 */
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-background: 0 0% 96.1%; /* #f5f5f5 */
+    --sidebar-foreground: 0 0% 9%; /* #17171b */
+    --sidebar-primary: 160 60% 50%; /* #3ed4a2 */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 91.4%; /* #e9e9e9 */
     
     /* 커스텀 라이트모드 색상 */
-    --light-bg: 0 0% 95%; /* #F2F2F2 */
-    --light-sub: 220 25% 11%; /* #1C2A44 */
-    --light-border: 210 16% 82%; /* #D1D5DB */
-    --light-text: 215 25% 17%; /* #1F2937 */
-    --light-accent: 160 60% 50%; /* #3ED4A2 */
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --light-bg: 0 0% 96.1%; /* #f5f5f5 */
+    --light-sub: 0 0% 99.2%; /* #fdfdfd */
+    --light-border: 0 0% 91.4%; /* #e9e9e9 */
+    --light-text: 0 0% 9%; /* #17171b */
+    --light-accent: 160 60% 50%; /* #3ed4a2 */
+    --sidebar-accent-foreground: 0 0% 9%; /* #17171b */
+    --sidebar-border: 0 0% 91.4%; /* #e9e9e9 */
+    --sidebar-ring: 160 60% 50%; /* #3ed4a2 */
   }
   .dark {
     --background: 220 25% 7%;
@@ -238,20 +238,20 @@ body {
 
 /* 라이트모드 스타일 - 사용자 지정 색상 */
 .light {
-  background-color: #F2F2F2;
-  color: #1F2937;
+  background-color: #f5f5f5;
+  color: #17171b;
 }
 
 .light .bg-gray-50 {
-  background-color: #F2F2F2;
+  background-color: #f5f5f5;
 }
 
 .light .bg-white {
-  background-color: #1C2A44;
+  background-color: #fdfdfd;
 }
 
 .light .border-gray-200 {
-  border-color: #D1D5DB;
+  border-color: #e9e9e9;
 }
 
 .light .text-gray-600,
@@ -259,7 +259,7 @@ body {
 .light .text-gray-900,
 .light .text-gray-700,
 .light .text-gray-800 {
-  color: #1F2937;
+  color: #17171b;
 }
 
 /* 추가 라이트모드 스타일 */
@@ -268,49 +268,49 @@ body {
 .light .hover\:bg-gray-50:hover,
 .light .hover\:bg-gray-100:hover,
 .light .hover\:bg-gray-200:hover {
-  background-color: #D1D5DB;
+  background-color: #e9e9e9;
 }
 
 .light .border-gray-300 {
-  border-color: #D1D5DB;
+  border-color: #e9e9e9;
 }
 
 /* 강조 색상 */
 .light .bg-gray-900 {
-  background-color: #3ED4A2;
+  background-color: #3ed4a2;
 }
 
 .light .hover\:bg-gray-800:hover {
-  background-color: #2FB88A;
+  background-color: #2fb88a;
 }
 
 .light .border-gray-900 {
-  border-color: #3ED4A2;
+  border-color: #3ed4a2;
 }
 
 /* 텍스트 강조 색상 */
 .light .text-light-accent {
-  color: #3ED4A2 !important;
+  color: #3ed4a2 !important;
 }
 
 /* SNAPFIT 로고 강조 색상 강제 적용 */
 .light h1.text-light-accent,
 .light .text-light-accent {
-  color: #3ED4A2 !important;
+  color: #3ed4a2 !important;
 }
 
 /* 모든 SNAPFIT 로고에 강조 색상 강제 적용 */
 .light h1,
 .light .font-bold.text-xl,
 .light .font-bold.text-2xl {
-  color: #3ED4A2 !important;
+  color: #3ed4a2 !important;
 }
 
 /* 특정 SNAPFIT 로고 선택자 */
 .light header h1,
 .light .sticky h1,
 .light .flex h1 {
-  color: #3ED4A2 !important;
+  color: #3ed4a2 !important;
 }
 
 /* SNAPFIT 텍스트 강제 적용 - 표준 CSS 선택자 사용 */
@@ -320,24 +320,24 @@ body {
 .light .flex.items-center div.font-bold,
 .light .text-center h1,
 .light .text-center div.font-bold {
-  color: #3ED4A2 !important;
+  color: #3ed4a2 !important;
 }
 
 /* 최고 우선순위 SNAPFIT 로고 색상 */
 .light h1[class*="text-"],
 .light div[class*="font-bold"][class*="text-"] {
-  color: #3ED4A2 !important;
+  color: #3ed4a2 !important;
 }
 
 /* 모든 헤더 내 텍스트 강조 색상 */
 .light header * {
-  color: #3ED4A2 !important;
+  color: #3ed4a2 !important;
 }
 
 /* SNAPFIT 로고만을 위한 특별 규칙 */
 .light h1:not(.dark\\:text-dark-accent),
 .light div.font-bold:not(.dark\\:text-dark-accent) {
-  color: #3ED4A2 !important;
+  color: #3ed4a2 !important;
 }
 
 /* 다크모드 스타일 - 사용자 지정 색상 */
