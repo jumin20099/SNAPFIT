@@ -90,7 +90,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
   const topAnchorTopRef = useRef<number>(0)
 
   const captureTopAnchor = useCallback(() => {
-    const anchor = document.elementFromPoint(0, 0)?.closest('[data-post-id]') as HTMLElement | null
+    const anchor = document.elementFromPoint(0, 0)?.closest('[data-list-index]') as HTMLElement | null
     if (!anchor) {
       topAnchorRef.current = null
       return
@@ -184,10 +184,6 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
       )
     }
 
-    if (activeTab === 'following') {
-      result = result.filter(post => post.authorName === '김주민')
-    }
-
     if (sortBy === 'latest') {
       result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     } else if (sortBy === 'mostCommented') {
@@ -208,9 +204,17 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
         onPostClick(postId)
         return
       }
-      router.push(`/community/${postId}`)
+      const query = new URLSearchParams()
+      if (sortBy === 'latest') {
+        query.set('sort', 'latest')
+      } else if (sortBy === 'mostCommented') {
+        query.set('sort', 'mostCommented')
+      }
+
+      const queryString = query.toString()
+      router.push(`/community/${postId}${queryString ? `?${queryString}` : ''}`)
     },
-    [onPostClick, router]
+    [onPostClick, router, sortBy]
   )
 
   const handleLikeSuccess = useCallback((postId: number, payload: { liked: boolean; count: number; reactionStatus?: Record<string, Partial<ReactionStatusItem>> }) => {
@@ -250,7 +254,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
     <>
       {Array.isArray(filteredPosts) && filteredPosts.length > 0 ? (
         <div className="grid grid-cols-2 gap-2">
-          {filteredPosts.map(post => {
+          {filteredPosts.map((post, index) => {
             const status = reactionManager.getPostStatus(post.postId)
             const liked = status?.liked ?? post.isLiked ?? false
             const likeCount = status?.likeCount ?? post.likeCount ?? 0
@@ -265,15 +269,15 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
               reactionStatusRaw: status
             })
             return (
-              <div data-post-id={post.postId} key={post.postId}>
-                <PostCard
-                  post={post}
-                  liked={liked}
-                  likeCount={likeCount}
-                  onClick={() => handleCardClick(post.postId)}
-                  onToggleSuccess={(payload) => handleLikeSuccess(post.postId, payload)}
-                />
-              </div>
+              <PostCard
+                key={post.postId}
+                listIndex={index}
+                post={post}
+                liked={liked}
+                likeCount={likeCount}
+                onClick={() => handleCardClick(post.postId)}
+                onToggleSuccess={(payload) => handleLikeSuccess(post.postId, payload)}
+              />
             )
           })}
         </div>
@@ -313,11 +317,12 @@ interface PostCardProps {
   post: Post
   liked: boolean
   likeCount: number
+  listIndex: number
   onToggleSuccess: (payload: { liked: boolean; count: number; reactionStatus?: Record<string, Partial<ReactionStatusItem>> }) => void
   onClick: () => void
 }
 
-const PostCard = React.memo(({ post, liked, likeCount, onToggleSuccess, onClick }: PostCardProps) => {
+const PostCard = React.memo(({ post, liked, likeCount, listIndex, onToggleSuccess, onClick }: PostCardProps) => {
   const handleSuccess = useCallback((data: { liked: boolean; count: number; reactionStatus?: Record<string, Partial<ReactionStatusItem>> }) => {
     logReactionDebug('toggleLike:success', {
       postId: post.postId,
@@ -340,7 +345,12 @@ const PostCard = React.memo(({ post, liked, likeCount, onToggleSuccess, onClick 
   }, [post.postId])
 
   return (
-    <div className="relative cursor-pointer group" onClick={onClick}>
+    <div
+      className="relative cursor-pointer group"
+      onClick={onClick}
+      data-post-id={post.postId}
+      data-list-index={listIndex}
+    >
       <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
         {post.mediaUrls && post.mediaUrls.length > 0 ? (
           <div className="relative w-full" style={{ aspectRatio: '1 / 1' }}>
