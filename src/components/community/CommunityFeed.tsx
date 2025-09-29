@@ -188,18 +188,12 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
       result = result.filter(post => post.authorName === '김주민')
     }
 
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case 'latest':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        case 'popular':
-          return b.likeCount - a.likeCount
-        case 'mostCommented':
-          return b.commentCount - a.commentCount
-        default:
-          return 0
-      }
-    })
+    if (sortBy === 'latest') {
+      result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    } else if (sortBy === 'mostCommented') {
+      result.sort((a, b) => (b.commentCount ?? 0) - (a.commentCount ?? 0))
+    }
+    // 인기/트렌딩 정렬은 백엔드 결과를 그대로 유지해 좋아요 토글 시 즉시 재정렬되지 않도록 함
 
     return result
   }, [posts, searchTerm, activeTab, sortBy])
