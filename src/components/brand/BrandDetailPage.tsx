@@ -406,7 +406,7 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
 
         <section>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">브랜드 정보</h3>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
             <Card className="p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-500">스토어 링크</p>
               {brandStore?.storeLink ? (
@@ -430,15 +430,6 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
               <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
                 {brandStore?.contact || '제휴 문의를 통해 최신 정보를 확인해보세요.'}
               </p>
-            </Card>
-            <Card className="p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500">활동 상태</p>
-              <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                {brandStore?.isActive ? '활성화된 브랜드' : '현재 비활성 상태'}
-              </p>
-              {brandStore?.createdAt && (
-                <p className="mt-1 text-xs text-gray-500">파트너 등록일: {new Date(brandStore.createdAt).toLocaleDateString()}</p>
-              )}
             </Card>
           </div>
         </section>
@@ -474,7 +465,7 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
           </div>
 
           {productsLoading ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, index) => (
                 <Card key={index} className="overflow-hidden">
                   <Skeleton className="h-48 w-full" />
@@ -494,7 +485,7 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
               표시할 상품이 없습니다. 다른 검색어로 다시 시도해주세요.
             </Card>
           ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {sortedProducts.map((product) => (
                 <Card
                   key={product.productIdx}
