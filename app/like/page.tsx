@@ -293,13 +293,6 @@ export default function LikedItemsPage() {
             >
               브랜드
             </TabsTrigger>
-            <TabsTrigger 
-              value="scraps" 
-              className="flex-1 w-full data-[state=active]:bg-white dark:data-[state=active]:bg-dark-sub data-[state=active]:text-gray-900 dark:data-[state=active]:text-dark-text text-sm font-medium rounded-none justify-center border-0"
-              onClick={() => router.push('/scraps')}
-            >
-              스크랩
-            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
