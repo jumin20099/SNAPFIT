@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from "next/navigation"
 import { LikeButton } from "@/features/reactions/LikeButton"
+import { useStores } from "@/hooks/useStores"
 
 interface LikedPost {
   postId: number
@@ -46,6 +47,7 @@ interface LikedBrand {
 
 export default function LikedItemsPage() {
   const router = useRouter()
+  const { data: stores } = useStores()
   const [activeTab, setActiveTab] = useState("posts")
   const [likedPosts, setLikedPosts] = useState<LikedPost[]>([])
   const [likedProducts, setLikedProducts] = useState<LikedProduct[]>([])
@@ -209,8 +211,35 @@ export default function LikedItemsPage() {
       if (response.ok) {
         const likedItems = await response.json()
         console.log('좋아요한 브랜드 ID 목록:', likedItems)
-        // TODO: 브랜드 상세 정보 API 구현 후 실제 데이터로 교체
-        // 현재는 좋아요한 브랜드가 없다고 표시
+        
+        // 좋아요한 브랜드 ID 목록을 추출
+        const likedBrandIds = Array.isArray(likedItems) 
+          ? likedItems.map((item: any) => item.targetIdx || item.brandId || item)
+          : []
+        
+        console.log('추출된 브랜드 ID 목록:', likedBrandIds)
+        
+        // stores 데이터가 있으면 매칭하여 브랜드 정보 구성
+        if (stores && stores.length > 0) {
+          const matchedBrands = stores
+            .filter(store => likedBrandIds.includes(store.storeIdx))
+            .map(store => ({
+              brandId: store.storeIdx,
+              name: store.storeName,
+              logoUrl: store.storeLogo || '/placeholder.svg',
+              description: store.storeDescription || '브랜드 설명이 없습니다.',
+              followerCount: 0, // 팔로워 수는 별도 API가 필요
+              likeCount: 0 // 좋아요 수는 별도 API가 필요
+            }))
+          
+          console.log('매칭된 브랜드 정보:', matchedBrands)
+          setLikedBrands(matchedBrands)
+        } else {
+          console.log('stores 데이터가 없어서 빈 배열로 설정')
+          setLikedBrands([])
+        }
+      } else {
+        console.error('좋아요한 브랜드 API 응답 오류:', response.status)
         setLikedBrands([])
       }
     } catch (error) {
@@ -228,13 +257,19 @@ export default function LikedItemsPage() {
       setLoading(true)
       await Promise.all([
         fetchLikedPosts(),
-        fetchLikedProducts(),
-        fetchLikedBrands()
+        fetchLikedProducts()
       ])
       setLoading(false)
     }
     loadData()
   }, [])
+
+  // stores 데이터가 로드된 후에 브랜드 정보 가져오기
+  useEffect(() => {
+    if (stores && stores.length > 0) {
+      fetchLikedBrands()
+    }
+  }, [stores])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
