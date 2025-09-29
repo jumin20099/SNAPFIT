@@ -99,8 +99,8 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
                          size={18}
                          className={`transition-colors ${
                            isActive 
-                             ? 'text-white dark:text-dark-text' 
-                             : 'text-gray-300 dark:text-gray-500'
+                             ? 'text-light-text2 dark:text-dark-text' 
+                             : 'text-light-text dark:text-gray-500'
                          }`}
                        />
                   {/* 활성 상태 인디케이터 */}
@@ -118,8 +118,8 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
                      <span
                        className={`text-[10px] font-medium transition-colors ${
                          isActive 
-                           ? 'text-white dark:text-dark-text' 
-                           : 'text-gray-300 dark:text-gray-500'
+                           ? 'text-light-text2 dark:text-dark-text' 
+                           : 'text-light-text dark:text-gray-500'
                        }`}
                      >
                   {tab.label}

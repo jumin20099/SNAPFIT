@@ -64,6 +64,7 @@ module.exports = {
           sub: "#fdfdfd",
           border: "#e9e9e9",
           text: "#17171b",
+          text2: "#555557",
           accent: "#3ed4a2",
         },
       },
