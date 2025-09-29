@@ -221,19 +221,48 @@ export default function LikedItemsPage() {
         
         // stores 데이터가 있으면 매칭하여 브랜드 정보 구성
         if (stores && stores.length > 0) {
-          const matchedBrands = stores
-            .filter(store => likedBrandIds.includes(store.storeIdx))
-            .map(store => ({
-              brandId: store.storeIdx,
-              name: store.storeName,
-              logoUrl: store.storeLogo || '/placeholder.svg',
-              description: store.storeDescription || '브랜드 설명이 없습니다.',
-              followerCount: 0, // 팔로워 수는 별도 API가 필요
-              likeCount: 0 // 좋아요 수는 별도 API가 필요
-            }))
+          const matchedStores = stores.filter(store => likedBrandIds.includes(store.storeIdx))
           
-          console.log('매칭된 브랜드 정보:', matchedBrands)
-          setLikedBrands(matchedBrands)
+          // 각 브랜드의 좋아요 수를 가져오기
+          const brandsWithLikeCount = await Promise.all(
+            matchedStores.map(async (store) => {
+              try {
+                const likeCountResponse = await fetch(`/api/likes/count?targetIdx=${store.storeIdx}&targetType=BRAND`, {
+                  cache: 'no-store'
+                })
+                let likeCount = 0
+                if (likeCountResponse.ok) {
+                  const likeCountText = await likeCountResponse.text()
+                  const parsed = Number(likeCountText)
+                  if (!Number.isNaN(parsed)) {
+                    likeCount = parsed
+                  }
+                }
+                
+                return {
+                  brandId: store.storeIdx,
+                  name: store.storeName,
+                  logoUrl: store.storeLogo || '/placeholder.svg',
+                  description: store.storeDescription || '브랜드 설명이 없습니다.',
+                  followerCount: 0, // 현재 시스템에 브랜드 팔로워 기능이 없음
+                  likeCount: likeCount
+                }
+              } catch (error) {
+                console.error(`브랜드 ${store.storeIdx} 좋아요 수 조회 실패:`, error)
+                return {
+                  brandId: store.storeIdx,
+                  name: store.storeName,
+                  logoUrl: store.storeLogo || '/placeholder.svg',
+                  description: store.storeDescription || '브랜드 설명이 없습니다.',
+                  followerCount: 0,
+                  likeCount: 0
+                }
+              }
+            })
+          )
+          
+          console.log('매칭된 브랜드 정보 (좋아요 수 포함):', brandsWithLikeCount)
+          setLikedBrands(brandsWithLikeCount)
         } else {
           console.log('stores 데이터가 없어서 빈 배열로 설정')
           setLikedBrands([])

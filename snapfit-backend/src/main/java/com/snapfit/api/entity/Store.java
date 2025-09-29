@@ -19,6 +19,12 @@ public class Store {
     @Column(name = "store_name")
     private String storeName;
     
+    @Column(name = "store_description")
+    private String storeDescription;
+    
+    @Column(name = "store_image")
+    private String storeImage;
+    
     @Column(name = "store_logo")
     private String storeLogo;      // S3 URL
     
