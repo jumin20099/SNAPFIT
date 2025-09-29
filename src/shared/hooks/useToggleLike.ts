@@ -4,10 +4,23 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/shared/api/client';
 import { toast } from 'sonner';
 
+interface BackendReactionStatusEntry {
+  liked: boolean;
+  likeCount: number;
+  scraped?: boolean;
+  scrapCount?: number;
+}
+
+interface ToggleLikeSuccessPayload {
+  liked: boolean;
+  count: number;
+  reactionStatus?: Record<string, BackendReactionStatusEntry>;
+}
+
 interface UseToggleLikeOptions {
   targetIdx: number;
   targetType: 'product' | 'brand' | 'outfit' | 'post';
-  onSuccess?: (data: { liked: boolean; count: number }) => void;
+  onSuccess?: (data: ToggleLikeSuccessPayload) => void;
   onError?: (error: Error) => void;
 }
 
@@ -19,7 +32,7 @@ export function useToggleLike({
 }: UseToggleLikeOptions) {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<ToggleLikeSuccessPayload>({
     mutationFn: () => apiClient.toggleLike(targetIdx, targetType),
     onMutate: async () => {
       // 낙관적 업데이트를 위한 쿼리 취소

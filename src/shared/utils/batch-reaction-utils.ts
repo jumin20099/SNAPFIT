@@ -72,15 +72,38 @@ export class BatchReactionStatusManager {
    * 특정 게시글 상태를 업데이트 (비동기 이벤트 대응)
    */
   updatePost(postId: string | number, updates: Partial<ReactionStatusItem>) {
-    if (!this.data) return;
+    if (!this.data) {
+      this.data = {};
+    }
     const key = `post_${postId}` as const;
-    const current = this.data[key] || { liked: false, likeCount: 0 };
+    const current: ReactionStatusItem = this.data[key] || {
+      liked: false,
+      likeCount: 0,
+      scraped: false,
+      scrapCount: 0,
+    };
     this.data[key] = {
       ...current,
       ...updates,
       likeCount: updates.likeCount ?? current.likeCount ?? 0,
       scrapCount: updates.scrapCount ?? current.scrapCount ?? 0,
     };
+  }
+
+  mergeRawStatus(raw?: Record<string, Partial<ReactionStatusItem>>) {
+    if (!raw) return;
+    if (!this.data) {
+      this.data = {};
+    }
+    for (const [key, value] of Object.entries(raw)) {
+      if (!value) continue;
+      this.data[key as keyof BatchReactionStatusResult] = {
+        liked: value.liked ?? (this.data[key as keyof BatchReactionStatusResult] as ReactionStatusItem | undefined)?.liked ?? false,
+        likeCount: value.likeCount ?? (this.data[key as keyof BatchReactionStatusResult] as ReactionStatusItem | undefined)?.likeCount ?? 0,
+        scraped: value.scraped ?? (this.data[key as keyof BatchReactionStatusResult] as ReactionStatusItem | undefined)?.scraped ?? false,
+        scrapCount: value.scrapCount ?? (this.data[key as keyof BatchReactionStatusResult] as ReactionStatusItem | undefined)?.scrapCount ?? 0,
+      };
+    }
   }
 }
 

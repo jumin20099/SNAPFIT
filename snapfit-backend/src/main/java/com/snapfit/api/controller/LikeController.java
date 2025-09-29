@@ -92,16 +92,27 @@ public class LikeController {
             }
 
             boolean liked = likeService.toggleLike(user, guestIdx, targetIdx, type);
-            long count = likeService.countLikes(targetIdx, type);
+            long likeCount = likeService.countLikes(targetIdx, type);
+            Map<String, Object> reactionStatus = Map.of(
+                    "liked", liked,
+                    "likeCount", likeCount,
+                    "scraped", false,
+                    "scrapCount", 0L
+            );
 
-            System.out.println("좋아요 토글 결과 - liked: " + liked + ", count: " + count);
+            System.out.println("좋아요 토글 결과 - liked: " + liked + ", count: " + likeCount);
+            System.out.println("반환 reactionStatus: " + reactionStatus);
 
             ResponseEntity.BodyBuilder builder = ResponseEntity.ok();
             if (responseCookie != null) {
                 builder.header(HttpHeaders.SET_COOKIE, responseCookie.toString());
             }
 
-            return builder.body(java.util.Map.of("liked", liked, "count", count));
+            return builder.body(Map.of(
+                    "liked", liked,
+                    "count", likeCount,
+                    "reactionStatus", Map.of("post_" + targetIdx, reactionStatus)
+            ));
         } catch (Exception e) {
             System.err.println("좋아요 토글 오류: " + e.getMessage());
             e.printStackTrace();

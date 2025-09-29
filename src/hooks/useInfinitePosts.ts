@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus';
+import type { ReactionStatusItem } from '@/shared/types';
 
 interface Post {
   postId: number;
@@ -47,6 +48,7 @@ interface UseInfinitePostsReturn {
   refresh: () => void;
   resetError: () => void;
   reactionManager: BatchReactionStatusManager;
+  updatePostReaction: (postId: number, updates: Partial<ReactionStatusItem>, reactionStatus?: Record<string, Partial<ReactionStatusItem>>) => void;
 }
 
 export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfinitePostsReturn {
@@ -62,16 +64,50 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
+  const lastReplacePageRef = useRef<number | null>(null);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const fetchedPagesRef = useRef<Set<number>>(new Set());
   const isFetchingRef = useRef(false);
+  const reactionOverridesRef = useRef<Record<number, Partial<ReactionStatusItem>>>({});
 
   // 배치 상태 조회 훅
+  const postIds = posts.map(p => p.postId)
   const { data: batchReactionStatus, manager: reactionManager } = useBatchReactionStatus({
-    postIds: posts.map(p => p.postId),
-    enabled: posts.length > 0
+    postIds,
+    enabled: postIds.length > 0
   });
+
+  const applyReactionState = useCallback((post: Post): Post => {
+    const override = reactionOverridesRef.current[post.postId] || {};
+    const status = reactionManager.getPostStatus(post.postId);
+
+    const liked = override.liked ?? status?.liked ?? post.isLiked ?? false;
+    const likeCount = override.likeCount ?? status?.likeCount ?? post.likeCount ?? 0;
+    const scraped = override.scraped ?? status?.scraped ?? post.isScrapped ?? false;
+    const scrapCount = override.scrapCount ?? status?.scrapCount ?? post.scrapCount ?? 0;
+
+    return {
+      ...post,
+      isLiked: liked,
+      likeCount,
+      isScrapped: scraped,
+      scrapCount
+    };
+  }, [reactionManager]);
+
+  const mergeServerReactionStatus = useCallback((status?: Record<string, Partial<ReactionStatusItem>>) => {
+    if (!status) return;
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[community:reaction:hook] mergeServerReactionStatus', {
+        statusKeys: Object.keys(status),
+        overridesBefore: { ...reactionOverridesRef.current }
+      });
+    }
+    reactionManager.mergeRawStatus(status);
+    reactionOverridesRef.current = {};
+    setPosts(prevPosts => prevPosts.map(applyReactionState));
+  }, [reactionManager, applyReactionState]);
 
   const buildApiUrl = useCallback((page: number) => {
     const params = new URLSearchParams({
@@ -92,6 +128,13 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
   const fetchPage = useCallback(async (page: number, replace: boolean) => {
     if (isFetchingRef.current) return;
     if (!replace && fetchedPagesRef.current.has(page)) return;
+
+    if (replace && lastReplacePageRef.current !== null && page === lastReplacePageRef.current) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[community:reaction:hook] fetchPage:skip-replace', { page, currentOverrides: { ...reactionOverridesRef.current } });
+      }
+      return;
+    }
 
     abortControllerRef.current?.abort();
     const controller = new AbortController();
@@ -122,39 +165,40 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
 
       const data: PostsResponse = await response.json();
 
-      const postsWithStatus = data.content.map(post => {
-        const status = reactionManager.getPostStatus(post.postId);
-        const patched = {
-          ...post,
-          isLiked: status?.liked ?? post.isLiked ?? false,
-          isScrapped: status?.scraped ?? post.isScrapped ?? false,
-          likeCount: status?.likeCount ?? post.likeCount ?? 0,
-          scrapCount: status?.scrapCount ?? post.scrapCount ?? 0
-        };
-        logReactionDebug('fetchPage:patched', {
-          postId: post.postId,
-          originalLiked: post.isLiked,
-          patchedLiked: patched.isLiked,
-          managerLiked: status?.liked,
-          originalLikeCount: post.likeCount,
-          patchedLikeCount: patched.likeCount,
-          managerLikeCount: status?.likeCount
-        });
-        return patched;
-      });
+      const normalized = data.content.map(post => ({
+        ...post,
+        isLiked: post.isLiked ?? false,
+        isScrapped: post.isScrapped ?? false,
+        likeCount: post.likeCount ?? 0,
+        scrapCount: post.scrapCount ?? 0
+      }));
 
-      setPosts(prev => {
-        const next = replace ? postsWithStatus : [...prev, ...postsWithStatus];
-        logReactionDebug('fetchPage:setPosts', {
+      const patched = normalized.map(applyReactionState);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[community:reaction:hook] fetchPage:normalized', {
+          page,
           replace,
-          length: next.length,
-          sample: next.slice(0, 3).map(p => ({ postId: p.postId, isLiked: p.isLiked, likeCount: p.likeCount }))
+          normalizedSample: normalized.slice(0, 3).map(p => ({ postId: p.postId, isLiked: p.isLiked, likeCount: p.likeCount })),
+          overrides: { ...reactionOverridesRef.current }
         });
+      }
+      setPosts(prev => {
+        const next = replace ? patched : [...prev, ...patched];
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[community:reaction:hook] fetchPage:setPosts', {
+            replace,
+            length: next.length,
+            sample: next.slice(0, 3).map(p => ({ postId: p.postId, isLiked: p.isLiked, likeCount: p.likeCount }))
+          });
+        }
         return next;
       });
       setHasMore(!data.last);
       setCurrentPage(page);
       fetchedPagesRef.current.add(page);
+      if (replace) {
+        lastReplacePageRef.current = page;
+      }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         return;
@@ -165,7 +209,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       isFetchingRef.current = false;
       setLoading(false);
     }
-  }, [buildApiUrl, reactionManager]);
+  }, [buildApiUrl, reactionManager, applyReactionState]);
 
   const loadMore = useCallback(() => {
     if (isFetchingRef.current || !hasMore) return;
@@ -176,46 +220,47 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
 
   const refresh = useCallback(async () => {
     fetchedPagesRef.current.clear();
+    lastReplacePageRef.current = null;
+    reactionOverridesRef.current = {};
     setHasMore(true);
     setCurrentPage(0);
     await fetchPage(0, true);
   }, [fetchPage]);
+
+  const updatePostReaction = useCallback((postId: number, updates: Partial<ReactionStatusItem>, reactionStatus?: Record<string, Partial<ReactionStatusItem>>) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[community:reaction:hook] updatePostReaction:input', { postId, updates, reactionStatus });
+    }
+    reactionOverridesRef.current[postId] = {
+      ...reactionOverridesRef.current[postId],
+      ...updates
+    };
+    reactionManager.updatePost(postId, updates);
+    if (reactionStatus) {
+      mergeServerReactionStatus(reactionStatus);
+    } else {
+      setPosts(prevPosts => prevPosts.map(applyReactionState));
+    }
+  }, [reactionManager, applyReactionState, mergeServerReactionStatus]);
 
   const resetError = useCallback(() => {
     setError(null);
   }, []);
 
   useEffect(() => {
-    if (batchReactionStatus && posts.length > 0) {
-      logReactionDebug('batchStatus:update', {
-        size: posts.length,
-        sample: posts.slice(0, 3).map(p => ({ postId: p.postId, beforeLiked: p.isLiked }))
-      });
-      setPosts(prevPosts =>
-        prevPosts.map(post => {
-          const status = reactionManager.getPostStatus(post.postId);
-          if (!status) return post;
-          const patched = {
-            ...post,
-            isLiked: status.liked ?? post.isLiked,
-            isScrapped: status.scraped ?? post.isScrapped,
-            likeCount: status.likeCount ?? post.likeCount,
-            scrapCount: status.scrapCount ?? post.scrapCount
-          };
-          logReactionDebug('batchStatus:patched', {
-            postId: post.postId,
-            beforeLiked: post.isLiked,
-            afterLiked: patched.isLiked,
-            statusLiked: status.liked,
-            beforeLikeCount: post.likeCount,
-            afterLikeCount: patched.likeCount,
-            statusLikeCount: status.likeCount
-          });
-          return patched;
-        })
-      );
+    if (!batchReactionStatus || posts.length === 0) {
+      return;
     }
-  }, [batchReactionStatus, reactionManager, posts.length]);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[community:reaction:hook] batchReactionStatus:update', {
+        keys: Object.keys(batchReactionStatus),
+        overridesBefore: { ...reactionOverridesRef.current }
+      });
+    }
+    reactionOverridesRef.current = {};
+    setPosts(prevPosts => prevPosts.map(applyReactionState));
+    lastReplacePageRef.current = null;
+  }, [batchReactionStatus, applyReactionState, posts.length]);
 
   useEffect(() => {
     refresh();
@@ -234,5 +279,6 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
     refresh,
     resetError,
     reactionManager,
+    updatePostReaction,
   };
 }

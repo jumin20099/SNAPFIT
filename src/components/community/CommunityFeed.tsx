@@ -2,9 +2,15 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useToggleLike } from '@/shared/hooks/useToggleLike'
 import { useInfinitePosts } from '@/hooks/useInfinitePosts'
-import { ReactionButton } from '@/shared/ui/ReactionButton'
+import dynamic from 'next/dynamic'
+const DynamicLikeButton = dynamic(async () => {
+  const mod = await import('@/features/reactions/LikeButton')
+  return mod.LikeButton
+}, {
+  ssr: false,
+  loading: () => null
+})
 
 type SortOption = 'latest' | 'popular' | 'trending' | 'mostCommented'
 
@@ -66,12 +72,14 @@ const logReactionDebug = (...args: unknown[]) => {
   console.log('[community:reaction]', ...args)
 }
 
+import type { ReactionStatusItem } from '@/shared/types'
+
 const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activeTab, onPostClick, onTotalCountChange }) => {
   const router = useRouter()
 
   const normalizedSort = sortBy === 'latest' || sortBy === 'trending' ? sortBy : 'popular'
 
-  const { posts, loading, error, hasMore, loadMore, reactionManager } = useInfinitePosts({
+  const { posts, loading, error, hasMore, loadMore, reactionManager, updatePostReaction } = useInfinitePosts({
     pageSize: 20,
     sortBy: normalizedSort,
   })
@@ -211,10 +219,11 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
     [onPostClick, router]
   )
 
-  const handleLikeSuccess = useCallback((postId: number, liked: boolean, count: number) => {
-    logReactionDebug('handleLikeSuccess', { postId, liked, count })
-    reactionManager.updatePost(postId, { liked, likeCount: count })
-  }, [reactionManager])
+  const handleLikeSuccess = useCallback((postId: number, payload: { liked: boolean; count: number; reactionStatus?: Record<string, Partial<ReactionStatusItem>> }) => {
+    const { liked, count, reactionStatus } = payload;
+    logReactionDebug('handleLikeSuccess', { postId, liked, count, reactionStatus });
+    updatePostReaction(postId, { liked, likeCount: count }, reactionStatus);
+  }, [updatePostReaction]);
 
   if (loading && posts.length === 0) {
     return (
@@ -257,7 +266,9 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
               likeCount,
               status,
               fallbackLiked: post.isLiked,
-              fallbackLikeCount: post.likeCount
+              fallbackLikeCount: post.likeCount,
+              override: reactionManager.getPostStatus(post.postId) && reactionManager.getPostStatus(post.postId)?.liked !== undefined,
+              reactionStatusRaw: status
             })
             return (
               <div data-post-id={post.postId} key={post.postId}>
@@ -266,7 +277,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
                   liked={liked}
                   likeCount={likeCount}
                   onClick={() => handleCardClick(post.postId)}
-                  onToggle={() => handleLikeSuccess(post.postId, !liked, liked ? Math.max(0, likeCount - 1) : likeCount + 1)}
+                  onToggleSuccess={(payload) => handleLikeSuccess(post.postId, payload)}
                 />
               </div>
             )
@@ -308,20 +319,31 @@ interface PostCardProps {
   post: Post
   liked: boolean
   likeCount: number
-  onToggle: () => void
+  onToggleSuccess: (payload: { liked: boolean; count: number; reactionStatus?: Record<string, Partial<ReactionStatusItem>> }) => void
   onClick: () => void
 }
 
-const PostCard = React.memo(({ post, liked, likeCount, onToggle, onClick }: PostCardProps) => {
-  const handleToggle = useCallback((event: React.MouseEvent) => {
-    event.stopPropagation()
-    logReactionDebug('toggleLike:click', {
+const PostCard = React.memo(({ post, liked, likeCount, onToggleSuccess, onClick }: PostCardProps) => {
+  const handleSuccess = useCallback((data: { liked: boolean; count: number; reactionStatus?: Record<string, Partial<ReactionStatusItem>> }) => {
+    logReactionDebug('toggleLike:success', {
       postId: post.postId,
-      beforeLiked: liked,
-      beforeLikeCount: likeCount
+      liked: data.liked,
+      count: data.count,
+      reactionStatus: data.reactionStatus
+    });
+    onToggleSuccess({
+      liked: data.liked,
+      count: data.count,
+      reactionStatus: data.reactionStatus
+    });
+  }, [onToggleSuccess, post.postId]);
+
+  const handleError = useCallback((error: Error) => {
+    logReactionDebug('toggleLike:error', {
+      postId: post.postId,
+      message: error.message
     })
-    onToggle()
-  }, [likeCount, liked, onToggle, post.postId])
+  }, [post.postId])
 
   return (
     <div className="relative cursor-pointer group" onClick={onClick}>
@@ -343,14 +365,16 @@ const PostCard = React.memo(({ post, liked, likeCount, onToggle, onClick }: Post
         )}
       </div>
 
-      <div className="absolute top-2 right-2">
-        <ReactionButton
-          kind="like"
-          active={liked}
-          count={likeCount}
-          onToggle={handleToggle}
+      <div className="absolute top-2 right-2" onClick={event => event.stopPropagation()}>
+        <DynamicLikeButton
+          targetIdx={post.postId}
+          targetType="post"
+          initialActive={liked}
+          initialCount={likeCount}
           showCount={false}
           className="p-1 transition-all duration-200 hover:scale-110"
+          onToggleSuccess={handleSuccess}
+          onToggleError={handleError}
         />
       </div>
     </div>
@@ -360,8 +384,8 @@ const PostCard = React.memo(({ post, liked, likeCount, onToggle, onClick }: Post
 function areEqualPostCard(prevProps: PostCardProps, nextProps: PostCardProps) {
   return (
     prevProps.post.postId === nextProps.post.postId &&
-    prevProps.post.liked === nextProps.post.liked &&
-    prevProps.post.scraped === nextProps.post.scraped &&
+    prevProps.liked === nextProps.liked &&
+    prevProps.likeCount === nextProps.likeCount &&
     prevProps.post.mediaUrls?.[0] === nextProps.post.mediaUrls?.[0]
   )
 }

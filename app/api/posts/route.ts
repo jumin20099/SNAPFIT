@@ -9,15 +9,39 @@ export async function GET(request: NextRequest) {
     const page = searchParams.get('page') || '0'
     const sort = searchParams.get('sort') || 'createdAt'
     const includePostId = searchParams.get('includePostId')
+    const authHeader = request.headers.get('authorization')
+    const cookieHeader = request.headers.get('cookie')
     
     // 백엔드 API 호출
     let backendUrl = `${BACKEND_URL}/api/posts?size=${size}&page=${page}&sort=${sort}`
     
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+
+    if (authHeader) {
+      headers['Authorization'] = authHeader
+    }
+
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[api/posts] forward request', {
+        backendUrl,
+        page,
+        size,
+        sort,
+        hasAuth: Boolean(authHeader),
+        hasCookie: Boolean(cookieHeader)
+      })
+    }
+
     const response = await fetch(backendUrl, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
+      credentials: 'include',
     })
 
     if (!response.ok) {
@@ -25,6 +49,20 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json()
+
+    if (process.env.NODE_ENV === 'development') {
+      const sample = Array.isArray(data?.content)
+        ? data.content.slice(0, 3).map((post: any) => ({
+            postId: post?.postId,
+            isLiked: post?.isLiked,
+            likeCount: post?.likeCount
+          }))
+        : []
+      console.log('[api/posts] backend response sample', {
+        totalElements: data?.totalElements,
+        sample
+      })
+    }
     
     // 특정 게시글을 우선적으로 포함하는 경우 (첫 페이지에서만)
     if (includePostId && page === '0' && data.content) {

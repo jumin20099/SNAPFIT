@@ -14,6 +14,8 @@ interface LikeButtonProps {
   initialCount: number;     // 서버 likeCount
   className?: string;
   showCount?: boolean;
+  onToggleSuccess?: (data: { liked: boolean; count: number; reactionStatus?: Record<string, { liked: boolean; likeCount: number; scraped?: boolean; scrapCount?: number }> }) => void;
+  onToggleError?: (error: Error) => void;
 }
 
 export function LikeButton({
@@ -23,6 +25,8 @@ export function LikeButton({
   initialCount,
   className,
   showCount = true,
+  onToggleSuccess,
+  onToggleError,
 }: LikeButtonProps) {
   const [active, setActive] = React.useState(initialActive);
   const [count, setCount] = React.useState(initialCount);
@@ -54,9 +58,11 @@ export function LikeButton({
       }
       setActive(data.liked);
       setCount(data.count);
+      onToggleSuccess?.(data);
     },
     onError: (error) => {
       console.error('좋아요 에러:', error);
+      onToggleError?.(error);
     },
   });
 
