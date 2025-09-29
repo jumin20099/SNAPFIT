@@ -262,6 +262,7 @@ body {
   color: #17171b;
 }
 
+
 /* 추가 라이트모드 스타일 */
 .light .bg-gray-100,
 .light .bg-gray-200,
@@ -299,45 +300,13 @@ body {
   color: #3ed4a2 !important;
 }
 
-/* SNAPFIT 로고에만 강조 색상 강제 적용 (제목 제외) */
-.light .font-bold.text-xl:not(.text-light-text),
-.light .font-bold.text-2xl:not(.text-light-text) {
+
+/* SNAPFIT 로고만 강조 색상 적용 */
+.light header h1.font-bold,
+.light header div.font-bold {
   color: #3ed4a2 !important;
 }
 
-/* 특정 SNAPFIT 로고 선택자 (제목 제외) */
-.light header h1:not(.text-light-text),
-.light .sticky h1:not(.text-light-text),
-.light .flex h1:not(.text-light-text) {
-  color: #3ed4a2 !important;
-}
-
-/* SNAPFIT 텍스트 강제 적용 - 표준 CSS 선택자 사용 */
-
-/* 더 구체적인 선택자 (제목 제외) */
-.light .flex.items-center h1:not(.text-light-text),
-.light .flex.items-center div.font-bold:not(.text-light-text),
-.light .text-center h1:not(.text-light-text),
-.light .text-center div.font-bold:not(.text-light-text) {
-  color: #3ed4a2 !important;
-}
-
-/* 최고 우선순위 SNAPFIT 로고 색상 (제목 제외) */
-.light h1[class*="text-"]:not(.text-light-text),
-.light div[class*="font-bold"][class*="text-"]:not(.text-light-text) {
-  color: #3ed4a2 !important;
-}
-
-/* 모든 헤더 내 텍스트 강조 색상 (제목 제외) */
-.light header *:not(.text-light-text) {
-  color: #3ed4a2 !important;
-}
-
-/* SNAPFIT 로고만을 위한 특별 규칙 (제목 제외) */
-.light h1:not(.dark\\:text-dark-accent):not(.text-light-text),
-.light div.font-bold:not(.dark\\:text-dark-accent):not(.text-light-text) {
-  color: #3ed4a2 !important;
-}
 
 /* 다크모드 스타일 - 사용자 지정 색상 */
 .dark {

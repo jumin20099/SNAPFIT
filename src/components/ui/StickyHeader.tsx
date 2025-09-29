@@ -128,7 +128,7 @@ export function StickyHeader({
                   onClick={handleBackClick}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
                 >
-                  <ArrowLeft size={20} className="text-gray-700 dark:text-dark-text" />
+                  <ArrowLeft size={20} className="text-[#17171b] dark:text-dark-text" />
                 </button>
               ) : (
                 <button 
@@ -148,7 +148,7 @@ export function StickyHeader({
                   onClick={() => setIsCategoryModalOpen(true)}
                   className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
                 >
-                  <Menu size={20} className="text-gray-700 dark:text-dark-text" />
+                  <Menu size={20} className="text-[#17171b] dark:text-dark-text" />
                 </button>
               )}
               
@@ -156,13 +156,13 @@ export function StickyHeader({
                 onClick={() => setIsSearchModalOpen(true)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
               >
-                <Search size={20} className="text-gray-700 dark:text-dark-text" />
+                <Search size={20} className="text-[#17171b] dark:text-dark-text" />
               </button>
               <button 
                 onClick={() => setIsNotificationModalOpen(true)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors relative"
               >
-                <Bell size={20} className="text-gray-700 dark:text-dark-text" />
+                <Bell size={20} className="text-[#17171b] dark:text-dark-text" />
                 {/* 알림 뱃지 */}
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
@@ -170,7 +170,7 @@ export function StickyHeader({
                 onClick={handleCartClick}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
               >
-                <ShoppingBag size={20} className="text-gray-700 dark:text-dark-text" />
+                <ShoppingBag size={20} className="text-[#17171b] dark:text-dark-text" />
               </button>
             </div>
           </div>
