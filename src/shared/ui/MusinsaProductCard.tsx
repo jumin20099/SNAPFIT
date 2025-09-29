@@ -1,6 +1,6 @@
 import { HTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import { Heart, ShoppingBag, Eye } from 'lucide-react';
+import { Heart, ShoppingBag, Eye, Star } from 'lucide-react';
 import { MusinsaCard } from './MusinsaCard';
 import { MusinsaButton } from './MusinsaButton';
 import { MusinsaBadge } from './MusinsaBadge';
@@ -22,6 +22,8 @@ interface MusinsaProductCardProps extends Omit<HTMLAttributes<HTMLDivElement>, '
     discountRate?: number;
     isNew?: boolean;
     isBest?: boolean;
+    rating?: number;
+    reviewCount?: number;
   };
   onLike?: (productId: string) => void;
   onAddToCart?: (productId: string) => void;
@@ -150,6 +152,19 @@ export const MusinsaProductCard = forwardRef<HTMLDivElement, MusinsaProductCardP
           <h3 className="text-sm font-medium text-gray-900 mb-2 line-clamp-2">
             {product.name}
           </h3>
+          
+          {/* 별점 및 리뷰 수 */}
+          <div className="flex items-center gap-1 mb-2">
+            <div className="flex items-center gap-1">
+              <Star size={12} className="text-yellow-400 fill-yellow-400" />
+              <span className="text-xs text-gray-600">
+                {product.rating && typeof product.rating === 'number' ? product.rating.toFixed(1) : '0.0'}
+              </span>
+            </div>
+            <span className="text-xs text-gray-400">
+              ({product.reviewCount ? product.reviewCount.toLocaleString() : '0'})
+            </span>
+          </div>
           
           {/* 가격 */}
           <div className="flex items-center gap-2 mb-2">

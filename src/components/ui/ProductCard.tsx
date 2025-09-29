@@ -100,21 +100,17 @@ export function ProductCard({ product, onLike, onClick, variant = 'grid' }: Prod
         )}
 
         {/* 별점 및 리뷰 수 */}
-        {(product.rating || product.reviewCount) && (
+        <div className="flex items-center gap-1">
           <div className="flex items-center gap-1">
-            <div className="flex items-center gap-1">
-              <Star size={12} className="text-yellow-400 fill-yellow-400" />
-              <span className="text-xs text-gray-600">
-                {product.rating && typeof product.rating === 'number' ? product.rating.toFixed(1) : '0.0'}
-              </span>
-            </div>
-            {product.reviewCount && product.reviewCount > 0 && (
-              <span className="text-xs text-gray-400">
-                ({product.reviewCount.toLocaleString()})
-              </span>
-            )}
+            <Star size={12} className="text-yellow-400 fill-yellow-400" />
+            <span className="text-xs text-gray-600">
+              {product.rating && typeof product.rating === 'number' ? product.rating.toFixed(1) : '0.0'}
+            </span>
           </div>
-        )}
+          <span className="text-xs text-gray-400">
+            ({product.reviewCount ? product.reviewCount.toLocaleString() : '0'})
+          </span>
+        </div>
 
         {/* 가격 영역 */}
         <div className="space-y-1">
