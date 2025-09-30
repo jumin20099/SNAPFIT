@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useLayoutEffect, useRef } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
@@ -157,11 +157,7 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
   const [brandLikeState, setBrandLikeState] = useState({ liked: false, count: 0 })
   const [authToken, setAuthToken] = useState<string | null>(null)
   const [showAllProducts, setShowAllProducts] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const productsPerPage = 12
-  const scrollPositionRef = useRef<{ ratio: number; absolute: number }>({ ratio: 0, absolute: 0 })
-  const productsSectionRef = useRef<HTMLDivElement>(null)
-  const [shouldRestoreScroll, setShouldRestoreScroll] = useState(false)
+  const [displayedProductCount, setDisplayedProductCount] = useState(16)
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
@@ -322,119 +318,26 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
     // 4개까지만 보여주고, 더보기 버튼으로 나머지 표시
     if (!showAllProducts) {
       result = sortedProducts.slice(0, 4)
-    } else if (sortedProducts.length > 14) {
-      // 14개 이상일 때 페이지네이션 적용
-      const startIndex = (currentPage - 1) * productsPerPage
-      const endIndex = startIndex + productsPerPage
-      result = sortedProducts.slice(startIndex, endIndex)
     } else {
-      // 14개 이하일 때는 모든 상품 표시
-      result = sortedProducts
+      // 더보기 버튼을 눌렀을 때는 displayedProductCount만큼 표시
+      result = sortedProducts.slice(0, displayedProductCount)
     }
     
     console.log('📦 displayedProducts 계산:', {
       totalProducts: sortedProducts.length,
       showAllProducts,
-      currentPage,
-      productsPerPage,
-      startIndex: showAllProducts && sortedProducts.length > 14 ? (currentPage - 1) * productsPerPage : 0,
-      endIndex: showAllProducts && sortedProducts.length > 14 ? (currentPage - 1) * productsPerPage + productsPerPage : sortedProducts.length,
+      displayedProductCount,
       displayedCount: result.length
     })
     
     return result
-  }, [sortedProducts, showAllProducts, currentPage, productsPerPage])
+  }, [sortedProducts, showAllProducts, displayedProductCount])
 
-  // 페이지네이션 정보
-  const totalPages = useMemo(() => {
-    if (!sortedProducts || sortedProducts.length <= 14) return 1
-    return Math.ceil(sortedProducts.length / productsPerPage)
-  }, [sortedProducts, productsPerPage])
-
-  // 페이지 변경 핸들러 (스크롤 위치 보존)
-  const handlePageChange = (newPage: number) => {
-    const currentScrollY = window.scrollY
-    const documentHeight = document.documentElement.scrollHeight
-    const scrollRatio = currentScrollY / documentHeight
-    
-    console.log('🔄 페이지 변경 시작:', {
-      from: currentPage,
-      to: newPage,
-      currentScrollY,
-      documentHeight,
-      windowHeight: window.innerHeight,
-      scrollRatio: scrollRatio.toFixed(3)
-    })
-    
-    // 스크롤 위치를 비율과 절대값 모두 저장
-    scrollPositionRef.current = {
-      ratio: scrollRatio,
-      absolute: currentScrollY
-    }
-    
-    setCurrentPage(newPage)
-    setShouldRestoreScroll(true)
-    
-    console.log('📌 스크롤 위치 저장:', {
-      ratio: scrollRatio.toFixed(3),
-      absolute: currentScrollY
-    })
+  // 더보기 핸들러
+  const handleLoadMore = () => {
+    setDisplayedProductCount(prev => prev + 16)
   }
 
-  // 스크롤 위치 복원 (렌더링 완료 후)
-  useEffect(() => {
-    console.log('🔍 스크롤 복원 useEffect 실행:', {
-      shouldRestoreScroll,
-      savedScrollPosition: scrollPositionRef.current,
-      currentScrollY: window.scrollY,
-      currentPage,
-      displayedProductsCount: displayedProducts.length
-    })
-    
-    if (shouldRestoreScroll && scrollPositionRef.current.ratio > 0) {
-      console.log('⏰ 스크롤 복원 대기 중... (100ms 후 실행)')
-      
-      // DOM 업데이트가 완전히 끝난 후 스크롤 복원
-      setTimeout(() => {
-        const beforeScrollY = window.scrollY
-        const newDocumentHeight = document.documentElement.scrollHeight
-        const maxScrollY = newDocumentHeight - window.innerHeight
-        
-        // 비율을 사용하여 새로운 스크롤 위치 계산
-        const targetScrollY = Math.min(
-          scrollPositionRef.current.ratio * newDocumentHeight,
-          maxScrollY
-        )
-        
-        console.log('🎯 스크롤 복원 실행:', {
-          beforeScrollY,
-          savedRatio: scrollPositionRef.current.ratio.toFixed(3),
-          savedAbsolute: scrollPositionRef.current.absolute,
-          newDocumentHeight,
-          windowHeight: window.innerHeight,
-          maxScrollY,
-          targetScrollY: Math.round(targetScrollY),
-          usingRatio: scrollPositionRef.current.ratio * newDocumentHeight,
-          capped: scrollPositionRef.current.ratio * newDocumentHeight > maxScrollY
-        })
-        
-        window.scrollTo(0, targetScrollY)
-        
-        // 복원 후 실제 스크롤 위치 확인
-        setTimeout(() => {
-          const afterScrollY = window.scrollY
-          console.log('✅ 스크롤 복원 완료:', {
-            expected: Math.round(targetScrollY),
-            actual: afterScrollY,
-            success: Math.abs(afterScrollY - targetScrollY) < 10
-          })
-        }, 50)
-        
-        scrollPositionRef.current = { ratio: 0, absolute: 0 }
-        setShouldRestoreScroll(false)
-      }, 100)
-    }
-  }, [currentPage, shouldRestoreScroll, displayedProducts.length])
 
   const brandOutfits = useMemo(() => {
     if (productIdSet.size === 0) return []
@@ -623,7 +526,7 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
             </Card>
           ) : (
             <>
-              <div ref={productsSectionRef} className="min-h-[800px]">
+              <div className="min-h-[800px]">
                 <div className="grid grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {displayedProducts.map((product) => (
                   <ProductCard
@@ -667,48 +570,16 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
                 </div>
               )}
               
-              {/* 페이지네이션 (14개 이상일 때) */}
-              {showAllProducts && sortedProducts.length > 14 && totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-8">
+              {/* 더보기 버튼 */}
+              {showAllProducts && displayedProductCount < sortedProducts.length && (
+                <div className="flex justify-center mt-8">
                   <Button
-                    onClick={() => {
-                      console.log('⬅️ 이전 페이지 버튼 클릭')
-                      handlePageChange(Math.max(1, currentPage - 1))
-                    }}
-                    disabled={currentPage === 1}
+                    onClick={handleLoadMore}
                     variant="outline"
-                    size="sm"
+                    size="lg"
+                    className="px-8"
                   >
-                    이전
-                  </Button>
-                  
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <Button
-                        key={page}
-                        onClick={() => {
-                          console.log('🔢 페이지 번호 클릭:', page)
-                          handlePageChange(page)
-                        }}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        className="w-8 h-8 p-0"
-                      >
-                        {page}
-                      </Button>
-                    ))}
-                  </div>
-                  
-                  <Button
-                    onClick={() => {
-                      console.log('➡️ 다음 페이지 버튼 클릭')
-                      handlePageChange(Math.min(totalPages, currentPage + 1))
-                    }}
-                    disabled={currentPage === totalPages}
-                    variant="outline"
-                    size="sm"
-                  >
-                    다음
+                    더보기 ({sortedProducts.length - displayedProductCount}개 더)
                   </Button>
                 </div>
               )}
