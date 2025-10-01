@@ -12,6 +12,8 @@ const DynamicLikeButton = dynamic(async () => {
   loading: () => null
 })
 
+import { PostTableList } from './PostTableList'
+
 type SortOption = 'latest' | 'popular' | 'trending' | 'mostCommented'
 
 interface CommunityFeedProps {
@@ -27,12 +29,15 @@ interface Post {
   content: string
   authorName: string
   authorId?: string
+  anonymousIndex?: number | null
   authorProfileImage?: string
   createdAt: string
   likeCount: number
   commentCount: number
   scrapCount: number
   viewCount: number
+  recommendCount?: number
+  boardType?: 'OUTFIT' | 'QUESTION' | 'INFO'
   isLiked?: boolean
   isScrapped?: boolean
   mediaUrls?: string[]
@@ -305,46 +310,91 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
     )
   }
 
+  const renderGridLayout = () => {
+    if (!Array.isArray(filteredPosts) || filteredPosts.length === 0) {
+      return null
+    }
+
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        {filteredPosts.map((post, index) => {
+          const status = reactionManager.getPostStatus(post.postId)
+          const liked = status?.liked ?? post.isLiked ?? false
+          const likeCount = status?.likeCount ?? post.likeCount ?? 0
+          logReactionDebug('renderPost', {
+            postId: post.postId,
+            liked,
+            likeCount,
+            status,
+            fallbackLiked: post.isLiked,
+            fallbackLikeCount: post.likeCount,
+            override: reactionManager.getPostStatus(post.postId) && reactionManager.getPostStatus(post.postId)?.liked !== undefined,
+            reactionStatusRaw: status
+          })
+          return (
+            <PostCard
+              key={post.postId}
+              listIndex={index}
+              post={post}
+              liked={liked}
+              likeCount={likeCount}
+              onClick={() => handleCardClick(post.postId)}
+              onToggleSuccess={(payload) => handleLikeSuccess(post.postId, payload)}
+            />
+          )
+        })}
+      </div>
+    )
+  }
+
+  const renderEmptyState = () => (
+    <div className="text-center py-12">
+      <div className="text-gray-400 text-6xl mb-4">📝</div>
+      <p className="text-gray-500 text-lg mb-2">
+        {searchTerm ? '검색 결과가 없습니다' : '표시할 게시글이 없습니다'}
+      </p>
+      {searchTerm && <p className="text-gray-400 text-sm">다른 검색어를 시도해보세요</p>}
+    </div>
+  )
+
+  const renderTableLayout = () => {
+    if (!Array.isArray(filteredPosts) || filteredPosts.length === 0) {
+      return renderEmptyState()
+    }
+
+    return (
+      <PostTableList
+        posts={filteredPosts.map((post, index) => ({
+          postId: post.postId,
+          title: post.title || post.content,
+          authorName: post.authorName,
+          anonymousIndex: post.anonymousIndex ?? null,
+          createdAt: post.createdAt,
+          viewCount: post.viewCount,
+          recommendCount: post.recommendCount ?? post.likeCount ?? 0,
+          order: index + 1,
+          thumbnailUrl: post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls[0] : null,
+          categoryLabel: post.boardType === 'QUESTION' ? '질문' : post.boardType === 'INFO' ? '정보' : post.tags?.[0] ?? null,
+        }))}
+        onSelect={(postId) => handleCardClick(postId)}
+      />
+    )
+  }
+
+  const renderFeedContent = () => {
+    if (activeTab === 'outfits') {
+      if (!Array.isArray(filteredPosts) || filteredPosts.length === 0) {
+        return renderEmptyState()
+      }
+      return renderGridLayout()
+    }
+
+    return renderTableLayout()
+  }
+
   return (
     <>
-      {Array.isArray(filteredPosts) && filteredPosts.length > 0 ? (
-        <div className="grid grid-cols-2 gap-2">
-          {filteredPosts.map((post, index) => {
-            const status = reactionManager.getPostStatus(post.postId)
-            const liked = status?.liked ?? post.isLiked ?? false
-            const likeCount = status?.likeCount ?? post.likeCount ?? 0
-            logReactionDebug('renderPost', {
-              postId: post.postId,
-              liked,
-              likeCount,
-              status,
-              fallbackLiked: post.isLiked,
-              fallbackLikeCount: post.likeCount,
-              override: reactionManager.getPostStatus(post.postId) && reactionManager.getPostStatus(post.postId)?.liked !== undefined,
-              reactionStatusRaw: status
-            })
-            return (
-              <PostCard
-                key={post.postId}
-                listIndex={index}
-                post={post}
-                liked={liked}
-                likeCount={likeCount}
-                onClick={() => handleCardClick(post.postId)}
-                onToggleSuccess={(payload) => handleLikeSuccess(post.postId, payload)}
-              />
-            )
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-gray-400 text-6xl mb-4">📝</div>
-          <p className="text-gray-500 text-lg mb-2">
-            {searchTerm ? '검색 결과가 없습니다' : '표시할 게시글이 없습니다'}
-          </p>
-          {searchTerm && <p className="text-gray-400 text-sm">다른 검색어를 시도해보세요</p>}
-        </div>
-      )}
+      {renderFeedContent()}
 
       {isLoadingMore && (
         <div className="infinite-loader flex justify-center py-6 bg-gray-50 dark:bg-gray-900/50 rounded-lg mt-4">
