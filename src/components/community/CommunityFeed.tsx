@@ -17,7 +17,7 @@ type SortOption = 'latest' | 'popular' | 'trending' | 'mostCommented'
 interface CommunityFeedProps {
   sortBy: SortOption
   searchTerm: string
-  activeTab: string
+  activeTab: 'outfits' | 'questions' | 'info'
   onPostClick?: (postId: number) => void
   onTotalCountChange?: (count: number) => void
 }
@@ -33,8 +33,8 @@ interface Post {
   commentCount: number
   scrapCount: number
   viewCount: number
-  liked: boolean
-  scraped: boolean
+  isLiked?: boolean
+  isScrapped?: boolean
   mediaUrls?: string[]
   tags?: string[]
   outfitId?: number
@@ -58,8 +58,6 @@ interface Post {
     }
     timestamp: number
   }
-  isLiked?: boolean
-  isScrapped?: boolean
 }
 
 const logScrollDebug = (...args: unknown[]) => {
@@ -82,6 +80,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
   const { posts, loading, error, hasMore, loadMore, reactionManager, updatePostReaction } = useInfinitePosts({
     pageSize: 20,
     sortBy: normalizedSort,
+    boardType: activeTab,
   })
 
   const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -110,7 +109,26 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
   }, [])
 
   const handleLoadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore) return
+    console.log(`[community:scroll] handleLoadMore:start`, { 
+      isLoadingMore, 
+      hasMore, 
+      postsLength: posts.length,
+      currentScrollY: window.scrollY
+    });
+
+    if (isLoadingMore || !hasMore) {
+      console.log(`[community:scroll] handleLoadMore:blocked`, { 
+        isLoadingMore, 
+        hasMore, 
+        reason: isLoadingMore ? 'already loading' : 'no more posts'
+      });
+      return
+    }
+
+    console.log(`[community:scroll] handleLoadMore:proceed`, { 
+      currentScrollY: window.scrollY, 
+      postsLength: posts.length 
+    });
 
     captureTopAnchor()
 
@@ -121,13 +139,21 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
 
     setIsLoadingMore(true)
     try {
+      console.log(`[community:scroll] handleLoadMore:calling-loadMore`);
       await loadMore()
+      console.log(`[community:scroll] handleLoadMore:loadMore-completed`);
       requestAnimationFrame(() => requestAnimationFrame(applyAnchorDelta))
       logScrollDebug('loadMore:completed')
     } catch (err) {
+      console.error(`[community:scroll] handleLoadMore:error`, err);
       logScrollDebug('loadMore:error', err)
     } finally {
       setIsLoadingMore(false)
+      console.log(`[community:scroll] handleLoadMore:finally`, {
+        hasMore,
+        postsLength: posts.length,
+        isLoadingMore: false
+      });
       logScrollDebug('loadMore:finally', {
         hasMore,
         postsLength: posts.length,
@@ -137,15 +163,43 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
 
   const sentinelRef = useCallback(
     (node: HTMLDivElement | null) => {
-      if (observer.current) observer.current.disconnect()
+      console.log(`[community:scroll] sentinelRef:callback`, { 
+        node: !!node, 
+        hasObserver: !!observer.current,
+        hasMore,
+        isLoadingMore,
+        postsLength: posts.length
+      });
+
+      if (observer.current) {
+        console.log(`[community:scroll] sentinelRef:disconnect`);
+        observer.current.disconnect()
+      }
 
       if (node) {
+        console.log(`[community:scroll] sentinelRef:create-observer`);
         observer.current = new IntersectionObserver(
           entries => {
             const entry = entries[0]
-            if (entry?.isIntersecting && hasMore && !isLoadingMore) {
-              logScrollDebug('intersection:trigger', { hasMore, isLoadingMore })
+            console.log(`[community:scroll] intersection:callback`, { 
+              isIntersecting: entry?.isIntersecting,
+              hasMore,
+              isLoadingMore,
+              postsLength: posts.length,
+              intersectionRatio: entry?.intersectionRatio,
+              boundingClientRect: entry?.boundingClientRect
+            });
+            
+            if (entry?.isIntersecting && hasMore && !isLoadingMore && posts.length > 0) {
+              console.log(`[community:scroll] intersection:trigger`, { hasMore, isLoadingMore, postsLength: posts.length })
               handleLoadMore()
+            } else {
+              console.log(`[community:scroll] intersection:ignored`, { 
+                reason: !entry?.isIntersecting ? 'not intersecting' :
+                        !hasMore ? 'no more posts' :
+                        isLoadingMore ? 'already loading' :
+                        posts.length === 0 ? 'no posts yet' : 'unknown'
+              });
             }
           },
           {
@@ -155,10 +209,11 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
           }
         )
 
+        console.log(`[community:scroll] sentinelRef:observe`);
         observer.current.observe(node)
       }
     },
-    [handleLoadMore, hasMore, isLoadingMore]
+    [handleLoadMore, hasMore, isLoadingMore, posts.length]
   )
 
   useEffect(() => {

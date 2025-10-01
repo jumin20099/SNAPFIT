@@ -24,6 +24,7 @@ public class PostResponseDto {
     private Long scrapCount;
     private Long commentCount;
     private Long viewCount;
+    private String boardType; // 게시판 타입 추가
     private Integer authorHeightCm;
     private BigDecimal authorWeightKg;
     private LocalDateTime createdAt;

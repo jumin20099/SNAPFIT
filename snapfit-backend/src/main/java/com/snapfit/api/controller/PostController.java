@@ -7,6 +7,7 @@ import com.snapfit.api.entity.Tag;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.entity.Like;
 import com.snapfit.api.entity.Outfit;
+import com.snapfit.api.entity.BoardType;
 import com.snapfit.api.repository.PostRepository;
 import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.repository.LikeRepository;
@@ -21,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -35,6 +37,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Optional;
 import java.time.LocalDateTime;
@@ -104,7 +107,8 @@ public class PostController {
             }
             
             // 2. 익명 사용자인 경우 익명 인덱스 할당
-            if (savedUser == null) {
+            boolean isAnonymousPost = (request.getIsAnonymous() != null && request.getIsAnonymous()) || savedUser == null;
+            if (isAnonymousPost) {
                 String trimmedPassword = anonymousPassword != null ? anonymousPassword.trim() : null;
                 if (!StringUtils.hasText(trimmedPassword) || trimmedPassword.length() < 4) {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -127,10 +131,30 @@ public class PostController {
                 log.info("코디 데이터 저장 성공: outfitId={}", outfitId);
             }
             
+            // 제목 기본값 처리 (비어 있으면 내용 앞부분 사용)
+            String normalizedTitle = request.getTitle();
+            if (!StringUtils.hasText(normalizedTitle)) {
+                normalizedTitle = request.getContent().length() > 30
+                        ? request.getContent().substring(0, 30)
+                        : request.getContent();
+            }
+            
             // 4. Post 엔티티 생성 및 저장
+            BoardType boardType = BoardType.OUTFIT; // 기본값
+            if (request.getBoardType() != null) {
+                try {
+                    // 프론트엔드에서 보내는 대문자 값을 그대로 사용 (QUESTION, INFO, OUTFIT)
+                    boardType = BoardType.valueOf(request.getBoardType());
+                    log.info("게시판 타입 설정: {}", boardType);
+                } catch (IllegalArgumentException e) {
+                    log.warn("잘못된 boardType: {}, 기본값 OUTFIT 사용", request.getBoardType());
+                }
+            }
+            
             Post post = Post.builder()
-                .title(request.getTitle())
+                .title(normalizedTitle)
                 .content(request.getContent())
+                .boardType(boardType)
                 .mediaUrls(request.getMediaUrls() != null ? request.getMediaUrls().stream().collect(Collectors.toSet()) : new java.util.HashSet<>())
                 .anonymousIndex(anonymousIndex)
                 .build();
@@ -171,7 +195,7 @@ public class PostController {
             response.setPostId(savedPost.getPostId());
             response.setTitle(savedPost.getTitle() != null ? savedPost.getTitle() : ""); // Post 엔티티의 title 필드 사용
             response.setContent(savedPost.getContent());
-            response.setTags(request.getTags());
+            response.setTags(request.getTags() != null ? request.getTags() : new ArrayList<>());
             response.setMediaUrls(new ArrayList<>(savedPost.getMediaUrls()));
             // 익명 게시글 처리
             if (savedPost.getAuthor() != null) {
@@ -629,14 +653,15 @@ public class PostController {
             dto.setAuthorProfileImage(post.getAuthor().getProfileImage() != null ? post.getAuthor().getProfileImage() : "");
         } else {
             // author가 null인 경우 (예외 상황)
-            dto.setAuthorId("unknown");
-            dto.setAuthorName("알 수 없음");
-            dto.setAuthorProfileImage("");
+            dto.setAuthorId("anonymous");
+            dto.setAuthorName("익명");
+            dto.setAuthorProfileImage("/placeholder.svg");
         }
         dto.setLikeCount(post.getCalculatedLikeCount() != null ? post.getCalculatedLikeCount().longValue() : 0L);
         dto.setScrapCount(post.getCalculatedScrapCount() != null ? post.getCalculatedScrapCount().longValue() : 0L);
         dto.setCommentCount(post.getCommentCount());
         dto.setViewCount(post.getViewCount());
+        dto.setBoardType(post.getBoardType() != null ? post.getBoardType().name() : "OUTFIT"); // boardType 설정
         dto.setCreatedAt(post.getCreatedAt());
         dto.setUpdatedAt(post.getUpdatedAt());
         
@@ -913,6 +938,191 @@ public class PostController {
         }
     }
     
+    // ===== 게시판 타입별 조회 API =====
+
+    /**
+     * 게시판 타입별 게시글 목록 조회
+     */
+    @GetMapping("/board/{boardType}")
+    public ResponseEntity<Page<PostResponseDto>> getPostsByBoardType(
+            @PathVariable String boardType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        try {
+            log.info("게시판 타입별 게시글 조회 시작: boardType={}, page={}, size={}", boardType, page, size);
+            
+            BoardType type = BoardType.valueOf(boardType.toUpperCase());
+            log.info("변환된 BoardType: {}", type);
+            
+            Sort.Direction direction = sortDir.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+            Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+            
+            // 전체 게시글 수 확인
+            long totalPosts = postRepository.count();
+            log.info("전체 게시글 수: {}", totalPosts);
+            
+            // 해당 boardType의 게시글 수 확인
+            long boardTypePosts = postRepository.countByBoardType(type);
+            log.info("{} 타입 게시글 수: {}", type, boardTypePosts);
+            
+            Page<Post> posts = postRepository.findByBoardTypeOrderByCreatedAtDesc(type, pageable);
+            log.info("조회된 게시글 수: {}, 총 페이지: {}, 현재 페이지: {}", 
+                posts.getNumberOfElements(), posts.getTotalPages(), posts.getNumber());
+            
+            // 각 게시글의 boardType 확인
+            for (Post post : posts.getContent()) {
+                log.info("게시글 ID: {}, boardType: {}, title: {}", 
+                    post.getPostId(), post.getBoardType(), post.getTitle());
+            }
+            
+            Page<PostResponseDto> response = posts.map(this::convertToDto);
+            
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.error("잘못된 boardType: {}", boardType, e);
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("게시판 타입별 게시글 조회 실패", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 게시판 타입별 인기 게시글 조회 (추천순)
+     */
+    @GetMapping("/board/{boardType}/popular")
+    public ResponseEntity<Page<PostResponseDto>> getPopularPostsByBoardType(
+            @PathVariable String boardType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        try {
+            BoardType type = BoardType.valueOf(boardType.toUpperCase());
+            Pageable pageable = PageRequest.of(page, size);
+            
+            Page<Post> posts = postRepository.findByBoardTypeOrderByRecommendCountDesc(type, pageable);
+            Page<PostResponseDto> response = posts.map(this::convertToDto);
+            
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("게시판 타입별 인기 게시글 조회 실패", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 게시판 타입별 검색
+     */
+    @GetMapping("/board/{boardType}/search")
+    public ResponseEntity<Page<PostResponseDto>> searchPostsByBoardType(
+            @PathVariable String boardType,
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        try {
+            BoardType type = BoardType.valueOf(boardType.toUpperCase());
+            Pageable pageable = PageRequest.of(page, size);
+            
+            Page<Post> posts = postRepository.searchByBoardTypeAndContent(boardType, q, pageable);
+            Page<PostResponseDto> response = posts.map(this::convertToDto);
+            
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("게시판 타입별 검색 실패", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // ===== 추천/비추천 API =====
+
+    /**
+     * 게시글 추천
+     */
+    @PostMapping("/{postId}/recommend")
+    public ResponseEntity<Map<String, Object>> recommendPost(@PathVariable Long postId) {
+        try {
+            // 게시글 존재 확인
+            Optional<Post> postOpt = postRepository.findById(postId);
+            if (postOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Post post = postOpt.get();
+            post.incrementRecommendCount();
+            postRepository.save(post);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("recommendCount", post.getRecommendCount());
+            response.put("message", "추천되었습니다.");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("게시글 추천 실패", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 게시글 비추천
+     */
+    @PostMapping("/{postId}/unrecommend")
+    public ResponseEntity<Map<String, Object>> unrecommendPost(@PathVariable Long postId) {
+        try {
+            // 게시글 존재 확인
+            Optional<Post> postOpt = postRepository.findById(postId);
+            if (postOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Post post = postOpt.get();
+            post.incrementUnrecommendCount();
+            postRepository.save(post);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("unrecommendCount", post.getUnrecommendCount());
+            response.put("message", "비추천되었습니다.");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("게시글 비추천 실패", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 게시판 통계 조회 (관리자용)
+     */
+    @GetMapping("/board/statistics")
+    public ResponseEntity<List<Map<String, Object>>> getBoardStatistics() {
+        try {
+            List<Object[]> stats = postRepository.getBoardTypeStatistics();
+            List<Map<String, Object>> response = new ArrayList<>();
+
+            for (Object[] stat : stats) {
+                Map<String, Object> boardStat = new HashMap<>();
+                boardStat.put("boardType", stat[0]);
+                boardStat.put("postCount", stat[1]);
+                boardStat.put("avgViews", stat[2]);
+                boardStat.put("avgRecommends", stat[3]);
+                boardStat.put("avgUnrecommends", stat[4]);
+                boardStat.put("avgComments", stat[5]);
+                response.add(boardStat);
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("게시판 통계 조회 실패", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     /**
      * 클라이언트 IP 주소 추출
      */

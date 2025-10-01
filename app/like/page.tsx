@@ -262,7 +262,7 @@ export default function LikedItemsPage() {
           )
           
           console.log('매칭된 브랜드 정보 (좋아요 수 포함):', brandsWithLikeCount)
-          setLikedBrands(brandsWithLikeCount)
+          setLikedBrands(brandsWithLikeCount.map(brand => ({ ...brand, liked: true })))
         } else {
           console.log('stores 데이터가 없어서 빈 배열로 설정')
           setLikedBrands([])

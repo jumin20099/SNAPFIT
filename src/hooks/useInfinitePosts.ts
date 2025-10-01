@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus';
 import type { ReactionStatusItem } from '@/shared/types';
+import type { BatchReactionStatusManager } from '@/shared/utils/batch-reaction-utils';
 
 interface Post {
   postId: number;
@@ -37,6 +38,7 @@ interface UseInfinitePostsOptions {
   sortBy?: 'latest' | 'trending' | 'popular';
   userId?: string;
   tag?: string;
+  boardType?: 'outfits' | 'questions' | 'info';
 }
 
 interface UseInfinitePostsReturn {
@@ -52,7 +54,7 @@ interface UseInfinitePostsReturn {
 }
 
 export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfinitePostsReturn {
-  const { pageSize = 10, sortBy = 'latest', userId, tag } = options;
+  const { pageSize = 10, sortBy = 'latest', userId, tag, boardType = 'outfits' } = options;
 
   const logReactionDebug = (...args: unknown[]) => {
     if (process.env.NODE_ENV !== 'development') return;
@@ -122,21 +124,43 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
     } else if (tag) {
       return `/api/posts/tag/${tag}?${params}`;
     }
-    return `/api/posts?${params}`;
-  }, [pageSize, sortBy, userId, tag]);
+
+    const normalizedBoardType = boardType ?? 'outfits';
+    return `/api/posts/board/${normalizedBoardType}?${params}`;
+  }, [pageSize, sortBy, userId, tag, boardType]);
 
   const fetchPage = useCallback(async (page: number, replace: boolean) => {
-    if (isFetchingRef.current) return;
-    if (!replace && fetchedPagesRef.current.has(page)) return;
+    console.log(`[community:reaction:hook] fetchPage:start`, { 
+      page, 
+      replace, 
+      isFetching: isFetchingRef.current,
+      hasMore,
+      currentPage,
+      postsLength: posts.length,
+      fetchedPages: Array.from(fetchedPagesRef.current),
+      lastReplacePage: lastReplacePageRef.current
+    });
 
-    if (replace && lastReplacePageRef.current !== null && page === lastReplacePageRef.current) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[community:reaction:hook] fetchPage:skip-replace', { page, currentOverrides: { ...reactionOverridesRef.current } });
-      }
+    if (isFetchingRef.current) {
+      console.log(`[community:reaction:hook] fetchPage:blocked`, { page, replace, reason: 'already fetching' });
+      return;
+    }
+    if (!replace && fetchedPagesRef.current.has(page)) {
+      console.log(`[community:reaction:hook] fetchPage:blocked`, { page, replace, reason: 'page already fetched' });
       return;
     }
 
-    abortControllerRef.current?.abort();
+    if (replace && lastReplacePageRef.current !== null && page === lastReplacePageRef.current) {
+      console.log('[community:reaction:hook] fetchPage:skip-replace', { page, currentOverrides: { ...reactionOverridesRef.current } });
+      return;
+    }
+
+    // 이전 요청 취소하지 않음 (요청 중단 방지)
+    // if (abortControllerRef.current && !replace) {
+    //   console.log(`[community:reaction:hook] fetchPage:abort-previous`, { page, replace });
+    //   abortControllerRef.current.abort();
+    // }
+    
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -148,6 +172,14 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       const url = buildApiUrl(page);
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
+      console.log(`[community:reaction:hook] fetchPage:request`, { 
+        url, 
+        page, 
+        replace, 
+        hasToken: !!token,
+        signal: controller.signal.aborted ? 'aborted' : 'active'
+      });
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -158,12 +190,39 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
         signal: controller.signal,
       });
 
+      console.log(`[community:reaction:hook] fetchPage:response`, { 
+        url, 
+        page, 
+        status: response.status, 
+        ok: response.ok,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error(`[community:reaction:hook] fetchPage:error`, { 
+          url, 
+          page, 
+          status: response.status, 
+          statusText: response.statusText,
+          errorData 
+        });
         throw new Error(errorData.message || `게시글 조회 실패: ${response.status}`);
       }
 
       const data: PostsResponse = await response.json();
+      console.log(`[community:reaction:hook] fetchPage:data`, { 
+        url, 
+        page, 
+        contentLength: data.content?.length || 0,
+        totalElements: data.totalElements,
+        totalPages: data.totalPages,
+        currentPage: data.number,
+        first: data.first,
+        last: data.last,
+        size: data.size
+      });
 
       const normalized = data.content.map(post => ({
         ...post,
@@ -174,58 +233,105 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       }));
 
       const patched = normalized.map(applyReactionState);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[community:reaction:hook] fetchPage:normalized', {
-          page,
-          replace,
-          normalizedSample: normalized.slice(0, 3).map(p => ({ postId: p.postId, isLiked: p.isLiked, likeCount: p.likeCount })),
-          overrides: { ...reactionOverridesRef.current }
-        });
-      }
+      console.log('[community:reaction:hook] fetchPage:normalized', {
+        page,
+        replace,
+        normalizedSample: normalized.slice(0, 3).map(p => ({ postId: p.postId, isLiked: p.isLiked, likeCount: p.likeCount })),
+        overrides: { ...reactionOverridesRef.current }
+      });
+      
       setPosts(prev => {
         const next = replace ? patched : [...prev, ...patched];
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[community:reaction:hook] fetchPage:setPosts', {
-            replace,
-            length: next.length,
-            sample: next.slice(0, 3).map(p => ({ postId: p.postId, isLiked: p.isLiked, likeCount: p.likeCount }))
-          });
-        }
+        console.log('[community:reaction:hook] fetchPage:setPosts', {
+          replace,
+          prevLength: prev.length,
+          nextLength: next.length,
+          added: patched.length,
+          sample: next.slice(0, 3).map(p => ({ postId: p.postId, isLiked: p.isLiked, likeCount: p.likeCount }))
+        });
         return next;
       });
+      
       setHasMore(!data.last);
       setCurrentPage(page);
       fetchedPagesRef.current.add(page);
       if (replace) {
         lastReplacePageRef.current = page;
       }
+      
+      console.log(`[community:reaction:hook] fetchPage:success`, { 
+        page, 
+        replace, 
+        hasMore: !data.last,
+        currentPage: page,
+        fetchedPages: Array.from(fetchedPagesRef.current)
+      });
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
+        console.log(`[community:reaction:hook] fetchPage:aborted`, { page, reason: 'AbortError' });
         return;
       }
+      console.error(`[community:reaction:hook] fetchPage:error`, { 
+        page, 
+        error: err,
+        errorName: err instanceof Error ? err.name : 'Unknown',
+        errorMessage: err instanceof Error ? err.message : 'Unknown error'
+      });
       const errorMessage = err instanceof Error ? err.message : '게시글 조회 중 오류가 발생했습니다';
       setError(errorMessage);
     } finally {
       isFetchingRef.current = false;
       setLoading(false);
+      console.log(`[community:reaction:hook] fetchPage:finally`, { page, replace, loading: false, isFetching: false });
     }
   }, [buildApiUrl, reactionManager, applyReactionState]);
 
   const loadMore = useCallback(() => {
-    if (isFetchingRef.current || !hasMore) return;
+    console.log(`[community:reaction:hook] loadMore:start`, { 
+      isFetching: isFetchingRef.current,
+      hasMore,
+      currentPage,
+      postsLength: posts.length
+    });
+    
+    if (isFetchingRef.current || !hasMore) {
+      console.log(`[community:reaction:hook] loadMore:blocked`, { 
+        isFetching: isFetchingRef.current,
+        hasMore,
+        reason: isFetchingRef.current ? 'already fetching' : 'no more posts'
+      });
+      return;
+    }
+    
     const nextPage = currentPage + 1;
-    logReactionDebug('loadMore:trigger', { currentPage, nextPage, hasMore });
+    console.log(`[community:reaction:hook] loadMore:trigger`, { currentPage, nextPage, hasMore });
     void fetchPage(nextPage, false);
   }, [hasMore, currentPage, fetchPage]);
 
   const refresh = useCallback(async () => {
+    console.log(`[community:reaction:hook] refresh:start`, { 
+      currentPosts: posts.length,
+      currentPage,
+      hasMore,
+      fetchedPages: Array.from(fetchedPagesRef.current),
+      lastReplacePage: lastReplacePageRef.current
+    });
+    
     fetchedPagesRef.current.clear();
     lastReplacePageRef.current = null;
     reactionOverridesRef.current = {};
     setHasMore(true);
     setCurrentPage(0);
+    
+    console.log(`[community:reaction:hook] refresh:cleared`, { 
+      fetchedPages: Array.from(fetchedPagesRef.current),
+      lastReplacePage: lastReplacePageRef.current
+    });
+    
     await fetchPage(0, true);
-  }, [fetchPage]);
+    
+    console.log(`[community:reaction:hook] refresh:completed`);
+  }, [fetchPage, posts.length, currentPage, hasMore]);
 
   const updatePostReaction = useCallback((postId: number, updates: Partial<ReactionStatusItem>, reactionStatus?: Record<string, Partial<ReactionStatusItem>>) => {
     if (process.env.NODE_ENV === 'development') {
@@ -263,11 +369,39 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
   }, [batchReactionStatus, applyReactionState, posts.length]);
 
   useEffect(() => {
+    console.log(`[community:reaction:hook] useEffect:refresh`, { 
+      sortBy, 
+      userId, 
+      tag, 
+      boardType,
+      currentPosts: posts.length,
+      currentPage,
+      hasMore
+    });
     refresh();
-  }, [sortBy, userId, tag, refresh]);
+  }, [sortBy, userId, tag, boardType]); // refresh 제거로 중복 실행 방지
 
-  useEffect(() => () => {
-    abortControllerRef.current?.abort();
+  const mountCountRef = useRef(0);
+
+  useEffect(() => {
+    mountCountRef.current += 1;
+
+    return () => {
+      mountCountRef.current -= 1;
+
+      if (mountCountRef.current === 0) {
+        const controller = abortControllerRef.current;
+
+        if (controller) {
+          queueMicrotask(() => {
+            if (mountCountRef.current === 0 && controller === abortControllerRef.current) {
+              controller.abort();
+              abortControllerRef.current = null;
+            }
+          });
+        }
+      }
+    };
   }, []);
 
   return {

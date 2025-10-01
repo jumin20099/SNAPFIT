@@ -1,9 +1,11 @@
 package com.snapfit.api.repository;
 
 import com.snapfit.api.entity.Post;
+import com.snapfit.api.entity.BoardType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -315,4 +317,113 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     void updateSponsoredStatus(@Param("postId") Long postId, 
                               @Param("isSponsored") Boolean isSponsored, 
                               @Param("updatedAt") LocalDateTime updatedAt);
+
+    // ===== 게시판 타입별 조회 메서드들 =====
+
+    /**
+     * 게시판 타입별 게시글 조회 (페이징)
+     * 성능: board_type 인덱스 활용
+     */
+    @EntityGraph(attributePaths = {"author", "tags", "outfit", "outfit.outfitItem"})
+    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType AND p.isDeleted = false ORDER BY p.createdAt DESC")
+    Page<Post> findByBoardTypeOrderByCreatedAtDesc(@Param("boardType") BoardType boardType, Pageable pageable);
+
+    /**
+     * 게시판 타입별 인기 게시글 조회 (추천순)
+     * 성능: board_type + 추천수 인덱스 활용
+     */
+    @EntityGraph(attributePaths = {"author", "tags", "outfit", "outfit.outfitItem"})
+    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType AND p.isDeleted = false ORDER BY p.recommendCount DESC, p.createdAt DESC")
+    Page<Post> findByBoardTypeOrderByRecommendCountDesc(@Param("boardType") BoardType boardType, Pageable pageable);
+
+    /**
+     * 게시판 타입별 조회수 순 게시글 조회
+     * 성능: board_type + 조회수 인덱스 활용
+     */
+    @EntityGraph(attributePaths = {"author", "tags", "outfit", "outfit.outfitItem"})
+    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType AND p.isDeleted = false ORDER BY p.viewCount DESC, p.createdAt DESC")
+    Page<Post> findByBoardTypeOrderByViewCountDesc(@Param("boardType") BoardType boardType, Pageable pageable);
+
+    /**
+     * 게시판 타입별 댓글 수 순 게시글 조회
+     * 성능: board_type + 댓글수 인덱스 활용
+     */
+    @EntityGraph(attributePaths = {"author", "tags", "outfit", "outfit.outfitItem"})
+    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType AND p.isDeleted = false ORDER BY p.commentCount DESC, p.createdAt DESC")
+    Page<Post> findByBoardTypeOrderByCommentCountDesc(@Param("boardType") BoardType boardType, Pageable pageable);
+
+    /**
+     * 게시판 타입별 검색 (제목 + 내용)
+     * 성능: board_type + 검색 인덱스 활용
+     */
+    @Query(value = "SELECT p.* FROM posts p " +
+                   "WHERE p.board_type = :boardType AND p.is_deleted = false " +
+                   "AND (p.title ILIKE %:searchTerm% OR p.content ILIKE %:searchTerm%) " +
+                   "ORDER BY p.created_at DESC", 
+           nativeQuery = true)
+    Page<Post> searchByBoardTypeAndContent(@Param("boardType") String boardType, 
+                                          @Param("searchTerm") String searchTerm, 
+                                          Pageable pageable);
+
+    // ===== 카운트 관련 메서드들 =====
+    
+    /**
+     * 게시판 타입별 게시글 수 조회
+     */
+    long countByBoardType(BoardType boardType);
+
+    // ===== 추천/비추천 관련 메서드들 =====
+
+    /**
+     * 추천 수 증가
+     */
+    @Modifying
+    @Query("UPDATE Post p SET p.recommendCount = p.recommendCount + 1 WHERE p.postId = :postId")
+    void incrementRecommendCount(@Param("postId") Long postId);
+
+    /**
+     * 추천 수 감소
+     */
+    @Modifying
+    @Query("UPDATE Post p SET p.recommendCount = GREATEST(p.recommendCount - 1, 0) WHERE p.postId = :postId")
+    void decrementRecommendCount(@Param("postId") Long postId);
+
+    /**
+     * 비추천 수 증가
+     */
+    @Modifying
+    @Query("UPDATE Post p SET p.unrecommendCount = p.unrecommendCount + 1 WHERE p.postId = :postId")
+    void incrementUnrecommendCount(@Param("postId") Long postId);
+
+    /**
+     * 비추천 수 감소
+     */
+    @Modifying
+    @Query("UPDATE Post p SET p.unrecommendCount = GREATEST(p.unrecommendCount - 1, 0) WHERE p.postId = :postId")
+    void decrementUnrecommendCount(@Param("postId") Long postId);
+
+    /**
+     * 게시판 타입별 통계 조회
+     * 성능: 집계 쿼리 최적화
+     */
+    @Query("SELECT p.boardType as boardType, " +
+           "COUNT(p) as postCount, " +
+           "AVG(p.viewCount) as avgViews, " +
+           "AVG(p.recommendCount) as avgRecommends, " +
+           "AVG(p.unrecommendCount) as avgUnrecommends, " +
+           "AVG(p.commentCount) as avgComments " +
+           "FROM Post p " +
+           "WHERE p.isDeleted = false " +
+           "GROUP BY p.boardType " +
+           "ORDER BY postCount DESC")
+    List<Object[]> getBoardTypeStatistics();
+
+    /**
+     * 익명 게시글을 위한 익명 인덱스 조회
+     * 성능: 익명 인덱스 기반 조회
+     */
+    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType AND p.anonymousIndex = :anonymousIndex AND p.isDeleted = false ORDER BY p.createdAt DESC")
+    Page<Post> findByBoardTypeAndAnonymousIndexOrderByCreatedAtDesc(@Param("boardType") BoardType boardType, 
+                                                                   @Param("anonymousIndex") Integer anonymousIndex, 
+                                                                   Pageable pageable);
 }

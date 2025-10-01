@@ -30,7 +30,9 @@ import java.util.*;
     @Index(name = "idx_posts_created_at", columnList = "created_at DESC, post_id DESC"),
     @Index(name = "idx_posts_outfit_id", columnList = "outfit_id"),
     @Index(name = "idx_posts_deleted", columnList = "is_deleted"),
-    @Index(name = "idx_posts_sponsored", columnList = "is_sponsored, created_at DESC")
+    @Index(name = "idx_posts_sponsored", columnList = "is_sponsored, created_at DESC"),
+    @Index(name = "idx_posts_board_type", columnList = "board_type, created_at DESC"),
+    @Index(name = "idx_posts_board_type_deleted", columnList = "board_type, is_deleted, created_at DESC")
 })
 @EntityListeners(AuditingEntityListener.class)
 @Getter
@@ -95,6 +97,15 @@ public class Post {
     }
 
     /**
+     * 게시판 타입 (필수)
+     * OUTFIT: 코디 게시판, QUESTION: 질문 게시판, INFO: 정보 게시판
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "board_type", nullable = false)
+    @Builder.Default
+    private BoardType boardType = BoardType.OUTFIT;
+
+    /**
      * 게시글 제목 (선택사항, 1-100자)
      * 보안: XSS 방지를 위한 제목 검증
      */
@@ -127,7 +138,7 @@ public class Post {
      */
     @Column(name = "media_urls", columnDefinition = "jsonb")
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
-    @Size(max = 10, message = "미디어는 최대 10개까지 업로드 가능합니다")
+    @Size(max = 30, message = "미디어는 최대 30개까지 업로드 가능합니다")
     @Builder.Default
     private Set<String> mediaUrls = new HashSet<>();
 
@@ -160,6 +171,20 @@ public class Post {
     @Column(name = "scrap_count", nullable = false)
     @Builder.Default
     private Long scrapCount = 0L;
+
+    /**
+     * 추천 수 (성능: 비동기 집계)
+     */
+    @Column(name = "recommend_count", nullable = false)
+    @Builder.Default
+    private Long recommendCount = 0L;
+
+    /**
+     * 비추천 수 (성능: 비동기 집계)
+     */
+    @Column(name = "unrecommend_count", nullable = false)
+    @Builder.Default
+    private Long unrecommendCount = 0L;
 
     /**
      * 댓글 수 (지연 로딩으로 성능 최적화)
@@ -423,7 +448,7 @@ public class Post {
      * 미디어 URL 추가 (중복 방지)
      */
     public void addMediaUrl(String mediaUrl) {
-        if (mediaUrl != null && !mediaUrl.trim().isEmpty() && mediaUrls.size() < 10) {
+        if (mediaUrl != null && !mediaUrl.trim().isEmpty() && mediaUrls.size() < 30) {
             mediaUrls.add(mediaUrl.trim());
         }
     }
@@ -487,6 +512,38 @@ public class Post {
     public void decrementCommentCount() {
         if (this.commentCount > 0) {
             this.commentCount--;
+        }
+    }
+
+    /**
+     * 추천 수 증가
+     */
+    public void incrementRecommendCount() {
+        this.recommendCount++;
+    }
+
+    /**
+     * 추천 수 감소
+     */
+    public void decrementRecommendCount() {
+        if (this.recommendCount > 0) {
+            this.recommendCount--;
+        }
+    }
+
+    /**
+     * 비추천 수 증가
+     */
+    public void incrementUnrecommendCount() {
+        this.unrecommendCount++;
+    }
+
+    /**
+     * 비추천 수 감소
+     */
+    public void decrementUnrecommendCount() {
+        if (this.unrecommendCount > 0) {
+            this.unrecommendCount--;
         }
     }
 

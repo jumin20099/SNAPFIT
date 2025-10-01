@@ -50,13 +50,18 @@ public class MediaController {
 
     @PostMapping("/upload")
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file,
-                                    @RequestParam("purpose") String purpose,
-                                    @RequestParam("refId") Long refId) {
+                                    @RequestParam(value = "type", defaultValue = "post") String type,
+                                    @RequestParam(value = "purpose", required = false) String purpose,
+                                    @RequestParam(value = "refId", defaultValue = "0") Long refId) {
         if (mediaService == null) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "미디어 업로드 서비스가 설정되지 않았습니다.");
         }
         
-        Media saved = mediaService.uploadMedia(file, purpose, refId);
+        // type 파라미터를 purpose로 사용 (하위 호환성)
+        String actualPurpose = purpose != null ? purpose : 
+            "post".equals(type) ? "post_image" : type;
+        
+        Media saved = mediaService.uploadMedia(file, actualPurpose, refId);
         return ResponseEntity.ok(Map.of(
             "id", saved.getId(),
             "url", saved.getMediaUrl()

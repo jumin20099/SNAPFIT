@@ -12,7 +12,6 @@ import java.util.List;
 @Data
 public class CreatePostRequestDto {
 
-    @NotBlank(message = "제목은 필수입니다")
     @Size(max = 200, message = "제목은 200자를 초과할 수 없습니다")
     private String title;
 
@@ -23,8 +22,14 @@ public class CreatePostRequestDto {
     @Size(max = 10, message = "태그는 최대 10개까지 가능합니다")
     private List<String> tags;
 
-    @Size(max = 10, message = "이미지는 최대 10개까지 가능합니다")
+    @Size(max = 30, message = "이미지는 최대 30개까지 가능합니다")
     private List<String> mediaUrls;
+
+    // 게시판 타입 (필수)
+    private String boardType;
+
+    // 익명 게시글 여부
+    private Boolean isAnonymous;
 
     // 코디 관련 필드 (선택사항)
     private CodyData codyData;

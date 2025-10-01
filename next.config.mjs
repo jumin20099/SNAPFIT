@@ -34,6 +34,11 @@ const nextConfig = {
   },
   async rewrites() {
     return [
+      // 로컬 업로드 파일 서빙
+      {
+        source: '/uploads/:path*',
+        destination: 'http://localhost:8080/uploads/:path*'
+      },
       // 백엔드로 프록시할 특정 API 경로들만 지정
       // WebSocket(SockJS) 엔드포인트 프록시
       {

@@ -115,18 +115,27 @@ export interface Notification {
 export interface Post {
   id: number;
   postId?: number;
-  authorId: number;
+  authorId: number | string;
   content: string;
+  title?: string;
   mediaUrls?: string[];
   likeCount: number;
   commentCount: number;
   scrapCount: number;
   viewCount: number;
+  recommendCount: number;
+  unrecommendCount: number;
   isDeleted: boolean;
   isSponsored: boolean;
+  boardType: 'OUTFIT' | 'QUESTION' | 'INFO';
+  anonymousIndex?: number;
   createdAt: string;
   updatedAt: string;
   author?: User;
+  authorName?: string;
+  authorProfileImage?: string;
+  isLiked?: boolean;
+  isScrapped?: boolean;
   tags?: Tag[];
   outfitId?: number;
 }

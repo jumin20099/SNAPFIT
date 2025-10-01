@@ -57,7 +57,7 @@ export function useToggleLike({
       
       onSuccess?.(data);
     },
-    onError: (error, variables, context) => {
+    onError: (error, variables, context: any) => {
       // 롤백
       if (context?.previousProducts) {
         queryClient.setQueryData(['products'], context.previousProducts);
