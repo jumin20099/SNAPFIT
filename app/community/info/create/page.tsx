@@ -10,11 +10,13 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { X, Upload, Image as ImageIcon, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import ApiClient from '@/shared/utils/api-client'
 
 interface CreateInfoProps {}
 
 export default function CreateInfoPage({}: CreateInfoProps) {
   const router = useRouter()
+  const apiClient = ApiClient.getInstance()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -100,32 +102,22 @@ export default function CreateInfoPage({}: CreateInfoProps) {
 
     setSubmitting(true)
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/posts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: title.trim() || null,
-          content: content.trim(),
-          mediaUrls: images,
-          boardType: 'INFO',
-          isAnonymous: !isLoggedIn,
-          anonymousPassword: !isLoggedIn ? trimmedPassword : undefined
-        })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        toast.success('정보가 작성되었습니다.')
-        router.push(`/community/info/${data.postId}`)
-      } else {
-        const error = await response.json()
-        toast.error(error.message || '게시글 작성에 실패했습니다.')
+      const requestData = {
+        title: title.trim() || null,
+        content: content.trim(),
+        mediaUrls: images,
+        boardType: 'INFO',
+        isAnonymous: !isLoggedIn,
+        ...(isLoggedIn ? {} : { anonymousPassword: trimmedPassword })
       }
+      
+      console.log('게시글 작성 요청 데이터:', requestData)
+      console.log('isLoggedIn:', isLoggedIn)
+      
+      const data = await apiClient.post('/api/posts', requestData)
+
+      toast.success('정보가 작성되었습니다.')
+      router.push(`/community/info/${data.postId}`)
     } catch (error) {
       console.error('게시글 작성 실패:', error)
       toast.error('게시글 작성에 실패했습니다.')

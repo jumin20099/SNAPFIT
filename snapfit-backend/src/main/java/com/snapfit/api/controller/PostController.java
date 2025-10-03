@@ -107,8 +107,10 @@ public class PostController {
             }
             
             // 2. 익명 사용자인 경우 익명 인덱스 할당
-            boolean isAnonymousPost = (request.getIsAnonymous() != null && request.getIsAnonymous()) || savedUser == null;
+            boolean isAnonymousPost = (request.getIsAnonymous() != null && request.getIsAnonymous()) || (savedUser == null && request.getIsAnonymous() != null && request.getIsAnonymous());
+            
             if (isAnonymousPost) {
+                // 익명 게시글인 경우에만 비밀번호 검증
                 String trimmedPassword = anonymousPassword != null ? anonymousPassword.trim() : null;
                 if (!StringUtils.hasText(trimmedPassword) || trimmedPassword.length() < 4) {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -119,6 +121,14 @@ public class PostController {
                 authorName = anonymousUserService.generateAnonymousName(anonymousIndex);
                 log.info("익명 사용자 게시글 작성: userIdentifier={}, anonymousIndex={}", userIdentifier, anonymousIndex);
                 anonymousPassword = trimmedPassword;
+            } else {
+                // 로그인된 사용자는 익명 비밀번호 불필요
+                if (savedUser != null) {
+                    log.info("로그인 사용자 게시글 작성: user={}", savedUser.getEmail());
+                } else {
+                    log.warn("JWT 인증은 성공했지만 사용자 정보를 찾을 수 없음: email={}", 
+                        authHeader != null ? jwtUtil.getSubjectFromToken(authHeader.substring(7)) : "unknown");
+                }
             }
             
             // 3. 코디 데이터 처리 (있는 경우)
@@ -198,21 +208,27 @@ public class PostController {
             response.setTags(request.getTags() != null ? request.getTags() : new ArrayList<>());
             response.setMediaUrls(new ArrayList<>(savedPost.getMediaUrls()));
             // 익명 게시글 처리
-            if (savedPost.getAuthor() != null) {
+            if (savedPost.getAnonymousIndex() != null) {
+                // 익명 게시글
+                response.setAuthorId("anonymous");
+                response.setAuthorName("익명" + savedPost.getAnonymousIndex());
+                response.setAuthorProfileImage("");
+            } else if (savedPost.getAuthor() != null) {
                 // 로그인 사용자 게시글
                 response.setAuthorId(savedPost.getAuthor().getUserIdx().toString());
                 response.setAuthorName(savedPost.getAuthor().getNickname());
                 response.setAuthorProfileImage(savedPost.getAuthor().getProfileImage() != null ? savedPost.getAuthor().getProfileImage() : "");
             } else {
-                // 익명 게시글
-                response.setAuthorId("anonymous");
-                response.setAuthorName("익명" + savedPost.getAnonymousIndex());
+                // 기본값
+                response.setAuthorId("unknown");
+                response.setAuthorName("알 수 없음");
                 response.setAuthorProfileImage("");
             }
             response.setLikeCount(savedPost.getLikeCount());
             response.setScrapCount(savedPost.getScrapCount());
             response.setCommentCount(savedPost.getCommentCount());
             response.setViewCount(savedPost.getViewCount());
+            response.setBoardType(savedPost.getBoardType() != null ? savedPost.getBoardType().name() : "OUTFIT");
             response.setCreatedAt(savedPost.getCreatedAt());
             response.setUpdatedAt(savedPost.getUpdatedAt());
             response.setIsLiked(false);

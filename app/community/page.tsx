@@ -21,7 +21,19 @@ export default function CommunityPage() {
   const searchParams = useSearchParams()
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState<'latest' | 'popular' | 'mostCommented' | 'trending'>('popular')
-  const [activeTab, setActiveTab] = useState<BoardType>('outfits')
+  
+  // URL 파라미터에서 초기 activeTab 설정 (즉시 실행)
+  const initialTab = (() => {
+    const type = searchParams.get('type') as BoardType
+    if (type && ['outfits', 'questions', 'info'].includes(type)) {
+      console.log('[CommunityPage] 초기 activeTab:', type)
+      return type
+    }
+    console.log('[CommunityPage] 초기 activeTab: outfits (기본값)')
+    return 'outfits' as BoardType
+  })()
+  
+  const [activeTab, setActiveTab] = useState<BoardType>(initialTab)
   const [showSearch, setShowSearch] = useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
@@ -34,11 +46,19 @@ export default function CommunityPage() {
     setSortBy(value)
   }, [])
 
-  // URL 파라미터에서 타입 읽기
+  // URL 파라미터 변경 시 activeTab 업데이트
   useEffect(() => {
     const type = searchParams.get('type') as BoardType
+    console.log('[CommunityPage] URL 파라미터 변경:', { type, currentActiveTab: activeTab })
+    
     if (type && ['outfits', 'questions', 'info'].includes(type)) {
-      setActiveTab(type)
+      if (activeTab !== type) {
+        setActiveTab(type)
+        console.log('[CommunityPage] activeTab 업데이트:', type)
+      }
+    } else if (activeTab !== 'outfits') {
+      setActiveTab('outfits')
+      console.log('[CommunityPage] activeTab 업데이트: outfits (기본값)')
     }
   }, [searchParams])
 
@@ -138,6 +158,7 @@ export default function CommunityPage() {
             </div>
 
             <CommunityFeed
+              key={`outfits-${sortBy}-${activeTab}`}
               sortBy={sortBy}
               searchTerm={searchTerm}
               activeTab={activeTab}
@@ -167,6 +188,7 @@ export default function CommunityPage() {
             </div>
 
             <CommunityFeed
+              key={`questions-${sortBy}-${activeTab}`}
               sortBy={sortBy}
               searchTerm={searchTerm}
               activeTab={activeTab}
@@ -196,6 +218,7 @@ export default function CommunityPage() {
             </div>
 
             <CommunityFeed
+              key={`info-${sortBy}-${activeTab}`}
               sortBy={sortBy}
               searchTerm={searchTerm}
               activeTab={activeTab}

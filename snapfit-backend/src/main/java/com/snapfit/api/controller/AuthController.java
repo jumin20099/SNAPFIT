@@ -10,6 +10,8 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -54,21 +56,33 @@ public class AuthController {
                                  .build());
         userRepo.save(user);
 
-        String token = jwtUtil.generateToken(email, user.getRole().name());
+        String accessToken = jwtUtil.generateAccessToken(email, user.getRole().name());
+        String refreshToken = jwtUtil.generateRefreshToken(email);
 
-        // HTTP-only 쿠키 설정
-        ResponseCookie cookie = ResponseCookie.from("auth_token", token)
+        // Access Token을 HTTP-only 쿠키로 설정
+        ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
             .httpOnly(true)
             .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
             .sameSite("Lax")
             .path("/")
-            .maxAge(24 * 60 * 60) // 24시간
+            .maxAge(30 * 60) // 30분
+            .build();
+
+        // Refresh Token을 HTTP-only 쿠키로 설정
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
+            .httpOnly(true)
+            .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
+            .sameSite("Lax")
+            .path("/")
+            .maxAge(7 * 24 * 60 * 60) // 7일
             .build();
 
         return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
             .body(Map.of(
-                "token",    token,
+                "accessToken", accessToken,
+                "refreshToken", refreshToken, // localStorage에도 저장할 수 있도록 응답에 포함
                 "email",    email,
                 "nickname", nickname
             ));
@@ -80,21 +94,33 @@ public class AuthController {
             return ResponseEntity.ok().body(Map.of("message", "로그인이 필요합니다."));
         }
 
-        String token = jwtUtil.generateToken(user.getEmail());
+        String accessToken = jwtUtil.generateAccessToken(user.getEmail(), user.getRole().name());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
         
-        // HTTP-only 쿠키 설정
-        ResponseCookie cookie = ResponseCookie.from("auth_token", token)
+        // Access Token을 HTTP-only 쿠키로 설정
+        ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
             .httpOnly(true)
             .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
             .sameSite("Lax")
             .path("/")
-            .maxAge(24 * 60 * 60) // 24시간
+            .maxAge(30 * 60) // 30분
+            .build();
+
+        // Refresh Token을 HTTP-only 쿠키로 설정
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
+            .httpOnly(true)
+            .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
+            .sameSite("Lax")
+            .path("/")
+            .maxAge(7 * 24 * 60 * 60) // 7일
             .build();
 
         return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
             .body(Map.of(
-                "token", token,
+                "accessToken", accessToken,
+                "refreshToken", refreshToken, // localStorage에도 저장할 수 있도록 응답에 포함
                 "email", user.getEmail(),
                 "nickname", user.getNickname()
             ));
@@ -102,18 +128,75 @@ public class AuthController {
 
     @GetMapping("/logout")
     public ResponseEntity<?> logout() {
-        // 쿠키 제거 (만료 시간을 0으로 설정)
-        ResponseCookie cookie = ResponseCookie.from("auth_token", "")
+        // Access Token 쿠키 제거
+        ResponseCookie accessCookie = ResponseCookie.from("access_token", "")
             .httpOnly(true)
-            .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
+            .secure(false)
+            .sameSite("Lax")
+            .path("/")
+            .maxAge(0)
+            .build();
+
+        // Refresh Token 쿠키 제거
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", "")
+            .httpOnly(true)
+            .secure(false)
             .sameSite("Lax")
             .path("/")
             .maxAge(0)
             .build();
 
         return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+            .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+            .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
             .body(Map.of("message", "로그아웃되었습니다."));
+    }
+
+    /**
+     * 토큰 갱신 엔드포인트
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@RequestBody Map<String, String> request) {
+        try {
+            String refreshToken = request.get("refreshToken");
+            
+            if (refreshToken == null || refreshToken.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Refresh token이 필요합니다."));
+            }
+
+            // Refresh Token 유효성 검증
+            if (!jwtUtil.validateRefreshToken(refreshToken)) {
+                return ResponseEntity.status(401).body(Map.of("error", "유효하지 않은 refresh token입니다."));
+            }
+
+            // Refresh Token에서 사용자 정보 추출
+            String email = jwtUtil.getSubjectFromToken(refreshToken);
+            User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+            // 새로운 Access Token 생성
+            String newAccessToken = jwtUtil.generateAccessToken(email, user.getRole().name());
+            
+            // 새로운 Access Token을 HTTP-only 쿠키로 설정
+            ResponseCookie accessCookie = ResponseCookie.from("access_token", newAccessToken)
+                .httpOnly(true)
+                .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(30 * 60) // 30분
+                .build();
+
+            return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
+                .body(Map.of(
+                    "accessToken", newAccessToken,
+                    "email", email,
+                    "nickname", user.getNickname()
+                ));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "토큰 갱신 중 오류가 발생했습니다."));
+        }
     }
 
     @GetMapping("/test-token")
@@ -122,10 +205,12 @@ public class AuthController {
         String testEmail = "test@example.com";
         String testRole = "USER";
         
-        String token = jwtUtil.generateToken(testEmail, testRole);
+        String accessToken = jwtUtil.generateAccessToken(testEmail, testRole);
+        String refreshToken = jwtUtil.generateRefreshToken(testEmail);
         
         return ResponseEntity.ok().body(Map.of(
-            "token", token,
+            "accessToken", accessToken,
+            "refreshToken", refreshToken,
             "email", testEmail,
             "role", testRole,
             "message", "테스트용 토큰이 생성되었습니다."

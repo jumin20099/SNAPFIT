@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus';
 import type { ReactionStatusItem } from '@/shared/types';
 import type { BatchReactionStatusManager } from '@/shared/utils/batch-reaction-utils';
+import ApiClient from '@/shared/utils/api-client';
 
 interface Post {
   postId: number;
@@ -17,6 +18,10 @@ interface Post {
   scrapCount: number;
   commentCount: number;
   viewCount: number;
+  recommendCount: number;
+  unrecommendCount: number;
+  boardType: 'OUTFIT' | 'QUESTION' | 'INFO';
+  anonymousIndex?: number;
   createdAt: string;
   updatedAt: string;
   isLiked: boolean;
@@ -55,6 +60,7 @@ interface UseInfinitePostsReturn {
 
 export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfinitePostsReturn {
   const { pageSize = 10, sortBy = 'latest', userId, tag, boardType = 'outfits' } = options;
+  const apiClient = ApiClient.getInstance();
 
   const logReactionDebug = (...args: unknown[]) => {
     if (process.env.NODE_ENV !== 'development') return;
@@ -126,7 +132,19 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
     }
 
     const normalizedBoardType = boardType ?? 'outfits';
-    return `/api/posts/board/${normalizedBoardType}?${params}`;
+    // 프론트엔드 boardType을 백엔드 enum 값으로 변환
+    const backendBoardType = normalizedBoardType === 'outfits' ? 'OUTFIT' : 
+                            normalizedBoardType === 'questions' ? 'QUESTION' : 
+                            normalizedBoardType === 'info' ? 'INFO' : 'OUTFIT';
+    
+    console.log('[useInfinitePosts] buildApiUrl:', {
+      boardType,
+      normalizedBoardType,
+      backendBoardType,
+      page
+    });
+    
+    return `/api/posts/board/${backendBoardType}?${params}`;
   }, [pageSize, sortBy, userId, tag, boardType]);
 
   const fetchPage = useCallback(async (page: number, replace: boolean) => {
@@ -170,58 +188,25 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
 
     try {
       const url = buildApiUrl(page);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
       console.log(`[community:reaction:hook] fetchPage:request`, { 
         url, 
         page, 
         replace, 
-        hasToken: !!token,
         signal: controller.signal.aborted ? 'aborted' : 'active'
       });
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        credentials: 'include',
-        signal: controller.signal,
-      });
+      const data = await apiClient.get<PostsResponse>(url);
 
       console.log(`[community:reaction:hook] fetchPage:response`, { 
-        url, 
-        page, 
-        status: response.status, 
-        ok: response.ok,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error(`[community:reaction:hook] fetchPage:error`, { 
-          url, 
-          page, 
-          status: response.status, 
-          statusText: response.statusText,
-          errorData 
-        });
-        throw new Error(errorData.message || `게시글 조회 실패: ${response.status}`);
-      }
-
-      const data: PostsResponse = await response.json();
-      console.log(`[community:reaction:hook] fetchPage:data`, { 
         url, 
         page, 
         contentLength: data.content?.length || 0,
         totalElements: data.totalElements,
         totalPages: data.totalPages,
-        currentPage: data.number,
+        number: data.number,
         first: data.first,
-        last: data.last,
-        size: data.size
+        last: data.last
       });
 
       const normalized = data.content.map(post => ({
@@ -284,7 +269,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
       setLoading(false);
       console.log(`[community:reaction:hook] fetchPage:finally`, { page, replace, loading: false, isFetching: false });
     }
-  }, [buildApiUrl, reactionManager, applyReactionState]);
+  }, [buildApiUrl, reactionManager, applyReactionState, apiClient]);
 
   const loadMore = useCallback(() => {
     console.log(`[community:reaction:hook] loadMore:start`, { 

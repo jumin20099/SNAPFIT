@@ -10,11 +10,13 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { X, Upload, Image as ImageIcon, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import ApiClient from '@/shared/utils/api-client'
 
 interface CreateQuestionProps {}
 
 export default function CreateQuestionPage({}: CreateQuestionProps) {
   const router = useRouter()
+  const apiClient = ApiClient.getInstance()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -100,33 +102,22 @@ export default function CreateQuestionPage({}: CreateQuestionProps) {
 
     setSubmitting(true)
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-      const response = await fetch(`${API_BASE_URL}/api/posts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          title: title.trim() || null,
-          content: content.trim(),
-          mediaUrls: images,
-          boardType: 'QUESTION',
-          isAnonymous: !isLoggedIn,
-          anonymousPassword: !isLoggedIn ? trimmedPassword : undefined
-        })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        toast.success('질문이 작성되었습니다.')
-        router.push(`/community/questions/${data.postId}`)
-      } else {
-        const error = await response.json()
-        toast.error(error.message || '게시글 작성에 실패했습니다.')
+      const requestData = {
+        title: title.trim() || null,
+        content: content.trim(),
+        mediaUrls: images,
+        boardType: 'QUESTION',
+        isAnonymous: !isLoggedIn,
+        ...(isLoggedIn ? {} : { anonymousPassword: trimmedPassword })
       }
+      
+      console.log('게시글 작성 요청 데이터:', requestData)
+      console.log('isLoggedIn:', isLoggedIn)
+      
+      const data = await apiClient.post('/api/posts', requestData)
+
+      toast.success('질문이 작성되었습니다.')
+      router.push(`/community/questions/${data.postId}`)
     } catch (error) {
       console.error('게시글 작성 실패:', error)
       toast.error('게시글 작성에 실패했습니다.')

@@ -15,8 +15,11 @@ public class JwtUtil {
     @Value("${jwt.secret:defaultSecretKeyForDevelopmentOnly}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration-ms:2592000000}")
-    private long jwtExpirationMs;
+    @Value("${jwt.access-token.expiration-ms:1800000}")
+    private long accessTokenExpirationMs;
+
+    @Value("${jwt.refresh-token.expiration-ms:604800000}")
+    private long refreshTokenExpirationMs;
 
     // 서명 키 생성 (HS256용)
     private Key getSigningKey() {
@@ -24,17 +27,18 @@ public class JwtUtil {
     }
 
     /**
-     * JWT 토큰 생성 (role 포함)
+     * Access Token 생성 (짧은 만료시간)
      * @param subject 이메일 또는 userIdx
      * @param role 권한
      */
-    public String generateToken(String subject, String role) {
+    public String generateAccessToken(String subject, String role) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
+        Date expiryDate = new Date(now.getTime() + accessTokenExpirationMs);
 
         return Jwts.builder()
                 .setSubject(subject)
                 .claim("role", role)
+                .claim("type", "access")
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
@@ -42,10 +46,50 @@ public class JwtUtil {
     }
 
     /**
-     * 기존 generateToken(subject)도 role=USER로 기본값 지정
+     * Refresh Token 생성 (긴 만료시간)
+     * @param subject 이메일 또는 userIdx
+     */
+    public String generateRefreshToken(String subject) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshTokenExpirationMs);
+
+        return Jwts.builder()
+                .setSubject(subject)
+                .claim("type", "refresh")
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
+     * 토큰 타입 확인
+     */
+    public String getTokenType(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return claims.get("type", String.class);
+        } catch (JwtException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * 기존 generateToken(subject)도 role=USER로 기본값 지정 (하위 호환성)
      */
     public String generateToken(String subject) {
-        return generateToken(subject, "USER");
+        return generateAccessToken(subject, "USER");
+    }
+
+    /**
+     * 기존 generateToken(subject, role)도 하위 호환성 유지
+     */
+    public String generateToken(String subject, String role) {
+        return generateAccessToken(subject, role);
     }
 
     /**
@@ -83,5 +127,27 @@ public class JwtUtil {
             // Malformed, Expired, SignatureException 등 세부 예외를 잡아도 됨
             return false;
         }
+    }
+
+    /**
+     * Access Token 유효성 검증
+     */
+    public boolean validateAccessToken(String token) {
+        if (!validateToken(token)) {
+            return false;
+        }
+        String tokenType = getTokenType(token);
+        return "access".equals(tokenType);
+    }
+
+    /**
+     * Refresh Token 유효성 검증
+     */
+    public boolean validateRefreshToken(String token) {
+        if (!validateToken(token)) {
+            return false;
+        }
+        String tokenType = getTokenType(token);
+        return "refresh".equals(tokenType);
     }
 }

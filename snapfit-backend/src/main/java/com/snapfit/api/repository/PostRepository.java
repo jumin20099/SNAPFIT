@@ -323,33 +323,53 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     /**
      * 게시판 타입별 게시글 조회 (페이징)
      * 성능: board_type 인덱스 활용
+     * 주의: 익명 게시글(author가 null)도 포함
      */
-    @EntityGraph(attributePaths = {"author", "tags", "outfit", "outfit.outfitItem"})
-    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType AND p.isDeleted = false ORDER BY p.createdAt DESC")
+    @Query("SELECT DISTINCT p FROM Post p " +
+           "LEFT JOIN FETCH p.author " +
+           "LEFT JOIN FETCH p.tags " +
+           "LEFT JOIN FETCH p.outfit " +
+           "WHERE p.boardType = :boardType AND p.isDeleted = false " +
+           "ORDER BY p.createdAt DESC")
     Page<Post> findByBoardTypeOrderByCreatedAtDesc(@Param("boardType") BoardType boardType, Pageable pageable);
 
     /**
      * 게시판 타입별 인기 게시글 조회 (추천순)
      * 성능: board_type + 추천수 인덱스 활용
+     * 주의: 익명 게시글(author가 null)도 포함
      */
-    @EntityGraph(attributePaths = {"author", "tags", "outfit", "outfit.outfitItem"})
-    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType AND p.isDeleted = false ORDER BY p.recommendCount DESC, p.createdAt DESC")
+    @Query("SELECT DISTINCT p FROM Post p " +
+           "LEFT JOIN FETCH p.author " +
+           "LEFT JOIN FETCH p.tags " +
+           "LEFT JOIN FETCH p.outfit " +
+           "WHERE p.boardType = :boardType AND p.isDeleted = false " +
+           "ORDER BY p.recommendCount DESC, p.createdAt DESC")
     Page<Post> findByBoardTypeOrderByRecommendCountDesc(@Param("boardType") BoardType boardType, Pageable pageable);
 
     /**
      * 게시판 타입별 조회수 순 게시글 조회
      * 성능: board_type + 조회수 인덱스 활용
+     * 주의: 익명 게시글(author가 null)도 포함
      */
-    @EntityGraph(attributePaths = {"author", "tags", "outfit", "outfit.outfitItem"})
-    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType AND p.isDeleted = false ORDER BY p.viewCount DESC, p.createdAt DESC")
+    @Query("SELECT DISTINCT p FROM Post p " +
+           "LEFT JOIN FETCH p.author " +
+           "LEFT JOIN FETCH p.tags " +
+           "LEFT JOIN FETCH p.outfit " +
+           "WHERE p.boardType = :boardType AND p.isDeleted = false " +
+           "ORDER BY p.viewCount DESC, p.createdAt DESC")
     Page<Post> findByBoardTypeOrderByViewCountDesc(@Param("boardType") BoardType boardType, Pageable pageable);
 
     /**
      * 게시판 타입별 댓글 수 순 게시글 조회
      * 성능: board_type + 댓글수 인덱스 활용
+     * 주의: 익명 게시글(author가 null)도 포함
      */
-    @EntityGraph(attributePaths = {"author", "tags", "outfit", "outfit.outfitItem"})
-    @Query("SELECT p FROM Post p WHERE p.boardType = :boardType AND p.isDeleted = false ORDER BY p.commentCount DESC, p.createdAt DESC")
+    @Query("SELECT DISTINCT p FROM Post p " +
+           "LEFT JOIN FETCH p.author " +
+           "LEFT JOIN FETCH p.tags " +
+           "LEFT JOIN FETCH p.outfit " +
+           "WHERE p.boardType = :boardType AND p.isDeleted = false " +
+           "ORDER BY p.commentCount DESC, p.createdAt DESC")
     Page<Post> findByBoardTypeOrderByCommentCountDesc(@Param("boardType") BoardType boardType, Pageable pageable);
 
     /**

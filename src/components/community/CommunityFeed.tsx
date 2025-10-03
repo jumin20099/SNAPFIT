@@ -88,6 +88,17 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
     boardType: activeTab,
   })
 
+  // 디버깅을 위한 로그
+  console.log('[CommunityFeed] 렌더링:', {
+    activeTab,
+    postsLength: posts.length,
+    loading,
+    error
+  })
+
+  // 탭 변경 시 게시글 초기화를 위한 key
+  const feedKey = `${activeTab}-${sortBy}`
+
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const observer = useRef<IntersectionObserver | null>(null)
   const topAnchorRef = useRef<HTMLElement | null>(null)
