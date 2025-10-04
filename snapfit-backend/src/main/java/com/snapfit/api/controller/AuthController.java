@@ -1,5 +1,6 @@
 package com.snapfit.api.controller;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -9,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -155,10 +157,30 @@ public class AuthController {
     /**
      * 토큰 갱신 엔드포인트
      */
+    @GetMapping("/cookie-check")
+    public ResponseEntity<?> checkCookies(
+            @CookieValue(value = "refresh_token", required = false) String refreshToken,
+            @CookieValue(value = "token", required = false) String accessToken) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("hasRefreshToken", refreshToken != null);
+        response.put("hasAccessToken", accessToken != null);
+        response.put("refreshTokenLength", refreshToken != null ? refreshToken.length() : 0);
+        response.put("accessTokenLength", accessToken != null ? accessToken.length() : 0);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/refresh")
-    public ResponseEntity<?> refreshToken(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> refreshToken(
+            @RequestBody(required = false) Map<String, String> request,
+            @CookieValue(value = "refresh_token", required = false) String refreshTokenFromCookie) {
         try {
-            String refreshToken = request.get("refreshToken");
+            // 요청 본문에서 리프레시 토큰을 먼저 시도하고, 없으면 쿠키에서 가져오기
+            String refreshToken = null;
+            if (request != null && request.get("refreshToken") != null) {
+                refreshToken = request.get("refreshToken");
+            } else if (refreshTokenFromCookie != null) {
+                refreshToken = refreshTokenFromCookie;
+            }
             
             if (refreshToken == null || refreshToken.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Refresh token이 필요합니다."));

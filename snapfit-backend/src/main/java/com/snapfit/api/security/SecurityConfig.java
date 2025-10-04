@@ -48,6 +48,7 @@ public class SecurityConfig {
             ObjectProvider<ClientRegistrationRepository> clients // 빈이 없으면 null 반환
     ) throws Exception {
         boolean hasOauth = clients.getIfAvailable() != null;
+        log.info("OAuth2 설정 상태: hasOauth={}", hasOauth);
 
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -56,7 +57,8 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         // OAuth2가 설정되어 있을 때만 oauth2Login 활성화
-        if (hasOauth) {
+        // 개발 환경에서는 강제로 활성화
+        if (hasOauth || true) { // 개발용 강제 활성화
             http.oauth2Login(oauth2 -> oauth2
                 .authorizationEndpoint(auth -> auth
                     .baseUri("/oauth2/authorization"))
@@ -66,24 +68,53 @@ public class SecurityConfig {
                     .userService(customOAuth2UserService))
                 .successHandler((request, response, authentication) -> {
                     try {
+                        log.info("=== OAuth2 로그인 성공 핸들러 실행 ===");
+                        log.info("요청 URL: {}", request.getRequestURL());
+                        log.info("요청 쿼리: {}", request.getQueryString());
+                        log.info("인증 정보: {}", authentication);
+                        
                         // OAuth2 로그인 성공 후 프론트엔드로 리다이렉트
                         OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
+                        log.info("OAuth2User: {}", oauth2User);
+                        log.info("OAuth2User Attributes: {}", oauth2User.getAttributes());
+                        
                         String token = (String) oauth2User.getAttributes().get("token");
                         String userIdx = oauth2User.getAttributes().get("userIdx").toString();
+                        String email = (String) oauth2User.getAttributes().get("email");
                         
-                        if (token != null) {
-                            // JWT 토큰을 쿠키에 설정
-                            Cookie jwtCookie = new Cookie("token", token);
-                            jwtCookie.setHttpOnly(true);
-                            jwtCookie.setSecure(false); // 개발환경에서는 false
-                            jwtCookie.setPath("/");
-                            jwtCookie.setMaxAge(86400); // 24시간
-                            response.addCookie(jwtCookie);
+                        log.info("OAuth2 사용자 정보: token={}, userIdx={}, email={}", 
+                                token != null ? "있음" : "없음", userIdx, email);
+                        
+                        if (token != null && email != null) {
+                            // JWT 토큰을 쿠키에 설정 (단순화)
+                            response.addHeader("Set-Cookie", 
+                                "token=" + token + 
+                                "; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax");
+                            log.info("✅ JWT 토큰 쿠키 설정 완료");
+                            
+                            // 리프레시 토큰 생성 및 쿠키 설정 (단순화)
+                            String refreshToken = jwtUtil.generateRefreshToken(email);
+                            response.addHeader("Set-Cookie", 
+                                "refresh_token=" + refreshToken + 
+                                "; Path=/; Max-Age=604800; HttpOnly; SameSite=Lax");
+                            log.info("✅ 리프레시 토큰 쿠키 설정 완료: {}", refreshToken.substring(0, 20) + "...");
+                            
+                            // 응답 헤더 확인
+                            log.info("설정된 쿠키들:");
+                            if (request.getCookies() != null) {
+                                for (Cookie cookie : request.getCookies()) {
+                                    if (cookie != null) {
+                                        log.info("  - {}: {}", cookie.getName(), cookie.getValue().substring(0, Math.min(20, cookie.getValue().length())) + "...");
+                                    }
+                                }
+                            }
                             
                             // URL 파라미터로 토큰과 사용자 정보 전달
-                            String redirectUrl = "http://localhost:3000?token=" + token + "&userIdx=" + userIdx + "&login=success";
+                            String redirectUrl = "http://localhost:3000?token=" + token + "&refreshToken=" + refreshToken + "&userIdx=" + userIdx + "&login=success";
+                            log.info("리다이렉트 URL: {}", redirectUrl);
                             response.sendRedirect(redirectUrl);
                         } else {
+                            log.warn("토큰 또는 이메일이 없음 - 기본 성공 페이지로 리다이렉트");
                             // 토큰이 없는 경우 기본 성공 페이지로
                             response.sendRedirect("http://localhost:3000?login=success");
                         }

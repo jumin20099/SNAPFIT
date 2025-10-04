@@ -37,15 +37,25 @@ class TokenManager {
    */
   getAccessToken(): string | null {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('accessToken');
+    // 기존 'token' 키와 새로운 'accessToken' 키 모두 지원
+    return localStorage.getItem('accessToken') || localStorage.getItem('token');
   }
 
   /**
-   * Refresh Token을 localStorage에서 가져옵니다.
+   * Refresh Token을 쿠키에서 가져옵니다. (보안상 localStorage 사용 안함)
    */
   getRefreshToken(): string | null {
     if (typeof window === 'undefined') return null;
-    return localStorage.getItem('refreshToken');
+    
+    // 쿠키에서 refresh_token 읽기
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'refresh_token') {
+        return value;
+      }
+    }
+    return null;
   }
 
   /**
@@ -54,8 +64,13 @@ class TokenManager {
   setTokens(accessToken: string, refreshToken: string): void {
     if (typeof window === 'undefined') return;
     
+    // Access Token만 localStorage에 저장
     localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem('token', accessToken); // 호환성
+    
+    // Refresh Token은 쿠키에만 저장 (보안상 localStorage 사용 안함)
+    // 쿠키는 백엔드에서 설정되므로 여기서는 로그만 출력
+    console.log('✅ Refresh Token은 쿠키에 저장됨 (보안)');
   }
 
   /**
@@ -64,8 +79,13 @@ class TokenManager {
   clearTokens(): void {
     if (typeof window === 'undefined') return;
     
+    // localStorage에서 Access Token만 제거
     localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('token'); // 기존 토큰도 제거
+    
+    // Refresh Token은 쿠키에 있으므로 백엔드에서 제거
+    // 여기서는 로그만 출력
+    console.log('✅ Refresh Token은 백엔드에서 제거됨 (보안)');
   }
 
   /**

@@ -20,12 +20,18 @@ export function HomePage() {
   // 로그인 성공 시 토큰을 로컬스토리지에 저장
   useEffect(() => {
     const token = searchParams.get('token')
+    const refreshToken = searchParams.get('refreshToken')
     const userIdx = searchParams.get('userIdx')
     const login = searchParams.get('login')
 
     if (login === 'success' && token) {
-      // 토큰을 로컬스토리지에 저장
+      // Access Token만 localStorage에 저장
       localStorage.setItem('token', token)
+      localStorage.setItem('accessToken', token) // TokenManager 호환성
+      // Refresh Token은 쿠키에만 저장 (보안상 localStorage에 저장하지 않음)
+      if (refreshToken) {
+        console.log('✅ 리프레시 토큰은 쿠키에 저장됨 (보안)')
+      }
       if (userIdx) {
         localStorage.setItem('userIdx', userIdx)
       }
@@ -33,6 +39,7 @@ export function HomePage() {
       // URL에서 토큰 파라미터 제거
       const newUrl = new URL(window.location.href)
       newUrl.searchParams.delete('token')
+      newUrl.searchParams.delete('refreshToken')
       newUrl.searchParams.delete('userIdx')
       newUrl.searchParams.delete('login')
       
