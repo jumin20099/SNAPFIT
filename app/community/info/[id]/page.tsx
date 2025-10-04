@@ -10,6 +10,8 @@ import { ThumbsUp, ThumbsDown, Eye, MessageCircle, Calendar, ArrowLeft, Share2, 
 import { toast } from 'sonner'
 import Image from 'next/image'
 import { Post } from '@/shared/types'
+import { PostTableList } from '@/components/community/PostTableList'
+import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
 
 interface InfoDetailProps {}
 
@@ -20,6 +22,58 @@ export default function InfoDetailPage({}: InfoDetailProps) {
   const [loading, setLoading] = useState(true)
   const [recommending, setRecommending] = useState(false)
   const [unrecommending, setUnrecommending] = useState(false)
+  const [relatedPosts, setRelatedPosts] = useState<Post[]>([])
+  const [relatedLoading, setRelatedLoading] = useState(false)
+  const [isRecommended, setIsRecommended] = useState(false)
+  const [isUnrecommended, setIsUnrecommended] = useState(false)
+
+  // 배치 상태 조회를 통해 추천/비추천 상태 확인
+  const postId = post?.postId || Number(params.id)
+  console.log('postId 상태:', { postId, hasPost: !!post, postData: post, paramsId: params.id })
+  
+  const { data: batchReactionStatus } = useBatchReactionStatus({
+    postIds: postId ? [postId] : [],
+    enabled: !!postId
+  })
+
+  // 배치 상태가 로드되면 추천/비추천 상태 및 개수 동기화
+  useEffect(() => {
+    console.log('useEffect 실행:', { 
+      batchReactionStatus, 
+      postId, 
+      hasBatchData: !!batchReactionStatus,
+      hasPostId: !!postId 
+    })
+    
+    if (batchReactionStatus && postId) {
+      console.log('배치 반응 상태 로드:', { batchReactionStatus, postId })
+      const status = batchReactionStatus[`post_${postId}`]
+      console.log('게시글 상태:', status)
+      if (status) {
+        console.log('추천/비추천 상태 업데이트:', {
+          recommended: status.recommended,
+          unrecommended: status.unrecommended,
+          recommendCount: status.recommendCount,
+          unrecommendCount: status.unrecommendCount
+        })
+        setIsRecommended(status.recommended || false)
+        setIsUnrecommended(status.unrecommended || false)
+        // 게시글 개수도 업데이트
+        setPost(prev => prev ? {
+          ...prev,
+          recommendCount: status.recommendCount || prev.recommendCount,
+          unrecommendCount: status.unrecommendCount || prev.unrecommendCount
+        } : null)
+      } else {
+        console.log('게시글 상태를 찾을 수 없음:', `post_${postId}`)
+      }
+    } else {
+      console.log('조건 불만족:', { 
+        batchReactionStatus: !!batchReactionStatus, 
+        postId: !!postId 
+      })
+    }
+  }, [batchReactionStatus, postId])
 
   // 게시글 조회
   const fetchPost = async () => {
@@ -48,10 +102,39 @@ export default function InfoDetailPage({}: InfoDetailProps) {
     }
   }
 
-  // 추천 처리
+  // 추천 처리 (비추천과 독립적으로 작동)
   const handleRecommend = async () => {
     if (!post) return
     
+    // 이미 추천한 경우 추천 취소
+    if (isRecommended) {
+      setRecommending(true)
+      try {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
+        const response = await fetch(`${API_BASE_URL}/api/posts/${post.postId}/recommend`, {
+          method: 'DELETE',
+          credentials: 'include'
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setPost(prev => prev ? { ...prev, recommendCount: data.recommendCount } : null)
+          setIsRecommended(false)
+          toast.success('추천이 취소되었습니다.')
+        } else {
+          const errorData = await response.json().catch(() => ({ error: '추천 취소에 실패했습니다.' }))
+          toast.error(errorData.error || '추천 취소에 실패했습니다.')
+        }
+      } catch (error) {
+        console.error('추천 취소 실패:', error)
+        toast.error('추천 취소에 실패했습니다.')
+      } finally {
+        setRecommending(false)
+      }
+      return
+    }
+    
+    // 추천 진행 (비추천 상태와 무관하게 진행)
     setRecommending(true)
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
@@ -60,13 +143,19 @@ export default function InfoDetailPage({}: InfoDetailProps) {
         credentials: 'include'
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setPost(prev => prev ? { ...prev, recommendCount: data.recommendCount } : null)
-        toast.success('추천되었습니다.')
-      } else {
-        toast.error('추천에 실패했습니다.')
-      }
+        if (response.ok) {
+          const data = await response.json()
+          setPost(prev => prev ? { 
+            ...prev, 
+            recommendCount: data.recommendCount,
+            unrecommendCount: data.unrecommendCount || prev.unrecommendCount
+          } : null)
+          setIsRecommended(true)
+          toast.success('추천되었습니다.')
+        } else {
+          const errorData = await response.json().catch(() => ({ error: '추천에 실패했습니다.' }))
+          toast.error(errorData.error || '추천에 실패했습니다.')
+        }
     } catch (error) {
       console.error('추천 실패:', error)
       toast.error('추천에 실패했습니다.')
@@ -75,28 +164,55 @@ export default function InfoDetailPage({}: InfoDetailProps) {
     }
   }
 
-  // 비추천 처리
+  // 비추천 처리 (추천과 독립적으로 작동, 토글 방식)
   const handleUnrecommend = async () => {
     if (!post) return
     
     setUnrecommending(true)
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
-      const response = await fetch(`${API_BASE_URL}/api/posts/${post.postId}/unrecommend`, {
-        method: 'POST',
-        credentials: 'include'
-      })
+      
+      // 이미 비추천한 경우 비추천 취소 (DELETE)
+      if (isUnrecommended) {
+        const response = await fetch(`${API_BASE_URL}/api/posts/${post.postId}/unrecommend`, {
+          method: 'DELETE',
+          credentials: 'include'
+        })
 
-      if (response.ok) {
-        const data = await response.json()
-        setPost(prev => prev ? { ...prev, unrecommendCount: data.unrecommendCount } : null)
-        toast.success('비추천되었습니다.')
-      } else {
-        toast.error('비추천에 실패했습니다.')
+        if (response.ok) {
+          const data = await response.json()
+          setPost(prev => prev ? { ...prev, unrecommendCount: data.unrecommendCount } : null)
+          setIsUnrecommended(false)
+          toast.success('비추천이 취소되었습니다.')
+        } else {
+          const errorData = await response.json().catch(() => ({ error: '비추천 취소에 실패했습니다.' }))
+          toast.error(errorData.error || '비추천 취소에 실패했습니다.')
+        }
+      } 
+      // 비추천 진행 (POST)
+      else {
+        const response = await fetch(`${API_BASE_URL}/api/posts/${post.postId}/unrecommend`, {
+          method: 'POST',
+          credentials: 'include'
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          setPost(prev => prev ? { 
+            ...prev, 
+            unrecommendCount: data.unrecommendCount,
+            recommendCount: data.recommendCount || prev.recommendCount
+          } : null)
+          setIsUnrecommended(true)
+          toast.success('비추천되었습니다.')
+        } else {
+          const errorData = await response.json().catch(() => ({ error: '비추천에 실패했습니다.' }))
+          toast.error(errorData.error || '비추천에 실패했습니다.')
+        }
       }
     } catch (error) {
-      console.error('비추천 실패:', error)
-      toast.error('비추천에 실패했습니다.')
+      console.error('비추천 처리 실패:', error)
+      toast.error('비추천 처리에 실패했습니다.')
     } finally {
       setUnrecommending(false)
     }
@@ -121,9 +237,33 @@ export default function InfoDetailPage({}: InfoDetailProps) {
     }
   }
 
+  // 관련 게시글 조회 (같은 게시판의 최신 게시글)
+  const fetchRelatedPosts = async () => {
+    try {
+      setRelatedLoading(true)
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
+      const response = await fetch(
+        `${API_BASE_URL}/api/posts/board/INFO?page=0&size=10`,
+        { credentials: 'include' }
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        // 현재 게시글 제외
+        const filtered = data.content.filter((p: Post) => p.postId !== Number(params.id))
+        setRelatedPosts(filtered)
+      }
+    } catch (error) {
+      console.error('관련 게시글 조회 실패:', error)
+    } finally {
+      setRelatedLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (params.id) {
       fetchPost()
+      fetchRelatedPosts()
     }
   }, [params.id])
 
@@ -276,7 +416,7 @@ export default function InfoDetailPage({}: InfoDetailProps) {
                   variant="outline"
                   onClick={handleRecommend}
                   disabled={recommending}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 border-blue-500 text-blue-500 hover:border-blue-600 hover:text-blue-600"
                 >
                   <ThumbsUp className="w-4 h-4" />
                   추천 {post.recommendCount}
@@ -285,7 +425,7 @@ export default function InfoDetailPage({}: InfoDetailProps) {
                   variant="outline"
                   onClick={handleUnrecommend}
                   disabled={unrecommending}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 border-red-500 text-red-500 hover:border-red-600 hover:text-red-600"
                 >
                   <ThumbsDown className="w-4 h-4" />
                   비추천 {post.unrecommendCount}
@@ -303,7 +443,7 @@ export default function InfoDetailPage({}: InfoDetailProps) {
         </Card>
 
         {/* 댓글 섹션 */}
-        <Card>
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle>댓글 {post.commentCount}</CardTitle>
           </CardHeader>
@@ -311,6 +451,51 @@ export default function InfoDetailPage({}: InfoDetailProps) {
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               댓글 기능은 추후 구현 예정입니다.
             </div>
+          </CardContent>
+        </Card>
+
+        {/* 같은 게시판의 다른 게시글 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>다른 정보 게시글</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/community/info')}
+              >
+                전체 보기
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {relatedLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : relatedPosts.length > 0 ? (
+              <PostTableList
+                posts={relatedPosts.map((post, index) => ({
+                  postId: post.postId,
+                  title: post.title || post.content,
+                  authorName: post.authorName,
+                  anonymousIndex: post.anonymousIndex ?? null,
+                  createdAt: post.createdAt,
+                  viewCount: post.viewCount,
+                  recommendCount: post.recommendCount ?? post.likeCount ?? 0,
+                  order: index + 1,
+                  thumbnailUrl: post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls[0] : null,
+                  categoryLabel: '정보',
+                }))}
+                onSelect={(postId) => router.push(`/community/info/${postId}`)}
+              />
+            ) : (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                다른 게시글이 없습니다.
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

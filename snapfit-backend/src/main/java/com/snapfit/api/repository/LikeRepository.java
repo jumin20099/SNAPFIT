@@ -42,4 +42,20 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
      * 특정 타겟의 좋아요 개수 조회
      */
     long countByTargetIdxAndTargetType(Long targetIdx, TargetType targetType);
+    
+    /**
+     * 특정 타겟의 추천/비추천 개수 조회 (isLike 필터)
+     */
+    @Query("SELECT COUNT(l) FROM Like l WHERE l.targetIdx = :targetIdx AND l.targetType = :targetType AND l.isLike = :isLike")
+    long countByTargetIdxAndTargetTypeAndIsLikeValue(@Param("targetIdx") Long targetIdx, @Param("targetType") TargetType targetType, @Param("isLike") Boolean isLike);
+    
+    /**
+     * 특정 사용자의 특정 타겟에 대한 추천/비추천 삭제
+     */
+    void deleteByUserAndTargetIdxAndTargetType(User user, Long targetIdx, TargetType targetType);
+    
+    /**
+     * 특정 게스트의 특정 타겟에 대한 추천/비추천 삭제
+     */
+    void deleteByGuestIdxAndTargetIdxAndTargetType(String guestIdx, Long targetIdx, TargetType targetType);
 } 

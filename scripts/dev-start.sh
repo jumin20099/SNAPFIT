@@ -2,6 +2,15 @@
 
 echo "🚀 SnapFit 개발 환경 시작 중..."
 
+# 기존 프로세스 정리
+echo "🧹 기존 프로세스 정리 중..."
+pkill -f "gradle.*bootRun" 2>/dev/null || true
+pkill -f "next dev" 2>/dev/null || true
+lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+lsof -ti:3001 | xargs kill -9 2>/dev/null || true
+lsof -ti:3002 | xargs kill -9 2>/dev/null || true
+
 # 1. 데이터베이스 및 Redis 시작
 echo "📦 Docker 서비스 시작..."
 cd snapfit-backend
@@ -43,7 +52,21 @@ echo ""
 echo "종료하려면 Ctrl+C를 누르세요"
 
 # 시그널 핸들링
-trap 'echo "🛑 개발 환경 종료 중..."; kill $BACKEND_PID $FRONTEND_PID; docker-compose down; exit' INT
+cleanup() {
+    echo "🛑 개발 환경 종료 중..."
+    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
+    pkill -f "gradle.*bootRun" 2>/dev/null || true
+    pkill -f "next dev" 2>/dev/null || true
+    lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+    lsof -ti:3001 | xargs kill -9 2>/dev/null || true
+    lsof -ti:3002 | xargs kill -9 2>/dev/null || true
+    cd snapfit-backend
+    docker-compose down
+    exit
+}
+
+trap cleanup INT TERM
 
 # 프로세스 대기
 wait

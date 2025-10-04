@@ -26,8 +26,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -1057,58 +1059,313 @@ public class PostController {
     // ===== 추천/비추천 API =====
 
     /**
-     * 게시글 추천
+     * 게스트 사용자 식별자 생성
+     * IP 주소, User-Agent 등을 조합하여 고유 식별자 생성
+     */
+    private String buildGuestIdentifier(String clientIp, String userAgent) {
+        String combined = clientIp + "|" + (userAgent != null ? userAgent : "unknown");
+        return String.valueOf(combined.hashCode());
+    }
+
+    /**
+     * 게시글 추천 (로그인/비로그인 모두 가능)
+     * 추천과 비추천은 독립적으로 작동 (동시에 둘 다 가능)
      */
     @PostMapping("/{postId}/recommend")
-    public ResponseEntity<Map<String, Object>> recommendPost(@PathVariable Long postId) {
+    @Transactional
+    public ResponseEntity<Map<String, Object>> recommendPost(
+            @PathVariable Long postId,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @CookieValue(value = "snapfit_guest_id", required = false) String guestToken,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String clientIp,
+            @RequestHeader(value = "X-Real-IP", required = false) String realIp,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent) {
         try {
-            // 게시글 존재 확인
-            Optional<Post> postOpt = postRepository.findById(postId);
-            if (postOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
+            Post post = postRepository.findById(postId)
+                    .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
+            User user = null;
+            String guestIdx = null;
+
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    user = userRepository.findByEmail(email).orElse(null);
+                } catch (Exception e) {
+                    log.warn("JWT 토큰 파싱 실패: {}", e.getMessage());
+                }
             }
 
-            Post post = postOpt.get();
+            if (user == null) {
+                // 쿠키 토큰을 우선 사용, 없으면 IP + User-Agent
+                if (guestToken != null && !guestToken.isEmpty()) {
+                    guestIdx = guestToken;
+                } else {
+                    String ip = getClientIp(clientIp, realIp);
+                    guestIdx = buildGuestIdentifier(ip, userAgent);
+                }
+            }
+
+            // 추천 레코드 확인 (POST_RECOMMEND 타입)
+            Optional<Like> existingRecommend = user != null 
+                ? likeRepository.findByUserAndTargetIdxAndTargetType(user, postId, Like.TargetType.POST_RECOMMEND)
+                : likeRepository.findByGuestIdxAndTargetIdxAndTargetType(guestIdx, postId, Like.TargetType.POST_RECOMMEND);
+
+            if (existingRecommend.isPresent()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "이미 추천한 게시글입니다."));
+            }
+
+            // 새로운 추천 생성
+            Like recommend = Like.builder()
+                    .user(user)
+                    .guestIdx(guestIdx)
+                    .targetIdx(postId)
+                    .targetType(Like.TargetType.POST_RECOMMEND)
+                    .isLike(true)
+                    .build();
+            likeRepository.save(recommend);
             post.incrementRecommendCount();
             postRepository.save(post);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("recommendCount", post.getRecommendCount());
+            response.put("unrecommendCount", post.getUnrecommendCount());
             response.put("message", "추천되었습니다.");
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("게시글 추천 실패", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
     /**
-     * 게시글 비추천
+     * 게시글 추천 취소 (로그인/비로그인 모두 가능)
+     * POST_RECOMMEND 타입 레코드 삭제
      */
-    @PostMapping("/{postId}/unrecommend")
-    public ResponseEntity<Map<String, Object>> unrecommendPost(@PathVariable Long postId) {
+    @DeleteMapping("/{postId}/recommend")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> unrecommendPost(
+            @PathVariable Long postId,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @CookieValue(value = "snapfit_guest_id", required = false) String guestToken,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String clientIp,
+            @RequestHeader(value = "X-Real-IP", required = false) String realIp,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent) {
         try {
-            // 게시글 존재 확인
-            Optional<Post> postOpt = postRepository.findById(postId);
-            if (postOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
+            Post post = postRepository.findById(postId)
+                    .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
+            User user = null;
+            String guestIdx = null;
+
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    user = userRepository.findByEmail(email).orElse(null);
+                } catch (Exception e) {
+                    log.warn("JWT 토큰 파싱 실패: {}", e.getMessage());
+                }
             }
 
-            Post post = postOpt.get();
+            if (user == null) {
+                // 쿠키 토큰을 우선 사용, 없으면 IP + User-Agent
+                if (guestToken != null && !guestToken.isEmpty()) {
+                    guestIdx = guestToken;
+                } else {
+                    String ip = getClientIp(clientIp, realIp);
+                    guestIdx = buildGuestIdentifier(ip, userAgent);
+                }
+            }
+
+            // 추천 레코드 확인
+            Optional<Like> existingRecommend = user != null 
+                ? likeRepository.findByUserAndTargetIdxAndTargetType(user, postId, Like.TargetType.POST_RECOMMEND)
+                : likeRepository.findByGuestIdxAndTargetIdxAndTargetType(guestIdx, postId, Like.TargetType.POST_RECOMMEND);
+
+            if (existingRecommend.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "추천하지 않은 게시글입니다."));
+            }
+
+            // 추천 레코드 삭제
+            if (user != null) {
+                likeRepository.deleteByUserAndTargetIdxAndTargetType(user, postId, Like.TargetType.POST_RECOMMEND);
+            } else {
+                likeRepository.deleteByGuestIdxAndTargetIdxAndTargetType(guestIdx, postId, Like.TargetType.POST_RECOMMEND);
+            }
+
+            post.decrementRecommendCount();
+            postRepository.save(post);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("recommendCount", post.getRecommendCount());
+            response.put("message", "추천이 취소되었습니다.");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("게시글 추천 취소 실패", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 게시글 비추천 (로그인/비로그인 모두 가능)
+     * 추천과 독립적으로 작동 (동시에 둘 다 가능)
+     */
+    @PostMapping("/{postId}/unrecommend")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> addUnrecommendPost(
+            @PathVariable Long postId,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @CookieValue(value = "snapfit_guest_id", required = false) String guestToken,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String clientIp,
+            @RequestHeader(value = "X-Real-IP", required = false) String realIp,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent) {
+        try {
+            log.info("비추천 요청 수신 - postId: {}, authHeader: {}, clientIp: {}, realIp: {}, userAgent: {}", 
+                    postId, authHeader != null ? "있음" : "없음", clientIp, realIp, userAgent);
+            
+            Post post = postRepository.findById(postId)
+                    .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
+            User user = null;
+            String guestIdx = null;
+
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    user = userRepository.findByEmail(email).orElse(null);
+                    log.info("JWT 인증 성공 - user: {}", user != null ? user.getEmail() : "null");
+                } catch (Exception e) {
+                    log.warn("JWT 토큰 파싱 실패: {}", e.getMessage());
+                }
+            }
+
+            if (user == null) {
+                // 쿠키 토큰을 우선 사용, 없으면 IP + User-Agent
+                if (guestToken != null && !guestToken.isEmpty()) {
+                    guestIdx = guestToken;
+                    log.info("게스트 사용자 (쿠키) - guestIdx: {}", guestIdx);
+                } else {
+                    String ip = getClientIp(clientIp, realIp);
+                    guestIdx = buildGuestIdentifier(ip, userAgent);
+                    log.info("게스트 사용자 (IP) - ip: {}, guestIdx: {}", ip, guestIdx);
+                }
+            }
+
+            // 비추천 레코드 확인 (POST_UNRECOMMEND 타입)
+            Optional<Like> existingUnrecommend = user != null 
+                ? likeRepository.findByUserAndTargetIdxAndTargetType(user, postId, Like.TargetType.POST_UNRECOMMEND)
+                : likeRepository.findByGuestIdxAndTargetIdxAndTargetType(guestIdx, postId, Like.TargetType.POST_UNRECOMMEND);
+
+            if (existingUnrecommend.isPresent()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "이미 비추천한 게시글입니다."));
+            }
+
+            // 새로운 비추천 생성
+            Like unrecommend = Like.builder()
+                    .user(user)
+                    .guestIdx(guestIdx)
+                    .targetIdx(postId)
+                    .targetType(Like.TargetType.POST_UNRECOMMEND)
+                    .isLike(false)
+                    .build();
+            likeRepository.save(unrecommend);
             post.incrementUnrecommendCount();
             postRepository.save(post);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("unrecommendCount", post.getUnrecommendCount());
+            response.put("recommendCount", post.getRecommendCount());
             response.put("message", "비추천되었습니다.");
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("게시글 비추천 실패", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * 게시글 비추천 취소 (로그인/비로그인 모두 가능)
+     * POST_UNRECOMMEND 타입 레코드 삭제
+     */
+    @DeleteMapping("/{postId}/unrecommend")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> removeUnrecommendPost(
+            @PathVariable Long postId,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authHeader,
+            @CookieValue(value = "snapfit_guest_id", required = false) String guestToken,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String clientIp,
+            @RequestHeader(value = "X-Real-IP", required = false) String realIp,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent) {
+        try {
+            Post post = postRepository.findById(postId)
+                    .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
+            User user = null;
+            String guestIdx = null;
+
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    user = userRepository.findByEmail(email).orElse(null);
+                } catch (Exception e) {
+                    log.warn("JWT 토큰 파싱 실패: {}", e.getMessage());
+                }
+            }
+
+            if (user == null) {
+                // 쿠키 토큰을 우선 사용, 없으면 IP + User-Agent
+                if (guestToken != null && !guestToken.isEmpty()) {
+                    guestIdx = guestToken;
+                } else {
+                    String ip = getClientIp(clientIp, realIp);
+                    guestIdx = buildGuestIdentifier(ip, userAgent);
+                }
+            }
+
+            // 비추천 레코드 확인
+            Optional<Like> existingUnrecommend = user != null 
+                ? likeRepository.findByUserAndTargetIdxAndTargetType(user, postId, Like.TargetType.POST_UNRECOMMEND)
+                : likeRepository.findByGuestIdxAndTargetIdxAndTargetType(guestIdx, postId, Like.TargetType.POST_UNRECOMMEND);
+
+            if (existingUnrecommend.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "비추천하지 않은 게시글입니다."));
+            }
+
+            // 비추천 레코드 삭제
+            if (user != null) {
+                likeRepository.deleteByUserAndTargetIdxAndTargetType(user, postId, Like.TargetType.POST_UNRECOMMEND);
+            } else {
+                likeRepository.deleteByGuestIdxAndTargetIdxAndTargetType(guestIdx, postId, Like.TargetType.POST_UNRECOMMEND);
+            }
+
+            post.decrementUnrecommendCount();
+            postRepository.save(post);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("unrecommendCount", post.getUnrecommendCount());
+            response.put("message", "비추천이 취소되었습니다.");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("게시글 비추천 취소 실패", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 

@@ -32,7 +32,14 @@ import lombok.Setter;
 public class Like {
 
     public enum TargetType {
-        POST, OUTFIT, PRODUCT, OUTFIT_SHARE, COMMENT, BRAND
+        POST,           // 게시글 좋아요
+        OUTFIT,         // 코디 좋아요
+        PRODUCT,        // 상품 좋아요
+        OUTFIT_SHARE,   // 코디 공유 좋아요
+        COMMENT,        // 댓글 좋아요
+        BRAND,          // 브랜드 좋아요
+        POST_RECOMMEND, // 게시글 추천 (독립적)
+        POST_UNRECOMMEND // 게시글 비추천 (독립적)
     }
 
     @Id

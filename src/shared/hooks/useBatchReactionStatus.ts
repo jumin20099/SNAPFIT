@@ -29,27 +29,65 @@ export function useBatchReactionStatus({
   const query = useQuery<BatchReactionStatusResult>({
     queryKey: ['batchReactionStatus', postIds, productIds, commentIds],
     queryFn: async () => {
-      if (!hasIds) return {};
+      console.log('useBatchReactionStatus queryFn 실행:', { 
+        postIds, 
+        productIds, 
+        commentIds, 
+        hasIds, 
+        enabled 
+      });
+      
+      if (!hasIds) {
+        console.log('ID가 없어서 빈 객체 반환');
+        return {};
+      }
 
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      let cookies = typeof document !== 'undefined' ? document.cookie : '';
+      
+      // snapfit_guest_id 쿠키가 없으면 기존 ID로 생성
+      if (typeof window !== 'undefined' && !cookies.includes('snapfit_guest_id')) {
+        const guestId = '-1159250824'; // 기존 게스트 ID 사용
+        document.cookie = `snapfit_guest_id=${guestId}; path=/; max-age=86400`;
+        cookies = document.cookie;
+        console.log('게스트 쿠키 생성 (기존 ID 사용):', guestId);
+      }
+      
+      console.log('API 요청 시작:', { 
+        token: token ? '있음' : '없음', 
+        cookies: cookies ? '있음' : '없음',
+        cookieValue: cookies.includes('snapfit_guest_id') ? cookies.split('snapfit_guest_id=')[1]?.split(';')[0] : '없음',
+        postIds, 
+        productIds, 
+        commentIds 
+      });
+      
       const response = await fetch('/api/reactions/status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(cookies ? { 'Cookie': cookies } : {}),
         },
         credentials: 'include',
         body: JSON.stringify({ postIds, productIds, commentIds })
       });
 
+      console.log('API 응답:', { 
+        status: response.status, 
+        ok: response.ok 
+      });
+
       if (!response.ok) {
         if (response.status === 401) {
+          console.log('401 에러 - 빈 객체 반환');
           return {};
         }
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log('API 응답 데이터:', data);
       
       // 타입 검증 수행
       if (!validateBatchReactionStatus(data)) {
@@ -57,10 +95,11 @@ export function useBatchReactionStatus({
         return {};
       }
 
+      console.log('유효한 데이터 반환:', data);
       return data;
     },
     enabled: enabled && hasIds,
-    staleTime: 30 * 1000, // 30초 (댓글 상태 변경 시 빠른 반영)
+    staleTime: 0, // 항상 새로운 데이터 가져오기 (새로고침 후 상태 동기화)
     gcTime: 2 * 60 * 1000, // 2분
   });
 

@@ -63,17 +63,21 @@ public class ReactionController {
         Map<String, Map<String, Object>> result = new HashMap<>();
         
         User user = null;
-        if (principal != null) {
-            try {
-                user = current(principal);
-            } catch (Exception ex) {
-                log.warn("사용자 정보 조회 실패: {}", ex.getMessage());
-            }
-        }
+        // 임시: JWT 토큰이 있어도 게스트로 처리 (디버깅용)
+        // if (principal != null) {
+        //     try {
+        //         user = current(principal);
+        //     } catch (Exception ex) {
+        //         log.warn("사용자 정보 조회 실패: {}", ex.getMessage());
+        //     }
+        // }
 
         String guestIdx = null;
         if (user == null && StringUtils.hasText(guestToken)) {
             guestIdx = buildGuestIdentifier(guestToken);
+            log.info("게스트 식별 완료: guestIdx={}, guestToken={}", guestIdx, guestToken);
+        } else {
+            log.info("게스트 식별 실패: user={}, guestToken={}", user != null ? "있음" : "없음", guestToken);
         }
 
         // 게시글 상태 조회
@@ -87,15 +91,40 @@ public class ReactionController {
                         guestIdx, postId, com.snapfit.api.entity.Like.TargetType.OUTFIT_SHARE);
             }
 
+            // 추천/비추천 상태 조회
+            boolean recommended = false;
+            boolean unrecommended = false;
+            if (user != null) {
+                recommended = likeRepository.existsByUserUserIdxAndTargetIdxAndTargetType(
+                        user.getUserIdx(), postId, com.snapfit.api.entity.Like.TargetType.POST_RECOMMEND);
+                unrecommended = likeRepository.existsByUserUserIdxAndTargetIdxAndTargetType(
+                        user.getUserIdx(), postId, com.snapfit.api.entity.Like.TargetType.POST_UNRECOMMEND);
+                log.info("로그인 사용자 상태 조회: postId={}, recommended={}, unrecommended={}", postId, recommended, unrecommended);
+            } else if (StringUtils.hasText(guestIdx)) {
+                recommended = likeRepository.existsByGuestIdxAndTargetIdxAndTargetType(
+                        guestIdx, postId, com.snapfit.api.entity.Like.TargetType.POST_RECOMMEND);
+                unrecommended = likeRepository.existsByGuestIdxAndTargetIdxAndTargetType(
+                        guestIdx, postId, com.snapfit.api.entity.Like.TargetType.POST_UNRECOMMEND);
+                log.info("게스트 사용자 상태 조회: postId={}, guestIdx={}, recommended={}, unrecommended={}", postId, guestIdx, recommended, unrecommended);
+            } else {
+                log.info("사용자 식별 실패: postId={}, user={}, guestIdx={}", postId, user != null ? "있음" : "없음", guestIdx);
+            }
+
             boolean scraped = user != null && scrapRepository.existsByUserIdAndPostId(user.getUserIdx(), postId);
             long likeCount = likeRepository.countByTargetIdxAndTargetType(postId, com.snapfit.api.entity.Like.TargetType.OUTFIT_SHARE);
             long scrapCount = scrapRepository.countByPostId(postId);
+            long recommendCount = likeRepository.countByTargetIdxAndTargetType(postId, com.snapfit.api.entity.Like.TargetType.POST_RECOMMEND);
+            long unrecommendCount = likeRepository.countByTargetIdxAndTargetType(postId, com.snapfit.api.entity.Like.TargetType.POST_UNRECOMMEND);
 
             Map<String, Object> status = new HashMap<>();
             status.put("liked", liked);
             status.put("scraped", scraped);
             status.put("likeCount", likeCount);
             status.put("scrapCount", scrapCount);
+            status.put("recommended", recommended);
+            status.put("unrecommended", unrecommended);
+            status.put("recommendCount", recommendCount);
+            status.put("unrecommendCount", unrecommendCount);
 
             result.put("post_" + postId, status);
         }

@@ -631,10 +631,42 @@ export default function PostDetailPage() {
     }
   }, [batchReactionStatus]);
 
-  // 통합 데이터 로딩 (한 번만 실행)
+  // 게시글 타입 확인 및 리다이렉트
   useEffect(() => {
+    const checkPostTypeAndRedirect = async () => {
+      try {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
+        const token = localStorage.getItem('token')
+        const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
+          headers: {
+            ...(token && { 'Authorization': `Bearer ${token}` })
+          }
+        })
+
+        if (response.ok) {
+          const post = await response.json()
+          
+          // 게시글 타입에 따라 리다이렉트
+          if (post.boardType === 'QUESTION') {
+            router.push(`/community/questions/${postId}`)
+            return true
+          } else if (post.boardType === 'INFO') {
+            router.push(`/community/info/${postId}`)
+            return true
+          }
+        }
+      } catch (error) {
+        console.error('게시글 타입 확인 실패:', error)
+      }
+      return false
+    }
+
     if (postId) {
       const loadData = async () => {
+        // 게시글 타입 확인 및 리다이렉트
+        const redirected = await checkPostTypeAndRedirect()
+        if (redirected) return
+        
         // 1. 게시글 로드
         const loadedPosts = await fetchPosts(0)
         

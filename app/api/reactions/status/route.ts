@@ -14,6 +14,14 @@ export async function POST(request: NextRequest) {
     const cookieHeader = request.headers.get('cookie')
     const forwardedFor = request.headers.get('x-forwarded-for')
     const realIp = request.headers.get('x-real-ip')
+    
+    console.log('Next.js API 라우트 - 요청 헤더:', {
+      authHeader: authHeader ? '있음' : '없음',
+      cookieHeader: cookieHeader ? '있음' : '없음',
+      forwardedFor,
+      realIp,
+      postIds
+    })
 
     // 백엔드 API 호출
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
@@ -40,16 +48,25 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ postIds, productIds, commentIds })
     })
 
+    console.log('백엔드 API 응답:', {
+      status: response.status,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
+    })
+
     if (!response.ok) {
       console.error('Backend API error:', response.status, response.statusText)
       return NextResponse.json({ error: 'Backend API error' }, { status: response.status })
     }
 
     const text = await response.text()
+    console.log('백엔드 응답 데이터:', text)
 
     let nextResponse: NextResponse
     try {
-      nextResponse = NextResponse.json(JSON.parse(text), { status: response.status })
+      const parsedData = JSON.parse(text)
+      console.log('파싱된 응답 데이터:', parsedData)
+      nextResponse = NextResponse.json(parsedData, { status: response.status })
     } catch {
       nextResponse = new NextResponse(text, { status: response.status })
     }
