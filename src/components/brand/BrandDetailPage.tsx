@@ -384,7 +384,18 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
 
       <main className="mx-auto max-w-screen-lg p-4 pb-24 space-y-10">
         <section className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} aria-label="이전 페이지로">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => {
+              if (window.history.length > 1) {
+                router.back()
+              } else {
+                router.push('/brands')
+              }
+            }} 
+            aria-label="이전 페이지로"
+          >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>

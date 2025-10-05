@@ -1223,7 +1223,18 @@ export default function PostDetailPage() {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <div className="bg-white border-b p-4 flex items-center justify-between flex-shrink-0">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="p-1 h-8 w-8">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => {
+            if (window.history.length > 1) {
+              router.back()
+            } else {
+              router.push('/community')
+            }
+          }} 
+          className="p-1 h-8 w-8"
+        >
           ←
         </Button>
         <div className="font-bold text-lg">커뮤니티</div>

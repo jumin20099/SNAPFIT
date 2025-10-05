@@ -347,7 +347,11 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
         <div className="mb-6">
           <Button
             variant="ghost"
-            onClick={() => router.back()}
+            onClick={() => {
+              // 간단하고 확실한 해결책: 항상 질문 목록으로 이동
+              console.log('뒤로가기 버튼 클릭됨 - 질문 목록으로 이동')
+              router.push('/community?type=questions')
+            }}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
