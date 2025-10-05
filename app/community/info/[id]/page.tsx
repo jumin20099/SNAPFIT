@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ThumbsUp, ThumbsDown, Eye, MessageCircle, Calendar, ArrowLeft, Share2, MoreHorizontal } from 'lucide-react'
+import { ThumbsUp, ThumbsDown, Eye, MessageCircle, Calendar, ArrowLeft, Share2, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
 import { Post } from '@/shared/types'
 import { PostTableList } from '@/components/community/PostTableList'
 import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
+import { PostEditModal } from '@/components/community/PostEditModal'
+import { PostDeleteModal } from '@/components/community/PostDeleteModal'
 
 interface InfoDetailProps {}
 
@@ -26,6 +28,8 @@ export default function InfoDetailPage({}: InfoDetailProps) {
   const [relatedLoading, setRelatedLoading] = useState(false)
   const [isRecommended, setIsRecommended] = useState(false)
   const [isUnrecommended, setIsUnrecommended] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   // 배치 상태 조회를 통해 추천/비추천 상태 확인
   const postId = post?.postId || Number(params.id)
@@ -237,6 +241,16 @@ export default function InfoDetailPage({}: InfoDetailProps) {
     }
   }
 
+  // 수정 성공 후 게시글 다시 로드
+  const handleEditSuccess = () => {
+    fetchPost()
+  }
+
+  // 삭제 성공 후 목록으로 이동
+  const handleDeleteSuccess = () => {
+    router.push('/community/info')
+  }
+
   // 관련 게시글 조회 (같은 게시판의 최신 게시글)
   const fetchRelatedPosts = async () => {
     try {
@@ -365,8 +379,23 @@ export default function InfoDetailPage({}: InfoDetailProps) {
                 <Share2 className="w-4 h-4 mr-2" />
                 공유
               </Button>
-              <Button variant="outline" size="sm">
-                <MoreHorizontal className="w-4 h-4" />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowEditModal(true)}
+                className="text-blue-600 hover:text-blue-700"
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                수정
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowDeleteModal(true)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                삭제
               </Button>
             </div>
           </div>
@@ -498,6 +527,24 @@ export default function InfoDetailPage({}: InfoDetailProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* 수정 모달 */}
+        <PostEditModal
+          post={post}
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={handleEditSuccess}
+          boardType="INFO"
+        />
+
+        {/* 삭제 모달 */}
+        <PostDeleteModal
+          post={post}
+          isOpen={showDeleteModal}
+          onClose={() => setShowDeleteModal(false)}
+          onSuccess={handleDeleteSuccess}
+          boardType="INFO"
+        />
       </div>
     </div>
   )

@@ -442,10 +442,6 @@ public class PostController {
         String providedPassword = request.getAnonymousPassword() != null ? request.getAnonymousPassword().trim() : null;
 
         if (isAnonymousRequest) {
-            if (!isAnonymousPost) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "인증이 필요합니다."));
-            }
             if (!StringUtils.hasText(providedPassword)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "비밀번호를 입력해주세요."));
@@ -520,10 +516,6 @@ public class PostController {
                 ? request.getAnonymousPassword().trim() : null;
 
         if (isAnonymousRequest) {
-            if (!isAnonymousPost) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "인증이 필요합니다."));
-            }
             if (!StringUtils.hasText(providedPassword)) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("error", "비밀번호를 입력해주세요."));
