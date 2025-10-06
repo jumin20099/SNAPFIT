@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, Send, User } from "lucide-react"
+import { Heart, MessageSquare, Bookmark, Share2, MoreHorizontal, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { CodyProductList } from "@/components/ui/CodyProductList"
 import { CommentsModal } from "@/components/ui/CommentsModal"
+import { CommentsSection } from "@/components/community/CommentsSection"
 import { useRouter, useParams } from "next/navigation"
 import { isCurrentUserPostAuthor } from "@/lib/auth-utils"
 import { useDeletePost } from "@/hooks/useDeletePost"
@@ -16,6 +16,7 @@ import { LikeButton } from "@/features/reactions/LikeButton"
 import { ScrapButton } from "@/features/reactions/ScrapButton"
 import { CommentLikeButton } from "@/features/reactions/CommentLikeButton"
 import { useBatchReactionStatus } from "@/shared/hooks/useBatchReactionStatus"
+import { PostActionMenu } from "@/components/ui/PostActionMenu"
 
 interface Comment {
   commentId: number
@@ -95,7 +96,6 @@ export default function PostDetailPage() {
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [currentPage, setCurrentPage] = useState(0)
-  const [commentTexts, setCommentTexts] = useState<Record<number, string>>({})
   const [commentsByPost, setCommentsByPost] = useState<Record<number, Comment[]>>({})
   const [isLiked, setIsLiked] = useState(false)
   const [isScraped, setIsScraped] = useState(false)
@@ -845,46 +845,6 @@ export default function PostDetailPage() {
     }
   }
 
-  const handleCommentSubmit = async (postId: number) => {
-    const commentText = commentTexts[postId] || ""
-    if (commentText.trim()) {
-      try {
-        const token = localStorage.getItem('token')
-        const response = await fetch('/api/comments', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` }),
-          },
-          body: JSON.stringify({
-            postId: postId,
-            content: commentText.trim()
-          }),
-        })
-
-        if (response.ok) {
-          const newComment = await response.json()
-          const transformedComment = transformComment(newComment)
-          setCommentsByPost(prev => ({
-            ...prev,
-            [postId]: [transformedComment, ...(prev[postId] || [])]
-          }))
-          setCommentTexts(prev => ({
-            ...prev,
-            [postId]: ""
-          }))
-          // 댓글 수 업데이트
-          setPosts(prev => prev.map(post => 
-            post.postId === postId 
-              ? { ...post, commentCount: post.commentCount + 1 }
-              : post
-          ))
-        }
-      } catch (error) {
-        console.error('댓글 작성 실패:', error)
-      }
-    }
-  }
 
   const handleAddComment = async (content: string) => {
     if (selectedPostId) {
@@ -1303,56 +1263,15 @@ export default function PostDetailPage() {
                     })()}
                   </button>
                 </div>
-                {isOwner ? (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEditPost(post.postId)
-                      }}
-                    >
-                      수정
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeletePost(post.postId, false)
-                      }}
-                      disabled={isDeleting}
-                      data-testid="delete-post-button"
-                    >
-                      {isDeleting ? '삭제 중...' : '삭제'}
-                    </Button>
-                  </div>
-                ) : isAnonymousAuthor ? (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEditPost(post.postId)
-                      }}
-                    >
-                      수정
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeletePost(post.postId, true)
-                      }}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? '삭제 중...' : '삭제'}
-                    </Button>
-                  </div>
-                ) : (
+                {(isOwner || isAnonymousAuthor) && (
+                  <PostActionMenu
+                    postId={post.postId}
+                    isOwner={isOwner || isAnonymousAuthor}
+                    onEdit={handleEditPost}
+                    onDelete={(postId) => handleDeletePost(postId, isAnonymousAuthor)}
+                  />
+                )}
+                {!isOwner && !isAnonymousAuthor && (
                   <Button 
                     variant={isFollowing ? "outline" : "default"} 
                     size="sm"
@@ -1537,24 +1456,8 @@ export default function PostDetailPage() {
               )}
             </div>
 
-            {/* Comment Input for each post */}
-            <div className="border-t bg-white p-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="댓글을 입력하세요..."
-                  value={commentTexts[post.postId] || ""}
-                  onChange={(e) => setCommentTexts(prev => ({
-                    ...prev,
-                    [post.postId]: e.target.value
-                  }))}
-                  onKeyPress={(e) => e.key === 'Enter' && handleCommentSubmit(post.postId)}
-                  className="flex-1"
-                />
-                <Button onClick={() => handleCommentSubmit(post.postId)} disabled={!(commentTexts[post.postId] || "").trim()}>
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+            {/* Comments Section */}
+            <CommentsSection postId={post.postId} boardType="QUESTION" />
           </div>
         )})}
         

@@ -6,7 +6,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:80
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { postId, content, parentId } = body
+    const { postId, content, parentId, anonymousPassword } = body
 
     // Authorization 헤더 추출
     const authHeader = request.headers.get('authorization')
@@ -28,7 +28,8 @@ export async function POST(request: NextRequest) {
       headers,
       body: JSON.stringify({
         content,
-        parentId: parentId || null
+        parentId: parentId || null,
+        anonymousPassword: anonymousPassword || null
       }),
     })
 

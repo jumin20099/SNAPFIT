@@ -11,15 +11,33 @@ export async function POST(
     // 인증 토큰 가져오기
     const token = request.headers.get('authorization')
     
+    // 클라이언트 IP 가져오기
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    const realIp = request.headers.get('x-real-ip')
+    
     // 백엔드 API 호출
     const backendUrl = `${BACKEND_URL}/api/comments/${params.commentId}/like`
     
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    
+    // Authorization 헤더가 있으면 추가
+    if (token) {
+      headers['Authorization'] = token
+    }
+    
+    // IP 헤더 추가
+    if (forwardedFor) {
+      headers['X-Forwarded-For'] = forwardedFor
+    }
+    if (realIp) {
+      headers['X-Real-IP'] = realIp
+    }
+    
     const response = await fetch(backendUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': token || '',
-      },
+      headers,
     })
 
     if (!response.ok) {

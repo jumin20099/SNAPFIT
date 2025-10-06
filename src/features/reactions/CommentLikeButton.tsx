@@ -9,6 +9,7 @@ interface CommentLikeButtonProps {
   initialActive: boolean;   // 서버 DTO isLiked
   initialCount: number;     // 서버 likeCount
   className?: string;
+  onToggleSuccess?: () => void;  // 토글 성공 콜백
 }
 
 export function CommentLikeButton({
@@ -16,6 +17,7 @@ export function CommentLikeButton({
   initialActive,
   initialCount,
   className,
+  onToggleSuccess,
 }: CommentLikeButtonProps) {
   const [active, setActive] = React.useState(initialActive);
   const [count, setCount] = React.useState(initialCount);
@@ -47,6 +49,7 @@ export function CommentLikeButton({
       }
       setActive(data.liked);
       setCount(data.likeCount);
+      onToggleSuccess?.(); // 토글 성공 콜백 호출
     },
     onError: (error) => {
       console.error('댓글 좋아요 에러:', error);

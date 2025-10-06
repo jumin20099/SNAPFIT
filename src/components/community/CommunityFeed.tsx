@@ -22,13 +22,16 @@ interface CommunityFeedProps {
   activeTab: 'outfits' | 'questions' | 'info'
   onPostClick?: (postId: number) => void
   onTotalCountChange?: (count: number) => void
+  onEditPost?: (postId: number) => void
+  onDeletePost?: (postId: number) => void
+  currentUserId?: number
 }
 
 interface Post {
   postId: number
   content: string
   authorName: string
-  authorId?: string
+  authorId?: number
   anonymousIndex?: number | null
   authorProfileImage?: string
   createdAt: string
@@ -77,7 +80,16 @@ const logReactionDebug = (...args: unknown[]) => {
 
 import type { ReactionStatusItem } from '@/shared/types'
 
-const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activeTab, onPostClick, onTotalCountChange }) => {
+const CommunityFeed: React.FC<CommunityFeedProps> = ({ 
+  sortBy, 
+  searchTerm, 
+  activeTab, 
+  onPostClick, 
+  onTotalCountChange, 
+  onEditPost, 
+  onDeletePost, 
+  currentUserId 
+}) => {
   const router = useRouter()
 
   const normalizedSort = sortBy === 'latest' || sortBy === 'trending' ? sortBy : 'popular'
@@ -373,6 +385,14 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
       return renderEmptyState()
     }
 
+    // 게시글 작성자 매핑 생성
+    const postAuthors = filteredPosts.reduce((acc, post) => {
+      if (post.authorId) {
+        acc[post.postId] = post.authorId
+      }
+      return acc
+    }, {} as Record<number, number>)
+
     return (
       <PostTableList
         posts={filteredPosts.map((post, index) => ({
@@ -388,6 +408,10 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({ sortBy, searchTerm, activ
           categoryLabel: post.boardType === 'QUESTION' ? '질문' : post.boardType === 'INFO' ? '정보' : post.tags?.[0] ?? null,
         }))}
         onSelect={(postId) => handleCardClick(postId)}
+        onEdit={onEditPost}
+        onDelete={onDeletePost}
+        currentUserId={currentUserId}
+        postAuthors={postAuthors}
       />
     )
   }

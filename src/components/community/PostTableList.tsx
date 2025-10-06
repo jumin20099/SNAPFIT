@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useCallback } from 'react'
+import { PostActionMenu } from '@/components/ui/PostActionMenu'
 
 interface PostTableItem {
   postId: number
@@ -18,6 +19,10 @@ interface PostTableItem {
 interface PostTableListProps {
   posts: PostTableItem[]
   onSelect?: (postId: number) => void
+  onEdit?: (postId: number) => void
+  onDelete?: (postId: number) => void
+  currentUserId?: number
+  postAuthors?: Record<number, number> // postId -> authorId 매핑
 }
 
 /**
@@ -84,7 +89,14 @@ const buildAuthorLabel = (authorName?: string | null, anonymousIndex?: number | 
  * @param onSelect 사용자가 행을 클릭했을 때 호출되는 콜백입니다. 게시글 상세 페이지로 이동하는 데 활용할 수 있습니다.
  * 컴포넌트는 PC·모바일 환경 모두를 고려하여 반응형 스타일을 적용하며, 가독성을 높이기 위해 행 호버 스타일을 포함합니다.
  */
-export function PostTableList({ posts, onSelect }: PostTableListProps) {
+export function PostTableList({ 
+  posts, 
+  onSelect, 
+  onEdit, 
+  onDelete, 
+  currentUserId, 
+  postAuthors 
+}: PostTableListProps) {
   const handleRowSelect = useCallback((postId: number) => {
     if (!onSelect) {
       return
@@ -94,7 +106,7 @@ export function PostTableList({ posts, onSelect }: PostTableListProps) {
 
   const tableHeader = useMemo(() => {
     const headerElement = (
-      <div className="hidden md:grid md:grid-cols-[50px_88px_68px_1fr_120px_112px_68px_68px] md:items-center md:px-3 md:py-1.5 text-[10px] font-medium text-gray-500 uppercase tracking-wide bg-gray-50 border border-gray-200 rounded-t-lg">
+      <div className="hidden md:grid md:grid-cols-[50px_88px_68px_1fr_120px_112px_68px_68px_60px] md:items-center md:px-3 md:py-1.5 text-[10px] font-medium text-gray-500 uppercase tracking-wide bg-gray-50 border border-gray-200 rounded-t-lg">
         <div>번호</div>
         <div className="text-center">말머리</div>
         <div className="text-center">이미지</div>
@@ -103,6 +115,7 @@ export function PostTableList({ posts, onSelect }: PostTableListProps) {
         <div className="text-center">작성일</div>
         <div className="text-center">조회</div>
         <div className="text-center">추천</div>
+        <div className="text-center">액션</div>
       </div>
     )
 
@@ -129,12 +142,15 @@ export function PostTableList({ posts, onSelect }: PostTableListProps) {
         return <span className="text-xs text-gray-400">-</span>
       }
 
+      // 게시글 소유자 확인
+      const isOwner = currentUserId && postAuthors && postAuthors[post.postId] === currentUserId
+
       const desktopRow = (
         <div
           key={`${post.postId}-desktop`}
           role="row"
           tabIndex={0}
-          className="hidden md:grid md:grid-cols-[50px_88px_68px_1fr_120px_112px_68px_68px] md:items-center md:px-3 md:py-1.5 border-x border-b border-gray-200 bg-white hover:bg-blue-50/60 focus:bg-blue-50/60 transition-colors cursor-pointer"
+          className="hidden md:grid md:grid-cols-[50px_88px_68px_1fr_120px_112px_68px_68px_60px] md:items-center md:px-3 md:py-1.5 border-x border-b border-gray-200 bg-white hover:bg-blue-50/60 focus:bg-blue-50/60 transition-colors cursor-pointer"
           data-post-id={post.postId}
           data-list-index={rowIndex - 1}
           onClick={() => handleRowSelect(post.postId)}
@@ -166,6 +182,14 @@ export function PostTableList({ posts, onSelect }: PostTableListProps) {
           <div className="text-xs text-gray-500 text-center">{displayDate}</div>
           <div className="text-xs text-gray-500 text-center">{displayViews.toLocaleString()}</div>
           <div className="text-xs text-gray-500 text-center">{displayRecommend.toLocaleString()}</div>
+          <div className="flex items-center justify-center">
+            <PostActionMenu
+              postId={post.postId}
+              isOwner={isOwner || false}
+              onEdit={onEdit || (() => {})}
+              onDelete={onDelete || (() => {})}
+            />
+          </div>
         </div>
       )
 
@@ -195,6 +219,12 @@ export function PostTableList({ posts, onSelect }: PostTableListProps) {
                 {post.title || post.content || '제목 없음'}
               </p>
             </div>
+            <PostActionMenu
+              postId={post.postId}
+              isOwner={isOwner || false}
+              onEdit={onEdit || (() => {})}
+              onDelete={onDelete || (() => {})}
+            />
           </div>
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-gray-500">
             {post.categoryLabel && post.categoryLabel.trim().length > 0 ? (

@@ -14,6 +14,8 @@ import { PostTableList } from '@/components/community/PostTableList'
 import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
 import { PostEditModal } from '@/components/community/PostEditModal'
 import { PostDeleteModal } from '@/components/community/PostDeleteModal'
+import { PostActionMenu } from '@/components/ui/PostActionMenu'
+import { CommentsSection } from '@/components/community/CommentsSection'
 
 interface QuestionDetailProps {}
 
@@ -383,24 +385,12 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
                 <Share2 className="w-4 h-4 mr-2" />
                 공유
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowEditModal(true)}
-                className="text-blue-600 hover:text-blue-700"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                수정
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowDeleteModal(true)}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                삭제
-              </Button>
+              <PostActionMenu
+                postId={post.postId}
+                isOwner={true}
+                onEdit={() => setShowEditModal(true)}
+                onDelete={() => setShowDeleteModal(true)}
+              />
             </div>
           </div>
         </div>
@@ -476,16 +466,12 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
         </Card>
 
         {/* 댓글 섹션 */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>댓글 {post.commentCount}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-              댓글 기능은 추후 구현 예정입니다.
-            </div>
-          </CardContent>
-        </Card>
+        {post && (
+          <CommentsSection
+            postId={post.postId}
+            boardType="QUESTION"
+          />
+        )}
 
         {/* 같은 게시판의 다른 게시글 */}
         <Card>
@@ -549,6 +535,7 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
           onSuccess={handleDeleteSuccess}
           boardType="QUESTION"
         />
+
       </div>
     </div>
   )

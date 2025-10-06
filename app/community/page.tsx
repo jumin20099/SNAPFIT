@@ -37,13 +37,34 @@ export default function CommunityPage() {
   const [showSearch, setShowSearch] = useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
+  const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined)
 
   const handlePostClick = useCallback((postId: number) => {
     router.push(`/community/${postId}`)
   }, [router])
 
+  const handleEditPost = useCallback((postId: number) => {
+    router.push(`/community/${postId}?edit=true`)
+  }, [router])
+
+  const handleDeletePost = useCallback((postId: number) => {
+    // 삭제 확인 모달을 표시하거나 바로 삭제 처리
+    if (confirm('게시글을 삭제하시겠습니까?')) {
+      // TODO: 게시글 삭제 API 호출
+      console.log('게시글 삭제:', postId)
+    }
+  }, [])
+
   const handleSortChange = useCallback((value: 'latest' | 'popular' | 'mostCommented') => {
     setSortBy(value)
+  }, [])
+
+  // 현재 사용자 ID 가져오기
+  useEffect(() => {
+    const userId = localStorage.getItem('userIdx')
+    if (userId) {
+      setCurrentUserId(parseInt(userId, 10))
+    }
   }, [])
 
   // URL 파라미터 변경 시 activeTab 업데이트
@@ -164,6 +185,9 @@ export default function CommunityPage() {
               activeTab={activeTab}
               onPostClick={handlePostClick}
               onTotalCountChange={setTotalCount}
+              onEditPost={handleEditPost}
+              onDeletePost={handleDeletePost}
+              currentUserId={currentUserId}
             />
           </TabsContent>
 
@@ -194,6 +218,9 @@ export default function CommunityPage() {
               activeTab={activeTab}
               onPostClick={handlePostClick}
               onTotalCountChange={setTotalCount}
+              onEditPost={handleEditPost}
+              onDeletePost={handleDeletePost}
+              currentUserId={currentUserId}
             />
           </TabsContent>
 
@@ -224,6 +251,9 @@ export default function CommunityPage() {
               activeTab={activeTab}
               onPostClick={handlePostClick}
               onTotalCountChange={setTotalCount}
+              onEditPost={handleEditPost}
+              onDeletePost={handleDeletePost}
+              currentUserId={currentUserId}
             />
           </TabsContent>
         </Tabs>

@@ -8,13 +8,21 @@ export async function DELETE(
   { params }: { params: { commentId: string } }
 ) {
   try {
+    // 인증 토큰 가져오기
+    const token = request.headers.get('authorization')
+    
+    // 요청 본문에서 비밀번호 추출
+    const body = await request.json().catch(() => ({}))
+    const { password } = body
+    
     // 백엔드 API 호출
-    const backendUrl = `${BACKEND_URL}/api/comments/${params.commentId}`
+    const backendUrl = `${BACKEND_URL}/api/comments/${params.commentId}${password ? `?password=${encodeURIComponent(password)}` : ''}`
     
     const response = await fetch(backendUrl, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { Authorization: token }),
       },
     })
 
