@@ -27,15 +27,24 @@ public class CommentLike {
     private Comment comment;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "user_idx", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "user_idx")
     private User user;
+    
+    @Column(name = "anonymous_index")
+    private Integer anonymousIndex;
+    
+    @Column(name = "anonymous_password_hash")
+    private String anonymousPasswordHash;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
     // 중복 좋아요 방지를 위한 유니크 제약조건
-    @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"comment_id", "user_id"}))
+    @Table(uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"comment_id", "user_id"}),
+        @UniqueConstraint(columnNames = {"comment_id", "anonymous_index"})
+    })
     public static class CommentLikeTable {
     }
 }

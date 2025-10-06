@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,29 +36,34 @@ public class ProductReviewService {
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
     private final UserMeasurementsRepository userMeasurementsRepository;
+    private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper = new ObjectMapper();
     
     /**
      * 리뷰 작성 (구매자만 가능)
      */
     @Transactional
-    public ProductReviewDto createReview(UUID userId, Long productId, CreateReviewRequest request) {
+    public ProductReviewDto createReview(UUID userId, Long productId, CreateReviewRequest request, String anonymousPasswordHash, Integer anonymousIndex) {
         log.info("리뷰 작성 요청: userId={}, productId={}", userId, productId);
         
-        // 구매자 검증
-        if (!hasUserPurchasedProduct(userId, productId)) {
-            throw new RuntimeException("구매자만 리뷰를 작성할 수 있습니다");
-        }
+        User user = null;
         
-        // 중복 리뷰 검증
-        if (reviewRepository.findByProductIdAndUserUserIdxAndStatus(
-            productId, userId, ProductReview.ReviewStatus.PUBLISHED).isPresent()) {
-            throw new RuntimeException("이미 리뷰를 작성하셨습니다");
+        // 로그인된 사용자인 경우 구매자 검증
+        if (userId != null) {
+            if (!hasUserPurchasedProduct(userId, productId)) {
+                throw new RuntimeException("구매자만 리뷰를 작성할 수 있습니다");
+            }
+            
+            // 중복 리뷰 검증
+            if (reviewRepository.findByProductIdAndUserUserIdxAndStatus(
+                productId, userId, ProductReview.ReviewStatus.PUBLISHED).isPresent()) {
+                throw new RuntimeException("이미 리뷰를 작성하셨습니다");
+            }
+            
+            // 사용자 조회
+            user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
         }
-        
-        // 사용자 조회
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
         
         // 이미지 배열을 JSON 문자열로 변환
         String imagesJson = null;
@@ -80,12 +86,41 @@ public class ProductReviewService {
             .content(request.getContent())
             .images(imagesJson)
             .status(ProductReview.ReviewStatus.PUBLISHED)
+            .anonymousIndex(anonymousIndex)
+            .anonymousPasswordHash(anonymousPasswordHash)
             .build();
         
         review = reviewRepository.save(review);
         log.info("리뷰 작성 완료: reviewId={}", review.getReviewId());
         
         return convertToDto(review, false, userId);
+    }
+    
+    /**
+     * 리뷰 삭제
+     */
+    @Transactional
+    public void deleteReview(Long reviewId, UUID userId, String password) {
+        log.info("리뷰 삭제 요청: reviewId={}, userId={}", reviewId, userId);
+        
+        ProductReview review = reviewRepository.findById(reviewId)
+            .orElseThrow(() -> new RuntimeException("리뷰를 찾을 수 없습니다"));
+        
+        if (review.getUser() != null) {
+            // 로그인된 사용자의 리뷰인 경우
+            if (userId == null || !review.getUser().getUserIdx().equals(userId)) {
+                throw new RuntimeException("본인의 리뷰만 삭제할 수 있습니다");
+            }
+        } else {
+            // 익명 리뷰인 경우 비밀번호 검증
+            if (password == null || review.getAnonymousPasswordHash() == null ||
+                !passwordEncoder.matches(password, review.getAnonymousPasswordHash())) {
+                throw new RuntimeException("비밀번호가 올바르지 않습니다");
+            }
+        }
+        
+        reviewRepository.delete(review);
+        log.info("리뷰 삭제 완료: reviewId={}", reviewId);
     }
     
     /**

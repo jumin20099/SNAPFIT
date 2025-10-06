@@ -51,6 +51,9 @@ public class Comment {
     @Column(name = "anonymous_index")
     private Integer anonymousIndex;
     
+    @Column(name = "anonymous_password_hash")
+    private String anonymousPasswordHash;
+    
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

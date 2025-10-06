@@ -28,7 +28,7 @@ public class ProductInquiry {
     private Long productId;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "user_idx", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "user_idx")
     private User user;
     
     @Column(name = "title", nullable = false)
@@ -55,6 +55,12 @@ public class ProductInquiry {
     
     @Column(name = "answered_at")
     private LocalDateTime answeredAt;
+    
+    @Column(name = "anonymous_index")
+    private Integer anonymousIndex;
+    
+    @Column(name = "anonymous_password_hash")
+    private String anonymousPasswordHash;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

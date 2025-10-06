@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,17 +25,22 @@ public class ProductInquiryService {
     
     private final ProductInquiryRepository inquiryRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     
     /**
      * 문의 작성
      */
     @Transactional
-    public ProductInquiryDto createInquiry(UUID userId, Long productId, CreateInquiryRequest request) {
+    public ProductInquiryDto createInquiry(UUID userId, Long productId, CreateInquiryRequest request, String anonymousPasswordHash, Integer anonymousIndex) {
         log.info("문의 작성 요청: userId={}, productId={}", userId, productId);
         
-        // 사용자 조회
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+        User user = null;
+        
+        // 로그인된 사용자인 경우 사용자 조회
+        if (userId != null) {
+            user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+        }
         
         // 문의 생성
         ProductInquiry inquiry = ProductInquiry.builder()
@@ -44,12 +50,41 @@ public class ProductInquiryService {
             .content(request.getContent())
             .isPrivate(request.getIsPrivate())
             .status(ProductInquiry.InquiryStatus.OPEN)
+            .anonymousIndex(anonymousIndex)
+            .anonymousPasswordHash(anonymousPasswordHash)
             .build();
         
         inquiry = inquiryRepository.save(inquiry);
         log.info("문의 작성 완료: inquiryId={}", inquiry.getInquiryId());
         
         return convertToDto(inquiry, false);
+    }
+    
+    /**
+     * 문의 삭제
+     */
+    @Transactional
+    public void deleteInquiry(Long inquiryId, UUID userId, String password) {
+        log.info("문의 삭제 요청: inquiryId={}, userId={}", inquiryId, userId);
+        
+        ProductInquiry inquiry = inquiryRepository.findById(inquiryId)
+            .orElseThrow(() -> new RuntimeException("문의를 찾을 수 없습니다"));
+        
+        if (inquiry.getUser() != null) {
+            // 로그인된 사용자의 문의인 경우
+            if (userId == null || !inquiry.getUser().getUserIdx().equals(userId)) {
+                throw new RuntimeException("본인의 문의만 삭제할 수 있습니다");
+            }
+        } else {
+            // 익명 문의인 경우 비밀번호 검증
+            if (password == null || inquiry.getAnonymousPasswordHash() == null ||
+                !passwordEncoder.matches(password, inquiry.getAnonymousPasswordHash())) {
+                throw new RuntimeException("비밀번호가 올바르지 않습니다");
+            }
+        }
+        
+        inquiryRepository.delete(inquiry);
+        log.info("문의 삭제 완료: inquiryId={}", inquiryId);
     }
     
     /**

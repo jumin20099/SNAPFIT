@@ -4,8 +4,12 @@ import com.snapfit.api.dto.CreateReviewRequest;
 import com.snapfit.api.dto.ProductReviewDto;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.service.ProductReviewService;
+import com.snapfit.api.service.AnonymousUserService;
+import com.snapfit.api.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.util.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +28,9 @@ import java.util.UUID;
 public class ProductReviewController {
     
     private final ProductReviewService reviewService;
+    private final AnonymousUserService anonymousUserService;
+    private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
     
     /**
      * 리뷰 작성
@@ -31,18 +38,97 @@ public class ProductReviewController {
     @PostMapping
     public ResponseEntity<ProductReviewDto> createReview(
             @PathVariable Long productId,
-            @Valid @RequestBody CreateReviewRequest request) {
-        
-        // 개발 환경에서는 하드코딩된 사용자 ID 사용
-        UUID userId = UUID.fromString("87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
+            @Valid @RequestBody CreateReviewRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String clientIp,
+            @RequestHeader(value = "X-Real-IP", required = false) String realIp) {
         
         try {
-            ProductReviewDto review = reviewService.createReview(userId, productId, request);
+            UUID userId = null;
+            String anonymousPasswordHash = null;
+            Integer anonymousIndex = null;
+            
+            // JWT 토큰으로 인증된 사용자 조회
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    if (email != null) {
+                        // 실제 사용자 조회 로직 (현재는 하드코딩된 사용자 ID 사용)
+                        userId = UUID.fromString("87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
+                        log.info("인증된 사용자 리뷰 작성: email={}", email);
+                    }
+                } catch (Exception e) {
+                    log.warn("JWT 토큰 파싱 실패: {}", e.getMessage());
+                }
+            }
+            
+            // 익명 사용자인 경우 비밀번호 검증
+            if (userId == null) {
+                String anonymousPassword = request.getAnonymousPassword();
+                if (!StringUtils.hasText(anonymousPassword) || anonymousPassword.trim().length() < 4) {
+                    return ResponseEntity.badRequest().build();
+                }
+                anonymousPasswordHash = passwordEncoder.encode(anonymousPassword.trim());
+                
+                String userIdentifier = getClientIp(clientIp, realIp);
+                anonymousIndex = anonymousUserService.getOrAssignAnonymousIndex(productId, userIdentifier);
+                log.info("익명 사용자 리뷰 작성: productId={}, userIdentifier={}, anonymousIndex={}", productId, userIdentifier, anonymousIndex);
+            }
+            
+            ProductReviewDto review = reviewService.createReview(userId, productId, request, anonymousPasswordHash, anonymousIndex);
             return ResponseEntity.ok(review);
         } catch (RuntimeException e) {
             log.warn("리뷰 작성 실패: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
+    }
+    
+    /**
+     * 리뷰 삭제
+     */
+    @DeleteMapping("/{reviewId}")
+    public ResponseEntity<Void> deleteReview(
+            @PathVariable Long productId,
+            @PathVariable Long reviewId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "password", required = false) String password) {
+        
+        try {
+            UUID userId = null;
+            
+            // JWT 토큰으로 인증된 사용자 조회
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    if (email != null) {
+                        userId = UUID.fromString("87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
+                    }
+                } catch (Exception e) {
+                    log.warn("JWT 토큰 파싱 실패: {}", e.getMessage());
+                }
+            }
+            
+            reviewService.deleteReview(reviewId, userId, password);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            log.warn("리뷰 삭제 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    /**
+     * 클라이언트 IP 주소 추출
+     */
+    private String getClientIp(String forwardedFor, String realIp) {
+        if (forwardedFor != null && !forwardedFor.isEmpty()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        if (realIp != null && !realIp.isEmpty()) {
+            return realIp;
+        }
+        return "unknown";
     }
     
     /**
@@ -140,26 +226,4 @@ public class ProductReviewController {
         }
     }
     
-    /**
-     * 리뷰 삭제
-     */
-    @DeleteMapping("/{reviewId}")
-    public ResponseEntity<Void> deleteReview(
-            @PathVariable Long productId,
-            @PathVariable Long reviewId) {
-        
-        log.info("리뷰 삭제 요청: productId={}, reviewId={}", productId, reviewId);
-        
-        // 개발 환경에서는 하드코딩된 사용자 ID 사용
-        UUID userId = UUID.fromString("87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
-        
-        try {
-            reviewService.deleteReview(reviewId, userId);
-            log.info("리뷰 삭제 성공: reviewId={}", reviewId);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            log.error("리뷰 삭제 실패: reviewId={}, error={}", reviewId, e.getMessage(), e);
-            return ResponseEntity.badRequest().build();
-        }
-    }
 }

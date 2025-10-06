@@ -16,4 +16,6 @@ public class CreateInquiryRequest {
     
     @NotNull(message = "비공개 여부는 필수입니다")
     private Boolean isPrivate;
+    
+    private String anonymousPassword; // 익명 문의 비밀번호
 }

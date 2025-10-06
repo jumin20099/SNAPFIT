@@ -28,7 +28,7 @@ public class ProductReview {
     private Long productId;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "user_idx", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "user_idx")
     private User user;
     
     @Column(name = "rating", nullable = false)
@@ -52,6 +52,12 @@ public class ProductReview {
     @Column(name = "status")
     @Builder.Default
     private ReviewStatus status = ReviewStatus.PUBLISHED;
+    
+    @Column(name = "anonymous_index")
+    private Integer anonymousIndex;
+    
+    @Column(name = "anonymous_password_hash")
+    private String anonymousPasswordHash;
     
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

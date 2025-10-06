@@ -6,8 +6,12 @@ import com.snapfit.api.dto.ProductInquiryDto;
 import com.snapfit.api.entity.ProductInquiry;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.service.ProductInquiryService;
+import com.snapfit.api.service.AnonymousUserService;
+import com.snapfit.api.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.util.StringUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +30,9 @@ import java.util.UUID;
 public class ProductInquiryController {
     
     private final ProductInquiryService inquiryService;
+    private final AnonymousUserService anonymousUserService;
+    private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
     
     /**
      * 문의 작성
@@ -33,18 +40,96 @@ public class ProductInquiryController {
     @PostMapping
     public ResponseEntity<ProductInquiryDto> createInquiry(
             @PathVariable Long productId,
-            @Valid @RequestBody CreateInquiryRequest request) {
-        
-        // 개발 환경에서는 하드코딩된 사용자 ID 사용
-        UUID userId = UUID.fromString("87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
+            @Valid @RequestBody CreateInquiryRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String clientIp,
+            @RequestHeader(value = "X-Real-IP", required = false) String realIp) {
         
         try {
-            ProductInquiryDto inquiry = inquiryService.createInquiry(userId, productId, request);
+            UUID userId = null;
+            String anonymousPasswordHash = null;
+            Integer anonymousIndex = null;
+            
+            // JWT 토큰으로 인증된 사용자 조회
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    if (email != null) {
+                        userId = UUID.fromString("87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
+                        log.info("인증된 사용자 문의 작성: email={}", email);
+                    }
+                } catch (Exception e) {
+                    log.warn("JWT 토큰 파싱 실패: {}", e.getMessage());
+                }
+            }
+            
+            // 익명 사용자인 경우 비밀번호 검증
+            if (userId == null) {
+                String anonymousPassword = request.getAnonymousPassword();
+                if (!StringUtils.hasText(anonymousPassword) || anonymousPassword.trim().length() < 4) {
+                    return ResponseEntity.badRequest().build();
+                }
+                anonymousPasswordHash = passwordEncoder.encode(anonymousPassword.trim());
+                
+                String userIdentifier = getClientIp(clientIp, realIp);
+                anonymousIndex = anonymousUserService.getOrAssignAnonymousIndex(productId, userIdentifier);
+                log.info("익명 사용자 문의 작성: productId={}, userIdentifier={}, anonymousIndex={}", productId, userIdentifier, anonymousIndex);
+            }
+            
+            ProductInquiryDto inquiry = inquiryService.createInquiry(userId, productId, request, anonymousPasswordHash, anonymousIndex);
             return ResponseEntity.ok(inquiry);
         } catch (RuntimeException e) {
             log.warn("문의 작성 실패: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
+    }
+    
+    /**
+     * 문의 삭제
+     */
+    @DeleteMapping("/{inquiryId}")
+    public ResponseEntity<Void> deleteInquiry(
+            @PathVariable Long productId,
+            @PathVariable Long inquiryId,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "password", required = false) String password) {
+        
+        try {
+            UUID userId = null;
+            
+            // JWT 토큰으로 인증된 사용자 조회
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                try {
+                    String token = authHeader.substring(7);
+                    String email = jwtUtil.getSubjectFromToken(token);
+                    if (email != null) {
+                        userId = UUID.fromString("87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
+                    }
+                } catch (Exception e) {
+                    log.warn("JWT 토큰 파싱 실패: {}", e.getMessage());
+                }
+            }
+            
+            inquiryService.deleteInquiry(inquiryId, userId, password);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            log.warn("문의 삭제 실패: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    /**
+     * 클라이언트 IP 주소 추출
+     */
+    private String getClientIp(String forwardedFor, String realIp) {
+        if (forwardedFor != null && !forwardedFor.isEmpty()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        if (realIp != null && !realIp.isEmpty()) {
+            return realIp;
+        }
+        return "unknown";
     }
     
     /**
@@ -152,23 +237,4 @@ public class ProductInquiryController {
         }
     }
     
-    /**
-     * 문의 삭제
-     */
-    @DeleteMapping("/{inquiryId}")
-    public ResponseEntity<Void> deleteInquiry(
-            @PathVariable Long productId,
-            @PathVariable Long inquiryId) {
-        
-        // 개발 환경에서는 하드코딩된 사용자 ID 사용
-        UUID userId = UUID.fromString("87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
-        
-        try {
-            inquiryService.deleteInquiry(inquiryId, userId);
-            return ResponseEntity.noContent().build();
-        } catch (RuntimeException e) {
-            log.warn("문의 삭제 실패: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
-    }
 }
