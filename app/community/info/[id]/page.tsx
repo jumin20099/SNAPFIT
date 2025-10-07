@@ -32,6 +32,7 @@ export default function InfoDetailPage({}: InfoDetailProps) {
   const [isUnrecommended, setIsUnrecommended] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [hasIncrementedView, setHasIncrementedView] = useState(false)
 
   // 배치 상태 조회를 통해 추천/비추천 상태 확인
   const postId = post?.postId || Number(params.id)
@@ -276,8 +277,16 @@ export default function InfoDetailPage({}: InfoDetailProps) {
     }
   }
 
-  // 조회수 증가 함수
+  // 조회수 증가 함수 (중복 호출 방지)
   const incrementViewCount = useCallback(async (postId: number) => {
+    // 중복 호출 방지
+    if (hasIncrementedView) {
+      console.log('조회수 증가 중복 호출 방지')
+      return
+    }
+    
+    setHasIncrementedView(true)
+    
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
       const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/view`, {
@@ -301,7 +310,7 @@ export default function InfoDetailPage({}: InfoDetailProps) {
     } catch (error) {
       console.error('조회수 증가 오류:', error)
     }
-  }, [])
+  }, [hasIncrementedView])
 
   useEffect(() => {
     if (params.id) {
