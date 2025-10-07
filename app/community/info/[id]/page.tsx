@@ -367,7 +367,7 @@ export default function InfoDetailPage({}: InfoDetailProps) {
               </h1>
               <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
                 <span>
-                  {post.anonymousIndex ? `익명${post.anonymousIndex}` : (post.author?.nickname || '알 수 없음')}
+                  {post.authorName || '알 수 없음'}
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
@@ -375,7 +375,7 @@ export default function InfoDetailPage({}: InfoDetailProps) {
                 </span>
                 <span className="flex items-center gap-1">
                   <Eye className="w-4 h-4" />
-                  {post.viewCount}
+                  {post.viewCount || 0}
                 </span>
               </div>
             </div>
