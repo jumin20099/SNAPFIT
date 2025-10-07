@@ -22,7 +22,11 @@
     "generate:api:local": "openapi-generator-cli generate -i http://localhost:8080/v3/api-docs -g typescript-fetch -o src/generated/api --additional-properties=supportsES6=true,typescriptThreePlus=true",
     "generate:api:prod": "openapi-generator-cli generate -i https://api.snapfit.app/v3/api-docs -g typescript-fetch -o src/generated/api --additional-properties=supportsES6=true,typescriptThreePlus=true",
     "dev:start": "./scripts/dev-start.sh",
-    "dev:full": "concurrently \"npm run dev:start\" \"npm run test:watch\""
+    "dev:full": "concurrently \"npm run dev:start\" \"npm run test:watch\"",
+    "test:api": "node scripts/api-test.js",
+    "test:seed": "node scripts/seed-test-data.js",
+    "test:all": "node scripts/run-all-tests.js",
+    "test:auto": "npm run test:seed && npm run test:api && npm run test:e2e"
   },
   "proxy": "http://localhost:8080",
   "dependencies": {
@@ -42,6 +46,7 @@
     "@tanstack/react-query": "^5.85.8",
     "@tanstack/react-query-devtools": "^5.85.8",
     "@tanstack/react-virtual": "^3.13.12",
+    "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.12",

@@ -15,7 +15,13 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '<rootDir>/.next/', 
     '<rootDir>/node_modules/',
-    '<rootDir>/tests/e2e/', // E2E 테스트는 Playwright에서 실행
+    '<rootDir>/e2e-tests/', // E2E 테스트는 Playwright에서 실행
+    '<rootDir>/scripts/', // 스크립트 파일 제외
+    '<rootDir>/playwright.config.js', // Playwright 설정 파일 제외
+  ],
+  testMatch: [
+    '<rootDir>/src/**/__tests__/**/*.{js,jsx,ts,tsx}',
+    '<rootDir>/src/**/*.{test,spec}.{js,jsx,ts,tsx}'
   ],
   collectCoverageFrom: [
     'src/**/*.{js,jsx,ts,tsx}',
