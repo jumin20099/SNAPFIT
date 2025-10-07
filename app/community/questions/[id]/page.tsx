@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,7 +32,7 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
   const [isUnrecommended, setIsUnrecommended] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [hasIncrementedView, setHasIncrementedView] = useState(false)
+  const hasIncrementedView = useRef<Set<number>>(new Set())
 
   // 배치 상태 조회를 통해 추천/비추천 상태 확인
   const postId = post?.postId || Number(params.id)
@@ -277,15 +277,15 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
     }
   }
 
-  // 조회수 증가 함수 (중복 호출 방지)
+  // 조회수 증가 함수 (Redis 기반 - 원자적 연산)
   const incrementViewCount = useCallback(async (postId: number) => {
     // 중복 호출 방지
-    if (hasIncrementedView) {
-      console.log('조회수 증가 중복 호출 방지')
+    if (hasIncrementedView.current.has(postId)) {
+      console.log('조회수 중복 호출 방지')
       return
     }
     
-    setHasIncrementedView(true)
+    hasIncrementedView.current.add(postId)
     
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
@@ -306,11 +306,15 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
         console.log('조회수 증가 성공:', newViewCount)
       } else {
         console.error('조회수 증가 실패:', response.status)
+        // 실패 시 Set에서 제거하여 재시도 가능하게 함
+        hasIncrementedView.current.delete(postId)
       }
     } catch (error) {
       console.error('조회수 증가 오류:', error)
+      // 실패 시 Set에서 제거하여 재시도 가능하게 함
+      hasIncrementedView.current.delete(postId)
     }
-  }, [hasIncrementedView])
+  }, [])
 
   useEffect(() => {
     if (params.id) {

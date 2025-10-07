@@ -6,3 +6,4 @@ ALTER TABLE comment_likes ADD COLUMN anonymous_password_hash VARCHAR(255);
 -- 익명 좋아요를 위한 유니크 제약조건 추가
 ALTER TABLE comment_likes ADD CONSTRAINT uk_comment_likes_anonymous 
 UNIQUE (comment_id, anonymous_index);
+
