@@ -156,7 +156,7 @@ export function useAuth() {
   /**
    * 토큰 갱신
    */
-  const refreshToken = useCallback(async () => {
+  const refreshTokenFunction = useCallback(async () => {
     try {
       const newAccessToken = await tokenManager.refreshAccessToken();
       return { success: true, accessToken: newAccessToken };
@@ -188,7 +188,7 @@ export function useAuth() {
       if (tokenManager.isRefreshTokenValid()) {
         // Access Token이 만료되었지만 Refresh Token이 유효한 경우
         try {
-          await refreshToken();
+          await refreshTokenFunction();
           await fetchCurrentUser();
         } catch (error) {
           console.error('토큰 갱신 및 사용자 정보 조회 실패:', error);
@@ -213,7 +213,7 @@ export function useAuth() {
       // Access Token이 유효한 경우
       await fetchCurrentUser();
     }
-  }, [tokenManager, refreshToken, fetchCurrentUser]);
+  }, [tokenManager, refreshTokenFunction, fetchCurrentUser]);
 
   /**
    * 컴포넌트 마운트 시 인증 상태 초기화
@@ -230,7 +230,7 @@ export function useAuth() {
 
     const checkTokenExpiry = () => {
       if (tokenManager.shouldRefreshToken()) {
-        refreshToken();
+        refreshTokenFunction();
       }
     };
 
@@ -238,13 +238,13 @@ export function useAuth() {
     const interval = setInterval(checkTokenExpiry, 60000);
     
     return () => clearInterval(interval);
-  }, [authState.isAuthenticated, tokenManager, refreshToken]);
+  }, [authState.isAuthenticated, tokenManager, refreshTokenFunction]);
 
   return {
     ...authState,
     login,
     logout,
-    refreshToken,
+    refreshToken: refreshTokenFunction,
     initializeAuth,
   };
 }

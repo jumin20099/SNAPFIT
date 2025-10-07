@@ -136,8 +136,29 @@ export interface Post {
   authorProfileImage?: string;
   isLiked?: boolean;
   isScrapped?: boolean;
-  tags?: Tag[];
+  tags?: string[];
   outfitId?: number;
+  // CommunityFeed에서 사용하는 추가 속성들
+  authorHeightCm?: number | null;
+  authorWeightKg?: number | string | null;
+  codyData?: {
+    name: string;
+    items: Array<{
+      productId: number;
+      src: string;
+      nx: number;
+      ny: number;
+      rotation: number;
+      z: number;
+      scale: number;
+    }>;
+    background: {
+      type: string;
+      selectedBackground: string;
+      customColor: string;
+    };
+    timestamp: number;
+  };
 }
 
 // 태그 타입
@@ -184,6 +205,10 @@ export interface ReactionStatusItem {
   likeCount: number;
   scraped?: boolean;
   scrapCount?: number;
+  recommended?: boolean;
+  unrecommended?: boolean;
+  recommendCount?: number;
+  unrecommendCount?: number;
 }
 
 export type BatchReactionStatusKeys = 

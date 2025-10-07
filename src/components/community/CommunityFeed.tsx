@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useInfinitePosts } from '@/hooks/useInfinitePosts'
+import { Post as SharedPost } from '@/shared/types'
 import dynamic from 'next/dynamic'
 const DynamicLikeButton = dynamic(async () => {
   const mod = await import('@/features/reactions/LikeButton')
@@ -27,46 +28,7 @@ interface CommunityFeedProps {
   currentUserId?: number
 }
 
-interface Post {
-  postId: number
-  content: string
-  authorName: string
-  authorId?: number
-  anonymousIndex?: number | null
-  authorProfileImage?: string
-  createdAt: string
-  likeCount: number
-  commentCount: number
-  scrapCount: number
-  viewCount: number
-  recommendCount?: number
-  boardType?: 'OUTFIT' | 'QUESTION' | 'INFO'
-  isLiked?: boolean
-  isScrapped?: boolean
-  mediaUrls?: string[]
-  tags?: string[]
-  outfitId?: number
-  authorHeightCm?: number | null
-  authorWeightKg?: number | string | null
-  codyData?: {
-    name: string
-    items: Array<{
-      productId: number
-      src: string
-      nx: number
-      ny: number
-      rotation: number
-      z: number
-      scale: number
-    }>
-    background: {
-      type: string
-      selectedBackground: string
-      customColor: string
-    }
-    timestamp: number
-  }
-}
+// Post 타입은 src/shared/types/index.ts에서 import
 
 const logScrollDebug = (...args: unknown[]) => {
   if (process.env.NODE_ENV !== 'development') return
@@ -262,7 +224,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
       result = result.filter(
         post =>
           post.content.toLowerCase().includes(lower) ||
-          post.authorName.toLowerCase().includes(lower) ||
+          post.authorName?.toLowerCase().includes(lower) ||
           post.tags?.some(tag => tag.toLowerCase().includes(lower))
       )
     }
@@ -341,7 +303,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
     return (
       <div className="grid grid-cols-2 gap-2">
         {filteredPosts.map((post, index) => {
-          const status = reactionManager.getPostStatus(post.postId)
+          const status = reactionManager.getPostStatus(post.postId || 0)
           const liked = status?.liked ?? post.isLiked ?? false
           const likeCount = status?.likeCount ?? post.likeCount ?? 0
           logReactionDebug('renderPost', {
@@ -351,7 +313,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
             status,
             fallbackLiked: post.isLiked,
             fallbackLikeCount: post.likeCount,
-            override: reactionManager.getPostStatus(post.postId) && reactionManager.getPostStatus(post.postId)?.liked !== undefined,
+            override: reactionManager.getPostStatus(post.postId || 0) && reactionManager.getPostStatus(post.postId || 0)?.liked !== undefined,
             reactionStatusRaw: status
           })
           return (
@@ -361,8 +323,8 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
               post={post}
               liked={liked}
               likeCount={likeCount}
-              onClick={() => handleCardClick(post.postId)}
-              onToggleSuccess={(payload) => handleLikeSuccess(post.postId, payload)}
+              onClick={() => handleCardClick(post.postId || 0)}
+              onToggleSuccess={(payload) => handleLikeSuccess(post.postId || 0, payload)}
             />
           )
         })}
@@ -387,8 +349,8 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
     // 게시글 작성자 매핑 생성
     const postAuthors = filteredPosts.reduce((acc, post) => {
-      if (post.authorId) {
-        acc[post.postId] = post.authorId
+      if (post.authorId && post.postId) {
+        acc[post.postId] = typeof post.authorId === 'string' ? parseInt(post.authorId) : post.authorId
       }
       return acc
     }, {} as Record<number, number>)
@@ -396,8 +358,9 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
     return (
       <PostTableList
         posts={filteredPosts.map((post, index) => ({
-          postId: post.postId,
+          postId: post.postId || 0,
           title: post.title || post.content,
+          content: post.content,
           authorName: post.authorName,
           anonymousIndex: post.anonymousIndex ?? null,
           createdAt: post.createdAt,
@@ -454,7 +417,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
 }
 
 interface PostCardProps {
-  post: Post
+  post: SharedPost
   liked: boolean
   likeCount: number
   listIndex: number
@@ -511,7 +474,7 @@ const PostCard = React.memo(({ post, liked, likeCount, listIndex, onToggleSucces
 
       <div className="absolute top-2 right-2" onClick={event => event.stopPropagation()}>
         <DynamicLikeButton
-          targetIdx={post.postId}
+          targetIdx={post.postId || 0}
           targetType="post"
           initialActive={liked}
           initialCount={likeCount}

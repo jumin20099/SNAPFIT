@@ -453,7 +453,7 @@ export default function PostDetailPage() {
           const status = reactionManager.getPostStatus(post.postId);
           
           return {
-            postId: post.postId,
+            postId: post.postId || 0,
             title: post.title || "",
             content: post.content,
             authorName: post.authorName || "익명",
@@ -801,11 +801,11 @@ export default function PostDetailPage() {
           const commentsData = await response.json()
           // 게시글 댓글 데이터
           const transformedComments = commentsData.map(transformComment)
-          return { postId: post.postId, comments: transformedComments }
+          return { postId: post.postId || 0, comments: transformedComments }
         } else {
           console.error(`댓글 API 실패: ${post.postId}`, response.status, response.statusText)
         }
-        return { postId: post.postId, comments: [] }
+        return { postId: post.postId || 0, comments: [] }
       })
       
       const results = await Promise.all(commentPromises)
@@ -1265,7 +1265,7 @@ export default function PostDetailPage() {
                 </div>
                 {(isOwner || isAnonymousAuthor) && (
                   <PostActionMenu
-                    postId={post.postId}
+                    postId={post.postId || 0}
                     isOwner={isOwner || isAnonymousAuthor}
                     onEdit={handleEditPost}
                     onDelete={(postId) => handleDeletePost(postId, isAnonymousAuthor)}
@@ -1375,7 +1375,7 @@ export default function PostDetailPage() {
                 </span>
                 <div className="ml-auto">
                   <ScrapButton
-                    postId={post.postId}
+                    postId={post.postId || 0}
                     initialActive={post.scraped || false}
                     initialCount={post.scrapCount}
                     className="p-2"
@@ -1457,7 +1457,7 @@ export default function PostDetailPage() {
             </div>
 
             {/* Comments Section */}
-            <CommentsSection postId={post.postId} boardType="QUESTION" />
+            <CommentsSection postId={post.postId || 0} boardType="QUESTION" />
           </div>
         )})}
         

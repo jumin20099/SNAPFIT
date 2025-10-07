@@ -386,7 +386,7 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
                 공유
               </Button>
               <PostActionMenu
-                postId={post.postId}
+                postId={post.postId || 0}
                 isOwner={true}
                 onEdit={() => setShowEditModal(true)}
                 onDelete={() => setShowDeleteModal(true)}
@@ -468,7 +468,7 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
         {/* 댓글 섹션 */}
         {post && (
           <CommentsSection
-            postId={post.postId}
+            postId={post.postId || 0}
             boardType="QUESTION"
           />
         )}
@@ -497,7 +497,7 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
             ) : relatedPosts.length > 0 ? (
               <PostTableList
                 posts={relatedPosts.map((post, index) => ({
-                  postId: post.postId,
+                  postId: post.postId || 0,
                   title: post.title || post.content,
                   authorName: post.authorName,
                   anonymousIndex: post.anonymousIndex ?? null,

@@ -1,35 +1,14 @@
 "use client"
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus';
-import type { ReactionStatusItem } from '@/shared/types';
+import type { ReactionStatusItem, Post as SharedPost } from '@/shared/types';
 import type { BatchReactionStatusManager } from '@/shared/utils/batch-reaction-utils';
 import ApiClient from '@/shared/utils/api-client';
 
-interface Post {
-  postId: number;
-  title: string;
-  content: string;
-  tags: string[];
-  mediaUrls: string[];
-  authorId: string;
-  authorName: string;
-  authorProfileImage: string;
-  likeCount: number;
-  scrapCount: number;
-  commentCount: number;
-  viewCount: number;
-  recommendCount: number;
-  unrecommendCount: number;
-  boardType: 'OUTFIT' | 'QUESTION' | 'INFO';
-  anonymousIndex?: number;
-  createdAt: string;
-  updatedAt: string;
-  isLiked: boolean;
-  isScrapped: boolean;
-}
+// Post 타입은 src/shared/types/index.ts에서 import
 
 interface PostsResponse {
-  content: Post[];
+  content: SharedPost[];
   totalElements: number;
   totalPages: number;
   size: number;
@@ -47,7 +26,7 @@ interface UseInfinitePostsOptions {
 }
 
 interface UseInfinitePostsReturn {
-  posts: Post[];
+  posts: SharedPost[];
   loading: boolean;
   error: string | null;
   hasMore: boolean;
@@ -67,7 +46,7 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
     console.log('[community:reaction:hook]', ...args);
   };
 
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<SharedPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -80,15 +59,15 @@ export function useInfinitePosts(options: UseInfinitePostsOptions = {}): UseInfi
   const reactionOverridesRef = useRef<Record<number, Partial<ReactionStatusItem>>>({});
 
   // 배치 상태 조회 훅
-  const postIds = posts.map(p => p.postId)
+  const postIds = posts.map(p => p.postId).filter((id): id is number => id !== undefined)
   const { data: batchReactionStatus, manager: reactionManager } = useBatchReactionStatus({
     postIds,
     enabled: postIds.length > 0
   });
 
-  const applyReactionState = useCallback((post: Post): Post => {
-    const override = reactionOverridesRef.current[post.postId] || {};
-    const status = reactionManager.getPostStatus(post.postId);
+  const applyReactionState = useCallback((post: SharedPost): SharedPost => {
+    const override = reactionOverridesRef.current[post.postId || 0] || {};
+    const status = reactionManager.getPostStatus(post.postId || 0);
 
     const liked = override.liked ?? status?.liked ?? post.isLiked ?? false;
     const likeCount = override.likeCount ?? status?.likeCount ?? post.likeCount ?? 0;

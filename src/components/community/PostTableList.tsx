@@ -6,6 +6,7 @@ import { PostActionMenu } from '@/components/ui/PostActionMenu'
 interface PostTableItem {
   postId: number
   title?: string | null
+  content?: string | null
   authorName?: string | null
   anonymousIndex?: number | null
   createdAt?: string | null
