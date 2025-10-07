@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -276,12 +276,45 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
     }
   }
 
+  // 조회수 증가 함수
+  const incrementViewCount = useCallback(async (postId: number) => {
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
+      const response = await fetch(`${API_BASE_URL}/api/posts/${postId}/view`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        const newViewCount = data.viewCount || 0
+        
+        // 상태 업데이트
+        setPost(prev => prev ? { ...prev, viewCount: newViewCount } : null)
+        console.log('조회수 증가 성공:', newViewCount)
+      } else {
+        console.error('조회수 증가 실패:', response.status)
+      }
+    } catch (error) {
+      console.error('조회수 증가 오류:', error)
+    }
+  }, [])
+
   useEffect(() => {
     if (params.id) {
       fetchPost()
       fetchRelatedPosts()
+      
+      // 조회수 증가 (게시글 로드 후)
+      const postId = Number(params.id)
+      if (postId) {
+        incrementViewCount(postId)
+      }
     }
-  }, [params.id])
+  }, [params.id, incrementViewCount])
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '-'

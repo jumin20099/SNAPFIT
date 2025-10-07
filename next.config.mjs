@@ -26,11 +26,17 @@ const nextConfig = {
         fs: false,
       };
     }
+    
+    // @tanstack/react-query 모듈 해석 문제 해결
+    config.resolve.alias = {
+      ...config.resolve.alias,
+    };
+    
     return config;
   },
   // 실험적 기능
   experimental: {
-    optimizePackageImports: ['@tanstack/react-query', 'lucide-react'],
+    // optimizePackageImports: ['@tanstack/react-query', 'lucide-react'], // 임시 비활성화
   },
   async rewrites() {
     // 프로덕션에서는 환경변수 사용, 개발에서는 localhost 사용
