@@ -13,7 +13,8 @@ export default function LoginPage() {
     setIsLoading(true)
     try {
       // 백엔드의 OAuth2 엔드포인트로 리다이렉트
-      window.location.href = 'http://localhost:8080/oauth2/authorization/kakao'
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
+      window.location.href = `${backendUrl}/oauth2/authorization/kakao`
     } catch (error) {
       console.error('카카오 로그인 실패:', error)
       alert('카카오 로그인에 실패했습니다. 다시 시도해주세요.')

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         client_id: process.env.KAKAO_CLIENT_ID || '',
         client_secret: process.env.KAKAO_CLIENT_SECRET || '',
         code: code,
-        redirect_uri: process.env.KAKAO_REDIRECT_URI || 'http://localhost:3000/auth/kakao/callback',
+        redirect_uri: process.env.KAKAO_REDIRECT_URI || `${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000'}/auth/kakao/callback`,
       }),
     })
 
