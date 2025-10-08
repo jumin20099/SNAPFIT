@@ -95,6 +95,12 @@ export default function InfoDetailPage({}: InfoDetailProps) {
       if (response.ok) {
         const data = await response.json()
         setPost(data)
+        
+        // 게시글 로드 완료 후 조회수 증가
+        const postId = Number(params.id)
+        if (postId) {
+          incrementViewCount(postId)
+        }
       } else if (response.status === 404) {
         toast.error('게시글을 찾을 수 없습니다.')
         router.push('/community/info')
@@ -320,14 +326,8 @@ export default function InfoDetailPage({}: InfoDetailProps) {
     if (params.id) {
       fetchPost()
       fetchRelatedPosts()
-      
-      // 조회수 증가 (게시글 로드 후)
-      const postId = Number(params.id)
-      if (postId) {
-        incrementViewCount(postId)
-      }
     }
-  }, [params.id, incrementViewCount])
+  }, [params.id])
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '-'
