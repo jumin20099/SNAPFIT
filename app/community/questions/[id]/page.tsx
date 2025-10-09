@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ThumbsUp, ThumbsDown, Eye, MessageCircle, Calendar, ArrowLeft, Share2, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
+import { ThumbsUp, ThumbsDown, Eye, MessageCircle, Calendar, ArrowLeft, Share2, MoreHorizontal, Edit, Trash2, User } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
 import { Post } from '@/shared/types'
@@ -322,6 +322,45 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
     }
   }, [])
 
+  // 프로필 버튼 클릭 핸들러
+  const handleProfileClick = () => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      alert('로그인 후 사용 가능합니다.')
+      return
+    }
+    
+    // 토큰이 있으면 사용자 정보를 가져와서 프로필 페이지로 이동
+    fetchUserProfile()
+  }
+
+  // 사용자 프로필 정보 가져오기
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch('/api/user/info', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      
+      if (response.ok) {
+        const userData = await response.json()
+        const userId = userData.userIdx || userData.id
+        if (userId) {
+          router.push(`/profile/${userId}`)
+        } else {
+          alert('사용자 정보를 가져올 수 없습니다.')
+        }
+      } else {
+        alert('로그인 후 사용 가능합니다.')
+      }
+    } catch (error) {
+      console.error('사용자 정보 조회 실패:', error)
+      alert('로그인 후 사용 가능합니다.')
+    }
+  }
+
   useEffect(() => {
     if (params.id) {
       fetchPost()
@@ -430,6 +469,9 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
               <Button variant="outline" size="sm" onClick={handleShare}>
                 <Share2 className="w-4 h-4 mr-2" />
                 공유
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleProfileClick}>
+                <User className="w-5 h-5" />
               </Button>
               <PostActionMenu
                 postId={post.postId || 0}
