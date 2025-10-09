@@ -449,10 +449,20 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={post.authorProfileImage} />
-                  <AvatarFallback>{post.authorName?.charAt(0) || '?'}</AvatarFallback>
-                </Avatar>
+                <button
+                  onClick={() => {
+                    if (post.authorId && post.authorId !== 'anonymous') {
+                      router.push(`/profile/${post.authorId}`)
+                    }
+                  }}
+                  disabled={!post.authorId || post.authorId === 'anonymous'}
+                  className="hover:opacity-80 transition-opacity disabled:cursor-default"
+                >
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src={post.authorProfileImage} />
+                    <AvatarFallback>{post.authorName?.charAt(0) || '?'}</AvatarFallback>
+                  </Avatar>
+                </button>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                     {post.title || '제목 없음'}
