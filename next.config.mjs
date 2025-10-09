@@ -27,11 +27,6 @@ const nextConfig = {
       };
     }
     
-    // @tanstack/react-query 모듈 해석 문제 해결
-    config.resolve.alias = {
-      ...config.resolve.alias,
-    };
-    
     return config;
   },
   // 실험적 기능

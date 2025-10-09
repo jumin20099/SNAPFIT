@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ThumbsUp, ThumbsDown, Eye, MessageCircle, Calendar, ArrowLeft, Share2, MoreHorizontal, Edit, Trash2, User } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
@@ -446,22 +447,38 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
           </Button>
           
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {post.title || '제목 없음'}
-              </h1>
-              <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
-                <span>
-                  {post.authorName || '알 수 없음'}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" />
-                  {formatDate(post.createdAt)}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Eye className="w-4 h-4" />
-                  {post.viewCount || 0}
-                </span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={post.authorProfileImage} />
+                  <AvatarFallback>{post.authorName?.charAt(0) || '?'}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {post.title || '제목 없음'}
+                  </h1>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    <button 
+                      onClick={() => {
+                        if (post.authorId && post.authorId !== 'anonymous') {
+                          router.push(`/profile/${post.authorId}`)
+                        }
+                      }}
+                      className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                      disabled={!post.authorId || post.authorId === 'anonymous'}
+                    >
+                      {post.authorName || '알 수 없음'}
+                    </button>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-4 h-4" />
+                      {formatDate(post.createdAt)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Eye className="w-4 h-4" />
+                      {post.viewCount || 0}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
             
