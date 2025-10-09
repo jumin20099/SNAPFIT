@@ -612,7 +612,7 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
             ) : relatedPosts.length > 0 ? (
               <PostTableList
                 posts={relatedPosts
-                  .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) // 최신순 정렬
                   .map((post, index) => ({
                     postId: post.postId || 0,
                     title: post.title || post.content,
@@ -621,7 +621,7 @@ export default function QuestionDetailPage({}: QuestionDetailProps) {
                     createdAt: post.createdAt,
                     viewCount: post.viewCount,
                     recommendCount: post.recommendCount ?? post.likeCount ?? 0,
-                    order: index + 1, // 가장 오래된 게시글이 1번
+                    order: relatedPosts.length - index, // 1번이 맨 아래 (역순 인덱스)
                     thumbnailUrl: post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls[0] : null,
                     categoryLabel: '질문',
                   }))}

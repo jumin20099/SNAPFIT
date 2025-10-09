@@ -358,11 +358,11 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
       return acc
     }, {} as Record<number, number>)
 
-    // 게시글을 오래된 순으로 정렬 (가장 오래된 게시글이 1번이 되도록)
+    // 게시글을 최신순으로 정렬하되, 인덱스는 오래된 순으로 부여 (1번이 맨 아래)
     const sortedPosts = [...filteredPosts].sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime()
       const dateB = new Date(b.createdAt).getTime()
-      return dateA - dateB // 오래된 순으로 정렬
+      return dateB - dateA // 최신순으로 정렬 (최신 게시글이 상단)
     })
 
     return (
@@ -376,7 +376,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
           createdAt: post.createdAt,
           viewCount: post.viewCount,
           recommendCount: post.recommendCount ?? post.likeCount ?? 0,
-          order: index + 1, // 가장 오래된 게시글이 1번
+          order: sortedPosts.length - index, // 1번이 맨 아래 (역순 인덱스)
           thumbnailUrl: post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls[0] : null,
           categoryLabel: post.boardType === 'QUESTION' ? '질문' : post.boardType === 'INFO' ? '정보' : post.tags?.[0] ?? null,
         }))}
