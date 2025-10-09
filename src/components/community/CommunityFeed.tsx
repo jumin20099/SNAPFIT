@@ -236,6 +236,9 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
     }
     // 인기/트렌딩 정렬은 백엔드 결과를 그대로 유지해 좋아요 토글 시 즉시 재정렬되지 않도록 함
 
+    // 인덱스 번호를 위해 오래된 순서로 정렬 (가장 오래된 게시글이 1번)
+    result.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+
     return result
   }, [posts, searchTerm, activeTab, sortBy])
 
@@ -355,9 +358,16 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
       return acc
     }, {} as Record<number, number>)
 
+    // 게시글을 오래된 순으로 정렬 (가장 오래된 게시글이 1번이 되도록)
+    const sortedPosts = [...filteredPosts].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime()
+      const dateB = new Date(b.createdAt).getTime()
+      return dateA - dateB // 오래된 순으로 정렬
+    })
+
     return (
       <PostTableList
-        posts={filteredPosts.map((post, index) => ({
+        posts={sortedPosts.map((post, index) => ({
           postId: post.postId || 0,
           title: post.title || post.content,
           content: post.content,
@@ -366,7 +376,7 @@ const CommunityFeed: React.FC<CommunityFeedProps> = ({
           createdAt: post.createdAt,
           viewCount: post.viewCount,
           recommendCount: post.recommendCount ?? post.likeCount ?? 0,
-          order: index + 1,
+          order: index + 1, // 가장 오래된 게시글이 1번
           thumbnailUrl: post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls[0] : null,
           categoryLabel: post.boardType === 'QUESTION' ? '질문' : post.boardType === 'INFO' ? '정보' : post.tags?.[0] ?? null,
         }))}

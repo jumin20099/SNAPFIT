@@ -611,18 +611,20 @@ export default function InfoDetailPage({}: InfoDetailProps) {
               </div>
             ) : relatedPosts.length > 0 ? (
               <PostTableList
-                posts={relatedPosts.map((post, index) => ({
-                  postId: post.postId || 0,
-                  title: post.title || post.content,
-                  authorName: post.authorName,
-                  anonymousIndex: post.anonymousIndex ?? null,
-                  createdAt: post.createdAt,
-                  viewCount: post.viewCount,
-                  recommendCount: post.recommendCount ?? post.likeCount ?? 0,
-                  order: index + 1,
-                  thumbnailUrl: post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls[0] : null,
-                  categoryLabel: '정보',
-                }))}
+                posts={relatedPosts
+                  .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                  .map((post, index) => ({
+                    postId: post.postId || 0,
+                    title: post.title || post.content,
+                    authorName: post.authorName,
+                    anonymousIndex: post.anonymousIndex ?? null,
+                    createdAt: post.createdAt,
+                    viewCount: post.viewCount,
+                    recommendCount: post.recommendCount ?? post.likeCount ?? 0,
+                    order: index + 1, // 가장 오래된 게시글이 1번
+                    thumbnailUrl: post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls[0] : null,
+                    categoryLabel: '정보',
+                  }))}
                 onSelect={(postId) => router.push(`/community/info/${postId}`)}
               />
             ) : (
