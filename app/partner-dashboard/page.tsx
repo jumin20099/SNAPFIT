@@ -42,13 +42,9 @@ export default function PartnerDashboardPage() {
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const token = localStorage.getItem('token')
-        if (token) {
-          const response = await fetch('/api/user/info', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
+        const response = await fetch('/api/user/info', {
+          credentials: 'include' // HttpOnly 쿠키 자동 전송
+        })
           if (response.ok) {
             const data = await response.json()
             setUserInfo(data)

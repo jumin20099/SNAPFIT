@@ -37,17 +37,12 @@ export const useProfile = () => {
   const updateProfile = useCallback(async (updateData: ProfileUpdateRequest): Promise<ProfileUpdateResponse> => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('로그인이 필요합니다');
-      }
-
       const response = await fetch('/api/user/profile', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify(updateData),
       });
 
@@ -68,11 +63,6 @@ export const useProfile = () => {
     setUploadProgress(0);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('로그인이 필요합니다');
-      }
-
       // 파일 크기 검사 (클라이언트 사이드)
       if (file.size > 5 * 1024 * 1024) {
         throw new Error('파일 크기는 5MB 이하여야 합니다');
@@ -89,9 +79,7 @@ export const useProfile = () => {
       // 업로드 진행률 시뮬레이션 (실제로는 XMLHttpRequest 사용)
       const uploadPromise = fetch('/api/media/upload/profile', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: formData,
       });
 

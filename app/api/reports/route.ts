@@ -2,6 +2,35 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080'
 
+// CSRF 토큰 검증 함수
+async function validateCsrfToken(request: NextRequest): Promise<boolean> {
+  const csrfToken = request.headers.get('X-CSRF-TOKEN')
+  if (!csrfToken) {
+    return false
+  }
+
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/csrf/validate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
+      },
+      credentials: 'include',
+    })
+    
+    if (!response.ok) {
+      return false
+    }
+    
+    const result = await response.json()
+    return result.valid === true
+  } catch (error) {
+    console.error('CSRF 토큰 검증 실패:', error)
+    return false
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const scope = request.nextUrl.searchParams.get('scope')
@@ -51,6 +80,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // CSRF 토큰 검증
+    const isValidCsrf = await validateCsrfToken(request)
+    if (!isValidCsrf) {
+      return NextResponse.json(
+        { error: 'CSRF 토큰이 유효하지 않습니다' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const normalizedBody = {
       ...body,
