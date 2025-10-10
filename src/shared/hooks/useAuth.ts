@@ -51,10 +51,10 @@ export function useAuth() {
 
       const userData = await apiClient.get<User>('/api/auth/me');
       
-      // 토큰을 localStorage에 저장 (응답에 포함된 경우)
-      if (userData.accessToken && userData.refreshToken) {
-        tokenManager.setTokens(userData.accessToken, userData.refreshToken);
-      }
+      // HttpOnly 쿠키를 사용하므로 localStorage에 토큰 저장하지 않음
+      // if (userData.accessToken && userData.refreshToken) {
+      //   tokenManager.setTokens(userData.accessToken, userData.refreshToken);
+      // }
       
       setAuthState({
         user: userData,

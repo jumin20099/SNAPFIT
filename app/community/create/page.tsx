@@ -90,12 +90,12 @@ export default function CreatePostPage() {
             setImages([exportData.codyImage])
           }
           
-          // 데이터 사용 후 정리
-          localStorage.removeItem('cody-export-data')
+          // 데이터 사용 후 정리 (localStorage 사용하지 않음)
+          // localStorage.removeItem('cody-export-data')
         }
       } catch (error) {
         console.error('코디 데이터 로드 실패:', error)
-        localStorage.removeItem('cody-export-data')
+        // localStorage.removeItem('cody-export-data')
       }
     }
     

@@ -186,10 +186,11 @@ export default function PostDetailPage() {
       // 네트워크 오류 시 fallback (localStorage 사용하지 않음)
       console.log('네트워크 오류로 인한 조회수 증가 실패:', postId)
       
-      viewCounts[postId] = newViewCount
-      localStorage.setItem('postViewCounts', JSON.stringify(viewCounts))
+      // localStorage 사용하지 않음 (보안상 일관성 유지)
+      // viewCounts[postId] = newViewCount
+      // localStorage.setItem('postViewCounts', JSON.stringify(viewCounts))
       
-      console.log('localStorage fallback 조회수 증가:', postId, currentCount, '->', newViewCount)
+      console.log('네트워크 오류로 인한 조회수 증가 실패:', postId)
       
       setPosts(prev => prev.map(post => 
         post.postId === postId 
