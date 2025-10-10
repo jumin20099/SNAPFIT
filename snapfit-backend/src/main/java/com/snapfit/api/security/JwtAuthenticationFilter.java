@@ -58,41 +58,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String requestPath = request.getRequestURI();
         System.out.println("=== JWT 필터 요청 경로: " + requestPath + " ===");
         
-        // 헤더에서 토큰 확인
-        String header = request.getHeader("Authorization");
-        System.out.println("Authorization 헤더: " + header);
+        // 쿠키에서 access_token 확인 (우선순위)
         String token = null;
-        
-        if (header != null && header.startsWith("Bearer ") && header.length() > 7) {
-            token = header.substring(7);
-            if (token != null && !token.trim().isEmpty() && !"null".equals(token)) {
-                System.out.println("헤더에서 토큰 읽기 성공: " + (token.length() > 20 ? token.substring(0, 20) + "..." : token));
-            } else {
-                token = null;
-                System.out.println("토큰이 null이거나 비어있음");
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (jakarta.servlet.http.Cookie cookie : cookies) {
+                if ("access_token".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                    System.out.println("쿠키에서 access_token 읽기 성공");
+                    break;
+                }
             }
-        } else {
-            // 헤더에 토큰이 없으면 쿼리 파라미터에서 확인 (WebSocket 연결용)
+        }
+        
+        // 쿠키에 토큰이 없으면 Authorization 헤더에서 확인 (하위 호환성)
+        if (token == null) {
+            String header = request.getHeader("Authorization");
+            if (header != null && header.startsWith("Bearer ") && header.length() > 7) {
+                token = header.substring(7);
+                if (token != null && !token.trim().isEmpty() && !"null".equals(token)) {
+                    System.out.println("헤더에서 토큰 읽기 성공: " + (token.length() > 20 ? token.substring(0, 20) + "..." : token));
+                } else {
+                    token = null;
+                }
+            }
+        }
+        
+        // 헤더에도 토큰이 없으면 쿼리 파라미터에서 확인 (WebSocket 연결용)
+        if (token == null) {
             String queryToken = request.getParameter("token");
             if (queryToken != null && !queryToken.trim().isEmpty()) {
                 token = queryToken.trim();
                 System.out.println("쿼리 파라미터에서 토큰 읽기 성공");
-            } else {
-                // 쿼리 파라미터에도 토큰이 없으면 쿠키에서 확인
-                jakarta.servlet.http.Cookie[] cookies = request.getCookies();
-                System.out.println("쿠키 배열: " + (cookies != null ? cookies.length : "null"));
-                if (cookies != null) {
-                    for (jakarta.servlet.http.Cookie cookie : cookies) {
-                        if ("token".equals(cookie.getName())) {
-                            token = cookie.getValue();
-                            System.out.println("쿠키에서 토큰 읽기 성공");
-                            break;
-                        }
-                    }
-                }
-                if (token == null) {
-                    System.out.println("쿠키에서 토큰을 찾을 수 없음");
-                }
             }
         }
         

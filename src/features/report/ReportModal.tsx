@@ -58,12 +58,10 @@ export function ReportModal() {
       return
     }
     
-    // 신고 사유가 비어있을 때 경고 (선택사항이지만 권장)
+    // 신고 사유 필수 검증
     if (trimmedReason.length === 0) {
-      const confirmed = window.confirm('신고 사유를 입력하지 않으셨습니다. 그래도 제출하시겠습니까?')
-      if (!confirmed) {
-        return
-      }
+      setError('신고 사유를 입력해주세요')
+      return
     }
     
     const success = await createReport({

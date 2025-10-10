@@ -4,12 +4,7 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080'
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization')
     const scope = request.nextUrl.searchParams.get('scope')
-
-    if (!token) {
-      return NextResponse.json({ error: '인증이 필요합니다' }, { status: 401 })
-    }
 
     const path = scope === 'my' ? '/api/reports/my' : '/api/reports'
     const backendUrl = new URL(`${BACKEND_URL}${path}`)
@@ -19,12 +14,19 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // 쿠키를 백엔드로 전달
+    const cookies = request.headers.get('cookie')
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    
+    if (cookies) {
+      headers['Cookie'] = cookies
+    }
+
     const response = await fetch(backendUrl.toString(), {
       method: 'GET',
-      headers: {
-        'Authorization': token,
-        'Content-Type': 'application/json',
-      },
+      headers,
     })
 
     if (!response.ok) {
@@ -49,12 +51,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization')
-    
-    if (!token) {
-      return NextResponse.json({ error: '인증이 필요합니다' }, { status: 401 })
-    }
-
     const body = await request.json()
     const normalizedBody = {
       ...body,
@@ -62,12 +58,19 @@ export async function POST(request: NextRequest) {
       category: body.category ? String(body.category).toUpperCase() : body.category,
     }
 
+    // 쿠키를 백엔드로 전달
+    const cookies = request.headers.get('cookie')
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    
+    if (cookies) {
+      headers['Cookie'] = cookies
+    }
+
     const response = await fetch(`${BACKEND_URL}/api/reports`, {
       method: 'POST',
-      headers: {
-        'Authorization': token,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(normalizedBody),
     })
 

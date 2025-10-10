@@ -8,6 +8,7 @@ import com.snapfit.api.entity.User.Role;
 import com.snapfit.api.security.JwtUtil;
 import com.snapfit.api.security.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,7 +19,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "*")
+@CrossOrigin(
+    origins = {"http://localhost:3000", "https://snapfit.app", "https://www.snapfit.app"},
+    allowCredentials = "true",
+    allowedHeaders = {"*"},
+    methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS}
+)
 public class AdminController {
     
     @Autowired
@@ -67,11 +73,13 @@ public class AdminController {
     }
     
     /**
-     * 임시 사용자로 로그인 (테스트용)
+     * 임시 사용자로 로그인 (개발/테스트용)
      * 일반 사용자 권한으로 로그인하여 시스템 점검
+     * 운영 환경에서는 비활성화됩니다.
      */
     @PostMapping("/temp-login")
     @PreAuthorize("hasRole('ADMIN')")
+    @ConditionalOnProperty(name = "app.features.temp-login", havingValue = "true", matchIfMissing = false)
     public ResponseEntity<?> tempLogin(@AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
             // 임시 사용자 이메일

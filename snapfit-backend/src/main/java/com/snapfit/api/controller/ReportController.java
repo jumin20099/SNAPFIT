@@ -71,10 +71,12 @@ public class ReportController {
                 trimmedReason = null;
             }
             
-            // 신고 사유 검증 - null이거나 빈 문자열인 경우 경고 로그
+            // 신고 사유 검증 - 필수 입력값으로 강제
             if (trimmedReason == null || trimmedReason.trim().isEmpty()) {
                 log.warn("신고 사유가 비어있음: reporterId={}, targetType={}, targetId={}", 
                     reporterId, resolvedTargetType, resolvedTargetId);
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "신고 사유를 입력해주세요"));
             }
 
             Report.Category category = createRequest.resolveCategory();

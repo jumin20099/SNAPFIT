@@ -33,63 +33,48 @@ class TokenManager {
   }
 
   /**
-   * Access Token을 localStorage에서 가져옵니다.
+   * Access Token을 쿠키에서 가져옵니다.
+   * HttpOnly 쿠키이므로 클라이언트에서는 접근할 수 없습니다.
+   * 서버에서 자동으로 쿠키를 읽어서 인증을 처리합니다.
    */
   getAccessToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    // 기존 'token' 키와 새로운 'accessToken' 키 모두 지원
-    return localStorage.getItem('accessToken') || localStorage.getItem('token');
+    // HttpOnly 쿠키는 클라이언트에서 접근할 수 없으므로 null 반환
+    // 서버에서 쿠키를 자동으로 읽어서 인증 처리
+    return null;
   }
 
   /**
-   * Refresh Token을 쿠키에서 가져옵니다. (보안상 localStorage 사용 안함)
+   * Refresh Token을 쿠키에서 가져옵니다.
+   * HttpOnly 쿠키이므로 클라이언트에서는 접근할 수 없습니다.
+   * 서버에서 자동으로 쿠키를 읽어서 토큰 갱신을 처리합니다.
    */
   getRefreshToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    
-    // 쿠키에서 refresh_token 읽기
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === 'refresh_token') {
-        return value;
-      }
-    }
+    // HttpOnly 쿠키는 클라이언트에서 접근할 수 없으므로 null 반환
+    // 서버에서 쿠키를 자동으로 읽어서 토큰 갱신 처리
     return null;
   }
 
   /**
    * 토큰 쌍을 저장합니다.
+   * HttpOnly 쿠키는 서버에서 설정되므로 클라이언트에서는 처리하지 않습니다.
    */
   setTokens(accessToken: string, refreshToken: string): void {
-    if (typeof window === 'undefined') return;
-    
-    // Access Token만 localStorage에 저장
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('token', accessToken); // 호환성
-    
-    // Refresh Token은 쿠키에만 저장 (보안상 localStorage 사용 안함)
-    // 쿠키는 백엔드에서 설정되므로 여기서는 로그만 출력
-    console.log('✅ Refresh Token은 쿠키에 저장됨 (보안)');
+    // HttpOnly 쿠키는 서버에서 설정되므로 클라이언트에서는 처리하지 않음
+    console.log('✅ 토큰은 HttpOnly 쿠키에 저장됨 (보안)');
   }
 
   /**
    * 모든 토큰을 제거합니다.
+   * HttpOnly 쿠키는 서버에서 제거되므로 클라이언트에서는 처리하지 않습니다.
    */
   clearTokens(): void {
-    if (typeof window === 'undefined') return;
-    
-    // localStorage에서 Access Token만 제거
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('token'); // 기존 토큰도 제거
-    
-    // Refresh Token은 쿠키에 있으므로 백엔드에서 제거
-    // 여기서는 로그만 출력
-    console.log('✅ Refresh Token은 백엔드에서 제거됨 (보안)');
+    // HttpOnly 쿠키는 서버에서 제거되므로 클라이언트에서는 처리하지 않음
+    console.log('✅ 토큰은 서버에서 제거됨 (보안)');
   }
 
   /**
    * Refresh Token을 사용하여 Access Token을 갱신합니다.
+   * HttpOnly 쿠키를 사용하므로 서버에서 자동으로 처리됩니다.
    */
   async refreshAccessToken(): Promise<string> {
     // 이미 갱신 중이면 기존 Promise를 반환
@@ -107,15 +92,10 @@ class TokenManager {
     this.refreshAttempts++;
 
     try {
-      const refreshToken = this.getRefreshToken();
-      if (!refreshToken) {
-        throw new Error('Refresh token이 없습니다.');
-      }
-
       // 토큰 갱신 시작 알림
       showTokenRefreshToast({ type: 'refreshing' });
 
-      this.refreshPromise = this.performRefresh(refreshToken);
+      this.refreshPromise = this.performRefresh();
       const newAccessToken = await this.refreshPromise;
       
       // 성공 시 카운터 리셋 및 성공 알림
@@ -149,8 +129,9 @@ class TokenManager {
 
   /**
    * 실제 토큰 갱신 API 호출
+   * HttpOnly 쿠키를 사용하므로 refreshToken을 별도로 전송하지 않습니다.
    */
-  private async performRefresh(refreshToken: string): Promise<string> {
+  private async performRefresh(): Promise<string> {
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
     
     const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
@@ -158,8 +139,7 @@ class TokenManager {
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include',
-      body: JSON.stringify({ refreshToken }),
+      credentials: 'include', // HttpOnly 쿠키 자동 전송
     });
 
     if (!response.ok) {
@@ -169,8 +149,8 @@ class TokenManager {
 
     const data: RefreshResponse = await response.json();
     
-    // 새로운 Access Token 저장
-    this.setTokens(data.accessToken, refreshToken);
+    // HttpOnly 쿠키는 서버에서 자동으로 설정되므로 클라이언트에서는 처리하지 않음
+    console.log('✅ 새로운 Access Token이 HttpOnly 쿠키로 설정됨');
     
     return data.accessToken;
   }
@@ -192,37 +172,32 @@ class TokenManager {
 
   /**
    * Access Token이 유효한지 확인합니다.
+   * HttpOnly 쿠키를 사용하므로 서버에서 검증합니다.
    */
   isAccessTokenValid(): boolean {
-    const accessToken = this.getAccessToken();
-    return this.isTokenValid(accessToken);
+    // HttpOnly 쿠키는 클라이언트에서 접근할 수 없으므로 항상 true 반환
+    // 실제 검증은 서버에서 수행됩니다.
+    return true;
   }
 
   /**
    * Refresh Token이 유효한지 확인합니다.
+   * HttpOnly 쿠키를 사용하므로 서버에서 검증합니다.
    */
   isRefreshTokenValid(): boolean {
-    const refreshToken = this.getRefreshToken();
-    return this.isTokenValid(refreshToken);
+    // HttpOnly 쿠키는 클라이언트에서 접근할 수 없으므로 항상 true 반환
+    // 실제 검증은 서버에서 수행됩니다.
+    return true;
   }
 
   /**
    * 토큰 갱신이 필요한지 확인합니다.
+   * HttpOnly 쿠키를 사용하므로 서버에서 자동으로 처리됩니다.
    */
   shouldRefreshToken(): boolean {
-    const accessToken = this.getAccessToken();
-    if (!accessToken) return false;
-
-    try {
-      const payload = JSON.parse(atob(accessToken.split('.')[1]));
-      const now = Math.floor(Date.now() / 1000);
-      const timeUntilExpiry = payload.exp - now;
-      
-      // 만료 5분 전에 갱신
-      return timeUntilExpiry < 300;
-    } catch {
-      return true;
-    }
+    // HttpOnly 쿠키를 사용하므로 서버에서 자동으로 토큰 갱신을 처리합니다.
+    // 클라이언트에서는 401 응답을 받았을 때만 갱신을 시도합니다.
+    return false;
   }
 
   /**
