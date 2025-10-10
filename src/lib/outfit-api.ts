@@ -30,12 +30,6 @@ export interface OutfitResponse {
 
 // 코디 저장
 export async function saveOutfitToDatabase(outfitData: OutfitData): Promise<OutfitResponse> {
-  const token = localStorage.getItem('token')
-  if (!token) {
-    throw new Error('로그인이 필요합니다')
-  }
-
-  console.log('Frontend - Token:', token)
   console.log('Frontend - OutfitData:', outfitData)
 
   let thumbnailUrl: string | null = null
@@ -56,9 +50,7 @@ export async function saveOutfitToDatabase(outfitData: OutfitData): Promise<Outf
 
     const uploadResponse = await fetch('/api/media/upload', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
+      credentials: 'include', // HttpOnly 쿠키 자동 전송
       body: formData
     })
 
@@ -77,8 +69,8 @@ export async function saveOutfitToDatabase(outfitData: OutfitData): Promise<Outf
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
     },
+    credentials: 'include', // HttpOnly 쿠키 자동 전송
     body: JSON.stringify({
       outfitName: outfitData.name,
       outfitItem: JSON.stringify(outfitData),

@@ -18,6 +18,7 @@ import com.snapfit.api.security.JwtUtil;
 import com.snapfit.api.service.PostService;
 import com.snapfit.api.service.TagService;
 import com.snapfit.api.service.AnonymousUserService;
+import com.snapfit.api.security.InputSanitizer;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,6 +69,7 @@ public class PostController {
     private final UserMeasurementsRepository userMeasurementsRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final InputSanitizer inputSanitizer;
 
     /**
      * 게시글 생성
@@ -151,6 +153,16 @@ public class PostController {
                         : request.getContent();
             }
             
+            // 게시글 제목과 내용 sanitizing
+            String sanitizedTitle = inputSanitizer.sanitizeText(normalizedTitle);
+            String sanitizedContent = inputSanitizer.sanitizeText(request.getContent());
+            
+            if (!inputSanitizer.isSafeInput(sanitizedTitle) || !inputSanitizer.isSafeInput(sanitizedContent)) {
+                log.warn("게시글에 위험한 입력 감지: title={}, content={}", normalizedTitle, request.getContent());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "게시글에 허용되지 않는 문자가 포함되어 있습니다"));
+            }
+            
             // 4. Post 엔티티 생성 및 저장
             BoardType boardType = BoardType.OUTFIT; // 기본값
             if (request.getBoardType() != null) {
@@ -164,8 +176,8 @@ public class PostController {
             }
             
             Post post = Post.builder()
-                .title(normalizedTitle)
-                .content(request.getContent())
+                .title(sanitizedTitle)
+                .content(sanitizedContent)
                 .boardType(boardType)
                 .mediaUrls(request.getMediaUrls() != null ? request.getMediaUrls().stream().collect(Collectors.toSet()) : new java.util.HashSet<>())
                 .anonymousIndex(anonymousIndex)

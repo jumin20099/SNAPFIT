@@ -50,14 +50,7 @@ export function useComments(postId: number): UseCommentsResult {
   const isLoadingRef = useRef(false);
 
   const getAuthHeaders = useCallback(() => {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-      throw new Error('인증 토큰이 없습니다. 다시 로그인해주세요.');
-    }
-    
     return {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
   }, []);
@@ -73,7 +66,8 @@ export function useComments(postId: number): UseCommentsResult {
     try {
       const headers = getAuthHeaders();
       const response = await fetch(`/api/posts/${postId}/comments?page=${page}&size=20`, {
-        headers
+        headers,
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       });
 
       console.log('댓글 API 응답 상태:', response.status, response.statusText);
@@ -166,6 +160,7 @@ export function useComments(postId: number): UseCommentsResult {
       const response = await fetch(`/api/posts/${postId}/comments`, {
         method: 'POST',
         headers: getAuthHeaders(),
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ content: content.trim() })
       });
 
@@ -203,6 +198,7 @@ export function useComments(postId: number): UseCommentsResult {
       const response = await fetch(`/api/comments/${commentId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ content: content.trim() })
       });
 
@@ -236,7 +232,8 @@ export function useComments(postId: number): UseCommentsResult {
     try {
       const response = await fetch(`/api/comments/${commentId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       });
 
       if (!response.ok) {
@@ -277,7 +274,8 @@ export function useComments(postId: number): UseCommentsResult {
     try {
       const response = await fetch(`http://localhost:8080/api/comments/${commentId}/like`, {
         method: 'POST',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       });
 
       if (!response.ok) {
