@@ -42,7 +42,8 @@ export function useBatchReactionStatus({
         return {};
       }
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       let cookies = typeof document !== 'undefined' ? document.cookie : '';
       
       // snapfit_guest_id 쿠키가 없으면 기존 ID로 생성
@@ -54,7 +55,6 @@ export function useBatchReactionStatus({
       }
       
       console.log('API 요청 시작:', { 
-        token: token ? '있음' : '없음', 
         cookies: cookies ? '있음' : '없음',
         cookieValue: cookies.includes('snapfit_guest_id') ? cookies.split('snapfit_guest_id=')[1]?.split(';')[0] : '없음',
         postIds, 
@@ -66,10 +66,8 @@ export function useBatchReactionStatus({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          ...(cookies ? { 'Cookie': cookies } : {}),
         },
-        credentials: 'include',
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ postIds, productIds, commentIds })
       });
 

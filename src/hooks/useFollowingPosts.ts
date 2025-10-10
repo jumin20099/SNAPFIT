@@ -27,17 +27,11 @@ export function useFollowingPosts() {
     setError(null)
     
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setError('로그인이 필요합니다')
-        return
-      }
-
       const response = await fetch('http://localhost:8080/api/posts/following', {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
       })
 
       if (response.ok) {
