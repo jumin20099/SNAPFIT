@@ -119,14 +119,9 @@ export default function LikedItemsPage() {
   // 좋아요한 상품 가져오기
   const fetchLikedProducts = async () => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
       // 1. 좋아요한 상품 ID 목록 가져오기
       const likesResponse = await fetch('/api/likes/my/products', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
 
       if (likesResponse.ok) {
@@ -145,8 +140,8 @@ export default function LikedItemsPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
           },
+          credentials: 'include', // HttpOnly 쿠키 자동 전송
           body: JSON.stringify({ productIds })
         })
 
@@ -179,13 +174,8 @@ export default function LikedItemsPage() {
   // 좋아요한 브랜드 가져오기
   const fetchLikedBrands = async () => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
       const response = await fetch('/api/likes/my/brands', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
 
       if (response.ok) {
@@ -204,15 +194,12 @@ export default function LikedItemsPage() {
   // 좋아요 토글 (게시글)
   const togglePostLike = async (postId: number) => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ postId })
       })
 
@@ -227,15 +214,12 @@ export default function LikedItemsPage() {
   // 좋아요 토글 (상품)
   const toggleProductLike = async (productId: number) => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ 
           targetIdx: productId, 
           targetType: 'PRODUCT' 

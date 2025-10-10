@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import com.snapfit.api.repository.PartnerApplicationRepository;
 import com.snapfit.api.security.CustomUserDetails;
+import com.snapfit.api.security.InputSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,6 +35,9 @@ public class UserController {
 
     @Autowired
     private PartnerApplicationRepository partnerApplicationRepository;
+    
+    @Autowired
+    private InputSanitizer inputSanitizer;
 
     @GetMapping("/info")
     public ResponseEntity<Map<String, Object>> getUserInfo() {
@@ -100,8 +104,18 @@ public class UserController {
             if (updateRequest.containsKey("nickname")) {
                 String newNickname = (String) updateRequest.get("nickname");
                 
+                // 닉네임 sanitizing
+                String sanitizedNickname = inputSanitizer.sanitizeNickname(newNickname);
+                if (!inputSanitizer.isSafeInput(sanitizedNickname)) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "error", "닉네임에 허용되지 않는 문자가 포함되어 있습니다",
+                        "code", "INVALID_NICKNAME_CONTENT"
+                    ));
+                }
+                
                 // 닉네임 유효성 검사
-                if (newNickname == null || newNickname.trim().length() < 2 || newNickname.trim().length() > 20) {
+                if (sanitizedNickname == null || sanitizedNickname.trim().length() < 2 || sanitizedNickname.trim().length() > 20) {
                     return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
                         "error", "닉네임은 2자 이상 20자 이하여야 합니다",
@@ -109,7 +123,7 @@ public class UserController {
                     ));
                 }
                 
-                if (!newNickname.matches("^[가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\\s]+$")) {
+                if (!sanitizedNickname.matches("^[가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z0-9\\s]+$")) {
                     return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
                         "error", "닉네임은 한글, 영문, 숫자, 공백만 사용할 수 있습니다",
@@ -118,7 +132,7 @@ public class UserController {
                 }
                 
                 // 닉네임 중복 검사 (현재 사용자 제외)
-                Optional<User> existingUser = userRepository.findByNickname(newNickname.trim());
+                Optional<User> existingUser = userRepository.findByNickname(sanitizedNickname.trim());
                 if (existingUser.isPresent() && !existingUser.get().getUserIdx().equals(userId)) {
                     return ResponseEntity.status(409).body(Map.of(
                         "success", false,
@@ -127,9 +141,9 @@ public class UserController {
                     ));
                 }
                 
-                user.setNickname(newNickname.trim());
+                user.setNickname(sanitizedNickname.trim());
                 updated = true;
-                log.info("닉네임 업데이트: {} -> {}", user.getNickname(), newNickname);
+                log.info("닉네임 업데이트: {} -> {}", user.getNickname(), sanitizedNickname);
             }
             
             // 프로필 이미지 업데이트

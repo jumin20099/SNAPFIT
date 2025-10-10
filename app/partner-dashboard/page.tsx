@@ -72,8 +72,6 @@ export default function PartnerDashboardPage() {
 
   const loadDashboard = async () => {
     try {
-      const token = localStorage.getItem("token") || ""
-
       // 1) 사용자 info에서 partner_application_id 조회
       let partnerAppId: number | undefined = undefined
       if (userInfo?.partner_application_id) {
@@ -86,7 +84,7 @@ export default function PartnerDashboardPage() {
         : "/api/partner/dashboard"
 
       const res = await fetch(dashUrl, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
       })
 
       if (res.ok) {
