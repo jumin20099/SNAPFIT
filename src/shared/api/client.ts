@@ -10,16 +10,12 @@ class ApiClient {
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     
-    // localStorage에서 토큰 가져오기
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    
     const defaultOptions: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
         ...options.headers,
       },
-      credentials: 'include',
+      credentials: 'include', // HttpOnly 쿠키 자동 전송
       ...options,
     };
 
@@ -137,10 +133,8 @@ class ApiClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(typeof window !== 'undefined' && localStorage.getItem('token') && { 
-          'Authorization': `Bearer ${localStorage.getItem('token')}` 
-        }),
       },
+      credentials: 'include', // HttpOnly 쿠키 자동 전송
     });
 
     if (!response.ok) {

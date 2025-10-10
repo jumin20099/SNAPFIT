@@ -58,10 +58,6 @@ export function useReport() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('로그인이 필요합니다.');
-      }
       const payload: Record<string, unknown> = {
         targetType: reportData.targetType,
         category: reportData.category || 'OTHER',
@@ -86,8 +82,8 @@ export function useReport() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify(payload)
       });
 
@@ -117,11 +113,6 @@ export function useReport() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('로그인이 필요합니다.');
-      }
-
       const params = new URLSearchParams({
         scope: 'my',
         page: page.toString(),
@@ -130,9 +121,7 @@ export function useReport() {
 
       const response = await fetch(`/api/reports?${params.toString()}`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
       });
 
       if (!response.ok) {

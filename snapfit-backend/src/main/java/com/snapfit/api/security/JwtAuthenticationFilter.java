@@ -56,7 +56,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         String requestPath = request.getRequestURI();
-        System.out.println("=== JWT 필터 요청 경로: " + requestPath + " ===");
         
         // 쿠키에서 access_token 확인 (우선순위)
         String token = null;
@@ -65,7 +64,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             for (jakarta.servlet.http.Cookie cookie : cookies) {
                 if ("access_token".equals(cookie.getName())) {
                     token = cookie.getValue();
-                    System.out.println("쿠키에서 access_token 읽기 성공");
                     break;
                 }
             }
@@ -76,9 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String header = request.getHeader("Authorization");
             if (header != null && header.startsWith("Bearer ") && header.length() > 7) {
                 token = header.substring(7);
-                if (token != null && !token.trim().isEmpty() && !"null".equals(token)) {
-                    System.out.println("헤더에서 토큰 읽기 성공: " + (token.length() > 20 ? token.substring(0, 20) + "..." : token));
-                } else {
+                if (token == null || token.trim().isEmpty() || "null".equals(token)) {
                     token = null;
                 }
             }
@@ -89,130 +85,60 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String queryToken = request.getParameter("token");
             if (queryToken != null && !queryToken.trim().isEmpty()) {
                 token = queryToken.trim();
-                System.out.println("쿼리 파라미터에서 토큰 읽기 성공");
             }
         }
         
         if (token == null) {
-            System.out.println("=== 토큰 없음, 인증 없이 진행 ===");
             filterChain.doFilter(request, response);
             return;
         }
         
         // 리뷰/문의 엔드포인트는 완전 우회
         if (requestPath.contains("/reviews") || requestPath.contains("/inquiries")) {
-            System.out.println("=== 리뷰/문의 엔드포인트 완전 우회: " + requestPath + " ===");
             filterChain.doFilter(request, response);
             return;
         }
         
         try {
-            System.out.println("=== JWT 필터 요청 경로: " + requestPath + " ===");
-            
-            // 개발 환경에서 JWT 검증 완전 우회
-            System.out.println("=== 개발 환경 JWT 검증 완전 우회 ===");
-            
-            // JWT 토큰에서 실제 사용자 정보 추출
-            String subject = "qazplm20099@gmail.com"; // 기본값
-            String role = "ADMIN"; // 기본값
-            
-            try {
-                // JWT 토큰 디코딩 (페이로드 부분만)
-                System.out.println("=== JWT 토큰 파싱 시작 ===");
-                System.out.println("원본 토큰: " + token.substring(0, 50) + "...");
-                
-                String[] parts = token.split("\\.");
-                System.out.println("토큰 파트 수: " + parts.length);
-                
-                if (parts.length == 3) {
-                    String payload = new String(java.util.Base64.getDecoder().decode(parts[1]));
-                    System.out.println("디코딩된 페이로드: " + payload);
-                    
-                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    com.fasterxml.jackson.databind.JsonNode jsonNode = mapper.readTree(payload);
-                    
-                    subject = jsonNode.get("sub").asText();
-                    role = jsonNode.get("role").asText();
-                    
-                    System.out.println("=== JWT 토큰에서 추출된 정보 ===");
-                    System.out.println("사용자: " + subject);
-                    System.out.println("역할: " + role);
-                } else {
-                    System.out.println("토큰 형식이 올바르지 않음: " + parts.length + " 파트");
-                }
-            } catch (Exception e) {
-                System.out.println("=== JWT 토큰 파싱 실패, 기본값 사용: " + e.getMessage() + " ===");
-                e.printStackTrace();
+            // JWT 토큰 유효성 검증
+            if (!jwtUtil.validateToken(token)) {
+                filterChain.doFilter(request, response);
+                return;
             }
-            
-            System.out.println("최종 사용자: " + subject);
-            System.out.println("최종 권한: " + role);
 
-            // User 엔티티 조회 또는 생성
-            final String finalSubject = subject;
-            final String finalRole = role;
+            // JWT 토큰에서 사용자 정보 추출
+            String email = jwtUtil.getSubjectFromToken(token);
+            String role = jwtUtil.getRoleFromToken(token);
             
-            // temp@example.com 사용자 확인 및 기존 계정 사용
-            User user = null;
-            if ("temp@example.com".equals(subject)) {
-                System.out.println("=== temp@example.com 사용자 조회 시작 ===");
-                java.util.List<User> tempUsers = userRepository.findAll().stream()
-                    .filter(u -> "temp@example.com".equals(u.getEmail()))
-                    .collect(java.util.stream.Collectors.toList());
-                System.out.println("temp@example.com 계정 수: " + tempUsers.size());
-                tempUsers.forEach(u -> System.out.println("  - userIdx: " + u.getUserIdx() + ", nickname: " + u.getNickname()));
-                
-                // 기존 계정이 있으면 첫 번째 계정 사용 (새로 생성하지 않음)
-                if (!tempUsers.isEmpty()) {
-                    user = tempUsers.get(0);
-                    System.out.println("=== 기존 temp@example.com 계정 사용 ===");
-                    System.out.println("userIdx: " + user.getUserIdx());
-                    System.out.println("email: " + user.getEmail());
-                    System.out.println("nickname: " + user.getNickname());
-                }
+            if (email == null || role == null) {
+                filterChain.doFilter(request, response);
+                return;
             }
+
+            // User 엔티티 조회
+            User user = userRepository.findByEmail(email)
+                .orElse(null);
             
-            // user가 null이면 새로 생성
             if (user == null) {
-                user = userRepository.findByEmail(subject)
-                    .orElseGet(() -> {
-                        System.out.println("=== 새로운 사용자 생성: " + finalSubject + " ===");
-                        User newUser = User.builder()
-                            .email(finalSubject)
-                            .nickname(finalSubject.equals("temp@example.com") ? "임시사용자" : "TestUser")
-                            .role(User.Role.valueOf(finalRole))
-                            .provider("local")
-                            .providerId("test_local_id")
-                            .build();
-                        User savedUser = userRepository.save(newUser);
-                        System.out.println("생성된 사용자 ID: " + savedUser.getUserIdx());
-                        return savedUser;
-                    });
+                filterChain.doFilter(request, response);
+                return;
             }
-            
-            System.out.println("=== 최종 사용자 정보 ===");
-            System.out.println("userIdx: " + user.getUserIdx());
-            System.out.println("email: " + user.getEmail());
-            System.out.println("nickname: " + user.getNickname());
 
-            // CustomUserDetails 생성 (컨트롤러에서 @AuthenticationPrincipal로 사용)
+            // CustomUserDetails 생성
             CustomUserDetails customUserDetails = new CustomUserDetails(user);
             
             // SecurityContext에 설정
             UsernamePasswordAuthenticationToken auth = 
                 new UsernamePasswordAuthenticationToken(
-                    customUserDetails,  // CustomUserDetails 사용
+                    customUserDetails,
                     null,
                     customUserDetails.getAuthorities()
                 );
             auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(auth);
-            
-            System.out.println("=== JWT 인증 성공 (우회): 사용자=" + subject + ", 역할=" + role + " ===");
 
         } catch (Exception e) {
-            System.out.println("=== JWT 처리 중 오류 발생: " + e.getMessage() + " ===");
-            e.printStackTrace();
+            // 인증 실패 시 계속 진행 (인증되지 않은 상태로 처리)
         }
         filterChain.doFilter(request, response);
     }

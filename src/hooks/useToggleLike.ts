@@ -10,14 +10,12 @@ export function useToggleLike() {
     setIsLoading(true)
     
     try {
-      const token = localStorage.getItem('token')
-      
       const response = await fetch('/api/products/like', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ productId }),
       })
 

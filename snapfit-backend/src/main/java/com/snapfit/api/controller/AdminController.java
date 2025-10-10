@@ -22,7 +22,7 @@ import java.util.UUID;
 @CrossOrigin(
     origins = {"http://localhost:3000", "https://snapfit.app", "https://www.snapfit.app"},
     allowCredentials = "true",
-    allowedHeaders = {"*"},
+    allowedHeaders = {"Content-Type", "Authorization", "X-Requested-With"},
     methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS}
 )
 public class AdminController {
@@ -72,55 +72,4 @@ public class AdminController {
         }
     }
     
-    /**
-     * 임시 사용자로 로그인 (개발/테스트용)
-     * 일반 사용자 권한으로 로그인하여 시스템 점검
-     * 운영 환경에서는 비활성화됩니다.
-     */
-    @PostMapping("/temp-login")
-    @PreAuthorize("hasRole('ADMIN')")
-    @ConditionalOnProperty(name = "app.features.temp-login", havingValue = "true", matchIfMissing = false)
-    public ResponseEntity<?> tempLogin(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        try {
-            // 임시 사용자 이메일
-            String tempEmail = "temp_user@snapfit.com";
-            
-            // 기존 임시 사용자 확인 또는 생성
-            User tempUser = userService.findByEmail(tempEmail);
-            if (tempUser == null) {
-                // 임시 사용자 생성
-                tempUser = User.builder()
-                    .userIdx(UUID.randomUUID())
-                    .email(tempEmail)
-                    .nickname("임시사용자")
-                    .provider("temp")
-                    .providerId("temp_001")
-                    .role(Role.USER)
-                    .bio("테스트용 임시 사용자입니다")
-                    .followerCount(0)
-                    .followingCount(0)
-                    .build();
-                
-                tempUser = userService.save(tempUser);
-            }
-            
-            // JWT 토큰 생성
-            String token = jwtUtil.generateToken(tempUser.getEmail(), tempUser.getRole().name());
-            
-            return ResponseEntity.ok(Map.of(
-                "token", token,
-                "user", Map.of(
-                    "userIdx", tempUser.getUserIdx().toString(),
-                    "email", tempUser.getEmail(),
-                    "nickname", tempUser.getNickname(),
-                    "role", tempUser.getRole().name()
-                ),
-                "message", "임시 사용자로 로그인되었습니다"
-            ));
-            
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                .body(Map.of("error", "임시 로그인 실패: " + e.getMessage()));
-        }
-    }
 }

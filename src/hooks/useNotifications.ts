@@ -19,15 +19,13 @@ interface NotificationResponse {
 }
 
 // 알림 목록 조회
-const fetchNotifications = async (): Promise<NotificationResponse> => {
-  const token = localStorage.getItem('token')
-  
-  const response = await fetch('/api/notifications', {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-    },
-  })
+  const fetchNotifications = async (): Promise<NotificationResponse> => {
+    const response = await fetch('/api/notifications', {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // HttpOnly 쿠키 자동 전송
+    })
 
   if (!response.ok) {
     throw new Error('알림을 불러오는데 실패했습니다')
@@ -37,17 +35,15 @@ const fetchNotifications = async (): Promise<NotificationResponse> => {
 }
 
 // 알림 읽음 처리
-const markNotificationAsRead = async (notificationId: string): Promise<void> => {
-  const token = localStorage.getItem('token')
-  
-  const response = await fetch(`/api/notifications/${notificationId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-    },
-    body: JSON.stringify({ isRead: true }),
-  })
+  const markNotificationAsRead = async (notificationId: string): Promise<void> => {
+    const response = await fetch(`/api/notifications/${notificationId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // HttpOnly 쿠키 자동 전송
+      body: JSON.stringify({ isRead: true }),
+    })
 
   if (!response.ok) {
     throw new Error('알림 읽음 처리에 실패했습니다')
@@ -55,16 +51,14 @@ const markNotificationAsRead = async (notificationId: string): Promise<void> => 
 }
 
 // 모든 알림 읽음 처리
-const markAllNotificationsAsRead = async (): Promise<void> => {
-  const token = localStorage.getItem('token')
-  
-  const response = await fetch('/api/notifications/read-all', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-    },
-  })
+  const markAllNotificationsAsRead = async (): Promise<void> => {
+    const response = await fetch('/api/notifications/read-all', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // HttpOnly 쿠키 자동 전송
+    })
 
   if (!response.ok) {
     throw new Error('모든 알림 읽음 처리에 실패했습니다')
