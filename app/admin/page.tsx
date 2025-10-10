@@ -418,12 +418,14 @@ export default function AdminPage() {
     const rejectionReason = prompt("거절 사유를 입력해주세요:")
     if (rejectionReason) {
       try {
-        const token = localStorage.getItem("token")
+        // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+        // 서버에서 자동으로 인증 처리
         const res = await fetch(`/api/partner/admin/products/${productId}/update-request/reject`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: 'include', // HttpOnly 쿠키 자동 전송
           body: JSON.stringify({ rejectionReason }),
         })
         if (res.ok) {
@@ -442,13 +444,14 @@ export default function AdminPage() {
 
   const handleReportAction = async (reportId: number, action: 'PROCESSING' | 'RESOLVED' | 'REJECTED', adminNotes?: string) => {
     try {
-      const token = localStorage.getItem("token")
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       const res = await fetch(`/api/reports/${reportId}/status`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ 
           status: action,
           adminNotes: adminNotes || ''
