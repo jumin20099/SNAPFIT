@@ -1,4 +1,5 @@
 import { Product, Post, User, Store, Notification, ApiResponse, PaginatedResponse, SizeVariant } from './types';
+import { addCsrfTokenToHeaders } from '@/lib/csrf';
 
 // API 클라이언트 기본 설정
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -10,11 +11,20 @@ class ApiClient {
   ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
     
+    // CSRF 토큰이 필요한 메서드들 (POST, PUT, DELETE, PATCH)
+    const needsCsrf = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method || 'GET');
+    const headers = needsCsrf 
+      ? await addCsrfTokenToHeaders({
+          'Content-Type': 'application/json',
+          ...options.headers,
+        })
+      : {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        };
+    
     const defaultOptions: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       credentials: 'include', // HttpOnly 쿠키 자동 전송
       ...options,
     };

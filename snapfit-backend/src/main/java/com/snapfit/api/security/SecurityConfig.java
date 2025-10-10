@@ -22,6 +22,7 @@ import java.util.List;
 
 import com.snapfit.api.service.CustomOAuth2UserService;
 import com.snapfit.api.security.JwtAuthenticationFilter;
+import com.snapfit.api.security.CsrfFilter;
 import com.snapfit.api.security.JwtUtil;
 import com.snapfit.api.repository.UserRepository;
 
@@ -41,6 +42,7 @@ public class SecurityConfig {
     private final JwtUtil jwtUtil;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final UserRepository userRepository;
+    private final CsrfFilter csrfFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -143,6 +145,9 @@ public class SecurityConfig {
         //             new AntPathRequestMatcher("/api/**")
         //         )
         //     );
+        
+        // CSRF 필터 추가
+        http.addFilterBefore(csrfFilter, UsernamePasswordAuthenticationFilter.class);
         
 
         return http.build();

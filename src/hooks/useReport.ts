@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { addCsrfTokenToHeaders } from '@/lib/csrf';
 
 /**
  * 신고 시스템 훅
@@ -78,11 +79,13 @@ export function useReport() {
         }
       }
 
+      const headers = await addCsrfTokenToHeaders({
+        'Content-Type': 'application/json',
+      });
+
       const response = await fetch('/api/reports', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify(payload)
       });

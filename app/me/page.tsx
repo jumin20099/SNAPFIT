@@ -124,16 +124,8 @@ export default function MePage() {
   // 사용자 정보 가져오기
   const fetchUserInfo = async () => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setUser(null)
-        return
-      }
-
       const response = await fetch('/api/user/info', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
 
       if (response.ok) {

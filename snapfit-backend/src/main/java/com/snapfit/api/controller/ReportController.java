@@ -5,6 +5,7 @@ import com.snapfit.api.dto.report.ReportResponseDto;
 import com.snapfit.api.entity.Report;
 import com.snapfit.api.service.ReportService;
 import com.snapfit.api.security.CustomUserDetails;
+import com.snapfit.api.security.InputSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,7 @@ import java.util.UUID;
 public class ReportController {
 
     private final ReportService reportService;
+    private final InputSanitizer inputSanitizer;
 
     /**
      * 신고 생성 (게시글, 댓글, 사용자)
@@ -85,6 +87,14 @@ public class ReportController {
                 return ResponseEntity.badRequest()
                     .body(Map.of("error", "신고 사유는 3자 이상 입력해주세요"));
             }
+            
+            // 신고 사유 sanitizing
+            String sanitizedReason = inputSanitizer.sanitizeReportReason(trimmedReason);
+            if (!inputSanitizer.isSafeInput(sanitizedReason)) {
+                log.warn("신고 사유에 위험한 입력 감지: reporterId={}, reason={}", reporterId, trimmedReason);
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "신고 사유에 허용되지 않는 문자가 포함되어 있습니다"));
+            }
 
             Report.Category category = createRequest.resolveCategory();
 
@@ -92,7 +102,7 @@ public class ReportController {
                 reporterId,
                 resolvedTargetType,
                 resolvedTargetId,
-                trimmedReason,
+                sanitizedReason,
                 category,
                 createRequest.getTargetUserId()
             );

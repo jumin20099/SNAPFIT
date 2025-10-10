@@ -38,15 +38,8 @@ export default function MyPage() {
     const fetchProfile = async () => {
       try {
         setIsProfileLoading(true)
-        const token = localStorage.getItem('token')
-        if (!token) {
-          setProfile(null)
-          return
-        }
         const response = await fetch('/api/user/info', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          credentials: 'include' // HttpOnly 쿠키 자동 전송
         })
         if (!response.ok) {
           throw new Error('사용자 정보를 불러오지 못했습니다.')
