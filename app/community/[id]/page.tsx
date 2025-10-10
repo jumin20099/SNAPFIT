@@ -165,15 +165,8 @@ export default function PostDetailPage() {
         )
       } else {
         console.error('Redis 조회수 증가 실패:', response.status)
-        // 실패 시 localStorage fallback
-        const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
-        const currentCount = viewCounts[postId] || 0
-        const newViewCount = currentCount + 1
-        
-        viewCounts[postId] = newViewCount
-        localStorage.setItem('postViewCounts', JSON.stringify(viewCounts))
-        
-        console.log('localStorage fallback 조회수 증가:', postId, currentCount, '->', newViewCount)
+        // 실패 시 fallback (localStorage 사용하지 않음)
+        console.log('Redis 조회수 증가 실패, fallback 처리:', postId)
         
         setPosts(prev => prev.map(post => 
           post.postId === postId 
@@ -189,11 +182,9 @@ export default function PostDetailPage() {
       }
       
     } catch (error) {
-      console.error('Redis API 호출 실패, localStorage fallback:', error)
-      // 네트워크 오류 시 localStorage fallback
-      const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
-      const currentCount = viewCounts[postId] || 0
-      const newViewCount = currentCount + 1
+      console.error('Redis API 호출 실패, fallback 처리:', error)
+      // 네트워크 오류 시 fallback (localStorage 사용하지 않음)
+      console.log('네트워크 오류로 인한 조회수 증가 실패:', postId)
       
       viewCounts[postId] = newViewCount
       localStorage.setItem('postViewCounts', JSON.stringify(viewCounts))
@@ -436,8 +427,8 @@ export default function PostDetailPage() {
         const data = await response.json()
         const newPosts = data.content || []
         
-        // localStorage에서 조회수 가져오기
-        const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
+        // localStorage 사용하지 않음 (보안상 일관성 유지)
+        // const viewCounts = JSON.parse(localStorage.getItem('postViewCounts') || '{}')
         
         // Post 타입에 맞게 데이터 변환
         const transformedPosts = newPosts.map((post: any, index: number) => {

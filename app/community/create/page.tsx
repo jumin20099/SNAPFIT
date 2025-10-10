@@ -67,16 +67,9 @@ export default function CreatePostPage() {
         }
         
         // localStorage에서 코디 데이터 로드 (코디 페이지에서 export한 경우)
-        const exportDataStr = localStorage.getItem('cody-export-data')
-        if (exportDataStr) {
-          const exportData = JSON.parse(exportDataStr)
-          
-          // 5분 이내 데이터만 유효 (메모리 정리)
-          const now = Date.now()
-          const dataAge = now - exportData.timestamp
-          if (dataAge > 5 * 60 * 1000) { // 5분
-            localStorage.removeItem('cody-export-data')
-            return
+        // 보안상 문제가 되지 않지만 일관성을 위해 제거
+        // const exportDataStr = localStorage.getItem('cody-export-data')
+        // 코디 데이터는 URL state나 다른 방법으로 전달받아야 함
           }
           
           if (exportData.codyData) {
@@ -243,11 +236,11 @@ export default function CreatePostPage() {
         } : undefined
       }
 
-      // 코디 페이지에서 저장 직후 export한 경우, localStorage에 outfitId가 있을 수 있음
-      const maybeOutfitId = localStorage.getItem('cody-last-outfit-id')
-      if (maybeOutfitId) {
-        postData.outfitId = Number(maybeOutfitId)
-      }
+      // 코디 페이지에서 저장 직후 export한 경우, outfitId는 다른 방법으로 전달받아야 함
+      // const maybeOutfitId = localStorage.getItem('cody-last-outfit-id')
+      // if (maybeOutfitId) {
+      //   postData.outfitId = Number(maybeOutfitId)
+      // }
 
       if (needsPassword && trimmedPassword) {
         postData.anonymousPassword = trimmedPassword

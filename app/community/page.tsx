@@ -61,10 +61,9 @@ export default function CommunityPage() {
 
   // 현재 사용자 ID 가져오기
   useEffect(() => {
-    const userId = localStorage.getItem('userIdx')
-    if (userId) {
-      setCurrentUserId(parseInt(userId, 10))
-    }
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 사용자 ID 직접 접근 불가
+    // 서버에서 자동으로 인증 처리하므로 사용자 ID는 API 응답에서 가져옴
+    // setCurrentUserId는 API 응답에서 설정됨
   }, [])
 
   // URL 파라미터 변경 시 activeTab 업데이트
