@@ -7,3 +7,4 @@ ALTER TABLE comment_likes ADD COLUMN anonymous_password_hash VARCHAR(255);
 ALTER TABLE comment_likes ADD CONSTRAINT uk_comment_likes_anonymous 
 UNIQUE (comment_id, anonymous_index);
 
+

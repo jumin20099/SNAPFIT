@@ -1,5 +1,7 @@
 "use server"
 
+import { cookies } from 'next/headers'
+
 interface Product {
   product_content: string
   id?: number
@@ -28,263 +30,161 @@ interface ProductAnalytics {
   product_name: string
   view_count: number
   purchase_count: number
-  total_sales: number
-  conversion_rate: number
+  revenue: number
+  commission: number
 }
 
-interface StoreAnalytics {
+interface StoreMallAnalytics {
   store_id: number
   store_name: string
   total_sales: number
-  commission_owed: number
-  commission_paid: number
-  payment_status: "paid" | "pending" | "overdue"
-  payment_due_date: string
-  is_active: boolean
+  commission_earned: number
+  pending_commission: number
 }
 
 interface StoreApplication {
   id: number
-  company_name: string
-  contact_email: string
-  contact_phone: string
-  business_registration: string
-  application_date: string
+  store_name: string
+  store_url: string
+  applicant_name: string
+  applicant_email: string
   status: "pending" | "approved" | "rejected"
-  documents: string[]
+  created_at: string
 }
 
 interface ProductApproval {
   id: number
   product_name: string
   store_name: string
-  images: string[]
-  description: string
   price: string
-  category: string
   status: "pending" | "approved" | "rejected"
-  submitted_date: string
+  submitted_at: string
 }
 
-// 상품 관련 액션들
-export async function getProducts() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/products/list", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("상품 목록을 불러오지 못했습니다.");
+/**
+ * 서버 사이드에서 인증된 fetch 요청을 수행합니다.
+ * HttpOnly 쿠키를 자동으로 전송합니다.
+ */
+async function authenticatedServerFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const cookieStore = cookies()
+  const token = cookieStore.get('access_token')?.value
+  
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Cookie': `access_token=${token}` }),
+      ...options.headers,
+    },
+  })
+}
+
+export async function getProducts(): Promise<Product[]> {
+  const res = await authenticatedServerFetch("/api/admin/products/list");
+  if (!res.ok) return [];
   return res.json();
 }
 
-export async function addProduct(productData: any) {
-  if (typeof window === "undefined") {
-    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/products/add", {
+export async function addProduct(product: Product) {
+  const res = await authenticatedServerFetch("/api/admin/products/add", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(productData),
+    body: JSON.stringify(product),
   });
-  if (!res.ok) throw new Error("상품 등록 실패");
+  if (!res.ok) throw new Error("상품 추가 실패");
   return res.json();
 }
 
 export async function deleteProduct(productId: number) {
-  if (typeof window === "undefined") {
-    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/products/${productId}`, {
+  const res = await authenticatedServerFetch(`/api/admin/products/${productId}`, {
     method: "DELETE",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("상품 삭제 실패");
   return res.json();
 }
 
-export async function updateProduct(productId: number, formData: FormData) {
-  if (typeof window === "undefined") {
-    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/products/${productId}`, {
+export async function updateProduct(productId: number, product: Product) {
+  const res = await authenticatedServerFetch(`/api/admin/products/${productId}`, {
     method: "PUT",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
+    body: JSON.stringify(product),
   });
   if (!res.ok) throw new Error("상품 수정 실패");
   return res.json();
 }
 
-// 상품 통계
-export async function getProductAnalytics() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/products/analytics", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("상품 통계 불러오기 실패");
+export async function getProductAnalytics(): Promise<ProductAnalytics[]> {
+  const res = await authenticatedServerFetch("/api/admin/products/analytics");
+  if (!res.ok) return [];
   return res.json();
 }
 
-export async function getStoreMalls() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/stores/list", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("제휴몰 목록을 불러오지 못했습니다.");
+export async function getStoreMalls(): Promise<StoreMall[]> {
+  const res = await authenticatedServerFetch("/api/admin/stores/list");
+  if (!res.ok) return [];
   return res.json();
 }
 
-// export async function deleteStoreMall(id: number) {
-//   const token = localStorage.getItem("token");
-//   const res = await fetch(`/api/admin/stores/${id}`, {
-//     method: "DELETE",
-//     headers: { Authorization: `Bearer ${token}` },
-//   });
-//   if (res.ok) return { success: true, message: "삭제 성공" };
-//   return { success: false, message: "삭제 실패" };
-// }
-
-// 제휴사 통계
-export async function getStoreAnalytics() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/stores/analytics", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("제휴사 통계 불러오기 실패");
+export async function getStoreMallAnalytics(): Promise<StoreMallAnalytics[]> {
+  const res = await authenticatedServerFetch("/api/admin/stores/analytics");
+  if (!res.ok) return [];
   return res.json();
 }
 
-export async function toggleStoreStatus(storeId: number, isActive: boolean) {
-  if (typeof window === "undefined") {
-    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/stores/${storeId}/status`, {
+export async function updateStoreMallStatus(storeId: number, status: "active" | "inactive") {
+  const res = await authenticatedServerFetch(`/api/admin/stores/${storeId}/status`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ isActive }),
+    body: JSON.stringify({ status }),
   });
-  if (!res.ok) throw new Error("제휴몰 상태 변경 실패");
+  if (!res.ok) throw new Error("스토어 상태 변경 실패");
   return res.json();
 }
 
-export async function markStoreCommissionPaid(storeId: number) {
-  if (typeof window === "undefined") {
-    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/stores/${storeId}/commission/paid`, {
+export async function markCommissionPaid(storeId: number) {
+  const res = await authenticatedServerFetch(`/api/admin/stores/${storeId}/commission/paid`, {
     method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("커미션 지급 처리 실패");
   return res.json();
 }
 
-export async function getStoreApplications() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/store/applications", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("제휴몰 신청 목록 불러오기 실패");
+export async function getStoreApplications(): Promise<StoreApplication[]> {
+  const res = await authenticatedServerFetch("/api/admin/store/applications");
+  if (!res.ok) return [];
   return res.json();
 }
 
-export async function approveStoreApplication(applicationId: number, approved: boolean) {
-  if (typeof window === "undefined") {
-    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/store/applications/${applicationId}/approve`, {
+export async function approveStoreApplication(applicationId: number) {
+  const res = await authenticatedServerFetch(`/api/admin/store/applications/${applicationId}/approve`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ approved }),
   });
-  if (!res.ok) throw new Error("제휴몰 신청 승인/거절 실패");
+  if (!res.ok) throw new Error("스토어 승인 실패");
   return res.json();
 }
 
-export async function getProductApprovals() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/products/approvals", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("상품 승인 목록 불러오기 실패");
+export async function getProductApprovals(): Promise<ProductApproval[]> {
+  const res = await authenticatedServerFetch("/api/admin/products/approvals");
+  if (!res.ok) return [];
   return res.json();
 }
 
-export async function approveProduct(productId: number, approved: boolean) {
-  if (typeof window === "undefined") {
-    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/products/${productId}/approve`, {
+export async function approveProduct(productId: number) {
+  const res = await authenticatedServerFetch(`/api/admin/products/${productId}/approve`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ approved }),
   });
-  if (!res.ok) throw new Error("상품 승인/거절 실패");
+  if (!res.ok) throw new Error("상품 승인 실패");
   return res.json();
 }
 
-export async function toggleProductStatus(productId: number, isActive: boolean) {
-  if (typeof window === "undefined") {
-    throw new Error("클라이언트 환경에서만 사용 가능합니다.");
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/products/${productId}/status`, {
+export async function updateProductStatus(productId: number, status: "active" | "inactive") {
+  const res = await authenticatedServerFetch(`/api/admin/products/${productId}/status`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ isActive }),
+    body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error("상품 상태 변경 실패");
   return res.json();
 }
 
-export async function getPartnerProducts() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/partner/products", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("제휴사 상품 목록 불러오기 실패");
+export async function getPartnerProducts(): Promise<Product[]> {
+  const res = await authenticatedServerFetch("/api/partner/products");
+  if (!res.ok) return [];
   return res.json();
 }

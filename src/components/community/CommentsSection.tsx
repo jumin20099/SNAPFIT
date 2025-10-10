@@ -64,19 +64,9 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
   const loadComments = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      }
-      
-      // 로그인한 사용자의 경우 Authorization 헤더 추가
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
-      
       const response = await fetch(`/api/comments/posts/${postId}?sortBy=time`, {
         method: 'GET',
-        headers,
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
       })
       
       if (response.ok) {
@@ -98,8 +88,9 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
   const handleSubmitComment = async () => {
     if (!newComment.trim()) return
 
-    const token = localStorage.getItem('token')
-    const isLoggedIn = !!token
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
+    const isLoggedIn = true
 
     // 로그인하지 않은 사용자는 비밀번호 필수
     if (!isLoggedIn && (!commentPassword.trim() || commentPassword.trim().length < 4)) {
@@ -123,8 +114,8 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify(requestBody),
       })
 
@@ -150,8 +141,9 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
   const handleReplyComment = async (parentId: number) => {
     if (!replyContent.trim()) return
 
-    const token = localStorage.getItem('token')
-    const isLoggedIn = !!token
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
+    const isLoggedIn = true
 
     // 로그인하지 않은 사용자는 비밀번호 필수
     if (!isLoggedIn && (!replyPassword.trim() || replyPassword.trim().length < 4)) {
@@ -176,8 +168,8 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify(requestBody),
       })
 
@@ -216,8 +208,9 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
   const handleDeleteComment = async () => {
     if (!commentToDelete) return
 
-    const token = localStorage.getItem('token')
-    const isLoggedIn = !!token
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
+    const isLoggedIn = true
 
     // 익명 댓글인 경우 비밀번호 필수
     if (!isLoggedIn && !deletePassword.trim()) {
@@ -235,8 +228,8 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify(requestBody),
       })
 
@@ -290,7 +283,7 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
               className="min-h-[80px] resize-none"
               data-testid="comment-input"
             />
-            {!localStorage.getItem('token') && (
+            {!isLoggedIn && (
               <div className="mt-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   비밀번호 <span className="text-red-500">*</span>
@@ -405,7 +398,7 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
                         onKeyPress={(e) => handleKeyPress(e, () => handleReplyComment(comment.commentId))}
                         className="min-h-[60px] resize-none text-sm"
                       />
-                      {!localStorage.getItem('token') && (
+                      {!isLoggedIn && (
                         <div className="mt-2">
                           <input
                             type="password"
@@ -505,7 +498,7 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
             <h3 className="text-lg font-semibold mb-4">댓글 삭제</h3>
             <p className="text-gray-600 mb-4">댓글을 삭제하시겠습니까?</p>
             
-            {!localStorage.getItem('token') && (
+            {!isLoggedIn && (
               <div className="mb-4">
                 <input
                   type="password"

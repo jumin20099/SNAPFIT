@@ -284,16 +284,16 @@ export function useCodyState() {
     // 마네킹과 상품 이미지 그리기 (위와 동일한 로직)
     const mannequinImage = canvas.toDataURL('image/png')
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
     let anonymousPassword: string | undefined
 
-    if (!token) {
-      const input = window.prompt('게시글 비밀번호를 입력해주세요 (4자 이상).')
-      if (!input || input.trim().length < 4) {
-        throw new Error('비밀번호는 4자 이상이어야 합니다')
-      }
-      anonymousPassword = input.trim()
+    // 익명 사용자인 경우 비밀번호 요청
+    const input = window.prompt('게시글 비밀번호를 입력해주세요 (4자 이상).')
+    if (!input || input.trim().length < 4) {
+      throw new Error('비밀번호는 4자 이상이어야 합니다')
     }
+    anonymousPassword = input.trim()
 
     const postData: Record<string, any> = {
       title,
@@ -308,7 +308,6 @@ export function useCodyState() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       credentials: 'include',
       body: JSON.stringify(postData)

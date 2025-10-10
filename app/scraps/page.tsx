@@ -40,26 +40,20 @@ export default function ScrapsPage() {
 
   useEffect(() => {
     const checkLoginStatus = async () => {
-      const token = localStorage.getItem('token')
-      setIsLoggedIn(!!token)
-      
-      if (token) {
-        await fetchScraps(token)
-      } else {
-        setLoading(false)
-      }
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
+      setIsLoggedIn(true)
+      await fetchScraps()
     }
     
     checkLoginStatus()
   }, [])
 
-  const fetchScraps = async (token: string) => {
+  const fetchScraps = async () => {
     try {
       // 1. 스크랩한 게시글 상세 정보 가져오기 (새로운 API 사용)
       const scrapsResponse = await fetch('/api/scraps/my/detailed', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       
       if (!scrapsResponse.ok) {

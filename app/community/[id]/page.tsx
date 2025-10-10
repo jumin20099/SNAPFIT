@@ -787,11 +787,8 @@ export default function PostDetailPage() {
         const sortParam = usePopularSort ? '?sortBy=popular' : '?sortBy=time'
         // 댓글 API 호출
         
-        const token = localStorage.getItem('token')
         const response = await fetch(`/api/comments/posts/${post.postId}${sortParam}`, {
-          headers: {
-            ...(token && { 'Authorization': `Bearer ${token}` })
-          }
+          credentials: 'include' // HttpOnly 쿠키 자동 전송
         })
         if (response.ok) {
           const commentsData = await response.json()
@@ -878,12 +875,11 @@ export default function PostDetailPage() {
 
   const handleLikeComment = async (commentId: number) => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`/api/comments/${commentId}/like`, {
         method: 'POST',
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
       })
 
@@ -994,24 +990,16 @@ export default function PostDetailPage() {
 
   // 프로필 버튼 클릭 핸들러
   const handleProfileClick = () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      alert('로그인 후 사용 가능합니다.')
-      return
-    }
-    
-    // 토큰이 있으면 사용자 정보를 가져와서 프로필 페이지로 이동
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
     fetchUserProfile()
   }
 
   // 사용자 프로필 정보 가져오기
   const fetchUserProfile = async () => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch('/api/user/info', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       
       if (response.ok) {

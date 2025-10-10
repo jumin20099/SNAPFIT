@@ -174,13 +174,11 @@ export default function MePage() {
   // 스크랩한 게시글 가져오기
   const fetchScrapPosts = async () => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       const response = await fetch('/api/scraps/my', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
 
       if (response.ok) {
@@ -227,9 +225,8 @@ export default function MePage() {
     try {
       setMeasurementLoading(true)
       setMeasurementError(null)
-      const token = localStorage.getItem('token')
-      if (!token) {
-        setMeasurements(null)
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
         return
       }
 
@@ -266,11 +263,8 @@ export default function MePage() {
       return
     }
 
-    const token = localStorage.getItem('token')
-    if (!token) {
-      alert('로그인이 필요합니다.')
-      return
-    }
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
 
     const payload: Record<string, unknown> = {
       isPublic: isMeasurementPublic,
@@ -328,13 +322,11 @@ export default function MePage() {
   // 주문 내역 가져오기
   const fetchOrders = async () => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       const response = await fetch('/api/orders/my-orders', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
 
       if (response.ok) {
@@ -380,8 +372,8 @@ export default function MePage() {
   // 닉네임 변경
   const updateNickname = async () => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       console.log('닉네임 변경 요청:', { nickname: editNickname })
       
@@ -389,8 +381,8 @@ export default function MePage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ nickname: editNickname })
       })
       
@@ -438,8 +430,8 @@ export default function MePage() {
   const handleCroppedImageUpload = async (croppedImageUrl: string) => {
     setIsUploading(true)
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       // Blob URL을 File로 변환
       const response = await fetch(croppedImageUrl)
@@ -451,9 +443,7 @@ export default function MePage() {
 
       const uploadResponse = await fetch('/api/media/upload/profile', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: formData
       })
 

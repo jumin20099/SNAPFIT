@@ -119,13 +119,9 @@ export default function AdminPage() {
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const token = localStorage.getItem('token')
-        if (token) {
-          const response = await fetch('/api/user/info', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
+        const response = await fetch('/api/user/info', {
+          credentials: 'include' // HttpOnly 쿠키 자동 전송
+        })
           if (response.ok) {
             const data = await response.json()
             setUserInfo(data)
@@ -154,12 +150,12 @@ export default function AdminPage() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
-      if (!token) return
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       // 상품 데이터 로드
       const productsRes = await fetch("/api/admin/products", {
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       if (productsRes.ok) {
         const productsData = await productsRes.json()
@@ -168,7 +164,7 @@ export default function AdminPage() {
 
       // 제휴몰 데이터 로드
       const mallsRes = await fetch("/api/admin/store-malls", {
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       if (mallsRes.ok) {
         const mallsData = await mallsRes.json()
@@ -177,7 +173,7 @@ export default function AdminPage() {
 
       // 제휴사 상품 데이터 로드
       const partnerProductsRes = await fetch("/api/admin/partner/products", {
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       if (partnerProductsRes.ok) {
         const partnerProductsData = await partnerProductsRes.json()
@@ -186,7 +182,7 @@ export default function AdminPage() {
 
       // 파트너 목록 로드
       const partnersRes = await fetch("/api/partner/admin/applications", {
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       if (partnersRes.ok) {
         const apps = await partnersRes.json()
@@ -196,7 +192,7 @@ export default function AdminPage() {
 
       // 수정 요청 목록 로드
       const updateRequestsRes = await fetch("/api/partner/admin/products/update-requests", {
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       if (updateRequestsRes.ok) {
         const data = await updateRequestsRes.json()
@@ -205,7 +201,7 @@ export default function AdminPage() {
 
       // 신고 목록 로드
       const reportsRes = await fetch(`/api/reports`, {
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       if (reportsRes.ok) {
         const reportsData = await reportsRes.json()
@@ -255,11 +251,12 @@ export default function AdminPage() {
     if (!selectedProductId) return
     
     try {
-      const token = localStorage.getItem("token")
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       if (selectedProductIsPartner) {
         const res = await fetch(`/api/partner/products/${selectedProductId}`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` }
+          credentials: 'include' // HttpOnly 쿠키 자동 전송
         })
         if (!res.ok) {
           toast.error("삭제 실패")
@@ -268,7 +265,7 @@ export default function AdminPage() {
       } else {
         const res = await fetch(`/api/admin/products/${selectedProductId}`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` }
+          credentials: 'include' // HttpOnly 쿠키 자동 전송
         })
         if (!res.ok) {
           toast.error("삭제 실패")
@@ -294,17 +291,18 @@ export default function AdminPage() {
         return
       }
       
-      const token = localStorage.getItem("token")
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       const url = isPartner 
         ? `/api/partner/products/${productId}/status`
         : `/api/admin/products/${productId}/status`
       
       const res = await fetch(url, {
         method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` 
-        },
+          headers: { 
+            "Content-Type": "application/json",
+          },
+          credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ 
           isActive: newStatus,
           status: newStatus ? 'active' : 'inactive'
@@ -325,13 +323,14 @@ export default function AdminPage() {
 
   const handleToggleMallStatus = async (mallId: number, newStatus: boolean) => {
     try {
-      const token = localStorage.getItem("token")
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       const res = await fetch(`/api/admin/store-malls/${mallId}/status`, {
         method: "PUT",
-        headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` 
-        },
+          headers: { 
+            "Content-Type": "application/json",
+          },
+          credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ isActive: newStatus })
       })
       
@@ -357,10 +356,11 @@ export default function AdminPage() {
     if (!selectedProductId) return
     
     try {
-      const token = localStorage.getItem("token")
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       const res = await fetch(`/api/admin/store-malls/${selectedProductId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       
       if (res.ok) {
@@ -389,7 +389,8 @@ export default function AdminPage() {
     if (!selectedProductId) return
     
     try {
-      const token = localStorage.getItem("token")
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       const res = await fetch(`/api/partner/admin/products/${selectedProductId}/update-request/approve`, {
         method: "PUT",
         headers: { 
@@ -422,7 +423,6 @@ export default function AdminPage() {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ rejectionReason }),
         })

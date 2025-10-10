@@ -92,16 +92,9 @@ export async function saveOutfitToDatabase(outfitData: OutfitData): Promise<Outf
 
 // 내 코디 목록 조회
 export async function getMyOutfits(): Promise<OutfitResponse[]> {
-  const token = localStorage.getItem('token')
-  if (!token) {
-    throw new Error('로그인이 필요합니다')
-  }
-
   const response = await fetch('/api/outfits?type=my', {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
+    credentials: 'include' // HttpOnly 쿠키 자동 전송
   })
 
   if (!response.ok) {
@@ -126,16 +119,9 @@ export async function getPublicOutfits(): Promise<OutfitResponse[]> {
 
 // 코디 삭제
 export async function deleteOutfit(outfitIdx: number): Promise<void> {
-  const token = localStorage.getItem('token')
-  if (!token) {
-    throw new Error('로그인이 필요합니다')
-  }
-
   const response = await fetch(`/api/outfits/${outfitIdx}`, {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
+    credentials: 'include' // HttpOnly 쿠키 자동 전송
   })
 
   if (!response.ok) {
@@ -145,15 +131,9 @@ export async function deleteOutfit(outfitIdx: number): Promise<void> {
 
 // 코디 공개/비공개 상태 토글
 export async function toggleOutfitVisibility(outfitIdx: number, isPublic: boolean): Promise<OutfitResponse> {
-  const token = localStorage.getItem('token')
-  if (!token) {
-    throw new Error('로그인이 필요합니다')
-  }
-
   console.log('=== toggleOutfitVisibility 호출 ===')
   console.log('outfitIdx:', outfitIdx)
   console.log('isPublic:', isPublic)
-  console.log('token:', token ? '존재함' : '없음')
 
   const requestBody = { isPublic }
   console.log('요청 body:', requestBody)
@@ -162,8 +142,8 @@ export async function toggleOutfitVisibility(outfitIdx: number, isPublic: boolea
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
     },
+    credentials: 'include', // HttpOnly 쿠키 자동 전송
     body: JSON.stringify(requestBody)
   })
 

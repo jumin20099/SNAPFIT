@@ -1,14 +1,14 @@
 // 클라이언트 전용 fetch 함수 모음
+// HttpOnly 쿠키 기반 인증을 사용합니다.
+
+import { authenticatedFetch } from '@/lib/auth-client';
 
 export async function getStoreMalls() {
   if (typeof window === "undefined") {
     return [];
   }
   
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/stores/list", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await authenticatedFetch("/api/admin/stores/list");
   if (!res.ok) throw new Error("제휴몰 목록을 불러오지 못했습니다.");
   return res.json();
 }
@@ -17,10 +17,7 @@ export async function getProducts() {
   if (typeof window === "undefined") {
     return [];
   }
-  const token = localStorage.getItem("token");
-  const res = await fetch("/api/admin/products/list", {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await authenticatedFetch("/api/admin/products/list");
   if (!res.ok) throw new Error("상품 목록을 불러오지 못했습니다.");
   return res.json();
 }
@@ -29,10 +26,8 @@ export async function deleteProduct(productId: number) {
   if (typeof window === "undefined") {
     throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/products/${productId}`, {
+  const res = await authenticatedFetch(`/api/admin/products/${productId}`, {
     method: "DELETE",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error("상품 삭제 실패");
   // 본문이 있으면 json 파싱, 없으면 undefined 반환
@@ -49,13 +44,8 @@ export async function toggleProductStatus(productId: number, isActive: boolean) 
   if (typeof window === "undefined") {
     throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/products/${productId}/status`, {
+  const res = await authenticatedFetch(`/api/admin/products/${productId}/status`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
     body: JSON.stringify({ isActive }),
   });
   if (!res.ok) throw new Error("상품 상태 변경 실패");
@@ -66,10 +56,7 @@ export async function checkStoreDependencies(storeId: number) {
   if (typeof window === "undefined") {
     throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/stores/${storeId}/dependencies`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const res = await authenticatedFetch(`/api/admin/stores/${storeId}/dependencies`);
   
   if (!res.ok) {
     throw new Error("의존성 확인 실패");
@@ -82,10 +69,8 @@ export async function deleteStoreMall(mallId: number) {
   if (typeof window === "undefined") {
     throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/stores/${mallId}`, {
+  const res = await authenticatedFetch(`/api/admin/stores/${mallId}`, {
     method: "DELETE",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   
   if (!res.ok) {
@@ -121,13 +106,8 @@ export async function toggleStoreStatus(storeId: number, isActive: boolean) {
   if (typeof window === "undefined") {
     throw new Error("클라이언트 환경에서만 사용 가능합니다.");
   }
-  const token = localStorage.getItem("token");
-  const res = await fetch(`/api/admin/stores/${storeId}/status`, {
+  const res = await authenticatedFetch(`/api/admin/stores/${storeId}/status`, {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
     body: JSON.stringify({ isActive }),
   });
   if (!res.ok) throw new Error("제휴몰 상태 변경 실패");
@@ -135,4 +115,4 @@ export async function toggleStoreStatus(storeId: number, isActive: boolean) {
 }
 
 // 제휴사 상품도 동일 엔드포인트로 통합했으므로 별도 함수 제거
-// 필요시 addProduct, deleteProduct 등도 이 파일로 옮길 수 있음 
+// 필요시 addProduct, deleteProduct 등도 이 파일로 옮길 수 있음

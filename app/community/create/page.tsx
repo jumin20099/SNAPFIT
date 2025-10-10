@@ -256,7 +256,6 @@ export default function CreatePostPage() {
       // 실제 API 호출
       console.log('게시글 작성 요청 데이터:', postData)
       
-      const token = localStorage.getItem('token')
       const endpoint = isEditMode && editPostId ? `/api/posts/${editPostId}` : '/api/posts'
       const method = isEditMode ? 'PUT' : 'POST'
 
@@ -264,7 +263,6 @@ export default function CreatePostPage() {
         method,
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         credentials: 'include',
         body: JSON.stringify(postData),

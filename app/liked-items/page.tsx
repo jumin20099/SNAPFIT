@@ -237,15 +237,12 @@ export default function LikedItemsPage() {
   // 좋아요 토글 (브랜드)
   const toggleBrandLike = async (brandId: number) => {
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
-
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ 
           targetIdx: brandId, 
           targetType: 'BRAND' 
