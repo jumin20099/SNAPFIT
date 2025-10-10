@@ -2,6 +2,7 @@
 
 import React, { useMemo, useCallback } from 'react'
 import { PostActionMenu } from '@/components/ui/PostActionMenu'
+import { useReportModal } from '@/features/report/ReportModalContext'
 
 interface PostTableItem {
   postId: number
@@ -98,12 +99,23 @@ export function PostTableList({
   currentUserId, 
   postAuthors 
 }: PostTableListProps) {
+  const { openReportModal } = useReportModal()
+
   const handleRowSelect = useCallback((postId: number) => {
     if (!onSelect) {
       return
     }
     onSelect(postId)
   }, [onSelect])
+
+  const handleReportPost = useCallback((postId: number, title?: string | null, authorName?: string | null) => {
+    openReportModal({
+      type: 'POST',
+      targetId: postId,
+      title: title || '게시글 신고',
+      description: authorName ? `작성자: ${authorName}` : undefined
+    })
+  }, [openReportModal])
 
   const tableHeader = useMemo(() => {
     const headerElement = (
@@ -154,6 +166,7 @@ export function PostTableList({
           className="hidden md:grid md:grid-cols-[50px_88px_68px_1fr_120px_112px_68px_68px_60px] md:items-center md:px-3 md:py-1.5 border-x border-b border-gray-200 bg-white hover:bg-blue-50/60 focus:bg-blue-50/60 transition-colors cursor-pointer"
           data-post-id={post.postId}
           data-list-index={rowIndex - 1}
+          data-testid="post-card"
           onClick={() => handleRowSelect(post.postId)}
           onKeyDown={event => {
             if (event.key === 'Enter' || event.key === ' ') {
@@ -189,6 +202,7 @@ export function PostTableList({
               isOwner={isOwner || false}
               onEdit={onEdit || (() => {})}
               onDelete={onDelete || (() => {})}
+              onReport={() => handleReportPost(post.postId, post.title, post.authorName)}
             />
           </div>
         </div>
@@ -200,6 +214,7 @@ export function PostTableList({
           className="grid md:hidden gap-2 border border-gray-200 rounded-lg p-3 bg-white hover:border-blue-200 transition-colors cursor-pointer"
           data-post-id={post.postId}
           data-list-index={rowIndex - 1}
+          data-testid="post-card"
           onClick={() => handleRowSelect(post.postId)}
         >
           <div className="flex items-center gap-2.5">
@@ -225,6 +240,7 @@ export function PostTableList({
               isOwner={isOwner || false}
               onEdit={onEdit || (() => {})}
               onDelete={onDelete || (() => {})}
+              onReport={() => handleReportPost(post.postId, post.title, post.authorName)}
             />
           </div>
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-gray-500">
@@ -265,4 +281,3 @@ export function PostTableList({
 
   return tableWrapper
 }
-

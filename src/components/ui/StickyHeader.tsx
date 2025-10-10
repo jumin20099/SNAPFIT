@@ -8,6 +8,7 @@ import { SearchModal } from './SearchModal'
 import { NotificationModal } from './NotificationModal'
 import { MainCategoryModal } from './MainCategoryModal'
 import { getSelectedCategoryPath } from '@/constants/categories'
+import { useNotifications } from '@/hooks/useNotifications'
 
 // 헥스 색상을 RGB로 변환하는 함수
 function hexToRgb(hex: string): string {
@@ -34,6 +35,7 @@ export function StickyHeader({
 }: StickyHeaderProps = {}) {
   const router = useRouter()
   const pathname = usePathname()
+  const { unreadCount } = useNotifications()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
@@ -119,17 +121,18 @@ export function StickyHeader({
         animate={{ y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <div className="max-w-md mx-auto px-4 py-3">
+        <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {/* 좌측: 되돌아가기 버튼 또는 로고 */}
             <div className="flex items-center">
               {pathname.startsWith('/products/') ? (
-                <button 
-                  onClick={handleBackClick}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
-                >
-                  <ArrowLeft size={20} className="text-[#17171b] dark:text-dark-text" />
-                </button>
+              <button 
+                onClick={handleBackClick}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="뒤로 가기"
+              >
+                <ArrowLeft size={20} className="text-[#17171b] dark:text-dark-text" />
+              </button>
               ) : (
                 <button 
                   onClick={() => router.push('/')}
@@ -154,21 +157,26 @@ export function StickyHeader({
               
               <button 
                 onClick={() => setIsSearchModalOpen(true)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="검색"
               >
                 <Search size={20} className="text-[#17171b] dark:text-dark-text" />
               </button>
               <button 
                 onClick={() => setIsNotificationModalOpen(true)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors relative"
+                aria-label="알림"
               >
                 <Bell size={20} className="text-[#17171b] dark:text-dark-text" />
-                {/* 알림 뱃지 */}
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                {/* 알림 뱃지 - 읽지 않은 알림이 있을 때만 표시 */}
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                )}
               </button>
               <button 
                 onClick={handleCartClick}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="장바구니"
               >
                 <ShoppingBag size={20} className="text-[#17171b] dark:text-dark-text" />
               </button>

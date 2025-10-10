@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import Image from 'next/image'
 
 export function HeroBanner() {
   // 실제 API에서 배너 데이터를 가져와야 함
@@ -12,21 +13,21 @@ export function HeroBanner() {
       title: "특별 할인 이벤트",
       subtitle: "한정 수량, 놓치지 마세요",
       badge: "특가",
-      image: "https://picsum.photos/seed/banner1/400/300",
+      image: "https://picsum.photos/seed/banner1/800/400",
       link: "/products?category=sale"
     },
     {
       title: "신상품 출시",
       subtitle: "최신 트렌드를 만나보세요",
       badge: "NEW",
-      image: "https://picsum.photos/seed/banner2/400/300",
+      image: "https://picsum.photos/seed/banner2/800/400",
       link: "/products?category=new"
     },
     {
       title: "코디 추천",
       subtitle: "완벽한 스타일링을 위한 아이템들",
       badge: "STYLE",
-      image: "https://picsum.photos/seed/banner3/400/300",
+      image: "https://picsum.photos/seed/banner3/800/400",
       link: "/cody"
     }
   ]
@@ -54,7 +55,7 @@ export function HeroBanner() {
   return (
     <div className="w-full">
       <motion.div
-        className="relative bg-gradient-to-br from-gray-800 via-gray-600 to-gray-400 p-6 h-48 overflow-hidden w-full"
+        className="relative bg-gradient-to-br from-gray-800 via-gray-600 to-gray-400 p-6 h-48 md:h-64 lg:h-80 overflow-hidden w-full"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
@@ -111,10 +112,12 @@ export function HeroBanner() {
               animate={{ x: 0, opacity: 1, rotate: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
             >
-              <img 
+              <Image 
                 src={slides[currentSlide % slides.length].image}
                 alt={slides[currentSlide % slides.length].title}
-                className="w-full h-full object-cover"
+                fill
+                className="object-cover"
+                sizes="96px"
               />
             </motion.div>
           </div>

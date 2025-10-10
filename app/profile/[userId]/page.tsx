@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { apiClient } from '@/shared/api/client'
+import { ReportButton } from '@/features/report/ReportButton'
 
 interface ProfileData {
   userId: string
@@ -207,6 +208,16 @@ export default function ProfilePage() {
                     >
                       {following ? '팔로잉' : '팔로우'}
                     </button>
+                  )}
+                  {!profile.isOwnProfile && (
+                    <ReportButton
+                      targetType="USER"
+                      targetUserId={profile.userId}
+                      label="신고"
+                      variant="outline"
+                      size="sm"
+                      data-testid="report-user-button"
+                    />
                   )}
                 </div>
               </div>

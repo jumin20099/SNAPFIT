@@ -4,12 +4,13 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Star } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { LikeButton } from '@/features/reactions/LikeButton'
 import type { Product } from '@/shared/types'
 
 interface ProductCardProps {
   product: Product
-  onLike?: (productId: string) => void
+  onLike?: (productId: number) => void
   onClick?: () => void
   variant?: 'grid' | 'list'
 }
@@ -50,11 +51,13 @@ export function ProductCard({ product, onLike, onClick, variant = 'grid' }: Prod
       {/* 상품 이미지 */}
       <div className="relative aspect-square bg-gray-100">
         {!imageError ? (
-          <img
-            src={product.productImage || product.imageUrl || product.product_image}
+          <Image
+            src={product.productImage || product.imageUrl || product.product_image || '/placeholder-product.png'}
             alt={`${product.brand || product.storeName || product.store_name} ${product.productName || product.name || product.product_name}`}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
             onError={() => setImageError(true)}
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">

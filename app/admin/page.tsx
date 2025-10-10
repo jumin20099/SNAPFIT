@@ -1,11 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { ArrowLeft, Plus, Edit, Trash2, Store, Package, BarChart3, FileText, Users, CheckCircle, XCircle, Shield, AlertTriangle, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { AdminStats } from '@/components/admin/AdminStats'
+import { ReportCard } from '@/components/admin/ReportCard'
+import { toast } from 'sonner'
 import { useRouter } from "next/navigation"
 
 export interface Product {
@@ -74,10 +79,13 @@ export default function AdminPage() {
     reportId: number
     reporterId: string
     targetType: string
-    targetId: number
+    targetId?: number
+    targetUserId?: string
     reason: string
     status: string
+    category?: string
     createdAt: string
+    updatedAt?: string
     adminNotes?: string
   }>>([])
   const [reportStats, setReportStats] = useState({
@@ -86,7 +94,24 @@ export default function AdminPage() {
     resolved: 0,
     rejected: 0
   })
+  const [reportCategoryStats, setReportCategoryStats] = useState({
+    SPAM: 0,
+    INAPPROPRIATE_CONTENT: 0,
+    HARASSMENT: 0,
+    OTHER: 0
+  })
+  const [reportStatusFilter, setReportStatusFilter] = useState<'ALL' | 'PENDING' | 'PROCESSING' | 'RESOLVED' | 'REJECTED'>('ALL')
+  const [reportCategoryFilter, setReportCategoryFilter] = useState<'ALL' | 'SPAM' | 'INAPPROPRIATE_CONTENT' | 'HARASSMENT' | 'OTHER'>('ALL')
   const [isTempLoginLoading, setIsTempLoginLoading] = useState(false)
+
+  const filteredReports = useMemo(() => {
+    return reports.filter((report) => {
+      const statusMatch = reportStatusFilter === 'ALL' || report.status === reportStatusFilter
+      const categoryValue = (report.category || 'OTHER').toUpperCase()
+      const categoryMatch = reportCategoryFilter === 'ALL' || categoryValue === reportCategoryFilter
+      return statusMatch && categoryMatch
+    })
+  }, [reports, reportStatusFilter, reportCategoryFilter])
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -176,19 +201,39 @@ export default function AdminPage() {
       }
 
       // 신고 목록 로드
-      const reportsRes = await fetch("/api/reports", {
+      const reportsRes = await fetch(`/api/reports`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       if (reportsRes.ok) {
         const reportsData = await reportsRes.json()
-        setReports(reportsData)
-        
-        // 신고 상태별 통계 계산
-        const stats = reportsData.reduce((acc: any, report: any) => {
-          acc[report.status.toLowerCase()] = (acc[report.status.toLowerCase()] || 0) + 1
+        const normalizedReports = Array.isArray(reportsData?.content) ? reportsData.content : reportsData
+        setReports(normalizedReports)
+
+        const statusCounts = normalizedReports.reduce((acc: Record<string, number>, report: any) => {
+          const key = (report.status || 'PENDING').toUpperCase()
+          acc[key] = (acc[key] || 0) + 1
           return acc
-        }, { pending: 0, processing: 0, resolved: 0, rejected: 0 })
-        setReportStats(stats)
+        }, {})
+
+        const categoryCounts = normalizedReports.reduce((acc: Record<string, number>, report: any) => {
+          const key = (report.category || 'OTHER').toUpperCase()
+          acc[key] = (acc[key] || 0) + 1
+          return acc
+        }, {})
+
+        setReportStats({
+          pending: statusCounts.PENDING || 0,
+          processing: statusCounts.PROCESSING || 0,
+          resolved: statusCounts.RESOLVED || 0,
+          rejected: statusCounts.REJECTED || 0
+        })
+
+        setReportCategoryStats({
+          SPAM: categoryCounts.SPAM || 0,
+          INAPPROPRIATE_CONTENT: categoryCounts.INAPPROPRIATE_CONTENT || 0,
+          HARASSMENT: categoryCounts.HARASSMENT || 0,
+          OTHER: categoryCounts.OTHER || 0
+        })
       }
     } catch (error) {
       console.error("데이터 로드 실패:", error)
@@ -309,28 +354,39 @@ export default function AdminPage() {
     }
   }
 
+  const [showApproveDialog, setShowApproveDialog] = useState(false)
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null)
+
   const handleApproveUpdateRequest = async (productId: number) => {
-    if (confirm("이 수정 요청을 승인하시겠습니까?")) {
-      try {
-        const token = localStorage.getItem("token")
-        const res = await fetch(`/api/partner/admin/products/${productId}/update-request/approve`, {
-          method: "PUT",
-          headers: { 
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}` 
-          }
-        })
-        if (res.ok) {
-          alert("수정 요청이 승인되었습니다.")
-          loadData()
-        } else {
-          const errorData = await res.json().catch(() => ({}))
-          alert(`승인 실패: ${errorData.error || '알 수 없는 오류'}`)
+    setSelectedProductId(productId)
+    setShowApproveDialog(true)
+  }
+
+  const confirmApproveUpdateRequest = async () => {
+    if (!selectedProductId) return
+    
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`/api/partner/admin/products/${selectedProductId}/update-request/approve`, {
+        method: "PUT",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
         }
-      } catch (error) {
-        console.error("승인 중 오류:", error)
-        alert("승인 중 오류가 발생했습니다.")
+      })
+      if (res.ok) {
+        toast.success("수정 요청이 승인되었습니다.")
+        loadData()
+      } else {
+        const errorData = await res.json().catch(() => ({}))
+        toast.error(`승인 실패: ${errorData.error || '알 수 없는 오류'}`)
       }
+    } catch (error) {
+      console.error("승인 중 오류:", error)
+      toast.error("승인 중 오류가 발생했습니다.")
+    } finally {
+      setShowApproveDialog(false)
+      setSelectedProductId(null)
     }
   }
 
@@ -897,19 +953,86 @@ export default function AdminPage() {
                     <Badge variant="default">완료 {reportStats.resolved}</Badge>
                   </div>
                 </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-gray-600">상태 필터</span>
+                    <Select value={reportStatusFilter} onValueChange={(value: 'ALL' | 'PENDING' | 'PROCESSING' | 'RESOLVED' | 'REJECTED') => setReportStatusFilter(value)}>
+                      <SelectTrigger data-testid="report-status-filter">
+                        <SelectValue placeholder="상태 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL" data-testid="filter-all">전체</SelectItem>
+                        <SelectItem value="PENDING" data-testid="filter-pending">대기</SelectItem>
+                        <SelectItem value="PROCESSING" data-testid="filter-processing">처리중</SelectItem>
+                        <SelectItem value="RESOLVED" data-testid="filter-resolved">완료</SelectItem>
+                        <SelectItem value="REJECTED" data-testid="filter-rejected">거부</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium text-gray-600">카테고리 필터</span>
+                    <Select value={reportCategoryFilter} onValueChange={(value: 'ALL' | 'SPAM' | 'INAPPROPRIATE_CONTENT' | 'HARASSMENT' | 'OTHER') => setReportCategoryFilter(value)}>
+                      <SelectTrigger data-testid="report-category-filter">
+                        <SelectValue placeholder="카테고리 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL" data-testid="filter-category-all">전체</SelectItem>
+                        <SelectItem value="SPAM" data-testid="filter-category-spam">스팸/홍보</SelectItem>
+                        <SelectItem value="INAPPROPRIATE_CONTENT" data-testid="filter-category-inappropriate">부적절한 콘텐츠</SelectItem>
+                        <SelectItem value="HARASSMENT" data-testid="filter-category-harassment">욕설/괴롭힘</SelectItem>
+                        <SelectItem value="OTHER" data-testid="filter-category-other">기타</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-4">
+                  <Card className="border-blue-100 bg-blue-50">
+                    <CardContent className="py-3">
+                      <div className="text-xs text-blue-500 uppercase">스팸</div>
+                      <div className="text-xl font-bold" data-testid="spam-reports-count">{reportCategoryStats.SPAM}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-purple-100 bg-purple-50">
+                    <CardContent className="py-3">
+                      <div className="text-xs text-purple-500 uppercase">부적절한 콘텐츠</div>
+                      <div className="text-xl font-bold" data-testid="inappropriate-reports-count">{reportCategoryStats.INAPPROPRIATE_CONTENT}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-red-100 bg-red-50">
+                    <CardContent className="py-3">
+                      <div className="text-xs text-red-500 uppercase">괴롭힘</div>
+                      <div className="text-xl font-bold" data-testid="harassment-reports-count">{reportCategoryStats.HARASSMENT}</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-gray-100 bg-gray-50">
+                    <CardContent className="py-3">
+                      <div className="text-xs text-gray-500 uppercase">기타</div>
+                      <div className="text-xl font-bold" data-testid="other-reports-count">{reportCategoryStats.OTHER}</div>
+                    </CardContent>
+                  </Card>
+                </div>
                 
+                <div className="hidden md:grid grid-cols-[1fr_120px_120px_160px] gap-4 text-xs font-semibold text-gray-500 uppercase" data-testid="reports-table-header">
+                  <span>신고 정보</span>
+                  <span>상태</span>
+                  <span>카테고리</span>
+                  <span>기록</span>
+                </div>
+
                 {loading ? (
                   <div className="text-center py-8">로딩 중...</div>
                 ) : (
-                  <div className="grid gap-4">
-                    {reports.length === 0 ? (
+                  <div className="grid gap-4" data-testid="admin-reports-list">
+                    {filteredReports.length === 0 ? (
                       <div className="text-center py-8">
                         <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-600">신고가 없습니다.</p>
                       </div>
                     ) : (
-                      reports.map((report) => (
-                        <Card key={report.reportId || `report-${Math.random()}`}>
+                      filteredReports.map((report) => (
+                        <Card key={report.reportId || `report-${Math.random()}`} data-testid="admin-report-item">
                           <CardContent className="p-4">
                             <div className="flex items-start gap-4">
                               <div className="flex-1">
@@ -929,6 +1052,14 @@ export default function AdminPage() {
                                     {report.targetType === 'POST' ? '게시글' :
                                      report.targetType === 'COMMENT' ? '댓글' : '사용자'} 신고
                                   </Badge>
+                                  {report.category && (
+                                    <Badge variant="secondary">
+                                      {report.category === 'SPAM' && '스팸/홍보'}
+                                      {report.category === 'INAPPROPRIATE_CONTENT' && '부적절한 콘텐츠'}
+                                      {report.category === 'HARASSMENT' && '욕설/괴롭힘'}
+                                      {report.category === 'OTHER' && '기타'}
+                                    </Badge>
+                                  )}
                                   <span className="text-sm text-gray-500">
                                     #{report.reportId}
                                   </span>
@@ -936,7 +1067,7 @@ export default function AdminPage() {
                                 
                                 <h3 className="font-medium mb-1">신고 사유: {report.reason}</h3>
                                 <p className="text-sm text-gray-600 mb-2">
-                                  대상: {report.targetType} ID {report.targetId}
+                                  대상: {report.targetType === 'USER' ? `USER ${report.targetUserId}` : `${report.targetType} ID ${report.targetId}`}
                                 </p>
                                 <p className="text-sm text-gray-600 mb-2">
                                   신고자: {report.reporterId}

@@ -1,8 +1,8 @@
 
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { 
   User, 
   Camera, 
@@ -13,7 +13,8 @@ import {
   Sun, 
   Settings,
   ArrowLeft,
-  LogOut
+  LogOut,
+  Flag
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -23,6 +24,12 @@ import { Input } from '@/components/ui/input'
 import ProfileImageEditor from '@/components/ProfileImageEditor'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Report, useReport } from '@/hooks/useReport'
+import { REPORT_CATEGORIES, REPORT_STATUS_LABELS } from '@/features/report/constants'
+import { ReportButton } from '@/features/report/ReportButton'
+import { toast } from 'sonner'
 // import { useTheme } from 'next-themes'
 
 interface UserProfile {
@@ -68,6 +75,7 @@ interface Order {
 
 export default function MePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   // const { theme, setTheme } = useTheme()
   const [theme, setTheme] = useState('light')
   const [user, setUser] = useState<UserProfile | null>(null)
@@ -80,7 +88,23 @@ export default function MePage() {
   const [showImageEditor, setShowImageEditor] = useState(false)
   const [selectedImageUrl, setSelectedImageUrl] = useState('')
   const [isUploading, setIsUploading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'profile' | 'cody' | 'orders'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'cody' | 'orders' | 'reports'>('profile')
+
+  // URL 파라미터에서 탭 상태 읽기
+  useEffect(() => {
+    const tab = searchParams.get('tab') as 'profile' | 'cody' | 'orders' | 'reports'
+    if (tab && ['profile', 'cody', 'orders', 'reports'].includes(tab)) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
+
+  // 탭 변경 시 URL 업데이트
+  const handleTabChange = (tab: 'profile' | 'cody' | 'orders' | 'reports') => {
+    setActiveTab(tab)
+    const url = new URL(window.location.href)
+    url.searchParams.set('tab', tab)
+    router.replace(url.pathname + url.search, { scroll: false })
+  }
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [measurements, setMeasurements] = useState<{ heightCm?: number | null; weightKg?: number | string | null; isPublic?: boolean } | null>(null)
   const [measurementLoading, setMeasurementLoading] = useState(false)
@@ -89,6 +113,13 @@ export default function MePage() {
   const [weightInput, setWeightInput] = useState('')
   const [isMeasurementPublic, setIsMeasurementPublic] = useState(false)
   const [measurementSaving, setMeasurementSaving] = useState(false)
+  
+  // 신고 관련 상태
+  const [reports, setReports] = useState<Report[]>([])
+  const [isReportsLoading, setIsReportsLoading] = useState(false)
+  const [reportsPage, setReportsPage] = useState(0)
+  const [hasMoreReports, setHasMoreReports] = useState(true)
+  const { getMyReports } = useReport()
 
   // 사용자 정보 가져오기
   const fetchUserInfo = async () => {
@@ -325,6 +356,35 @@ export default function MePage() {
     }
   }
 
+  // 신고 내역 가져오기
+  const loadReports = async (page: number = 0, append: boolean = false) => {
+    try {
+      setIsReportsLoading(true)
+      const items = await getMyReports(page, 20) // 페이지당 20개로 제한
+      
+      if (append) {
+        setReports(prev => [...prev, ...items])
+      } else {
+        setReports(items)
+      }
+      
+      setHasMoreReports(items.length === 20) // 20개 미만이면 더 이상 없음
+    } catch (error) {
+      toast.error('신고 내역을 불러오지 못했습니다')
+    } finally {
+      setIsReportsLoading(false)
+    }
+  }
+
+  // 더 많은 신고 내역 로드
+  const loadMoreReports = () => {
+    if (!isReportsLoading && hasMoreReports) {
+      const nextPage = reportsPage + 1
+      setReportsPage(nextPage)
+      loadReports(nextPage, true)
+    }
+  }
+
   // 닉네임 변경
   const updateNickname = async () => {
     try {
@@ -536,6 +596,31 @@ export default function MePage() {
     }
   }, [measurements])
 
+  // 신고 내역 탭이 활성화될 때 신고 내역 로드
+  useEffect(() => {
+    if (activeTab === 'reports' && reports.length === 0 && !isReportsLoading) {
+      loadReports(0, false)
+    }
+  }, [activeTab])
+
+  // 신고 내역 정렬
+  const orderedReports = useMemo(() => {
+    return [...reports].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  }, [reports])
+
+  // 신고 카테고리 라벨 맵
+  const categoryLabelMap = REPORT_CATEGORIES.reduce<Record<string, string>>((acc, category) => {
+    acc[category.value] = category.label
+    return acc
+  }, {})
+
+  // 신고 대상 타입 한국어 맵
+  const targetTypeLabels = {
+    POST: '게시글',
+    COMMENT: '댓글',
+    USER: '사용자'
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('ko-KR', {
@@ -661,34 +746,44 @@ export default function MePage() {
         <div className="bg-white dark:bg-dark-sub rounded-lg shadow-sm">
           <div className="flex border-b border-gray-200 dark:border-dark-border">
             <button
-              className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
+              className={`flex-1 py-3 px-2 text-sm font-medium text-center ${
                 activeTab === 'profile'
                   ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
-              onClick={() => setActiveTab('profile')}
+              onClick={() => handleTabChange('profile')}
             >
               프로필
             </button>
             <button
-              className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
+              className={`flex-1 py-3 px-2 text-sm font-medium text-center ${
                 activeTab === 'cody'
                   ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
-              onClick={() => setActiveTab('cody')}
+              onClick={() => handleTabChange('cody')}
             >
               내 코디
             </button>
             <button
-              className={`flex-1 py-3 px-4 text-sm font-medium text-center ${
+              className={`flex-1 py-3 px-2 text-sm font-medium text-center ${
                 activeTab === 'orders'
                   ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
-              onClick={() => setActiveTab('orders')}
+              onClick={() => handleTabChange('orders')}
             >
               주문 내역
+            </button>
+            <button
+              className={`flex-1 py-3 px-2 text-sm font-medium text-center ${
+                activeTab === 'reports'
+                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+              onClick={() => handleTabChange('reports')}
+            >
+              신고 내역
             </button>
           </div>
         </div>
@@ -798,7 +893,7 @@ export default function MePage() {
           <div className="bg-white dark:bg-dark-sub rounded-lg p-6 shadow-sm">
             <MyCodyList />
           </div>
-        ) : (
+        ) : activeTab === 'orders' ? (
           /* 주문 내역 탭 */
           <div className="bg-white dark:bg-dark-sub rounded-lg p-6 shadow-sm">
             {orders.length === 0 ? (
@@ -882,7 +977,80 @@ export default function MePage() {
               </div>
             )}
           </div>
-        )}
+        ) : activeTab === 'reports' ? (
+          /* 신고 내역 탭 */
+          <div className="bg-white dark:bg-dark-sub rounded-lg p-6 shadow-sm">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">내 신고 내역</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">최근 50개의 신고 내역을 보여드립니다.</p>
+            </div>
+            
+            {isReportsLoading && reports.length === 0 ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, index) => (
+                  <Skeleton key={index} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : orderedReports.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-gray-400 mb-4">
+                  <Flag className="w-16 h-16 mx-auto" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">신고 내역이 없습니다</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">아직 접수된 신고가 없습니다.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {orderedReports.map((report) => (
+                  <div
+                    key={report.reportId}
+                    className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-sub p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{targetTypeLabels[report.targetType] || report.targetType}</Badge>
+                        <Badge variant="outline">{categoryLabelMap[report.category] || report.category}</Badge>
+                      </div>
+                      <Badge variant="outline">
+                        {REPORT_STATUS_LABELS[report.status] || report.status}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300 mb-1">
+                      {report.reason || '사유 없음'}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      접수일: {new Date(report.createdAt).toLocaleString('ko-KR')}
+                    </div>
+                    <div className="mt-2">
+                      <ReportButton
+                        targetType={report.targetType}
+                        targetId={report.targetType === 'USER' ? undefined : report.targetId}
+                        targetUserId={report.targetUserId}
+                        variant="ghost"
+                        size="sm"
+                        label="다시 신고"
+                      />
+                    </div>
+                  </div>
+                ))}
+                
+                {/* 더 보기 버튼 */}
+                {hasMoreReports && (
+                  <div className="text-center mt-4">
+                    <Button
+                      onClick={loadMoreReports}
+                      disabled={isReportsLoading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {isReportsLoading ? '로딩 중...' : '더 보기'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {/* 닉네임 편집 모달 */}

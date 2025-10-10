@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { MoreHorizontal, Edit, Trash2 } from 'lucide-react'
+import { MoreHorizontal, Edit, Trash2, Flag } from 'lucide-react'
 
 interface PostActionMenuProps {
   postId: number
@@ -10,6 +10,7 @@ interface PostActionMenuProps {
   onEdit: (postId: number) => void
   onDelete: (postId: number) => void
   className?: string
+  onReport?: (postId: number) => void
 }
 
 export function PostActionMenu({ 
@@ -17,7 +18,8 @@ export function PostActionMenu({
   isOwner, 
   onEdit, 
   onDelete, 
-  className = '' 
+  className = '',
+  onReport
 }: PostActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -59,9 +61,20 @@ export function PostActionMenu({
     onDelete(postId)
   }
 
-  // 소유자가 아닌 경우 메뉴를 표시하지 않음
-  if (!isOwner) {
+  const hasOwnerActions = isOwner
+  const hasReportAction = typeof onReport === 'function'
+
+  // 소유자가 아니어도 신고 기능이 있으면 메뉴 표시
+  if (!hasOwnerActions && !hasReportAction) {
     return null
+  }
+
+  const handleReport = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsOpen(false)
+    if (onReport) {
+      onReport(postId)
+    }
   }
 
   return (
@@ -73,6 +86,7 @@ export function PostActionMenu({
         onClick={toggleMenu}
         className="h-8 w-8 p-0 hover:bg-gray-100"
         aria-label="게시글 메뉴"
+        data-testid="post-more-menu"
       >
         <MoreHorizontal className="h-4 w-4" />
       </Button>
@@ -81,20 +95,34 @@ export function PostActionMenu({
       {isOpen && (
         <div className="absolute right-0 top-8 z-50 w-32 bg-white border border-gray-200 rounded-md shadow-lg">
           <div className="py-1">
-            <button
-              onClick={handleEdit}
-              className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
-            >
-              <Edit className="h-4 w-4" />
-              수정
-            </button>
-            <button
-              onClick={handleDelete}
-              className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-            >
-              <Trash2 className="h-4 w-4" />
-              삭제
-            </button>
+            {hasOwnerActions && (
+              <>
+                <button
+                  onClick={handleEdit}
+                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                >
+                  <Edit className="h-4 w-4" />
+                  수정
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  삭제
+                </button>
+              </>
+            )}
+            {hasReportAction && (
+              <button
+                onClick={handleReport}
+                className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                data-testid="report-post-button"
+              >
+                <Flag className="h-4 w-4" />
+                신고하기
+              </button>
+            )}
           </div>
         </div>
       )}

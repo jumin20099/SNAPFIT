@@ -17,6 +17,8 @@ import { ScrapButton } from "@/features/reactions/ScrapButton"
 import { CommentLikeButton } from "@/features/reactions/CommentLikeButton"
 import { useBatchReactionStatus } from "@/shared/hooks/useBatchReactionStatus"
 import { PostActionMenu } from "@/components/ui/PostActionMenu"
+import { ReportButton } from "@/features/report/ReportButton"
+import { useReportModal } from "@/features/report/ReportModalContext"
 
 interface Comment {
   commentId: number
@@ -107,9 +109,19 @@ export default function PostDetailPage() {
   const [selectedPostId, setSelectedPostId] = useState<number | null>(null)
   const observer = useRef<IntersectionObserver | null>(null)
   const hasIncrementedView = useRef<Set<number>>(new Set())
+  const { openReportModal } = useReportModal()
   
   // 게시글 삭제 기능
   const { isDeleting, deletePost } = useDeletePost()
+
+  const handleReportPostClick = useCallback((targetPostId: number, title?: string | null, authorName?: string | null) => {
+    openReportModal({
+      type: 'POST',
+      targetId: targetPostId,
+      title: title || '게시글 신고',
+      description: authorName ? `작성자: ${authorName}` : undefined
+    })
+  }, [openReportModal])
 
   // 조회수 증가 함수 (Redis 기반 - 원자적 연산)
   const incrementViewCount = useCallback(async (postId: number) => {
@@ -1263,14 +1275,13 @@ export default function PostDetailPage() {
                     })()}
                   </button>
                 </div>
-                {(isOwner || isAnonymousAuthor) && (
-                  <PostActionMenu
-                    postId={post.postId || 0}
-                    isOwner={isOwner || isAnonymousAuthor}
-                    onEdit={handleEditPost}
-                    onDelete={(postId) => handleDeletePost(postId, isAnonymousAuthor)}
-                  />
-                )}
+                <PostActionMenu
+                  postId={post.postId || 0}
+                  isOwner={isOwner || isAnonymousAuthor}
+                  onEdit={handleEditPost}
+                  onDelete={(postId) => handleDeletePost(postId, isAnonymousAuthor)}
+                  onReport={() => handleReportPostClick(post.postId || 0, post.title, post.authorName)}
+                />
                 {!isOwner && !isAnonymousAuthor && (
                   <Button 
                     variant={isFollowing ? "outline" : "default"} 
@@ -1279,6 +1290,17 @@ export default function PostDetailPage() {
                   >
                     {isFollowing ? "팔로잉" : "+ 팔로우"}
                   </Button>
+                )}
+                {!isOwner && (
+                  <ReportButton
+                    targetType="POST"
+                    targetId={post.postId}
+                    description={post.authorName ? `작성자: ${post.authorName}` : undefined}
+                    variant="ghost"
+                    size="sm"
+                    data-testid="inline-report-post-button"
+                    className="text-gray-600"
+                  />
                 )}
               </div>
             </div>

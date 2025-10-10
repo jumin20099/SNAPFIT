@@ -8,6 +8,7 @@ import { Reply, MoreHorizontal, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { useComments } from '@/hooks/useComments'
 import { CommentLikeButton } from '@/features/reactions/CommentLikeButton'
+import { ReportButton } from '@/features/report/ReportButton'
 
 interface CommentsSectionProps {
   postId: number
@@ -287,16 +288,23 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
               onChange={(e) => setNewComment(e.target.value)}
               onKeyPress={(e) => handleKeyPress(e, handleSubmitComment)}
               className="min-h-[80px] resize-none"
+              data-testid="comment-input"
             />
             {!localStorage.getItem('token') && (
               <div className="mt-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  비밀번호 <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="password"
-                  placeholder="비밀번호 (4자 이상)"
+                  placeholder="비밀번호를 4자 이상 입력해주세요"
                   value={commentPassword}
                   onChange={(e) => setCommentPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  익명으로 댓글을 작성하려면 비밀번호가 필요합니다
+                </p>
               </div>
             )}
             <div className="flex justify-end mt-2">
@@ -304,6 +312,7 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
                 onClick={handleSubmitComment}
                 disabled={!newComment.trim() || submitting}
                 size="sm"
+                data-testid="comment-submit-button"
               >
                 <Send className="w-4 h-4 mr-1" />
                 {submitting ? '작성 중...' : '댓글 작성'}
@@ -323,7 +332,7 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
           </div>
         ) : (
           comments.map((comment) => (
-            <div key={comment.commentId} className="space-y-3">
+            <div key={comment.commentId} className="space-y-3" data-testid="comment-item">
               {/* 메인 댓글 */}
               <div className="flex gap-3">
                 <Avatar className="w-8 h-8">
@@ -358,11 +367,21 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
                       <Reply className="w-4 h-4 mr-1" />
                       답글
                     </Button>
+                    <ReportButton
+                      targetType="COMMENT"
+                      targetId={comment.commentId}
+                      description={`작성자: ${comment.authorName}`}
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-500"
+                      data-testid="report-comment-button"
+                    />
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteCommentClick(comment.commentId)}
                       className="text-gray-500 hover:text-red-500"
+                      data-testid="comment-more-menu"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
@@ -426,7 +445,7 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
               {comment.replies && comment.replies.length > 0 && (
                 <div className="ml-11 space-y-2">
                   {comment.replies.map((reply) => (
-                    <div key={reply.commentId} className="flex gap-3">
+                    <div key={reply.commentId} className="flex gap-3" data-testid="comment-item">
                       <Avatar className="w-6 h-6">
                         <AvatarImage src={reply.authorProfileImage} />
                         <AvatarFallback>{reply.authorName.charAt(0)}</AvatarFallback>
@@ -450,11 +469,21 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
                               loadComments()
                             }}
                           />
+                          <ReportButton
+                            targetType="COMMENT"
+                            targetId={reply.commentId}
+                            description={`작성자: ${reply.authorName}`}
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-500"
+                            data-testid="report-comment-button"
+                          />
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteCommentClick(reply.commentId)}
                             className="text-gray-500 hover:text-red-500"
+                            data-testid="comment-more-menu"
                           >
                             <MoreHorizontal className="w-4 h-4" />
                           </Button>

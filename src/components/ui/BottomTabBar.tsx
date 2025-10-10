@@ -34,6 +34,24 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
     customColor: '#ffffff'
   })
 
+  // 현재 경로에 따른 활성 탭 자동 감지
+  const getActiveTabFromPath = (path: string) => {
+    if (path === '/') return 'home'
+    if (path.startsWith('/community')) return 'community'
+    if (path.startsWith('/cody')) return 'cody'
+    if (path.startsWith('/like') || path.startsWith('/liked-items')) return 'wishlist'
+    if (path.startsWith('/me') || path.startsWith('/profile')) return 'profile'
+    return 'home'
+  }
+
+  // 경로 변경 시 활성 탭 동기화
+  useEffect(() => {
+    const currentActiveTab = getActiveTabFromPath(pathname)
+    if (currentActiveTab !== activeTab) {
+      onTabChange(currentActiveTab)
+    }
+  }, [pathname, activeTab, onTabChange])
+
   // 코디 페이지 감지 및 배경 정보 로드
   useEffect(() => {
     const isCody = pathname === '/cody' || pathname.startsWith('/cody')
@@ -89,9 +107,12 @@ export function BottomTabBar({ activeTab, onTabChange }: BottomTabBarProps) {
               <motion.button
                 key={tab.id}
                 onClick={() => handleTabClick(tab)}
-                className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors"
+                className="flex flex-col items-center gap-0.5 py-1 px-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 whileTap={{ scale: 0.95 }}
                 transition={{ duration: 0.1 }}
+                aria-label={tab.label}
+                role="tab"
+                aria-selected={isActive}
               >
                 {/* 아이콘 */}
                 <div className="relative">

@@ -5,26 +5,33 @@ import { useState, useCallback } from 'react';
  * E2E 테스트 통과를 위한 최소 구현
  */
 
-interface ReportRequest {
+export interface ReportRequest {
   targetType: 'POST' | 'COMMENT' | 'USER';
-  targetId: number;
-  reason: string;
+  targetId?: number;
+  targetUserId?: string;
+  category?: 'SPAM' | 'INAPPROPRIATE_CONTENT' | 'HARASSMENT' | 'OTHER';
+  reason: string | null;
 }
 
 interface ReportResponse {
   success: boolean;
-  reportId: number;
-  targetType: string;
-  targetId: number;
-  reason: string;
-  status: string;
-  message: string;
+  reportId?: number;
+  targetType?: string;
+  targetId?: number;
+  targetUserId?: string;
+  category?: string;
+  reason?: string;
+  status?: string;
+  message?: string;
+  report?: Report;
 }
 
-interface Report {
+export interface Report {
   reportId: number;
   targetType: 'POST' | 'COMMENT' | 'USER';
-  targetId: number;
+  targetId?: number;
+  targetUserId?: string;
+  category: 'SPAM' | 'INAPPROPRIATE_CONTENT' | 'HARASSMENT' | 'OTHER';
   reason: string;
   status: 'PENDING' | 'PROCESSING' | 'RESOLVED' | 'REJECTED';
   createdAt: string;
@@ -55,28 +62,42 @@ export function useReport() {
       if (!token) {
         throw new Error('로그인이 필요합니다.');
       }
+      const payload: Record<string, unknown> = {
+        targetType: reportData.targetType,
+        category: reportData.category || 'OTHER',
+        reason: reportData.reason,
+      };
 
-      const url = new URL('http://localhost:8080/api/reports');
-      url.searchParams.append('token', token);
-      url.searchParams.append('targetType', reportData.targetType);
-      url.searchParams.append('targetId', reportData.targetId.toString());
-      url.searchParams.append('reason', reportData.reason);
+      if (reportData.targetType === 'USER') {
+        payload.targetUserId = reportData.targetUserId;
+      }
 
-      const response = await fetch(url.toString(), {
+      if (reportData.targetId !== undefined && reportData.targetId !== null) {
+        payload.targetId = reportData.targetId;
+        if (reportData.targetType === 'POST') {
+          payload.reportedPostId = reportData.targetId;
+        }
+        if (reportData.targetType === 'COMMENT') {
+          payload.reportedCommentId = reportData.targetId;
+        }
+      }
+
+      const response = await fetch('/api/reports', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
         throw new Error(errorData.error || `신고 실패: ${response.statusText}`);
       }
 
       const result: ReportResponse = await response.json();
-      console.log(`신고 생성 성공:`, result);
+      console.log('신고 생성 성공:', result);
       return true;
       
     } catch (err: any) {
@@ -101,12 +122,13 @@ export function useReport() {
         throw new Error('로그인이 필요합니다.');
       }
 
-      const url = new URL('http://localhost:8080/api/reports/my');
-      url.searchParams.append('token', token);
-      url.searchParams.append('page', page.toString());
-      url.searchParams.append('size', size.toString());
+      const params = new URLSearchParams({
+        scope: 'my',
+        page: page.toString(),
+        size: size.toString()
+      });
 
-      const response = await fetch(url.toString(), {
+      const response = await fetch(`/api/reports?${params.toString()}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -133,33 +155,36 @@ export function useReport() {
   /**
    * 게시글 신고
    */
-  const reportPost = useCallback(async (postId: number, reason: string): Promise<boolean> => {
+  const reportPost = useCallback(async (postId: number, reason: string, category?: ReportRequest['category']): Promise<boolean> => {
     return createReport({
       targetType: 'POST',
       targetId: postId,
-      reason
+      reason,
+      category
     });
   }, [createReport]);
 
   /**
    * 댓글 신고
    */
-  const reportComment = useCallback(async (commentId: number, reason: string): Promise<boolean> => {
+  const reportComment = useCallback(async (commentId: number, reason: string, category?: ReportRequest['category']): Promise<boolean> => {
     return createReport({
       targetType: 'COMMENT',
       targetId: commentId,
-      reason
+      reason,
+      category
     });
   }, [createReport]);
 
   /**
    * 사용자 신고
    */
-  const reportUser = useCallback(async (userId: number, reason: string): Promise<boolean> => {
+  const reportUser = useCallback(async (userId: string, reason: string, category?: ReportRequest['category']): Promise<boolean> => {
     return createReport({
       targetType: 'USER',
-      targetId: userId,
-      reason
+      targetUserId: userId,
+      reason,
+      category
     });
   }, [createReport]);
 

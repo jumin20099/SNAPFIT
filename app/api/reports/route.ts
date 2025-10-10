@@ -5,12 +5,21 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080'
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')
-    
+    const scope = request.nextUrl.searchParams.get('scope')
+
     if (!token) {
       return NextResponse.json({ error: '인증이 필요합니다' }, { status: 401 })
     }
 
-    const response = await fetch(`${BACKEND_URL}/api/reports`, {
+    const path = scope === 'my' ? '/api/reports/my' : '/api/reports'
+    const backendUrl = new URL(`${BACKEND_URL}${path}`)
+    request.nextUrl.searchParams.forEach((value, key) => {
+      if (key !== 'scope') {
+        backendUrl.searchParams.append(key, value)
+      }
+    })
+
+    const response = await fetch(backendUrl.toString(), {
       method: 'GET',
       headers: {
         'Authorization': token,
@@ -47,6 +56,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    const normalizedBody = {
+      ...body,
+      targetType: body.targetType ? String(body.targetType).toUpperCase() : body.targetType,
+      category: body.category ? String(body.category).toUpperCase() : body.category,
+    }
 
     const response = await fetch(`${BACKEND_URL}/api/reports`, {
       method: 'POST',
@@ -54,7 +68,7 @@ export async function POST(request: NextRequest) {
         'Authorization': token,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(normalizedBody),
     })
 
     if (!response.ok) {

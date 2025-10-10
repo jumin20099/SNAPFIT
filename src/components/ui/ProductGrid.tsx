@@ -7,6 +7,8 @@ import { useCategoryProducts } from '@/shared/api/queries'
 import { useStores } from '@/hooks/useStores'
 import { useBatchReactionStatus } from '@/shared/hooks/useBatchReactionStatus'
 import { mapCategoryIdToBackend } from '@/constants/categories'
+import { useToggleLike } from '@/hooks/useToggleLike'
+import { toast } from 'sonner'
 import type { Product } from '@/shared/types'
 
 interface ProductGridProps {
@@ -37,7 +39,7 @@ const transformApiProduct = (apiProduct: any): Product => {
 
 export function ProductGrid({ category, gender, mainCategory, subCategory }: ProductGridProps) {
   // 모든 상품을 가져온 후 클라이언트에서 필터링
-  const { data: apiProducts, isLoading, error } = useCategoryProducts('all')
+  const { data: apiProducts, isLoading, error, refetch } = useCategoryProducts('all')
   const { data: stores } = useStores()
   
   // 상품 ID 목록 추출
@@ -97,9 +99,20 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
   })
   const hasMore = false // 현재는 페이지네이션 미구현
 
-  const handleLike = (productId: string) => {
-    // 좋아요 기능 구현
-    console.log('좋아요한 상품:', productId)
+  const { toggleLike, isLoading: isLikeLoading } = useToggleLike()
+
+  const handleLike = async (productId: number) => {
+    try {
+      const success = await toggleLike(productId)
+      if (success) {
+        toast.success('상품을 좋아요 목록에 추가했습니다')
+      } else {
+        toast.error('좋아요 처리에 실패했습니다')
+      }
+    } catch (error) {
+      console.error('좋아요 오류:', error)
+      toast.error('좋아요 처리 중 오류가 발생했습니다')
+    }
   }
 
   const loadMore = () => {
@@ -122,7 +135,7 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
 
   return (
     <div className="px-4 pb-20">
-      <div className="max-w-md mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* 섹션 타이틀 */}
         <div className="mb-4">
           <h2 className="text-lg font-semibold text-gray-900">
@@ -131,7 +144,7 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
         </div>
 
         {/* 상품 그리드 */}
-        <div className="grid grid-cols-2 gap-0">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           <AnimatePresence>
             {isLoading ? (
               // 로딩 스켈레톤
@@ -151,7 +164,7 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
                   상품을 불러오는 중 오류가 발생했습니다
                 </p>
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={() => refetch()}
                   className="text-gray-600 text-sm font-medium hover:underline"
                 >
                   다시 시도
@@ -186,10 +199,10 @@ export function ProductGrid({ category, gender, mainCategory, subCategory }: Pro
                   {category === '전체' ? '추천 상품이 없습니다' : `${category} 상품이 없습니다`}
                 </p>
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={() => refetch()}
                   className="text-gray-600 text-sm font-medium hover:underline"
                 >
-                  새로고침
+                  다시 시도
                 </button>
               </motion.div>
             )}

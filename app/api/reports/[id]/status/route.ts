@@ -14,6 +14,10 @@ export async function PUT(
     }
 
     const body = await request.json()
+    const normalizedBody = {
+      ...body,
+      status: body.status ? String(body.status).toUpperCase() : body.status,
+    }
     const reportId = params.id
 
     // 백엔드로 상태 변경 요청 전달
@@ -23,7 +27,7 @@ export async function PUT(
         'Authorization': token,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(normalizedBody),
     })
 
     if (!response.ok) {

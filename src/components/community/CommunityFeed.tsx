@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useInfinitePosts } from '@/hooks/useInfinitePosts'
 import { Post as SharedPost } from '@/shared/types'
 import dynamic from 'next/dynamic'
+import { ReportButton } from '@/features/report/ReportButton'
 const DynamicLikeButton = dynamic(async () => {
   const mod = await import('@/features/reactions/LikeButton')
   return mod.LikeButton
@@ -463,6 +464,7 @@ const PostCard = React.memo(({ post, liked, likeCount, listIndex, onToggleSucces
       onClick={onClick}
       data-post-id={post.postId}
       data-list-index={listIndex}
+      data-testid="post-card"
     >
       <div className="aspect-square bg-gray-200 rounded-lg overflow-hidden">
         {post.mediaUrls && post.mediaUrls.length > 0 ? (
@@ -494,6 +496,16 @@ const PostCard = React.memo(({ post, liked, likeCount, listIndex, onToggleSucces
           onToggleError={handleError}
         />
       </div>
+      <div className="absolute top-2 left-2" onClick={(event) => event.stopPropagation()}>
+        <ReportButton
+          targetType="POST"
+          targetId={post.postId}
+          variant="ghost"
+          size="sm"
+          label="신고"
+          data-testid="inline-report-post-button"
+        />
+      </div>
     </div>
   )
 }, areEqualPostCard)
@@ -508,4 +520,3 @@ function areEqualPostCard(prevProps: PostCardProps, nextProps: PostCardProps) {
 }
 
 export { CommunityFeed }
-

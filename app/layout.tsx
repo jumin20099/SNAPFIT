@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { ToastProvider } from '@/shared/ui/ToastProvider'
 import { BottomTabBarWrapper } from '@/components/ui/BottomTabBarWrapper'
+import { ReportModalProvider } from '@/features/report/ReportModalContext'
 
 
 
@@ -27,9 +28,11 @@ export default function RootLayout({
           <ThemeProvider>
             <CartProvider>
               <ModalProvider>
-                {children}
-                <BottomTabBarWrapper />
-                <ToastProvider />
+                <ReportModalProvider>
+                  {children}
+                  <BottomTabBarWrapper />
+                  <ToastProvider />
+                </ReportModalProvider>
               </ModalProvider>
             </CartProvider>
           </ThemeProvider>
