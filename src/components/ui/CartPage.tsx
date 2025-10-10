@@ -70,16 +70,13 @@ export function CartPage() {
     
     // 로그인 상태 확인 및 사용자 정보 가져오기
     const checkLoginStatus = async () => {
-      const token = localStorage.getItem('token')
-      setIsLoggedIn(!!token)
-      
-      if (token) {
-        try {
-          const response = await fetch('http://localhost:8080/api/user/info', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
+      setIsLoggedIn(true)
+      try {
+        const response = await fetch('http://localhost:8080/api/user/info', {
+          credentials: 'include' // HttpOnly 쿠키 자동 전송
+        })
           if (response.ok) {
             const userData = await response.json()
             setUser(userData)
@@ -157,14 +154,14 @@ export function CartPage() {
   const processPayment = async () => {
     try {
       // 1. 주문 생성
-      const token = localStorage.getItem('token')
-      console.log('주문 생성 요청 토큰:', token ? token.substring(0, 20) + '...' : 'null')
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       
       const orderResponse = await fetch('/api/orders', {
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           items: cartItems.map(item => ({
@@ -247,20 +244,16 @@ export function CartPage() {
 
   // 좋아요 토글
   const toggleLike = async (productId: string) => {
-    // 로그인 상태 확인
-    const token = localStorage.getItem('token')
-    if (!token) {
-      alert('좋아요 기능을 사용하려면 로그인이 필요합니다.')
-      return
-    }
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
     
     try {
       const response = await fetch('/api/likes/toggle', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ 
           targetIdx: parseInt(productId),
           targetType: 'PRODUCT'

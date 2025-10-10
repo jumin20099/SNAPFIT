@@ -160,8 +160,9 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
   const [displayedProductCount, setDisplayedProductCount] = useState(16)
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
-    setAuthToken(token)
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
+    setAuthToken(null)
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === 'token') {
@@ -241,14 +242,12 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
 
         let liked = false
         if (typeof window !== 'undefined') {
-          const token = localStorage.getItem('token')
-          if (token) {
-            const likedRes = await fetch('/api/likes/my/brands', {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              cache: 'no-store',
-            })
+          // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+          // 서버에서 자동으로 인증 처리
+          const likedRes = await fetch('/api/likes/my/brands', {
+            credentials: 'include', // HttpOnly 쿠키 자동 전송
+            cache: 'no-store',
+          })
             if (likedRes.ok) {
               const likedData = await likedRes.json()
               if (Array.isArray(likedData)) {
