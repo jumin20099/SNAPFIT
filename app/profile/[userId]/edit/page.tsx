@@ -36,11 +36,8 @@ export default function ProfileEditPage() {
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`/api/profiles/${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       
       if (response.ok) {
@@ -65,13 +62,12 @@ export default function ProfileEditPage() {
     setSaving(true)
     
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch('/api/profiles/me', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({
           nickname: profile.nickname,
           profileImage: profile.profileImage,
@@ -119,8 +115,8 @@ export default function ProfileEditPage() {
   const handleCroppedImageUpload = async (croppedImageUrl: string) => {
     setIsUploading(true)
     try {
-      const token = localStorage.getItem('token')
-      if (!token) return
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       // Blob URL을 File로 변환
       const response = await fetch(croppedImageUrl)
@@ -131,10 +127,8 @@ export default function ProfileEditPage() {
       formData.append('file', file)
 
       const uploadResponse = await fetch('/api/media/upload/profile', {
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
         body: formData
       })
 

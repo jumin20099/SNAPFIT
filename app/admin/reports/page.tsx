@@ -62,7 +62,8 @@ export default function AdminReportsPage() {
   const fetchReports = async (status?: string) => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token') || 'admin-token'
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       
       let url = 'http://localhost:8080/api/reports/admin'
       if (status && status !== 'all') {
@@ -70,8 +71,7 @@ export default function AdminReportsPage() {
       }
       
       const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
           'Content-Type': 'application/json'
         }
       })
@@ -116,7 +116,8 @@ export default function AdminReportsPage() {
   const updateReportStatus = async (reportId: number, newStatus: string, notes?: string) => {
     setProcessing(true)
     try {
-      const token = localStorage.getItem('token') || 'admin-token'
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       
       const url = new URL(`http://localhost:8080/api/reports/${reportId}/status`)
       url.searchParams.append('status', newStatus)
@@ -126,8 +127,8 @@ export default function AdminReportsPage() {
 
       const response = await fetch(url.toString(), {
         method: 'PUT',
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       })
