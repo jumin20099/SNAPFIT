@@ -67,6 +67,11 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     boolean existsByReporterIdAndTargetTypeAndTargetId(UUID reporterId, Report.TargetType targetType, Long targetId);
 
     /**
+     * 특정 사용자가 특정 사용자(targetUserId)를 신고했는지 확인
+     */
+    boolean existsByReporterIdAndTargetTypeAndTargetUserId(UUID reporterId, Report.TargetType targetType, UUID targetUserId);
+
+    /**
      * 상태별 신고 통계
      */
     @Query("SELECT r.status, COUNT(r) FROM Report r GROUP BY r.status")
@@ -77,6 +82,12 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
      */
     @Query("SELECT r.targetType, COUNT(r) FROM Report r GROUP BY r.targetType")
     List<Object[]> getTargetTypeStatistics();
+
+    /**
+     * 신고 카테고리 통계
+     */
+    @Query("SELECT r.category, COUNT(r) FROM Report r GROUP BY r.category")
+    List<Object[]> getCategoryStatistics();
 
     /**
      * 전체 신고 목록 조회 (생성일 역순)

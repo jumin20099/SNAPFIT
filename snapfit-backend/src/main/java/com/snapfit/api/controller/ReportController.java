@@ -1,5 +1,7 @@
 package com.snapfit.api.controller;
 
+import com.snapfit.api.dto.report.ReportCreateRequest;
+import com.snapfit.api.dto.report.ReportResponseDto;
 import com.snapfit.api.entity.Report;
 import com.snapfit.api.service.ReportService;
 import com.snapfit.api.security.CustomUserDetails;
@@ -8,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -39,15 +42,13 @@ public class ReportController {
      */
     @PostMapping
     public ResponseEntity<?> createReport(
-            @RequestParam("targetType") String targetType,
-            @RequestParam("targetId") Long targetId,
-            @RequestParam("reason") String reason,
+            @RequestBody ReportCreateRequest createRequest,
             @RequestParam(value = "token", required = false) String token,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest request) {
-        
-        log.info("신고 생성 요청: targetType={}, targetId={}, reason={}", targetType, targetId, reason);
-        
+
+        log.info("신고 생성 요청: body={}, token={}", createRequest, token);
+
         try {
             // 임시 인증 처리 (E2E 테스트용)
             UUID reporterId;
@@ -64,22 +65,37 @@ public class ReportController {
                     .body(Map.of("error", "인증이 필요합니다"));
             }
 
-            // 신고 생성
-            Report.TargetType type = Report.TargetType.valueOf(targetType.toUpperCase());
-            Report report = reportService.createReport(reporterId, type, targetId, reason);
+            Report.TargetType resolvedTargetType = createRequest.resolveTargetType();
+            if (resolvedTargetType == null) {
+                throw new IllegalArgumentException("신고 대상 타입이 필요합니다");
+            }
+
+            Long resolvedTargetId = createRequest.resolveTargetId();
+            String trimmedReason = createRequest.getReason() == null ? null : createRequest.getReason().trim();
+            if (trimmedReason != null && trimmedReason.isEmpty()) {
+                trimmedReason = null;
+            }
+
+            Report.Category category = createRequest.resolveCategory();
+
+            Report report = reportService.createReport(
+                reporterId,
+                resolvedTargetType,
+                resolvedTargetId,
+                trimmedReason,
+                category,
+                createRequest.getTargetUserId()
+            );
             
             log.info("신고 생성 성공: reportId={}, reporter={}, target={}:{}", 
-                report.getReportId(), reporterId, targetType, targetId);
+                report.getReportId(), reporterId, resolvedTargetType, resolvedTargetId);
             
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "reportId", report.getReportId(),
-                "targetType", report.getTargetType().toString(),
-                "targetId", report.getTargetId(),
-                "reason", report.getReason(),
-                "status", report.getStatus().toString(),
-                "message", "신고가 정상적으로 접수되었습니다"
-            ));
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of(
+                    "success", true,
+                    "report", ReportResponseDto.from(report),
+                    "message", "신고가 정상적으로 접수되었습니다"
+                ));
             
         } catch (IllegalArgumentException e) {
             log.error("신고 생성 실패 - 잘못된 요청: {}", e.getMessage());
@@ -102,9 +118,9 @@ public class ReportController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        
+
         log.info("내 신고 목록 조회: token={}, page={}, size={}", token, page, size);
-        
+
         try {
             // 임시 인증 처리
             UUID reporterId;
@@ -117,14 +133,18 @@ public class ReportController {
                     .body(Map.of("error", "인증이 필요합니다"));
             }
 
-            List<Report> reports = reportService.getReportsByReporter(reporterId);
-            
+            Pageable pageable = PageRequest.of(page, size);
+            Page<Report> reportPage = reportService.getMyReports(reporterId, pageable);
+            List<ReportResponseDto> content = reportPage.getContent().stream()
+                .map(ReportResponseDto::from)
+                .toList();
+
             return ResponseEntity.ok(Map.of(
-                "content", reports,
-                "totalElements", reports.size(),
-                "totalPages", (reports.size() + size - 1) / size,
-                "size", size,
-                "number", page
+                "content", content,
+                "totalElements", reportPage.getTotalElements(),
+                "totalPages", reportPage.getTotalPages(),
+                "size", reportPage.getSize(),
+                "number", reportPage.getNumber()
             ));
             
         } catch (Exception e) {
@@ -157,8 +177,12 @@ public class ReportController {
             } else {
                 reports = reportService.getAllReports(pageable);
             }
+
+            List<ReportResponseDto> content = reports.getContent().stream()
+                .map(ReportResponseDto::from)
+                .toList();
             
-            return ResponseEntity.ok(reports.getContent());
+            return ResponseEntity.ok(content);
             
         } catch (Exception e) {
             log.error("신고 목록 조회 실패: ", e);
@@ -191,9 +215,13 @@ public class ReportController {
             } else {
                 reports = reportService.getAllReports(pageable);
             }
-            
+
+            List<ReportResponseDto> content = reports.getContent().stream()
+                .map(ReportResponseDto::from)
+                .toList();
+
             return ResponseEntity.ok(Map.of(
-                "content", reports.getContent(),
+                "content", content,
                 "totalElements", reports.getTotalElements(),
                 "totalPages", reports.getTotalPages(),
                 "size", reports.getSize(),
@@ -228,12 +256,9 @@ public class ReportController {
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("reportId", updatedReport.getReportId());
-            response.put("status", updatedReport.getStatus().toString());
-            response.put("adminNotes", updatedReport.getAdminNotes());
-            response.put("resolvedAt", updatedReport.getResolvedAt());
+            response.put("report", ReportResponseDto.from(updatedReport));
             response.put("message", "신고 상태가 변경되었습니다");
-            
+
             return ResponseEntity.ok(response);
             
         } catch (IllegalArgumentException e) {

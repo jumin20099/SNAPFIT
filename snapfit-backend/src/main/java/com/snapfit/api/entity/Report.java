@@ -40,6 +40,16 @@ public class Report {
     }
 
     /**
+     * 신고 카테고리
+     */
+    public enum Category {
+        SPAM,
+        INAPPROPRIATE_CONTENT,
+        HARASSMENT,
+        OTHER
+    }
+
+    /**
      * 신고 상태
      */
     public enum Status {
@@ -75,15 +85,29 @@ public class Report {
     private TargetType targetType;
 
     /**
-     * 신고 대상 ID
+     * 신고 대상 ID (게시글/댓글)
      */
-    @Column(name = "target_id", nullable = false)
+    @Column(name = "target_id")
     private Long targetId;
+
+    /**
+     * 신고 대상 사용자 ID (사용자 신고)
+     */
+    @Column(name = "target_user_id")
+    private UUID targetUserId;
+
+    /**
+     * 신고 카테고리
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", length = 32, nullable = false)
+    @Builder.Default
+    private Category category = Category.OTHER;
 
     /**
      * 신고 사유
      */
-    @Column(name = "reason", nullable = false, length = 100)
+    @Column(name = "reason", nullable = true, length = 100)
     private String reason;
 
     /**
@@ -123,39 +147,43 @@ public class Report {
     /**
      * 게시글 신고 생성자
      */
-    public static Report createPostReport(UUID reporterId, Long postId, String reason) {
+    public static Report createPostReport(UUID reporterId, Long postId, String reason, Category category) {
         Report report = new Report();
         report.reporterId = reporterId;
         report.targetType = TargetType.POST;
         report.targetId = postId;
         report.reason = reason;
         report.status = Status.PENDING;
+        report.category = category == null ? Category.OTHER : category;
         return report;
     }
 
     /**
      * 댓글 신고 생성자
      */
-    public static Report createCommentReport(UUID reporterId, Long commentId, String reason) {
+    public static Report createCommentReport(UUID reporterId, Long commentId, String reason, Category category) {
         Report report = new Report();
         report.reporterId = reporterId;
         report.targetType = TargetType.COMMENT;
         report.targetId = commentId;
         report.reason = reason;
         report.status = Status.PENDING;
+        report.category = category == null ? Category.OTHER : category;
         return report;
     }
 
     /**
      * 사용자 신고 생성자
      */
-    public static Report createUserReport(UUID reporterId, UUID targetUserId, String reason) {
+    public static Report createUserReport(UUID reporterId, UUID targetUserId, String reason, Category category) {
         Report report = new Report();
         report.reporterId = reporterId;
         report.targetType = TargetType.USER;
-        report.targetId = targetUserId.hashCode() + 0L; // UUID를 Long으로 변환 (임시)
+        report.targetId = targetUserId == null ? null : Math.abs(targetUserId.getMostSignificantBits());
+        report.targetUserId = targetUserId;
         report.reason = reason;
         report.status = Status.PENDING;
+        report.category = category == null ? Category.OTHER : category;
         return report;
     }
 
@@ -216,6 +244,9 @@ public class Report {
         if (reason != null) {
             reason = reason.trim();
         }
+        if (category == null) {
+            category = Category.OTHER;
+        }
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
@@ -231,6 +262,9 @@ public class Report {
     protected void onUpdate() {
         if (reason != null) {
             reason = reason.trim();
+        }
+        if (category == null) {
+            category = Category.OTHER;
         }
         updatedAt = LocalDateTime.now();
     }

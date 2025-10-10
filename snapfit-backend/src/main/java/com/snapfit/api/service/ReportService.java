@@ -35,7 +35,7 @@ public class ReportService {
      * 게시글 신고
      */
     @Transactional
-    public Report reportPost(UUID reporterId, Long postId, String reason) {
+    public Report reportPost(UUID reporterId, Long postId, String reason, Report.Category category) {
         log.info("게시글 신고 시작: 신고자={}, 게시글ID={}", reporterId, postId);
         
         // 중복 신고 체크
@@ -48,7 +48,7 @@ public class ReportService {
         User reporter = userRepository.findById(reporterId)
             .orElseThrow(() -> new IllegalArgumentException("신고자를 찾을 수 없습니다"));
         
-        Report report = Report.createPostReport(reporterId, postId, reason);
+        Report report = Report.createPostReport(reporterId, postId, reason, category);
         Report savedReport = reportRepository.save(report);
         
         log.info("게시글 신고 완료: 신고ID={}, 신고자={}, 게시글ID={}", 
@@ -61,7 +61,7 @@ public class ReportService {
      * 댓글 신고
      */
     @Transactional
-    public Report reportComment(UUID reporterId, Long commentId, String reason) {
+    public Report reportComment(UUID reporterId, Long commentId, String reason, Report.Category category) {
         log.info("댓글 신고 시작: 신고자={}, 댓글ID={}", reporterId, commentId);
         
         // 중복 신고 체크
@@ -74,7 +74,7 @@ public class ReportService {
         User reporter = userRepository.findById(reporterId)
             .orElseThrow(() -> new IllegalArgumentException("신고자를 찾을 수 없습니다"));
         
-        Report report = Report.createCommentReport(reporterId, commentId, reason);
+        Report report = Report.createCommentReport(reporterId, commentId, reason, category);
         Report savedReport = reportRepository.save(report);
         
         log.info("댓글 신고 완료: 신고ID={}, 신고자={}, 댓글ID={}", 
@@ -87,23 +87,28 @@ public class ReportService {
      * 사용자 신고
      */
     @Transactional
-    public Report reportUser(UUID reporterId, UUID targetUserId, String reason) {
+    public Report reportUser(UUID reporterId, UUID targetUserId, String reason, Report.Category category) {
         log.info("사용자 신고 시작: 신고자={}, 대상사용자={}", reporterId, targetUserId);
         
         // 자기 자신 신고 방지
         if (reporterId.equals(targetUserId)) {
             throw new IllegalArgumentException("자기 자신을 신고할 수 없습니다");
         }
-        
+
         // 대상 사용자 존재 확인
-        User targetUser = userRepository.findById(targetUserId)
+        userRepository.findById(targetUserId)
             .orElseThrow(() -> new IllegalArgumentException("신고할 사용자를 찾을 수 없습니다"));
         
         // 신고자 존재 확인
         User reporter = userRepository.findById(reporterId)
             .orElseThrow(() -> new IllegalArgumentException("신고자를 찾을 수 없습니다"));
         
-        Report report = Report.createUserReport(reporterId, targetUserId, reason);
+        if (reportRepository.existsByReporterIdAndTargetTypeAndTargetUserId(
+            reporterId, Report.TargetType.USER, targetUserId)) {
+            throw new IllegalArgumentException("이미 신고한 사용자입니다");
+        }
+
+        Report report = Report.createUserReport(reporterId, targetUserId, reason, category);
         Report savedReport = reportRepository.save(report);
         
         log.info("사용자 신고 완료: 신고ID={}, 신고자={}, 대상사용자={}", 
@@ -212,6 +217,14 @@ public class ReportService {
                 row -> row[0].toString(),
                 row -> (Long) row[1]
             ));
+
+        // 카테고리별 통계
+        List<Object[]> categoryStats = reportRepository.getCategoryStatistics();
+        Map<String, Long> categoryCounts = categoryStats.stream()
+            .collect(Collectors.toMap(
+                row -> row[0].toString(),
+                row -> (Long) row[1]
+            ));
         
         // 최근 7일간 신고 수
         List<Object[]> recentStats = reportRepository.getRecentReportsCount(7);
@@ -224,6 +237,7 @@ public class ReportService {
         return Map.of(
             "statusCounts", statusCounts,
             "typeCounts", typeCounts,
+            "categoryCounts", categoryCounts,
             "recentCounts", recentCounts,
             "totalPending", reportRepository.countByStatus(Report.Status.PENDING),
             "totalProcessing", reportRepository.countByStatus(Report.Status.PROCESSING)
@@ -252,11 +266,18 @@ public class ReportService {
      * 통합 신고 생성 메서드
      */
     @Transactional
-    public Report createReport(UUID reporterId, Report.TargetType targetType, Long targetId, String reason) {
-        log.info("신고 생성: 신고자={}, 타입={}, 대상ID={}, 사유={}", reporterId, targetType, targetId, reason);
+    public Report createReport(UUID reporterId, Report.TargetType targetType, Long targetId, String reason, Report.Category category, UUID targetUserId) {
+        log.info("신고 생성: 신고자={}, 타입={}, 대상ID={}, 사유={}, 카테고리={}, 대상사용자={}", reporterId, targetType, targetId, reason, category, targetUserId);
 
         // 중복 신고 확인
-        if (reportRepository.existsByReporterIdAndTargetTypeAndTargetId(reporterId, targetType, targetId)) {
+        if (targetType == Report.TargetType.USER) {
+            if (targetUserId == null) {
+                throw new IllegalArgumentException("사용자 신고에는 targetUserId가 필요합니다");
+            }
+            if (reportRepository.existsByReporterIdAndTargetTypeAndTargetUserId(reporterId, targetType, targetUserId)) {
+                throw new IllegalArgumentException("이미 신고한 사용자입니다");
+            }
+        } else if (targetId != null && reportRepository.existsByReporterIdAndTargetTypeAndTargetId(reporterId, targetType, targetId)) {
             throw new IllegalArgumentException("이미 신고한 대상입니다");
         }
 
@@ -268,13 +289,16 @@ public class ReportService {
         Report report;
         switch (targetType) {
             case POST:
-                report = Report.createPostReport(reporterId, targetId, reason);
+                report = Report.createPostReport(reporterId, targetId, reason, category);
                 break;
             case COMMENT:
-                report = Report.createCommentReport(reporterId, targetId, reason);
+                report = Report.createCommentReport(reporterId, targetId, reason, category);
                 break;
             case USER:
-                report = Report.createUserReport(reporterId, UUID.randomUUID(), reason); // 임시 UUID
+                if (targetUserId == null) {
+                    throw new IllegalArgumentException("사용자 신고에는 targetUserId가 필요합니다");
+                }
+                report = Report.createUserReport(reporterId, targetUserId, reason, category);
                 break;
             default:
                 throw new IllegalArgumentException("지원하지 않는 신고 대상 타입입니다: " + targetType);
