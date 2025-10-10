@@ -44,8 +44,9 @@ export default function CreatePostPage() {
   useEffect(() => {
     const loadExportData = () => {
       try {
-        const token = localStorage.getItem('token')
-        setIsLoggedIn(!!token)
+        // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+        // 서버에서 자동으로 인증 처리
+        setIsLoggedIn(true)
         
         // URL state에서 코디 데이터 확인 (마이페이지에서 공유한 경우)
         const urlParams = new URLSearchParams(window.location.search)
@@ -115,12 +116,12 @@ export default function CreatePostPage() {
 
       try {
         setIsLoadingPost(true)
-        const token = localStorage.getItem('token')
-        setIsLoggedIn(!!token)
+        // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+        // 서버에서 자동으로 인증 처리
+        setIsLoggedIn(true)
         const response = await fetch(`/api/posts/${editPostId}`, {
           headers: {
             'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           credentials: 'include',
         })

@@ -46,9 +46,10 @@ export function useCreatePost(): UseCreatePostReturn {
     try {
       console.log('useCreatePost: 게시글 생성 시작', data);
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
-      if (!token && (!data.anonymousPassword || data.anonymousPassword.trim().length < 4)) {
+      if (!data.anonymousPassword || data.anonymousPassword.trim().length < 4) {
         throw new Error('비밀번호는 4자 이상 입력해주세요.');
       }
 
@@ -61,7 +62,6 @@ export function useCreatePost(): UseCreatePostReturn {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         credentials: 'include',
         body: JSON.stringify(payload),

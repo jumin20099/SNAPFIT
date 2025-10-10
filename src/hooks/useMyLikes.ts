@@ -14,21 +14,13 @@ export function useMyLikes() {
   useEffect(() => {
     setLoading(true);
     
-    // Authorization 헤더 가져오기
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-
-    
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
     const headers: HeadersInit = {};
     
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-      
-    } else {
-      
-    }
-    
     fetch('/api/likes/my', {
-      headers
+      headers,
+      credentials: 'include' // HttpOnly 쿠키 자동 전송
     })
       .then((res) => {
   

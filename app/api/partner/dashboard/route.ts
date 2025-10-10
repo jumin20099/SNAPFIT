@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateCsrfToken } from '@/lib/csrf-utils'
 
 export const dynamic = 'force-dynamic'
 

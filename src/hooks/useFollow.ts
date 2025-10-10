@@ -23,9 +23,9 @@ export function useFollow(targetUserId: string): UseFollowResult {
   const [isLoading, setIsLoading] = useState(false);
 
   const getAuthHeaders = useCallback(() => {
-    const token = localStorage.getItem('token');
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
     return {
-      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
   }, []);
@@ -41,7 +41,8 @@ export function useFollow(targetUserId: string): UseFollowResult {
       const userUuid = getUserUuid(userId);
       
       const response = await fetch(`http://localhost:8080/api/follows/${userUuid}/status`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(),
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       });
 
       if (response.ok) {
@@ -81,7 +82,8 @@ export function useFollow(targetUserId: string): UseFollowResult {
         headers: {
           ...getAuthHeaders(),
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       });
 
       if (!response.ok) {

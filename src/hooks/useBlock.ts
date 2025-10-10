@@ -39,13 +39,10 @@ export function useBlock() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('로그인이 필요합니다.');
-      }
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       const url = new URL(`http://localhost:8080/api/blocks/${userId}`);
-      url.searchParams.append('token', token);
       if (reason) {
         url.searchParams.append('reason', reason);
       }
@@ -54,8 +51,8 @@ export function useBlock() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+        },
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       });
 
       if (!response.ok) {
@@ -84,20 +81,17 @@ export function useBlock() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('로그인이 필요합니다.');
-      }
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       const url = new URL(`http://localhost:8080/api/blocks/${userId}`);
-      url.searchParams.append('token', token);
 
       const response = await fetch(url.toString(), {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
+        },
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       });
 
       if (!response.ok) {
@@ -123,19 +117,14 @@ export function useBlock() {
    */
   const checkBlockStatus = useCallback(async (userId: string): Promise<boolean> => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        return false;
-      }
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       const url = new URL(`http://localhost:8080/api/blocks/check/${userId}`);
-      url.searchParams.append('token', token);
 
       const response = await fetch(url.toString(), {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       });
 
       if (!response.ok) {
@@ -160,21 +149,16 @@ export function useBlock() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('로그인이 필요합니다.');
-      }
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       const url = new URL('http://localhost:8080/api/blocks/my');
-      url.searchParams.append('token', token);
       url.searchParams.append('page', page.toString());
       url.searchParams.append('size', size.toString());
 
       const response = await fetch(url.toString(), {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       });
 
       if (!response.ok) {

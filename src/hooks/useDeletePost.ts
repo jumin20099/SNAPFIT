@@ -12,10 +12,9 @@ export function useDeletePost(): UseDeletePostResult {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const getAuthHeaders = useCallback((hasBody: boolean) => {
-    const token = localStorage.getItem('token');
-    const headers: Record<string, string> = {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
+    const headers: Record<string, string> = {};
     if (hasBody) {
       headers['Content-Type'] = 'application/json';
     }

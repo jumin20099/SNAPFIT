@@ -217,24 +217,13 @@ export default function PostDetailPage() {
   // 사용자 상호작용 상태 가져오기 (좋아요, 스크랩) - 백엔드 API만 사용
   const fetchUserInteractions = useCallback(async () => {
     try {
-      // 토큰 가져오기
-      const token = localStorage.getItem('token')
-      if (!token) {
-        console.log('토큰이 없어서 사용자 상태를 불러올 수 없습니다.')
-        return
-      }
-      
-      // 백엔드 API에서 최신 상태 가져오기 (Authorization 헤더 포함)
+      // 백엔드 API에서 최신 상태 가져오기 (HttpOnly 쿠키 자동 전송)
       const [likesResponse, scrapsResponse] = await Promise.all([
         fetch('/api/likes/my', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          credentials: 'include' // HttpOnly 쿠키 자동 전송
         }),
         fetch('/api/scraps/my', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          credentials: 'include' // HttpOnly 쿠키 자동 전송
         })
       ])
       
@@ -421,7 +410,7 @@ export default function PostDetailPage() {
     setError(null) // 에러 상태 초기화
     try {
       // Next.js API 라우트 사용 (프록시를 통해 백엔드 호출)
-      const token = localStorage.getItem('token')
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
       
       // 특정 게시글을 포함한 목록 요청 (첫 페이지인 경우)
       const params = new URLSearchParams({
@@ -441,9 +430,7 @@ export default function PostDetailPage() {
       const url = `/api/posts?${params.toString()}`
       
       const response = await fetch(url, {
-        headers: {
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       if (response.ok) {
         const data = await response.json()
@@ -648,11 +635,8 @@ export default function PostDetailPage() {
     const checkPostTypeAndRedirect = async () => {
       try {
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
-        const token = localStorage.getItem('token')
         const response = await fetch(`${API_BASE_URL}/api/posts/${postId}`, {
-          headers: {
-            ...(token && { 'Authorization': `Bearer ${token}` })
-          }
+          credentials: 'include' // HttpOnly 쿠키 자동 전송
         })
 
         if (response.ok) {

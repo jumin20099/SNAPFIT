@@ -8,6 +8,7 @@ import com.snapfit.api.dto.PartnerApplicationActionDto;
 import com.snapfit.api.dto.ProductApprovalActionDto;
 import com.snapfit.api.dto.BulkProductApprovalActionDto;
 import com.snapfit.api.service.PartnerService;
+import com.snapfit.api.security.InputSanitizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +24,24 @@ public class PartnerController {
     @Autowired
     private PartnerService partnerService;
     
+    @Autowired
+    private InputSanitizer inputSanitizer;
+    
     // 제휴사 신청 제출
     @PostMapping("/application")
     public ResponseEntity<?> submitApplication(@RequestBody PartnerApplicationDto dto) {
         try {
+            // 입력 sanitizing 적용
+            dto.sanitizeInputs(inputSanitizer);
+            
+            // 안전성 검증
+            if (!inputSanitizer.isSafeInput(dto.getCompanyName()) ||
+                !inputSanitizer.isSafeInput(dto.getContactEmail()) ||
+                !inputSanitizer.isSafeInput(dto.getContactPhone())) {
+                return ResponseEntity.badRequest()
+                    .body(java.util.Map.of("error", "입력값에 허용되지 않는 문자가 포함되어 있습니다"));
+            }
+            
             PartnerApplicationDto result = partnerService.submitApplication(dto);
             return ResponseEntity.ok(result);
         } catch (IllegalStateException dup) {
