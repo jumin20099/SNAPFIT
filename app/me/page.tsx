@@ -517,7 +517,8 @@ export default function MePage() {
 
   // 로그아웃
   const handleLogout = () => {
-    localStorage.removeItem('token')
+    // HttpOnly 쿠키를 사용하므로 localStorage 토큰 제거 불필요
+    // localStorage.removeItem('token')
     router.push('/login')
   }
 

@@ -17,7 +17,7 @@ export function HomePage() {
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>()
   const [activeTab, setActiveTab] = useState('home')
 
-  // 로그인 성공 시 토큰을 로컬스토리지에 저장
+  // 로그인 성공 시 처리 (localStorage 사용하지 않음)
   useEffect(() => {
     const token = searchParams.get('token')
     const refreshToken = searchParams.get('refreshToken')
@@ -25,9 +25,8 @@ export function HomePage() {
     const login = searchParams.get('login')
 
     if (login === 'success' && token) {
-      // Access Token만 localStorage에 저장
-      localStorage.setItem('token', token)
-      localStorage.setItem('accessToken', token) // TokenManager 호환성
+      // 보안상 localStorage에 토큰 저장하지 않음
+      // HttpOnly 쿠키로 자동 처리됨
       // Refresh Token은 쿠키에만 저장 (보안상 localStorage에 저장하지 않음)
       if (refreshToken) {
         console.log('✅ 리프레시 토큰은 쿠키에 저장됨 (보안)')

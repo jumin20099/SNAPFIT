@@ -13,9 +13,9 @@ export function formatCurrencyKRW(amount: number): string {
 }
 
 export function logout() {
-  // localStorage 토큰 제거
-  localStorage.removeItem('token')
-  sessionStorage.removeItem('token')
+  // HttpOnly 쿠키를 사용하므로 localStorage 토큰 제거 불필요
+  // localStorage.removeItem('token')
+  // sessionStorage.removeItem('token')
   
   // 쿠키 제거 (백엔드 API 호출)
   fetch('/api/auth/logout', {

@@ -44,26 +44,20 @@ export function useSSENotifications(props?: UseSSENotificationsProps) {
   }, []);
 
   const connect = useCallback(() => {
-    // JWT 토큰을 localStorage에서 가져오기 (키 이름: "token")
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.log("=== SSE 연결 실패: 토큰 없음 ===");
-      setError("토큰이 없습니다");
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
+    console.log("=== SSE 연결 시도 (HttpOnly 쿠키 기반) ===");
       return;
     }
-
-    console.log("=== SSE 연결 시도: 토큰 있음 ===");
-    console.log("토큰 길이:", token.length);
 
     // 기존 연결이 있으면 먼저 닫기
     if (esRef.current) {
       esRef.current.close();
     }
 
-    // ❗EventSource는 Authorization 헤더를 직접 보낼 수 없음
-    // Next.js API 라우트에서 토큰을 쿠키로 설정하거나
-    // URL 파라미터로 전달해야 함
-    const es = new EventSource(`/api/notifications/stream?token=${encodeURIComponent(token)}`);
+    // HttpOnly 쿠키 기반 SSE 연결
+    // EventSource는 자동으로 쿠키를 전송함
+    const es = new EventSource(`/api/notifications/stream`);
     esRef.current = es;
 
     es.addEventListener("open", () => {

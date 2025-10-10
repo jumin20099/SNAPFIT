@@ -497,11 +497,8 @@ export default function AdminPage() {
         if (response.ok) {
           const data = await response.json()
           
-          // 토큰 저장
-          localStorage.setItem('token', data.token)
-          
-          // 사용자 정보 저장
-          localStorage.setItem('userInfo', JSON.stringify(data.user))
+          // 보안상 localStorage에 토큰 저장하지 않음
+          // HttpOnly 쿠키로 자동 처리됨
           
           toast.success(`임시 사용자로 로그인되었습니다!\n닉네임: ${data.user.nickname}\n권한: ${data.user.role}`)
           
