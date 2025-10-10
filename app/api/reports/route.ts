@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { shouldValidateCsrf, validateCsrfToken } from '@/lib/csrf-api'
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8080'
 
@@ -51,6 +52,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // CSRF 토큰 검증
+    if (shouldValidateCsrf(request)) {
+      const isValidCsrf = await validateCsrfToken(request)
+      if (!isValidCsrf) {
+        return NextResponse.json(
+          { error: '유효하지 않은 CSRF 토큰입니다' },
+          { status: 403 }
+        )
+      }
+    }
+
     const body = await request.json()
     const normalizedBody = {
       ...body,
