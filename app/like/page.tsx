@@ -61,14 +61,12 @@ export default function LikedItemsPage() {
   const fetchLikedPosts = async () => {
     try {
       setPostsLoading(true)
-      const token = localStorage.getItem('token')
-      if (!token) return
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       // 1. 좋아요한 게시글 ID 목록 가져오기
       const likesResponse = await fetch('/api/likes/my/posts', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
 
               if (likesResponse.ok) {
@@ -87,8 +85,8 @@ export default function LikedItemsPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
           },
+          credentials: 'include', // HttpOnly 쿠키 자동 전송
           body: JSON.stringify({ postIds })
         })
 
@@ -136,14 +134,12 @@ export default function LikedItemsPage() {
   const fetchLikedProducts = async () => {
     try {
       setProductsLoading(true)
-      const token = localStorage.getItem('token')
-      if (!token) return
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       // 1. 좋아요한 상품 ID 목록 가져오기
       const likesResponse = await fetch('/api/likes/my/products', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
 
       if (likesResponse.ok) {
@@ -162,8 +158,8 @@ export default function LikedItemsPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
           },
+          credentials: 'include', // HttpOnly 쿠키 자동 전송
           body: JSON.stringify({ productIds })
         })
 
@@ -199,13 +195,11 @@ export default function LikedItemsPage() {
   const fetchLikedBrands = async () => {
     try {
       setBrandsLoading(true)
-      const token = localStorage.getItem('token')
-      if (!token) return
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
 
       const response = await fetch('/api/likes/my/brands', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
 
       if (response.ok) {

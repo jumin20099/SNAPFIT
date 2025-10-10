@@ -75,11 +75,8 @@ export default function ProfilePage() {
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch(`/api/profiles/${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       
       if (response.ok) {
@@ -100,14 +97,13 @@ export default function ProfilePage() {
     if (!profile) return
 
     try {
-      const token = localStorage.getItem('token')
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
       const endpoint = following ? `/api/profiles/${userId}/unfollow` : `/api/profiles/${userId}/follow`
       
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
 
       if (response.ok) {

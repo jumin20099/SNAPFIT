@@ -100,21 +100,15 @@ export default function CommunityPage() {
   }, [searchParams, router])
 
   const handleProfileClick = () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      alert('로그인 후 사용 가능합니다.')
-      return
-    }
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
     fetchUserProfile()
   }
 
   const fetchUserProfile = async () => {
     try {
-      const token = localStorage.getItem('token')
       const response = await fetch('/api/user/info', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
 
       if (response.ok) {

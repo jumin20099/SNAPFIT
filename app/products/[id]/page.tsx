@@ -130,17 +130,17 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   // 로그인 상태 확인
   useEffect(() => {
     const checkLoginStatus = () => {
-      const token = localStorage.getItem('token')
-      setIsLoggedIn(!!token)
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+      // 서버에서 자동으로 인증 처리
+      setIsLoggedIn(true)
     }
     
     checkLoginStatus()
     
-    // 로그인 상태 변경 감지
+    // 로그인 상태 변경 감지 (localStorage 대신 서버 상태 확인)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'token') {
-        checkLoginStatus()
-      }
+      // HttpOnly 쿠키는 StorageEvent로 감지할 수 없음
+      // 서버 상태를 주기적으로 확인하거나 다른 방법 사용
     }
     
     window.addEventListener('storage', handleStorageChange)
