@@ -37,12 +37,17 @@ export const useProfile = () => {
   const updateProfile = useCallback(async (updateData: ProfileUpdateRequest): Promise<ProfileUpdateResponse> => {
     setIsLoading(true);
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('로그인이 필요합니다');
+      }
+
       const response = await fetch('/api/user/profile', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
-        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify(updateData),
       });
 

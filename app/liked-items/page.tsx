@@ -52,9 +52,14 @@ export default function LikedItemsPage() {
   // 좋아요한 게시글 가져오기
   const fetchLikedPosts = async () => {
     try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
       // 1. 좋아요한 게시글 ID 목록 가져오기
       const likesResponse = await fetch('/api/likes/my/posts', {
-        credentials: 'include' // HttpOnly 쿠키 자동 전송
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
 
               if (likesResponse.ok) {

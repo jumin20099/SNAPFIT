@@ -13,7 +13,6 @@ import com.snapfit.api.repository.PostRepository;
 import com.snapfit.api.repository.UserRepository;
 import com.snapfit.api.service.AnonymousUserService;
 import com.snapfit.api.security.JwtUtil;
-import com.snapfit.api.security.InputSanitizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,7 +44,6 @@ public class CommentController {
     private final AnonymousUserService anonymousUserService;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
-    private final InputSanitizer inputSanitizer;
     
     // 댓글 작성
     @PostMapping("/posts/{postId}")
@@ -129,18 +127,11 @@ public class CommentController {
                 log.info("익명 사용자 댓글 작성: postId={}, userIdentifier={}, anonymousIndex={}", postId, userIdentifier, anonymousIndex);
             }
             
-            // 댓글 내용 sanitizing
-            String sanitizedContent = inputSanitizer.sanitizeComment(request.getContent());
-            if (!inputSanitizer.isSafeInput(sanitizedContent)) {
-                log.warn("댓글 내용에 위험한 입력 감지: postId={}, content={}", postId, request.getContent());
-                throw new RuntimeException("댓글 내용에 허용되지 않는 문자가 포함되어 있습니다");
-            }
-            
             // 댓글 생성
             Comment comment = Comment.builder()
                     .post(post)
                     .author(author)
-                    .content(sanitizedContent)
+                    .content(request.getContent())
                     .likeCount(0L)
                     .anonymousIndex(anonymousIndex)
                     .anonymousPasswordHash(anonymousPasswordHash)
