@@ -67,13 +67,8 @@ export function LikeButton({
   });
 
   const handleToggle = () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-
-    if (!token && targetType === 'product') {
-      toast.info('로그인 후 이용 가능합니다.');
-      return;
-    }
-
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+    // 서버에서 자동으로 인증 처리
     mutate();
   };
 

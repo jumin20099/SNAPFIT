@@ -80,24 +80,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         
-        // 헤더에도 토큰이 없으면 쿼리 파라미터에서 확인 (WebSocket 연결용)
-        if (token == null) {
-            String queryToken = request.getParameter("token");
-            if (queryToken != null && !queryToken.trim().isEmpty()) {
-                token = queryToken.trim();
-            }
-        }
-        
         if (token == null) {
             filterChain.doFilter(request, response);
             return;
         }
         
-        // 리뷰/문의 엔드포인트는 완전 우회
-        if (requestPath.contains("/reviews") || requestPath.contains("/inquiries")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
         
         try {
             // JWT 토큰 유효성 검증

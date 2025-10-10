@@ -78,6 +78,13 @@ public class ReportController {
                 return ResponseEntity.badRequest()
                     .body(Map.of("error", "신고 사유를 입력해주세요"));
             }
+            
+            // 신고 사유 길이 검증
+            if (trimmedReason.length() < 3) {
+                log.warn("신고 사유가 너무 짧음: reporterId={}, reason={}", reporterId, trimmedReason);
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "신고 사유는 3자 이상 입력해주세요"));
+            }
 
             Report.Category category = createRequest.resolveCategory();
 

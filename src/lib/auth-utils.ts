@@ -34,15 +34,11 @@ export function decodeJWTToken(token: string): UserInfo | null {
 }
 
 /**
- * localStorage에서 JWT 토큰을 가져옴
+ * HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰에 접근할 수 없음
  */
 export function getAuthToken(): string | null {
-  try {
-    return localStorage.getItem('token');
-  } catch (error) {
-    console.error('JWT 토큰 가져오기 실패:', error);
-    return null;
-  }
+  // HttpOnly 쿠키는 클라이언트에서 접근할 수 없으므로 null 반환
+  return null;
 }
 
 /**
@@ -78,18 +74,9 @@ export function getDisplayNameFromEmail(email: string): string {
  * 현재 사용자가 특정 게시글의 작성자인지 확인
  */
 export function getCurrentUserId(): string | null {
-  try {
-    const storedId = localStorage.getItem('userIdx');
-    if (storedId) {
-      return storedId;
-    }
-
-    const currentUser = getCurrentUser();
-    return currentUser?.sub ?? null;
-  } catch (error) {
-    console.error('현재 사용자 ID 가져오기 실패:', error);
-    return null;
-  }
+  // HttpOnly 쿠키를 사용하므로 클라이언트에서 사용자 ID에 접근할 수 없음
+  // 서버에서 자동으로 처리됨
+  return null;
 }
 
 export function isCurrentUserPostAuthor({

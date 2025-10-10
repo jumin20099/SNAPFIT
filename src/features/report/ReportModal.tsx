@@ -64,6 +64,12 @@ export function ReportModal() {
       return
     }
     
+    // 신고 사유 길이 검증
+    if (trimmedReason.length < 3) {
+      setError('신고 사유는 3자 이상 입력해주세요')
+      return
+    }
+    
     const success = await createReport({
       targetType: target.type,
       targetId: target.targetId,
