@@ -78,9 +78,8 @@ export default function PartnerProductUploadPage() {
   useEffect(() => {
     // 사용자 정보 가져오기
     const fetchUserInfo = async () => {
-      const token = localStorage.getItem("token")
       const res = await fetch('/api/user/info', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
       })
       if (res.ok) {
         const data = await res.json()
@@ -100,9 +99,8 @@ export default function PartnerProductUploadPage() {
         // 상품 정보를 로드한 후 수정 모드로 전환
         const loadProductForEdit = async () => {
           try {
-            const token = localStorage.getItem("token")
             const res = await fetch(`/api/partner/products/${productId}`, {
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
+              credentials: 'include', // HttpOnly 쿠키 자동 전송
             })
             if (res.ok) {
               const product = await res.json()
@@ -131,9 +129,8 @@ export default function PartnerProductUploadPage() {
 
   const loadProducts = async () => {
     try {
-      const token = localStorage.getItem("token")
       const res = await fetch("/api/partner/products", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
       })
       if (res.ok) {
         const data = await res.json()
@@ -163,13 +160,10 @@ export default function PartnerProductUploadPage() {
 
     setUploading(true)
     try {
-      const token = localStorage.getItem("token")
       const res = await fetch("/api/media/upload", {
         method: "POST",
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: formData,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       })
       if (!res.ok) {
         const errorData = await res.json()
@@ -187,7 +181,6 @@ export default function PartnerProductUploadPage() {
     e.preventDefault()
     setIsSubmitting(true)
     try {
-      const token = localStorage.getItem("token")
       const url = editingProduct?.id 
         ? `/api/partner/products/${editingProduct.id}`
         : "/api/partner/products"
@@ -197,8 +190,8 @@ export default function PartnerProductUploadPage() {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({
           ...form,
           productPrice: Number(form.productPrice),
@@ -245,10 +238,9 @@ export default function PartnerProductUploadPage() {
   const handleDeleteProduct = async (productId: number) => {
     if (!confirm("정말로 이 상품을 삭제하시겠습니까?")) return
     try {
-      const token = localStorage.getItem("token")
       const res = await fetch(`/api/partner/products/${productId}`, {
         method: "DELETE",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       if (res.ok) {
         alert("상품이 삭제되었습니다.")
@@ -266,10 +258,9 @@ export default function PartnerProductUploadPage() {
   const handleCancelUpdateRequest = async (productId: number) => {
     if (!confirm("수정 요청을 취소하시겠습니까?")) return
     try {
-      const token = localStorage.getItem("token")
       const res = await fetch(`/api/partner/products/${productId}/update-request/cancel`, {
         method: "PUT",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include' // HttpOnly 쿠키 자동 전송
       })
       if (res.ok) {
         alert("수정 요청이 취소되었습니다.")

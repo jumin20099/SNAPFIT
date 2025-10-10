@@ -46,7 +46,8 @@ export default function AddProductPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const token = localStorage.getItem("token")
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+// 서버에서 자동으로 인증 처리
       let newProduct = { ...product }
       
       // 이미지 파일이 있으면 업로드
@@ -58,9 +59,7 @@ export default function AddProductPage() {
         
         const uploadResponse = await fetch('/api/media/upload', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          },
+          credentials: 'include', // HttpOnly 쿠키 자동 전송,
           body: formData
         })
         
@@ -78,8 +77,8 @@ export default function AddProductPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송,
         body: JSON.stringify(newProduct)
       })
       

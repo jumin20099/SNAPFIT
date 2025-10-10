@@ -44,7 +44,8 @@ export default function ProductApprovalsPage() {
   const loadProducts = async () => {
     try {
       setLoading(true)
-      const token = localStorage.getItem("token")
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+// 서버에서 자동으로 인증 처리
       if (!token) {
         console.error("토큰이 없습니다.")
         return
@@ -138,7 +139,8 @@ export default function ProductApprovalsPage() {
 
     setIsSubmitting(true)
     try {
-      const token = localStorage.getItem("token")
+      // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
+// 서버에서 자동으로 인증 처리
       if (!token) {
         alert("인증이 필요합니다.")
         return

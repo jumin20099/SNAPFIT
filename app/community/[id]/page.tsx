@@ -315,9 +315,9 @@ export default function PostDetailPage() {
           const statusResponse = await fetch('/api/reactions/status', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송,
             body: JSON.stringify({ postIds })
           })
           
@@ -373,9 +373,9 @@ export default function PostDetailPage() {
           const statusResponse = await fetch('/api/reactions/status', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // HttpOnly 쿠키 자동 전송,
             body: JSON.stringify({ postIds: [currentPost.postId] })
           })
           
