@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,27 +44,21 @@ public class ReportController {
     @PostMapping
     public ResponseEntity<?> createReport(
             @RequestBody ReportCreateRequest createRequest,
-            @RequestParam(value = "token", required = false) String token,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             HttpServletRequest request) {
 
-        log.info("신고 생성 요청: body={}, token={}", createRequest, token);
+        log.info("신고 생성 요청: body={}", createRequest);
 
         try {
-            // 임시 인증 처리 (E2E 테스트용)
-            UUID reporterId;
-            if (token != null) {
-                // 토큰 기반 임시 사용자 매핑
-                reporterId = getTestUserId(token);
-                log.info("토큰 기반 인증: reporterId={}", reporterId);
-            } else if (userDetails != null) {
-                reporterId = UUID.fromString(userDetails.getUserId());
-                log.info("Spring Security 인증: reporterId={}", reporterId);
-            } else {
-                log.warn("인증 정보 없음: token={}, userDetails={}", token, userDetails);
+            // 인증 검증 - Spring Security 인증만 허용
+            if (userDetails == null) {
+                log.warn("인증되지 않은 신고 생성 시도");
                 return ResponseEntity.status(401)
                     .body(Map.of("error", "인증이 필요합니다"));
             }
+
+            UUID reporterId = UUID.fromString(userDetails.getUserId());
+            log.info("Spring Security 인증: reporterId={}", reporterId);
 
             Report.TargetType resolvedTargetType = createRequest.resolveTargetType();
             if (resolvedTargetType == null) {
@@ -74,6 +69,12 @@ public class ReportController {
             String trimmedReason = createRequest.getReason() == null ? null : createRequest.getReason().trim();
             if (trimmedReason != null && trimmedReason.isEmpty()) {
                 trimmedReason = null;
+            }
+            
+            // 신고 사유 검증 - null이거나 빈 문자열인 경우 경고 로그
+            if (trimmedReason == null || trimmedReason.trim().isEmpty()) {
+                log.warn("신고 사유가 비어있음: reporterId={}, targetType={}, targetId={}", 
+                    reporterId, resolvedTargetType, resolvedTargetId);
             }
 
             Report.Category category = createRequest.resolveCategory();
@@ -114,24 +115,21 @@ public class ReportController {
      */
     @GetMapping("/my")
     public ResponseEntity<?> getMyReports(
-            @RequestParam(value = "token", required = false) String token,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        log.info("내 신고 목록 조회: token={}, page={}, size={}", token, page, size);
+        log.info("내 신고 목록 조회: page={}, size={}", page, size);
 
         try {
-            // 임시 인증 처리
-            UUID reporterId;
-            if (token != null) {
-                reporterId = getTestUserId(token);
-            } else if (userDetails != null) {
-                reporterId = UUID.fromString(userDetails.getUserId());
-            } else {
+            // 인증 검증 - Spring Security 인증만 허용
+            if (userDetails == null) {
+                log.warn("인증되지 않은 신고 목록 조회 시도");
                 return ResponseEntity.status(401)
                     .body(Map.of("error", "인증이 필요합니다"));
             }
+
+            UUID reporterId = UUID.fromString(userDetails.getUserId());
 
             Pageable pageable = PageRequest.of(page, size);
             Page<Report> reportPage = reportService.getMyReports(reporterId, pageable);
@@ -159,6 +157,7 @@ public class ReportController {
      * GET /api/reports
      */
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllReports(
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -197,6 +196,7 @@ public class ReportController {
      * GET /api/reports/admin
      */
     @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getReportsForAdmin(
             @RequestParam(value = "status", required = false) String status,
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -240,6 +240,7 @@ public class ReportController {
      * PUT /api/reports/{reportId}/status
      */
     @PutMapping("/{reportId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateReportStatus(
             @PathVariable Long reportId,
             @RequestBody Map<String, Object> requestBody,
@@ -274,16 +275,4 @@ public class ReportController {
         }
     }
 
-    /**
-     * 임시 테스트용 사용자 ID 매핑
-     * 실제 운영에서는 JWT 토큰 파싱으로 대체
-     */
-    private UUID getTestUserId(String token) {
-        // E2E 테스트용 임시 매핑
-        return switch (token) {
-            case "test-token-1" -> UUID.fromString("4c12cfb2-c5b8-4ff6-96cc-afdb0168830d");
-            case "test-token-2" -> UUID.fromString("87b18a9c-d2ba-4318-b9aa-859e03c5aad7");
-            default -> UUID.fromString("4c12cfb2-c5b8-4ff6-96cc-afdb0168830d"); // 기본값
-        };
-    }
 }

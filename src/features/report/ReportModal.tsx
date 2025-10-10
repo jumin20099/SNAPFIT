@@ -51,6 +51,21 @@ export function ReportModal() {
     const trimmedReason = reason.trim()
     
     setError(null)
+    
+    // 카테고리 선택 확인
+    if (!category) {
+      setError('신고 카테고리를 선택해주세요')
+      return
+    }
+    
+    // 신고 사유가 비어있을 때 경고 (선택사항이지만 권장)
+    if (trimmedReason.length === 0) {
+      const confirmed = window.confirm('신고 사유를 입력하지 않으셨습니다. 그래도 제출하시겠습니까?')
+      if (!confirmed) {
+        return
+      }
+    }
+    
     const success = await createReport({
       targetType: target.type,
       targetId: target.targetId,
@@ -129,7 +144,7 @@ export function ReportModal() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={isLoading}
+              disabled={isLoading || !category}
               data-testid="submit-report-button"
             >
               {isLoading ? '제출 중...' : '신고 제출'}

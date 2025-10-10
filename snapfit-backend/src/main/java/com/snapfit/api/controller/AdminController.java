@@ -6,8 +6,11 @@ import com.snapfit.api.service.UserService;
 import com.snapfit.api.entity.User;
 import com.snapfit.api.entity.User.Role;
 import com.snapfit.api.security.JwtUtil;
+import com.snapfit.api.security.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -29,9 +32,11 @@ public class AdminController {
     
     // 상품 승인/거절 및 활성화/비활성화
     @PutMapping("/products/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> updateProductStatus(
             @PathVariable Long id,
-            @RequestBody Map<String, Object> requestBody) {
+            @RequestBody Map<String, Object> requestBody,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
             // 기존 승인/거절 로직
             if (requestBody.containsKey("action")) {
@@ -66,7 +71,8 @@ public class AdminController {
      * 일반 사용자 권한으로 로그인하여 시스템 점검
      */
     @PostMapping("/temp-login")
-    public ResponseEntity<?> tempLogin() {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> tempLogin(@AuthenticationPrincipal CustomUserDetails userDetails) {
         try {
             // 임시 사용자 이메일
             String tempEmail = "temp_user@snapfit.com";

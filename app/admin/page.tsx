@@ -75,6 +75,9 @@ export default function AdminPage() {
   const [selectedPartnerName, setSelectedPartnerName] = useState<string>('전체')
   const [partnerProducts, setPartnerProducts] = useState<Product[]>([])
   const [updateRequests, setUpdateRequests] = useState<Product[]>([])
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(null)
+  const [selectedProductIsPartner, setSelectedProductIsPartner] = useState(false)
   const [reports, setReports] = useState<Array<{
     reportId: number
     reporterId: string
@@ -243,41 +246,51 @@ export default function AdminPage() {
   }
 
   const handleDeleteProduct = async (productId: number, isPartner: boolean = false) => {
-    if (confirm("정말로 이 상품을 삭제하시겠습니까?")) {
-      try {
-        const token = localStorage.getItem("token")
-        if (isPartner) {
-          const res = await fetch(`/api/partner/products/${productId}`, {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          if (!res.ok) {
-            alert("삭제 실패")
-            return
-          }
-        } else {
-          const res = await fetch(`/api/admin/products/${productId}`, {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          if (!res.ok) {
-            alert("삭제 실패")
-            return
-          }
+    setShowDeleteDialog(true)
+    setSelectedProductId(productId)
+    setSelectedProductIsPartner(isPartner)
+  }
+
+  const confirmDeleteProduct = async () => {
+    if (!selectedProductId) return
+    
+    try {
+      const token = localStorage.getItem("token")
+      if (selectedProductIsPartner) {
+        const res = await fetch(`/api/partner/products/${selectedProductId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (!res.ok) {
+          toast.error("삭제 실패")
+          return
         }
-        alert("삭제 성공")
-        loadData()
-      } catch (error) {
-        console.error("삭제 실패:", error)
-        alert("삭제 실패")
+      } else {
+        const res = await fetch(`/api/admin/products/${selectedProductId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (!res.ok) {
+          toast.error("삭제 실패")
+          return
+        }
       }
+      toast.success("삭제 성공")
+      loadData()
+    } catch (error) {
+      console.error("삭제 실패:", error)
+      toast.error("삭제 실패")
+    } finally {
+      setShowDeleteDialog(false)
+      setSelectedProductId(null)
+      setSelectedProductIsPartner(false)
     }
   }
 
   const handleToggleProductStatus = async (productId: number, newStatus: boolean, isPartner: boolean) => {
     try {
       if (!productId) {
-        alert("상품 ID가 없습니다")
+        toast.error("상품 ID가 없습니다")
         return
       }
       
@@ -300,12 +313,13 @@ export default function AdminPage() {
       
       if (res.ok) {
         await loadData()
+        toast.success("상태가 변경되었습니다")
       } else {
-        alert("상태 변경 실패")
+        toast.error("상태 변경 실패")
       }
     } catch (error) {
       console.error("상태 변경 실패:", error)
-      alert("상태 변경 실패")
+      toast.error("상태 변경 실패")
     }
   }
 
@@ -323,39 +337,48 @@ export default function AdminPage() {
       
       if (res.ok) {
         await loadData()
+        toast.success("상태가 변경되었습니다")
       } else {
-        alert("상태 변경 실패")
+        toast.error("상태 변경 실패")
       }
     } catch (error) {
       console.error("상태 변경 실패:", error)
-      alert("상태 변경 실패")
+      toast.error("상태 변경 실패")
     }
   }
 
   const handleDeleteMall = async (mallId: number) => {
-    if (confirm("정말로 이 제휴몰을 삭제하시겠습니까?")) {
-      try {
-        const token = localStorage.getItem("token")
-        const res = await fetch(`/api/admin/store-malls/${mallId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        
-        if (res.ok) {
-          alert("삭제 성공")
-          loadData()
-        } else {
-          alert("삭제 실패")
-        }
-      } catch (error) {
-        console.error("삭제 실패:", error)
-        alert("삭제 실패")
+    setShowDeleteDialog(true)
+    setSelectedProductId(mallId)
+    setSelectedProductIsPartner(false) // mall 삭제용으로 재사용
+  }
+
+  const confirmDeleteMall = async () => {
+    if (!selectedProductId) return
+    
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`/api/admin/store-malls/${selectedProductId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (res.ok) {
+        toast.success("삭제 성공")
+        loadData()
+      } else {
+        toast.error("삭제 실패")
       }
+    } catch (error) {
+      console.error("삭제 실패:", error)
+      toast.error("삭제 실패")
+    } finally {
+      setShowDeleteDialog(false)
+      setSelectedProductId(null)
     }
   }
 
   const [showApproveDialog, setShowApproveDialog] = useState(false)
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null)
 
   const handleApproveUpdateRequest = async (productId: number) => {
     setSelectedProductId(productId)
@@ -404,15 +427,15 @@ export default function AdminPage() {
           body: JSON.stringify({ rejectionReason }),
         })
         if (res.ok) {
-          alert("수정 요청이 거절되었습니다.")
+          toast.success("수정 요청이 거절되었습니다.")
           loadData()
         } else {
           const errorData = await res.json().catch(() => ({}))
-          alert(`거절 실패: ${errorData.error || '알 수 없는 오류'}`)
+          toast.error(`거절 실패: ${errorData.error || '알 수 없는 오류'}`)
         }
       } catch (error) {
         console.error("거절 중 오류:", error)
-        alert("거절 중 오류가 발생했습니다.")
+        toast.error("거절 중 오류가 발생했습니다.")
       }
     }
   }
@@ -433,24 +456,24 @@ export default function AdminPage() {
       })
       
       if (res.ok) {
-        alert(`신고가 ${action === 'PROCESSING' ? '처리 중으로' : action === 'RESOLVED' ? '승인' : '거절'}되었습니다.`)
+        toast.success(`신고가 ${action === 'PROCESSING' ? '처리 중으로' : action === 'RESOLVED' ? '승인' : '거절'}되었습니다.`)
         loadData()
       } else {
-        alert("처리 실패")
+        toast.error("처리 실패")
       }
     } catch (error) {
       console.error("신고 처리 중 오류:", error)
-      alert("처리 중 오류가 발생했습니다.")
+      toast.error("처리 중 오류가 발생했습니다.")
     }
   }
 
   const handleApproveReport = (reportId: number) => {
-    const adminNotes = prompt("처리 사유를 입력해주세요 (선택사항):")
+    const adminNotes = window.prompt("처리 사유를 입력해주세요 (선택사항):")
     handleReportAction(reportId, 'RESOLVED', adminNotes || undefined)
   }
 
   const handleRejectReport = (reportId: number) => {
-    const adminNotes = prompt("거절 사유를 입력해주세요:")
+    const adminNotes = window.prompt("거절 사유를 입력해주세요:")
     if (adminNotes) {
       handleReportAction(reportId, 'REJECTED', adminNotes)
     }
@@ -458,7 +481,7 @@ export default function AdminPage() {
 
   // 임시 사용자 로그인 함수
   const handleTempLogin = async () => {
-    if (confirm("임시 사용자로 로그인하시겠습니까?\n(일반 사용자 권한으로 시스템을 점검할 수 있습니다)")) {
+    if (window.confirm("임시 사용자로 로그인하시겠습니까?\n(일반 사용자 권한으로 시스템을 점검할 수 있습니다)")) {
       setIsTempLoginLoading(true)
       try {
         const response = await fetch('/api/admin/temp-login', {
@@ -477,17 +500,17 @@ export default function AdminPage() {
           // 사용자 정보 저장
           localStorage.setItem('userInfo', JSON.stringify(data.user))
           
-          alert(`임시 사용자로 로그인되었습니다!\n닉네임: ${data.user.nickname}\n권한: ${data.user.role}`)
+          toast.success(`임시 사용자로 로그인되었습니다!\n닉네임: ${data.user.nickname}\n권한: ${data.user.role}`)
           
           // 페이지 새로고침하여 새로운 권한으로 로드
           window.location.reload()
         } else {
           const errorData = await response.json()
-          alert(`임시 로그인 실패: ${errorData.error || '알 수 없는 오류'}`)
+          toast.error(`임시 로그인 실패: ${errorData.error || '알 수 없는 오류'}`)
         }
       } catch (error) {
         console.error('임시 로그인 실패:', error)
-        alert('임시 로그인 중 오류가 발생했습니다.')
+        toast.error('임시 로그인 중 오류가 발생했습니다.')
       } finally {
         setIsTempLoginLoading(false)
       }
@@ -1117,6 +1140,18 @@ export default function AdminPage() {
           </div>
         </Tabs>
       </div>
+
+      {/* 삭제 확인 다이얼로그 */}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={selectedProductIsPartner ? confirmDeleteProduct : confirmDeleteMall}
+        title="삭제 확인"
+        description="정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+        confirmText="삭제"
+        cancelText="취소"
+        variant="destructive"
+      />
     </div>
   )
 }

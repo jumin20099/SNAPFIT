@@ -598,8 +598,16 @@ export default function MePage() {
 
   // 신고 내역 탭이 활성화될 때 신고 내역 로드
   useEffect(() => {
-    if (activeTab === 'reports' && reports.length === 0 && !isReportsLoading) {
-      loadReports(0, false)
+    if (activeTab === 'reports') {
+      // 탭이 변경될 때마다 상태 초기화
+      setReportsPage(0)
+      setReports([])
+      setHasMoreReports(true)
+      
+      // 신고 내역 로드
+      if (!isReportsLoading) {
+        loadReports(0, false)
+      }
     }
   }, [activeTab])
 
