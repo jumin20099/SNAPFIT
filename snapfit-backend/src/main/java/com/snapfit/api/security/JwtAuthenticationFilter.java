@@ -2,17 +2,14 @@
 package com.snapfit.api.security;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import lombok.extern.slf4j.Slf4j;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -22,13 +19,12 @@ import lombok.RequiredArgsConstructor;
 
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.UserRepository;
-import com.snapfit.api.security.CustomOAuth2User;
-import com.snapfit.api.security.CustomUserDetails;
 
 /**
  * 모든 요청마다 헤더의 Authorization: Bearer <token> 을 체크하여
  * JWT가 유효한 경우 SecurityContext에 인증 정보를 설정
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -55,8 +51,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
-        String requestPath = request.getRequestURI();
-        
         // 쿠키에서 access_token 확인 (우선순위)
         String token = null;
         jakarta.servlet.http.Cookie[] cookies = request.getCookies();

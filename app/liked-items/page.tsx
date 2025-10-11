@@ -72,9 +72,9 @@ export default function LikedItemsPage() {
         const postsResponse = await fetch('/api/posts/liked', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Content-Type': 'application/json'
           },
+          credentials: 'include',
           body: JSON.stringify({ postIds })
         })
 
