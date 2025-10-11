@@ -116,6 +116,36 @@ const nextConfig = {
       {
         source: '/api/csrf/:path*',
         destination: `${backendUrl}/api/csrf/:path*`
+      },
+      // 포스트 관련 API 프록시
+      {
+        source: '/api/posts/:path*',
+        destination: `${backendUrl}/api/posts/:path*`
+      },
+      // 반응 관련 API 프록시
+      {
+        source: '/api/reactions/:path*',
+        destination: `${backendUrl}/api/reactions/:path*`
+      },
+      // 댓글 관련 API 프록시
+      {
+        source: '/api/comments/:path*',
+        destination: `${backendUrl}/api/comments/:path*`
+      },
+      // 알림 관련 API 프록시
+      {
+        source: '/api/notifications/:path*',
+        destination: `${backendUrl}/api/notifications/:path*`
+      },
+      // 코디 관련 API 프록시
+      {
+        source: '/api/outfits/:path*',
+        destination: `${backendUrl}/api/outfits/:path*`
+      },
+      // 상품 관련 API 프록시 (기존에 있지만 명시적으로 추가)
+      {
+        source: '/api/products/:path*',
+        destination: `${backendUrl}/api/products/:path*`
       }
     ]
   }

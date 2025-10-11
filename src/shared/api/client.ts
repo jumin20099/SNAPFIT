@@ -1,8 +1,8 @@
 import { Product, Post, User, Store, Notification, ApiResponse, PaginatedResponse, SizeVariant } from './types';
 import { addCsrfTokenToHeaders } from '@/lib/csrf';
 
-// API 클라이언트 기본 설정
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// API 클라이언트 기본 설정 - Next.js 프록시 사용
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 class ApiClient {
   private async request<T>(
