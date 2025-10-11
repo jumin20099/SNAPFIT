@@ -98,20 +98,20 @@ public class AuthController {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
         
-        // Access Token을 HTTP-only 쿠키로 설정
+        // Access Token을 HTTP-only 쿠키로 설정 (보안 강화)
         ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
             .httpOnly(true)
-            .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
-            .sameSite("Lax")
+            .secure(true) // 프로덕션 환경에서 보안 강화
+            .sameSite("Strict") // CSRF 공격 방지 강화
             .path("/")
             .maxAge(30 * 60) // 30분
             .build();
 
-        // Refresh Token을 HTTP-only 쿠키로 설정
+        // Refresh Token을 HTTP-only 쿠키로 설정 (보안 강화)
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
             .httpOnly(true)
-            .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
-            .sameSite("Lax")
+            .secure(true) // 프로덕션 환경에서 보안 강화
+            .sameSite("Strict") // CSRF 공격 방지 강화
             .path("/")
             .maxAge(7 * 24 * 60 * 60) // 7일
             .build();
@@ -120,8 +120,7 @@ public class AuthController {
             .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
             .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
             .body(Map.of(
-                "accessToken", accessToken,
-                "refreshToken", refreshToken, // localStorage에도 저장할 수 있도록 응답에 포함
+                "message", "로그인 성공",
                 "email", user.getEmail(),
                 "nickname", user.getNickname()
             ));
@@ -170,16 +169,10 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(
-            @RequestBody(required = false) Map<String, String> request,
             @CookieValue(value = "refresh_token", required = false) String refreshTokenFromCookie) {
         try {
-            // 요청 본문에서 리프레시 토큰을 먼저 시도하고, 없으면 쿠키에서 가져오기
-            String refreshToken = null;
-            if (request != null && request.get("refreshToken") != null) {
-                refreshToken = request.get("refreshToken");
-            } else if (refreshTokenFromCookie != null) {
-                refreshToken = refreshTokenFromCookie;
-            }
+            // 보안: 쿠키에서만 Refresh Token 가져오기 (JSON 본문에서 받지 않음)
+            String refreshToken = refreshTokenFromCookie;
             
             if (refreshToken == null || refreshToken.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Refresh token이 필요합니다."));
@@ -202,7 +195,7 @@ public class AuthController {
             ResponseCookie accessCookie = ResponseCookie.from("access_token", newAccessToken)
                 .httpOnly(true)
                 .secure(true) // 프로덕션 환경에서 보안 강화
-                .sameSite("Lax")
+                .sameSite("Strict") // CSRF 공격 방지 강화
                 .path("/")
                 .maxAge(30 * 60) // 30분
                 .build();

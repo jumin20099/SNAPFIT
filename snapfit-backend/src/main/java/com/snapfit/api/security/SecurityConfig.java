@@ -98,14 +98,14 @@ public class SecurityConfig {
                             // JWT 토큰을 쿠키에 설정 (보안 강화)
                             response.addHeader("Set-Cookie", 
                                 "token=" + token + 
-                                "; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Lax");
+                                "; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Strict");
                             log.info("✅ JWT 토큰 쿠키 설정 완료");
                             
                             // 리프레시 토큰 생성 및 쿠키 설정 (보안 강화)
                             String refreshToken = jwtUtil.generateRefreshToken(email);
                             response.addHeader("Set-Cookie", 
                                 "refresh_token=" + refreshToken + 
-                                "; Path=/; Max-Age=604800; HttpOnly; Secure; SameSite=Lax");
+                                "; Path=/; Max-Age=604800; HttpOnly; Secure; SameSite=Strict");
                             log.info("✅ 리프레시 토큰 쿠키 설정 완료");
                             
                             // 보안: 토큰을 쿼리 스트링에 노출하지 않음
