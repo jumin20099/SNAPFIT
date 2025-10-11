@@ -87,8 +87,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         
         try {
-            // JWT 토큰 유효성 검증
-            if (!jwtUtil.validateToken(token)) {
+            // 보안: Access Token만 허용 (Refresh Token 사용 방지)
+            if (!jwtUtil.validateAccessToken(token)) {
+                String tokenType = jwtUtil.getTokenType(token);
+                if ("refresh".equals(tokenType)) {
+                    log.warn("보안 위반: Refresh Token이 Access Token으로 사용됨 - 토큰: {}...", token.substring(0, Math.min(20, token.length())));
+                } else {
+                    log.warn("유효하지 않은 토큰 사용 시도 - 타입: {}, 토큰: {}...", tokenType, token.substring(0, Math.min(20, token.length())));
+                }
                 filterChain.doFilter(request, response);
                 return;
             }
