@@ -33,10 +33,10 @@ public class CsrfController {
         try {
             var csrfToken = csrfTokenService.generateToken();
             
-            // CSRF 토큰을 쿠키로 설정 (Double Submit Cookie 패턴) - 보안 강화
+            // CSRF 토큰을 쿠키로 설정 (Double Submit Cookie 패턴) - 개발 환경에서는 secure=false
             Cookie csrfCookie = new Cookie("XSRF-TOKEN", csrfToken.getToken());
             csrfCookie.setHttpOnly(false); // JavaScript에서 읽을 수 있도록
-            csrfCookie.setSecure(true); // 프로덕션 환경에서 보안 강화
+            csrfCookie.setSecure(false); // 개발 환경에서는 HTTP에서도 작동하도록
             csrfCookie.setPath("/");
             csrfCookie.setMaxAge(30 * 60); // 30분
             response.addCookie(csrfCookie);

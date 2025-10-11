@@ -111,6 +111,11 @@ const nextConfig = {
       {
         source: '/api/scraps/:path*',
         destination: `${backendUrl}/api/scraps/:path*`
+      },
+      // CSRF 토큰 API 프록시
+      {
+        source: '/api/csrf/:path*',
+        destination: `${backendUrl}/api/csrf/:path*`
       }
     ]
   }
