@@ -5,14 +5,17 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import javax.annotation.PostConstruct;
 
 import java.security.Key;
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.Date;
 
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret:defaultSecretKeyForDevelopmentOnly}")
+    @Value("${jwt.secret:}")
     private String jwtSecret;
 
     @Value("${jwt.access-token.expiration-ms:1800000}")
@@ -20,6 +23,59 @@ public class JwtUtil {
 
     @Value("${jwt.refresh-token.expiration-ms:604800000}")
     private long refreshTokenExpirationMs;
+
+    @PostConstruct
+    public void validateJwtSecret() {
+        // 보안: JWT 시크릿 키 검증 및 생성
+        if (jwtSecret == null || jwtSecret.trim().isEmpty()) {
+            // 개발 환경에서는 자동으로 강한 키 생성
+            if (isDevelopmentEnvironment()) {
+                jwtSecret = generateSecureSecret();
+                System.out.println("⚠️  개발 환경에서 자동으로 JWT 시크릿 키를 생성했습니다.");
+                System.out.println("⚠️  프로덕션 환경에서는 반드시 JWT_SECRET 환경 변수를 설정하세요.");
+            } else {
+                throw new IllegalStateException(
+                    "JWT_SECRET 환경 변수가 설정되지 않았습니다. " +
+                    "프로덕션 환경에서는 반드시 강한 JWT 시크릿 키를 설정해야 합니다. " +
+                    "예: export JWT_SECRET=$(openssl rand -base64 64)"
+                );
+            }
+        }
+        
+        // 최소 길이 검증 (HS256 최소 권장: 32바이트)
+        if (jwtSecret.length() < 32) {
+            throw new IllegalStateException(
+                "JWT 시크릿 키가 너무 짧습니다. " +
+                "최소 32자 이상의 강한 키를 사용해야 합니다. " +
+                "현재 길이: " + jwtSecret.length() + "자"
+            );
+        }
+        
+        // 개발용 기본 키 사용 금지
+        if (jwtSecret.equals("defaultSecretKeyForDevelopmentOnly") || 
+            jwtSecret.contains("development") || 
+            jwtSecret.contains("test")) {
+            throw new IllegalStateException(
+                "개발용 기본 JWT 시크릿 키 사용이 감지되었습니다. " +
+                "프로덕션 환경에서는 반드시 강한 랜덤 키를 사용해야 합니다."
+            );
+        }
+        
+        System.out.println("✅ JWT 시크릿 키 검증 완료 (길이: " + jwtSecret.length() + "자)");
+    }
+    
+    private boolean isDevelopmentEnvironment() {
+        String profile = System.getProperty("spring.profiles.active", "");
+        return "dev".equals(profile) || "development".equals(profile) || profile.isEmpty();
+    }
+    
+    private String generateSecureSecret() {
+        // 64바이트(512비트) 강한 랜덤 키 생성
+        SecureRandom random = new SecureRandom();
+        byte[] keyBytes = new byte[64];
+        random.nextBytes(keyBytes);
+        return Base64.getEncoder().encodeToString(keyBytes);
+    }
 
     // 서명 키 생성 (HS256용)
     private Key getSigningKey() {

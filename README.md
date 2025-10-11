@@ -2,6 +2,21 @@
 
 SNAPFIT은 "Outfit-first → Category-first"로 리팩토링된 모바일 우선 패션 플랫폼입니다.
 
+## 🔐 **보안 설정 (필수)**
+
+### JWT 시크릿 키 설정
+프로덕션 환경에서는 반드시 강한 JWT 시크릿 키를 설정해야 합니다:
+
+```bash
+# 강한 JWT 시크릿 키 생성 (64바이트)
+export JWT_SECRET=$(openssl rand -base64 64)
+
+# 또는 수동으로 설정
+export JWT_SECRET="your-very-long-and-secure-secret-key-here"
+```
+
+**⚠️ 중요**: JWT 시크릿 키가 설정되지 않으면 애플리케이션이 시작되지 않습니다.
+
 ## 🚀 **새로운 아키텍처**
 
 ### **라우팅 구조**
