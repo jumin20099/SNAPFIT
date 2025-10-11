@@ -36,16 +36,22 @@ export async function refreshCsrfToken(): Promise<string> {
  */
 async function fetchCsrfToken(): Promise<string> {
   try {
+    console.log('CSRF 토큰 요청 시작: /api/csrf/token');
     const response = await fetch('/api/csrf/token', {
       method: 'GET',
       credentials: 'include',
     });
 
+    console.log('CSRF 토큰 응답 상태:', response.status, response.ok);
+    
     if (!response.ok) {
-      throw new Error('CSRF 토큰 가져오기 실패');
+      const errorText = await response.text();
+      console.error('CSRF 토큰 응답 오류:', errorText);
+      throw new Error(`CSRF 토큰 가져오기 실패: ${response.status} ${errorText}`);
     }
 
     const data = await response.json();
+    console.log('CSRF 토큰 응답 데이터:', data);
     return data.token;
   } catch (error) {
     console.error('CSRF 토큰 가져오기 오류:', error);

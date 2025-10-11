@@ -63,11 +63,16 @@ export function useBatchReactionStatus({
         commentIds 
       });
       
+      // CSRF 토큰 가져오기 디버깅
+      console.log('CSRF 토큰 가져오기 시작...');
+      const csrfHeaders = await addCsrfTokenToHeaders({
+        'Content-Type': 'application/json',
+      });
+      console.log('CSRF 헤더:', csrfHeaders);
+      
       const response = await fetch('/api/reactions/status', {
         method: 'POST',
-        headers: await addCsrfTokenToHeaders({
-          'Content-Type': 'application/json',
-        }),
+        headers: csrfHeaders,
         credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ postIds, productIds, commentIds })
       });
