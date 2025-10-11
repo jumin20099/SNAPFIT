@@ -14,13 +14,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 디버깅 로그 추가
-    console.log('=== 좋아요 토글 API 라우트 시작 ===')
-    console.log('요청 헤더:', Object.fromEntries(req.headers.entries()))
+    // 보안: 민감한 정보 로깅 제거
+    // console.log('=== 좋아요 토글 API 라우트 시작 ===')
+    // console.log('요청 헤더:', Object.fromEntries(req.headers.entries()))
     
     // JSON 바디 그대로 전달
     const raw = await req.text()
-    console.log('요청 바디:', raw)
+    // console.log('요청 바디:', raw)
     
     // 클라가 준 헤더를 그대로 전달
     const auth = req.headers.get('authorization') ?? ''
@@ -29,14 +29,9 @@ export async function POST(req: NextRequest) {
     const xff = req.headers.get('x-forwarded-for') ?? ''
     const xRealIp = req.headers.get('x-real-ip') ?? ''
 
-    console.log('백엔드로 전달할 헤더:', {
-      'Content-Type': ct,
-      'Authorization': auth,
-      'Cookie': cookie ? '[present]' : '[missing]',
-      'X-Forwarded-For': xff,
-      'X-Real-IP': xRealIp,
-    })
-    console.log('백엔드 URL:', `${BE}/api/likes/toggle`)
+    // 보안: 민감한 정보 로깅 제거
+    // console.log('백엔드로 전달할 헤더:', {...})
+    // console.log('백엔드 URL:', `${BE}/api/likes/toggle`)
 
     const headers: HeadersInit = {
       'Content-Type': ct,

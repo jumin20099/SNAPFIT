@@ -61,19 +61,19 @@ public class AuthController {
         String accessToken = jwtUtil.generateAccessToken(email, user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(email);
 
-        // Access Token을 HTTP-only 쿠키로 설정
+        // Access Token을 HTTP-only 쿠키로 설정 (보안 강화)
         ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
             .httpOnly(true)
-            .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
+            .secure(true) // 프로덕션 환경에서 보안 강화
             .sameSite("Lax")
             .path("/")
             .maxAge(30 * 60) // 30분
             .build();
 
-        // Refresh Token을 HTTP-only 쿠키로 설정
+        // Refresh Token을 HTTP-only 쿠키로 설정 (보안 강화)
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
             .httpOnly(true)
-            .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
+            .secure(true) // 프로덕션 환경에서 보안 강화
             .sameSite("Lax")
             .path("/")
             .maxAge(7 * 24 * 60 * 60) // 7일
@@ -83,9 +83,8 @@ public class AuthController {
             .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
             .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
             .body(Map.of(
-                "accessToken", accessToken,
-                "refreshToken", refreshToken, // localStorage에도 저장할 수 있도록 응답에 포함
-                "email",    email,
+                "message", "로그인 성공",
+                "email", email,
                 "nickname", nickname
             ));
     }
@@ -199,10 +198,10 @@ public class AuthController {
             // 새로운 Access Token 생성
             String newAccessToken = jwtUtil.generateAccessToken(email, user.getRole().name());
             
-            // 새로운 Access Token을 HTTP-only 쿠키로 설정
+            // 새로운 Access Token을 HTTP-only 쿠키로 설정 (보안 강화)
             ResponseCookie accessCookie = ResponseCookie.from("access_token", newAccessToken)
                 .httpOnly(true)
-                .secure(false) // 개발환경에서는 false, 프로덕션에서는 true
+                .secure(true) // 프로덕션 환경에서 보안 강화
                 .sameSite("Lax")
                 .path("/")
                 .maxAge(30 * 60) // 30분
@@ -211,7 +210,7 @@ public class AuthController {
             return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, accessCookie.toString())
                 .body(Map.of(
-                    "accessToken", newAccessToken,
+                    "message", "토큰 갱신 성공",
                     "email", email,
                     "nickname", user.getNickname()
                 ));
@@ -221,21 +220,6 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/test-token")
-    public ResponseEntity<?> generateTestToken() {
-        // 테스트용 이메일과 역할로 토큰 생성
-        String testEmail = "test@example.com";
-        String testRole = "USER";
-        
-        String accessToken = jwtUtil.generateAccessToken(testEmail, testRole);
-        String refreshToken = jwtUtil.generateRefreshToken(testEmail);
-        
-        return ResponseEntity.ok().body(Map.of(
-            "accessToken", accessToken,
-            "refreshToken", refreshToken,
-            "email", testEmail,
-            "role", testRole,
-            "message", "테스트용 토큰이 생성되었습니다."
-        ));
-    }
+    // 보안: 테스트 토큰 엔드포인트 제거됨
+    // @GetMapping("/test-token") - 프로덕션에서 제거
 }

@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,7 +34,8 @@ import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.Cookie;
 
 @Configuration
-// @EnableWebSecurity  // 개발 환경에서 비활성화
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -55,7 +57,12 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**", "/api/csrf/**", "/oauth2/**", "/login/oauth2/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/partner/**").hasAnyRole("ADMIN", "PARTNER")
+                .anyRequest().authenticated()
+            )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         // OAuth2가 설정되어 있을 때만 oauth2Login 활성화
@@ -88,31 +95,21 @@ public class SecurityConfig {
                                 token != null ? "있음" : "없음", userIdx, email);
                         
                         if (token != null && email != null) {
-                            // JWT 토큰을 쿠키에 설정 (단순화)
+                            // JWT 토큰을 쿠키에 설정 (보안 강화)
                             response.addHeader("Set-Cookie", 
                                 "token=" + token + 
-                                "; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax");
+                                "; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Lax");
                             log.info("✅ JWT 토큰 쿠키 설정 완료");
                             
-                            // 리프레시 토큰 생성 및 쿠키 설정 (단순화)
+                            // 리프레시 토큰 생성 및 쿠키 설정 (보안 강화)
                             String refreshToken = jwtUtil.generateRefreshToken(email);
                             response.addHeader("Set-Cookie", 
                                 "refresh_token=" + refreshToken + 
-                                "; Path=/; Max-Age=604800; HttpOnly; SameSite=Lax");
-                            log.info("✅ 리프레시 토큰 쿠키 설정 완료: {}", refreshToken.substring(0, 20) + "...");
+                                "; Path=/; Max-Age=604800; HttpOnly; Secure; SameSite=Lax");
+                            log.info("✅ 리프레시 토큰 쿠키 설정 완료");
                             
-                            // 응답 헤더 확인
-                            log.info("설정된 쿠키들:");
-                            if (request.getCookies() != null) {
-                                for (Cookie cookie : request.getCookies()) {
-                                    if (cookie != null) {
-                                        log.info("  - {}: {}", cookie.getName(), cookie.getValue().substring(0, Math.min(20, cookie.getValue().length())) + "...");
-                                    }
-                                }
-                            }
-                            
-                            // URL 파라미터로 토큰과 사용자 정보 전달
-                            String redirectUrl = "http://localhost:3000?token=" + token + "&refreshToken=" + refreshToken + "&userIdx=" + userIdx + "&login=success";
+                            // 보안: 토큰을 쿼리 스트링에 노출하지 않음
+                            String redirectUrl = "http://localhost:3000?login=success";
                             log.info("리다이렉트 URL: {}", redirectUrl);
                             response.sendRedirect(redirectUrl);
                         } else {
@@ -136,15 +133,15 @@ public class SecurityConfig {
             );
         }
 
-        // JWT 필터 비활성화 (개발 환경)
-        // http.addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userRepository),
-        //         UsernamePasswordAuthenticationFilter.class)
-        //     .exceptionHandling(ex -> ex
-        //         .defaultAuthenticationEntryPointFor(
-        //             new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-        //             new AntPathRequestMatcher("/api/**")
-        //         )
-        //     );
+        // JWT 필터 활성화
+        http.addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userRepository),
+                UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(ex -> ex
+                .defaultAuthenticationEntryPointFor(
+                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                    new AntPathRequestMatcher("/api/**")
+                )
+            );
         
         // CSRF 필터 추가
         http.addFilterBefore(csrfFilter, UsernamePasswordAuthenticationFilter.class);

@@ -11,7 +11,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/partner/products")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"http://localhost:3000", "https://snapfit.app", "https://www.snapfit.app"}, allowCredentials = "true")
 public class ProductUpdateRequestController {
     
     @Autowired
