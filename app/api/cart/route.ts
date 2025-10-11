@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateCsrfToken } from '@/lib/csrf-utils'
 
 // 장바구니 API
 export async function GET(request: NextRequest) {
@@ -42,6 +43,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // CSRF 토큰 검증
+    const isValidCsrf = await validateCsrfToken(request)
+    if (!isValidCsrf) {
+      return NextResponse.json(
+        { error: 'CSRF 토큰이 유효하지 않습니다' },
+        { status: 403 }
+      )
+    }
+
+    
     const body = await request.json()
     const { productId, quantity = 1, size, color } = body
 
@@ -75,6 +86,16 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    // CSRF 토큰 검증
+    const isValidCsrf = await validateCsrfToken(request)
+    if (!isValidCsrf) {
+      return NextResponse.json(
+        { error: 'CSRF 토큰이 유효하지 않습니다' },
+        { status: 403 }
+      )
+    }
+
+    
     const body = await request.json()
     const { itemId, quantity } = body
 
@@ -108,6 +129,16 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // CSRF 토큰 검증
+    const isValidCsrf = await validateCsrfToken(request)
+    if (!isValidCsrf) {
+      return NextResponse.json(
+        { error: 'CSRF 토큰이 유효하지 않습니다' },
+        { status: 403 }
+      )
+    }
+
+    
     const { searchParams } = new URL(request.url)
     const itemId = searchParams.get('itemId')
 

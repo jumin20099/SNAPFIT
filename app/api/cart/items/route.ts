@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateCsrfToken } from '@/lib/csrf-utils'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
 
@@ -31,6 +32,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // CSRF 토큰 검증
+    const isValidCsrf = await validateCsrfToken(request)
+    if (!isValidCsrf) {
+      return NextResponse.json(
+        { error: 'CSRF 토큰이 유효하지 않습니다' },
+        { status: 403 }
+      )
+    }
+
+    
     const body = await request.json()
     const userId = request.cookies.get('userId')?.value || '1' // 임시로 1 사용
     
@@ -58,6 +69,16 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // CSRF 토큰 검증
+    const isValidCsrf = await validateCsrfToken(request)
+    if (!isValidCsrf) {
+      return NextResponse.json(
+        { error: 'CSRF 토큰이 유효하지 않습니다' },
+        { status: 403 }
+      )
+    }
+
+    
     const userId = request.cookies.get('userId')?.value || '1' // 임시로 1 사용
     
     const response = await fetch(`${API_BASE_URL}/api/cart/items`, {

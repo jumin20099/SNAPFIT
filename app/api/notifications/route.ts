@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { validateCsrfToken } from '@/lib/csrf-utils'
 
 // 절대 경로로 변경
 const BACKEND = process.env.BACKEND_ORIGIN ?? 'http://localhost:8080'

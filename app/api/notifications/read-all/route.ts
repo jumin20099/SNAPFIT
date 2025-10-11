@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { validateCsrfToken } from '@/lib/csrf-utils'
 import { BACKEND, passThroughHeaders } from '../../_utils/proxy'
 
 export const dynamic = 'force-dynamic'
@@ -20,6 +21,16 @@ function extractTokenFromRequest(req: NextRequest): string | null {
 
 export async function PUT(request: NextRequest) {
   try {
+    // CSRF 토큰 검증
+    const isValidCsrf = await validateCsrfToken(request)
+    if (!isValidCsrf) {
+      return NextResponse.json(
+        { error: 'CSRF 토큰이 유효하지 않습니다' },
+        { status: 403 }
+      )
+    }
+
+    
     const token = extractTokenFromRequest(request)
     if (!token) {
       return new Response(JSON.stringify({ code: 'UNAUTHORIZED', message: 'Missing access token' }), { status: 401 })

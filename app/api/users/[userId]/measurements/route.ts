@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { validateCsrfToken } from '@/lib/csrf-utils'
 
 const API_BASE = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
 

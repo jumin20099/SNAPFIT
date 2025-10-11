@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { validateCsrfToken } from '@/lib/csrf-utils'
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080'
 
@@ -63,6 +64,15 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    // CSRF 토큰 검증
+    const isValidCsrf = await validateCsrfToken(request)
+    if (!isValidCsrf) {
+      return NextResponse.json(
+        { error: 'CSRF 토큰이 유효하지 않습니다' },
+        { status: 403 }
+      )
+    }
+
     const productId = params.id
     const API = process.env.API_BASE_URL || 'http://localhost:8080'
     let anon = request.cookies.get('anon')?.value || ''
