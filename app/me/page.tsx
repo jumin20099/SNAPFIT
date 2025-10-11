@@ -192,9 +192,9 @@ export default function MePage() {
           const postsResponse = await fetch('/api/posts/liked', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({ postIds })
           })
 
@@ -227,13 +227,12 @@ export default function MePage() {
       setMeasurementError(null)
       // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
       // 서버에서 자동으로 인증 처리
+      if (!userId) {
         return
       }
 
       const response = await fetch(`/api/users/${userId}/measurements`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include'
       })
 
       if (response.status === 404) {
@@ -295,9 +294,9 @@ export default function MePage() {
       const response = await fetch(`/api/users/${user.id}/measurements`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(payload),
       })
 
@@ -458,9 +457,9 @@ export default function MePage() {
             const profileUpdateResponse = await fetch('/api/user/profile', {
               method: 'PATCH',
               headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
               },
+              credentials: 'include',
               body: JSON.stringify({
                 profileImage: result.data.url
               })

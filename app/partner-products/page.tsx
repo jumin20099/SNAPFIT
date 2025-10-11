@@ -61,7 +61,7 @@ export default function PartnerProductsPage() {
       // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
 // 서버에서 자동으로 인증 처리
       const res = await fetch("/api/partner/products", {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include'
       })
       if (res.ok) {
         const data = await res.json()
@@ -79,7 +79,7 @@ export default function PartnerProductsPage() {
 // 서버에서 자동으로 인증 처리
       const res = await fetch(`/api/partner/products/${productId}`, {
         method: "DELETE",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include'
       })
       if (res.ok) {
         alert("상품이 삭제되었습니다.")
@@ -101,7 +101,7 @@ export default function PartnerProductsPage() {
 // 서버에서 자동으로 인증 처리
       const res = await fetch(`/api/partner/products/${productId}/update-request/cancel`, {
         method: "PUT",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include'
       })
       if (res.ok) {
         alert("수정 요청이 취소되었습니다.")

@@ -77,13 +77,12 @@ export function CartPage() {
         const response = await fetch('http://localhost:8080/api/user/info', {
           credentials: 'include' // HttpOnly 쿠키 자동 전송
         })
-          if (response.ok) {
-            const userData = await response.json()
-            setUser(userData)
-          }
-        } catch (error) {
-          console.error('사용자 정보 가져오기 실패:', error)
+        if (response.ok) {
+          const userData = await response.json()
+          setUser(userData)
         }
+      } catch (error) {
+        console.error('사용자 정보 가져오기 실패:', error)
       }
     }
     

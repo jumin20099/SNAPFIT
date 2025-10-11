@@ -6,7 +6,7 @@ const BE = process.env.NEXT_PUBLIC_API_ORIGIN ?? 'http://localhost:8080'
 export async function POST(req: NextRequest) {
   try {
     // CSRF 토큰 검증
-    const isValidCsrf = await validateCsrfToken(request)
+    const isValidCsrf = await validateCsrfToken(req)
     if (!isValidCsrf) {
       return NextResponse.json(
         { error: 'CSRF 토큰이 유효하지 않습니다' },

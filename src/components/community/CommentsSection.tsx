@@ -90,10 +90,11 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
 
     // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
     // 서버에서 자동으로 인증 처리
-    const isLoggedIn = true
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 로그인 상태 검증 불가
+    // 서버에서 자동으로 인증 처리
 
     // 로그인하지 않은 사용자는 비밀번호 필수
-    if (!isLoggedIn && (!commentPassword.trim() || commentPassword.trim().length < 4)) {
+    if (!commentPassword.trim() || commentPassword.trim().length < 4) {
       toast.error('비밀번호는 4자 이상 입력해주세요.')
       return
     }
@@ -106,9 +107,8 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
       }
 
       // 익명 사용자인 경우 비밀번호 추가
-      if (!isLoggedIn) {
-        requestBody.anonymousPassword = commentPassword.trim()
-      }
+      // 비밀번호는 항상 전송
+      requestBody.anonymousPassword = commentPassword.trim()
 
       const response = await fetch('/api/comments', {
         method: 'POST',
@@ -143,10 +143,11 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
 
     // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
     // 서버에서 자동으로 인증 처리
-    const isLoggedIn = true
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 로그인 상태 검증 불가
+    // 서버에서 자동으로 인증 처리
 
     // 로그인하지 않은 사용자는 비밀번호 필수
-    if (!isLoggedIn && (!replyPassword.trim() || replyPassword.trim().length < 4)) {
+    if (!replyPassword.trim() || replyPassword.trim().length < 4) {
       toast.error('비밀번호는 4자 이상 입력해주세요.')
       return
     }
@@ -160,9 +161,8 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
       }
 
       // 익명 사용자인 경우 비밀번호 추가
-      if (!isLoggedIn) {
-        requestBody.anonymousPassword = replyPassword.trim()
-      }
+      // 비밀번호는 항상 전송
+      requestBody.anonymousPassword = replyPassword.trim()
 
       const response = await fetch('/api/comments', {
         method: 'POST',
@@ -210,19 +210,19 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
 
     // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
     // 서버에서 자동으로 인증 처리
-    const isLoggedIn = true
+    // HttpOnly 쿠키를 사용하므로 클라이언트에서 로그인 상태 검증 불가
+    // 서버에서 자동으로 인증 처리
 
     // 익명 댓글인 경우 비밀번호 필수
-    if (!isLoggedIn && !deletePassword.trim()) {
+    if (!deletePassword.trim()) {
       toast.error('비밀번호를 입력해주세요.')
       return
     }
 
     try {
       const requestBody: any = {}
-      if (!isLoggedIn) {
-        requestBody.password = deletePassword.trim()
-      }
+      // 비밀번호는 항상 전송
+      requestBody.password = deletePassword.trim()
 
       const response = await fetch(`/api/comments/${commentToDelete}`, {
         method: 'DELETE',
@@ -283,7 +283,7 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
               className="min-h-[80px] resize-none"
               data-testid="comment-input"
             />
-            {!isLoggedIn && (
+            {false && (
               <div className="mt-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   비밀번호 <span className="text-red-500">*</span>
@@ -398,7 +398,7 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
                         onKeyPress={(e) => handleKeyPress(e, () => handleReplyComment(comment.commentId))}
                         className="min-h-[60px] resize-none text-sm"
                       />
-                      {!isLoggedIn && (
+                      {false && (
                         <div className="mt-2">
                           <input
                             type="password"
@@ -498,7 +498,7 @@ export function CommentsSection({ postId, boardType }: CommentsSectionProps) {
             <h3 className="text-lg font-semibold mb-4">댓글 삭제</h3>
             <p className="text-gray-600 mb-4">댓글을 삭제하시겠습니까?</p>
             
-            {!isLoggedIn && (
+            {false && (
               <div className="mb-4">
                 <input
                   type="password"

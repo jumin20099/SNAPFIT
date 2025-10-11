@@ -143,9 +143,9 @@ export default function ProfileEditPage() {
             const profileUpdateResponse = await fetch('/api/profiles/me', {
               method: 'PUT',
               headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Content-Type': 'application/json'
               },
+              credentials: 'include',
               body: JSON.stringify({
                 profileImage: result.data.url
               })

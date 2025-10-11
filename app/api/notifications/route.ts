@@ -59,7 +59,7 @@ function extractTokenFromRequest(req: NextRequest): string | null {
   if (h?.startsWith('Bearer ')) return h.slice(7)
 
   // 2) 서버측 쿠키(권장: HTTP-Only로 세팅)
-  const fromCookie = req.cookies.get('token')?.value // 'access_token'에서 'token'으로 변경
+  const fromCookie = req.cookies.get('access_token')?.value // AuthController에서 발급하는 쿠키 이름
   if (fromCookie) return fromCookie
 
   // 3) (임시) 쿼리파라미터 토큰 - SSE 등

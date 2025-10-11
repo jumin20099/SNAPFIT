@@ -47,8 +47,7 @@ export function useSSENotifications(props?: UseSSENotificationsProps) {
     // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
     // 서버에서 자동으로 인증 처리
     console.log("=== SSE 연결 시도 (HttpOnly 쿠키 기반) ===");
-      return;
-    }
+    // return; // 임시로 비활성화
 
     // 기존 연결이 있으면 먼저 닫기
     if (esRef.current) {

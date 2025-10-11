@@ -61,19 +61,19 @@ public class AuthController {
         String accessToken = jwtUtil.generateAccessToken(email, user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(email);
 
-        // Access Token을 HTTP-only 쿠키로 설정 (보안 강화)
+        // Access Token을 HTTP-only 쿠키로 설정 (개발 환경에서는 secure=false)
         ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
             .httpOnly(true)
-            .secure(true) // 프로덕션 환경에서 보안 강화
+            .secure(false) // 개발 환경에서는 HTTP에서도 작동하도록
             .sameSite("Lax")
             .path("/")
             .maxAge(30 * 60) // 30분
             .build();
 
-        // Refresh Token을 HTTP-only 쿠키로 설정 (보안 강화)
+        // Refresh Token을 HTTP-only 쿠키로 설정 (개발 환경에서는 secure=false)
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
             .httpOnly(true)
-            .secure(true) // 프로덕션 환경에서 보안 강화
+            .secure(false) // 개발 환경에서는 HTTP에서도 작동하도록
             .sameSite("Lax")
             .path("/")
             .maxAge(7 * 24 * 60 * 60) // 7일
@@ -98,20 +98,20 @@ public class AuthController {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
         
-        // Access Token을 HTTP-only 쿠키로 설정 (보안 강화)
+        // Access Token을 HTTP-only 쿠키로 설정 (개발 환경에서는 secure=false)
         ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
             .httpOnly(true)
-            .secure(true) // 프로덕션 환경에서 보안 강화
-            .sameSite("Strict") // CSRF 공격 방지 강화
+            .secure(false) // 개발 환경에서는 HTTP에서도 작동하도록
+            .sameSite("Lax") // 개발 환경에서는 Lax로 설정
             .path("/")
             .maxAge(30 * 60) // 30분
             .build();
 
-        // Refresh Token을 HTTP-only 쿠키로 설정 (보안 강화)
+        // Refresh Token을 HTTP-only 쿠키로 설정 (개발 환경에서는 secure=false)
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
             .httpOnly(true)
-            .secure(true) // 프로덕션 환경에서 보안 강화
-            .sameSite("Strict") // CSRF 공격 방지 강화
+            .secure(false) // 개발 환경에서는 HTTP에서도 작동하도록
+            .sameSite("Lax") // 개발 환경에서는 Lax로 설정
             .path("/")
             .maxAge(7 * 24 * 60 * 60) // 7일
             .build();

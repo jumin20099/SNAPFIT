@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { validateCsrfToken } from '@/lib/csrf-utils'
 import { BACKEND, passThroughHeaders } from '../../_utils/proxy'
 
@@ -11,7 +11,7 @@ function extractTokenFromRequest(req: NextRequest): string | null {
   if (h?.startsWith('Bearer ')) return h.slice(7)
 
   // 2) 서버측 쿠키(권장: HTTP-Only로 세팅)
-  const fromCookie = req.cookies.get('token')?.value // 'access_token'에서 'token'으로 변경
+  const fromCookie = req.cookies.get('access_token')?.value // AuthController에서 발급하는 쿠키 이름
   if (fromCookie) return fromCookie
 
   // 3) (임시) 쿼리파라미터 토큰 - SSE 등
@@ -19,10 +19,10 @@ function extractTokenFromRequest(req: NextRequest): string | null {
   return fromQuery
 }
 
-export async function PUT(request: NextRequest) {
+export async function PUT(req: NextRequest) {
   try {
     // CSRF 토큰 검증
-    const isValidCsrf = await validateCsrfToken(request)
+    const isValidCsrf = await validateCsrfToken(req)
     if (!isValidCsrf) {
       return NextResponse.json(
         { error: 'CSRF 토큰이 유효하지 않습니다' },
@@ -31,14 +31,14 @@ export async function PUT(request: NextRequest) {
     }
 
     
-    const token = extractTokenFromRequest(request)
+    const token = extractTokenFromRequest(req)
     if (!token) {
       return new Response(JSON.stringify({ code: 'UNAUTHORIZED', message: 'Missing access token' }), { status: 401 })
     }
 
     const response = await fetch(`${BACKEND}/api/notifications/read-all`, {
       method: 'PUT',
-      headers: { ...passThroughHeaders(request), Authorization: `Bearer ${token}` },
+      headers: { ...passThroughHeaders(req), Authorization: `Bearer ${token}` },
       cache: 'no-store',
     })
 

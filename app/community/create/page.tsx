@@ -70,29 +70,30 @@ export default function CreatePostPage() {
         // 보안상 문제가 되지 않지만 일관성을 위해 제거
         // const exportDataStr = localStorage.getItem('cody-export-data')
         // 코디 데이터는 URL state나 다른 방법으로 전달받아야 함
+        
+        // 임시로 빈 객체 사용 (실제로는 URL state나 다른 방법 필요)
+        const exportData: { codyData: any | null, codyImage: string | null } = { codyData: null, codyImage: null }
+        
+        if (exportData.codyData) {
+          setCodyData(exportData.codyData)
+          // 코디 이름을 제목으로 설정
+          if (exportData.codyData.name) {
+            setTitle(exportData.codyData.name)
           }
-          
-          if (exportData.codyData) {
-            setCodyData(exportData.codyData)
-            // 코디 이름을 제목으로 설정
-            if (exportData.codyData.name) {
-              setTitle(exportData.codyData.name)
-            }
-            // 기본 내용 설정
-            setContent(`"${exportData.codyData.name || '코디'}" 코디를 공유합니다! 💫\n\n아이템 ${exportData.codyData.items.length}개로 구성된 오늘의 코디입니다.`)
-            // 기본 태그 설정
-            setTags(['코디', '패션', exportData.codyData.name || '코디'])
-          }
-          
-          if (exportData.codyImage) {
-            setCodyImage(exportData.codyImage)
-            // 코디 이미지를 images 배열에 추가
-            setImages([exportData.codyImage])
-          }
-          
-          // 데이터 사용 후 정리 (localStorage 사용하지 않음)
-          // localStorage.removeItem('cody-export-data')
+          // 기본 내용 설정
+          setContent(`"${exportData.codyData.name || '코디'}" 코디를 공유합니다! 💫\n\n아이템 ${exportData.codyData.items.length}개로 구성된 오늘의 코디입니다.`)
+          // 기본 태그 설정
+          setTags(['코디', '패션', exportData.codyData.name || '코디'])
         }
+        
+        if (exportData.codyImage) {
+          setCodyImage(exportData.codyImage)
+          // 코디 이미지를 images 배열에 추가
+          setImages([exportData.codyImage])
+        }
+        
+        // 데이터 사용 후 정리 (localStorage 사용하지 않음)
+        // localStorage.removeItem('cody-export-data')
       } catch (error) {
         console.error('코디 데이터 로드 실패:', error)
         // localStorage.removeItem('cody-export-data')
@@ -272,9 +273,10 @@ export default function CreatePostPage() {
       const result = await response.json()
 
       // export 경로에서 outfitId를 사용했다면 중복 저장 방지 위해 플래그 제거
-      if (maybeOutfitId) {
-        localStorage.removeItem('cody-last-outfit-id')
-      }
+      // localStorage 사용하지 않음 (보안상 일관성 유지)
+      // if (maybeOutfitId) {
+      //   localStorage.removeItem('cody-last-outfit-id')
+      // }
       console.log('게시글 작성 성공:', result)
       
       alert(isEditMode ? '게시글이 성공적으로 수정되었습니다.' : '게시글이 성공적으로 작성되었습니다! 🎉')

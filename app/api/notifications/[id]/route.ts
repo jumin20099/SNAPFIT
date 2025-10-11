@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { validateCsrfToken } from '@/lib/csrf-utils'
 import { BACKEND, passThroughHeaders } from '../../_utils/proxy'
 
@@ -11,7 +11,7 @@ function extractTokenFromRequest(req: NextRequest): string | null {
   if (h?.startsWith('Bearer ')) return h.slice(7)
 
   // 2) 서버측 쿠키(권장: HTTP-Only로 세팅)
-  const fromCookie = req.cookies.get('token')?.value // 'access_token'에서 'token'으로 변경
+  const fromCookie = req.cookies.get('access_token')?.value // AuthController에서 발급하는 쿠키 이름
   if (fromCookie) return fromCookie
 
   // 3) (임시) 쿼리파라미터 토큰 - SSE 등
@@ -22,7 +22,7 @@ function extractTokenFromRequest(req: NextRequest): string | null {
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     // CSRF 토큰 검증
-    const isValidCsrf = await validateCsrfToken(request)
+    const isValidCsrf = await validateCsrfToken(req)
     if (!isValidCsrf) {
       return NextResponse.json(
         { error: 'CSRF 토큰이 유효하지 않습니다' },
@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     // CSRF 토큰 검증
-    const isValidCsrf = await validateCsrfToken(request)
+    const isValidCsrf = await validateCsrfToken(req)
     if (!isValidCsrf) {
       return NextResponse.json(
         { error: 'CSRF 토큰이 유효하지 않습니다' },

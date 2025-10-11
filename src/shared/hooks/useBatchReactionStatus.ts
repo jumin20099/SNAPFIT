@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import type { BatchReactionStatusResult } from '@/shared/types';
 import { validateBatchReactionStatus, createBatchReactionManager, BatchReactionStatusManager } from '@/shared/utils/batch-reaction-utils';
+import { addCsrfTokenToHeaders } from '@/lib/csrf-utils';
 
 interface BatchReactionStatusOptions {
   postIds?: number[];
@@ -64,9 +65,9 @@ export function useBatchReactionStatus({
       
       const response = await fetch('/api/reactions/status', {
         method: 'POST',
-        headers: {
+        headers: await addCsrfTokenToHeaders({
           'Content-Type': 'application/json',
-        },
+        }),
         credentials: 'include', // HttpOnly 쿠키 자동 전송
         body: JSON.stringify({ postIds, productIds, commentIds })
       });

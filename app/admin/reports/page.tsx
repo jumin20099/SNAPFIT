@@ -72,6 +72,7 @@ export default function AdminReportsPage() {
       
       const response = await fetch(url, {
         credentials: 'include', // HttpOnly 쿠키 자동 전송
+        headers: {
           'Content-Type': 'application/json'
         }
       })

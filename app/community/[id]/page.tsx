@@ -168,15 +168,16 @@ export default function PostDetailPage() {
         // 실패 시 fallback (localStorage 사용하지 않음)
         console.log('Redis 조회수 증가 실패, fallback 처리:', postId)
         
+        // 실패 시 현재 조회수 + 1로 업데이트
         setPosts(prev => prev.map(post => 
           post.postId === postId 
-            ? { ...post, viewCount: newViewCount }
+            ? { ...post, viewCount: (post.viewCount || 0) + 1 }
             : post
         ))
         
         setCurrentPost(prev => 
           prev && prev.postId === postId 
-            ? { ...prev, viewCount: newViewCount }
+            ? { ...prev, viewCount: (prev.viewCount || 0) + 1 }
             : prev
         )
       }
@@ -194,13 +195,13 @@ export default function PostDetailPage() {
       
       setPosts(prev => prev.map(post => 
         post.postId === postId 
-          ? { ...post, viewCount: newViewCount }
+          ? { ...post, viewCount: (post.viewCount || 0) + 1 }
           : post
       ))
       
       setCurrentPost(prev => 
         prev && prev.postId === postId 
-          ? { ...prev, viewCount: newViewCount }
+          ? { ...prev, viewCount: (prev.viewCount || 0) + 1 }
           : prev
       )
     }
@@ -302,7 +303,7 @@ export default function PostDetailPage() {
       if (posts.length > 0) {
         try {
           const postIds = posts.map(post => post.postId)
-          console.log('개별 게시글 페이지 배치 상태 조회 요청:', { postIds, token: token.substring(0, 10) + '...' })
+          console.log('개별 게시글 페이지 배치 상태 조회 요청:', { postIds })
           
           const statusResponse = await fetch('/api/reactions/status', {
             method: 'POST',
@@ -454,7 +455,7 @@ export default function PostDetailPage() {
             likeCount: (status?.likeCount ?? post.likeCount) || 0, // 배치 상태 우선, 없으면 백엔드 값
             commentCount: post.commentCount || 0,
             scrapCount: (status?.scrapCount ?? post.scrapCount) || 0, // 배치 상태 우선, 없으면 백엔드 값
-            viewCount: viewCounts[post.postId] || post.viewCount || 0, // localStorage에서 조회수 복원
+            viewCount: post.viewCount || 0, // 백엔드에서 조회수 가져오기
             createdAt: createdAtRaw,
             updatedAt: updatedAtRaw,
             authorHeightCm: post.authorHeightCm ?? post.author_height_cm ?? null,

@@ -22,34 +22,41 @@ interface NotificationProviderProps {
 export function NotificationProvider({ children }: NotificationProviderProps) {
   const queryClient = useQueryClient();
   
-  // SSE 알림 연결
-  const { 
-    connected, 
-    unreadCount: sseUnreadCount,
-    notifications: sseNotifications 
-  } = useSSENotifications({
-    onNotificationReceived: (notification) => {
-      // 쿼리 무효화로 최신 알림 목록 가져오기
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      
-      // 토스트 알림 표시
-      toast.success(notification.title, {
-        description: notification.message,
-        duration: 5000,
-        action: {
-          label: '확인',
-          onClick: () => {
-            // 알림 상세 페이지로 이동하거나 모달 열기
-            console.log('알림 확인:', notification);
-          },
-        },
-      });
-    },
-    onUnreadCountUpdate: (count) => {
-      // 전역 상태 업데이트 (필요시)
-      console.log('읽지 않은 알림 개수 업데이트:', count);
-    },
-  });
+  // SSE 알림 연결 (임시로 비활성화)
+  // const { 
+  //   connected, 
+  //   unreadCount: sseUnreadCount,
+  //   notifications: sseNotifications 
+  // } = useSSENotifications({
+  
+  // 임시로 기본값 사용
+  const connected = false;
+  const sseUnreadCount = 0;
+  const sseNotifications: any[] = [];
+  
+  // useSSENotifications({
+  //   onNotificationReceived: (notification) => {
+  //     // 쿼리 무효화로 최신 알림 목록 가져오기
+  //     queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  //     
+  //     // 토스트 알림 표시
+  //     toast.success(notification.title, {
+  //       description: notification.message,
+  //       duration: 5000,
+  //       action: {
+  //         label: '확인',
+  //         onClick: () => {
+  //           // 알림 상세 페이지로 이동하거나 모달 열기
+  //           console.log('알림 확인:', notification);
+  //         },
+  //       },
+  //     });
+  //   },
+  //   onUnreadCountUpdate: (count) => {
+  //     // 전역 상태 업데이트 (필요시)
+  //     console.log('읽지 않은 알림 개수 업데이트:', count);
+  //   },
+  // });
 
   // 기존 알림 데이터
   const { 

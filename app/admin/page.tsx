@@ -122,14 +122,13 @@ export default function AdminPage() {
         const response = await fetch('/api/user/info', {
           credentials: 'include' // HttpOnly 쿠키 자동 전송
         })
-          if (response.ok) {
-            const data = await response.json()
-            setUserInfo(data)
-            
-            // ADMIN 권한이 아니면 홈으로 리다이렉트
-            if (data.role !== 'ADMIN') {
-              router.push('/')
-            }
+        if (response.ok) {
+          const data = await response.json()
+          setUserInfo(data)
+          
+          // ADMIN 권한이 아니면 홈으로 리다이렉트
+          if (data.role !== 'ADMIN') {
+            router.push('/')
           }
         }
       } catch (error) {
@@ -394,9 +393,9 @@ export default function AdminPage() {
       const res = await fetch(`/api/partner/admin/products/${selectedProductId}/update-request/approve`, {
         method: "PUT",
         headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}` 
-        }
+          "Content-Type": "application/json"
+        },
+        credentials: 'include'
       })
       if (res.ok) {
         toast.success("수정 요청이 승인되었습니다.")

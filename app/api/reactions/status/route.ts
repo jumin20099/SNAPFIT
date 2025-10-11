@@ -28,8 +28,7 @@ export async function POST(request: NextRequest) {
     
     // 보안: 민감한 정보 로깅 제거
     // console.log('Next.js API 라우트 - 요청 헤더:', {...})
-    })
-
+    
     // 백엔드 API 호출
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
     const headers: HeadersInit = {

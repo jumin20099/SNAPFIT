@@ -248,14 +248,13 @@ export default function BrandDetailPage({ brandId }: BrandDetailPageProps) {
             credentials: 'include', // HttpOnly 쿠키 자동 전송
             cache: 'no-store',
           })
-            if (likedRes.ok) {
-              const likedData = await likedRes.json()
-              if (Array.isArray(likedData)) {
-                liked = likedData.some((item: any) => {
-                  const value = item?.targetIdx ?? item?.brandId
-                  return Number(value) === numericBrandId
-                })
-              }
+          if (likedRes.ok) {
+            const likedData = await likedRes.json()
+            if (Array.isArray(likedData)) {
+              liked = likedData.some((item: any) => {
+                const value = item?.targetIdx ?? item?.brandId
+                return Number(value) === numericBrandId
+              })
             }
           }
         }

@@ -45,14 +45,13 @@ export default function PartnerDashboardPage() {
         const response = await fetch('/api/user/info', {
           credentials: 'include' // HttpOnly 쿠키 자동 전송
         })
-          if (response.ok) {
-            const data = await response.json()
-            setUserInfo(data)
-            
-            // PARTNER 또는 ADMIN 권한이 아니면 홈으로 리다이렉트
-            if (data.role !== 'PARTNER' && data.role !== 'ADMIN') {
-              router.push('/')
-            }
+        if (response.ok) {
+          const data = await response.json()
+          setUserInfo(data)
+          
+          // PARTNER 또는 ADMIN 권한이 아니면 홈으로 리다이렉트
+          if (data.role !== 'PARTNER' && data.role !== 'ADMIN') {
+            router.push('/')
           }
         }
       } catch (error) {

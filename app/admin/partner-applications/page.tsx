@@ -40,16 +40,12 @@ export default function PartnerApplicationsPage() {
     try {
       setLoading(true)
       // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
-// 서버에서 자동으로 인증 처리
-      if (!token) {
-        console.error("토큰이 없습니다.")
-        return
-      }
+      // 서버에서 자동으로 인증 처리
 
       // 백엔드 API 호출 시도
       try {
         const res = await fetch("/api/admin/partner/applications", {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include'
         })
         if (res.ok) {
           const data = await res.json()
@@ -129,11 +125,7 @@ export default function PartnerApplicationsPage() {
     setIsSubmitting(true)
     try {
       // HttpOnly 쿠키를 사용하므로 클라이언트에서 토큰 검증 불가
-// 서버에서 자동으로 인증 처리
-      if (!token) {
-        alert("인증이 필요합니다.")
-        return
-      }
+      // 서버에서 자동으로 인증 처리
 
       // 백엔드 API 호출 시도
       try {
