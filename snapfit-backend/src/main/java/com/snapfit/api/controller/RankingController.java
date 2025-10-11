@@ -28,7 +28,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/ranking")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // CORS 허용
+@CrossOrigin(origins = {"http://localhost:3000", "https://snapfit.app", "https://www.snapfit.app"}, allowCredentials = "true")
 public class RankingController {
 
     private final RankingService rankingService;

@@ -34,9 +34,17 @@ public class MediaUploadServiceImpl implements MediaUploadService {
     public Media uploadMedia(MultipartFile file, String purpose, Long refId) {
         String bucket = null;
         String key = null;
-        String ext = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.'));
-        String originalName = file.getOriginalFilename();
-        String uidName = UUID.randomUUID() + "_" + originalName; // UUID+원본이름 조합
+        // 보안: 원본 파일명에서 확장자만 추출하고 나머지는 무시
+        String originalFilename = file.getOriginalFilename();
+        String ext = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            ext = originalFilename.substring(originalFilename.lastIndexOf('.'));
+        } else {
+            ext = ".bin"; // 확장자가 없는 경우 기본값
+        }
+        
+        // 보안: 서버에서 생성한 안전한 파일명만 사용 (경로 삽입 방지)
+        String uidName = UUID.randomUUID().toString() + ext;
         
         // refId가 0인 경우 (프로필 이미지) 고유한 키 생성
         if (refId == 0L && "profile".equals(purpose)) {

@@ -26,12 +26,8 @@ export async function POST(request: NextRequest) {
     const forwardedFor = request.headers.get('x-forwarded-for')
     const realIp = request.headers.get('x-real-ip')
     
-    console.log('Next.js API 라우트 - 요청 헤더:', {
-      authHeader: authHeader ? '있음' : '없음',
-      cookieHeader: cookieHeader ? '있음' : '없음',
-      forwardedFor,
-      realIp,
-      postIds
+    // 보안: 민감한 정보 로깅 제거
+    // console.log('Next.js API 라우트 - 요청 헤더:', {...})
     })
 
     // 백엔드 API 호출
