@@ -23,15 +23,22 @@ export async function GET(request: NextRequest) {
 
 
     const auth = request.headers.get('authorization') || ''
+    const cookies = request.headers.get('cookie') || ''
     console.log('상품 목록 API - Authorization 헤더:', auth ? '존재함' : '없음')
+    console.log('상품 목록 API - 쿠키:', cookies ? '존재함' : '없음')
+    console.log('상품 목록 API - 백엔드 URL:', backendUrl)
     
     const response = await fetch(backendUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         ...(auth && { Authorization: auth }),
+        // 쿠키 전달
+        'Cookie': cookies,
       },
     })
+    
+    console.log('상품 목록 API - 백엔드 응답 상태:', response.status)
 
 
 
