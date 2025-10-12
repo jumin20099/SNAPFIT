@@ -74,18 +74,18 @@ class ApiClient {
     if (sub) params.append('sub', sub);
     
     const queryString = params.toString();
-    const url = queryString ? `/api/products?${queryString}` : '/api/products';
+    const url = queryString ? `/products?${queryString}` : '/products';
     
     return this.request<Product[]>(url);
   }
 
   async getProductById(id: number): Promise<Product> {
-    return this.request<Product>(`/api/products/${id}`);
+    return this.request<Product>(`/products/${id}`);
   }
 
   async searchProducts(keyword: string, type: string = 'all'): Promise<Product[]> {
     const params = new URLSearchParams({ keyword, type });
-    return this.request<Product[]>(`/api/products/search?${params.toString()}`);
+    return this.request<Product[]>(`/products/search?${params.toString()}`);
   }
 
   // 포스트 관련 API
@@ -94,15 +94,15 @@ class ApiClient {
       page: page.toString(), 
       size: size.toString() 
     });
-    return this.request<PaginatedResponse<Post>>(`/api/posts?${params.toString()}`);
+    return this.request<PaginatedResponse<Post>>(`/posts?${params.toString()}`);
   }
 
   async getPostById(id: number): Promise<Post> {
-    return this.request<Post>(`/api/posts/${id}`);
+    return this.request<Post>(`/posts/${id}`);
   }
 
   async createPost(data: { content: string; imageUrl?: string }): Promise<Post> {
-    return this.request<Post>('/api/posts', {
+    return this.request<Post>('/posts', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -111,7 +111,7 @@ class ApiClient {
   // 좋아요 관련 API
   async toggleLike(targetIdx: number, targetType: 'product' | 'brand' | 'outfit' | 'post'): Promise<{ liked: boolean; count: number }> {
     const payloadType = targetType === 'post' ? 'POST' : targetType;
-    return this.request<{ liked: boolean; count: number }>('/api/likes/toggle', {
+    return this.request<{ liked: boolean; count: number }>('/likes/toggle', {
       method: 'POST',
       body: JSON.stringify({ 
         targetIdx, 
@@ -122,7 +122,7 @@ class ApiClient {
 
   // 스크랩 관련 API
   async toggleScrap(postId: number): Promise<{ scraped: boolean; count: number }> {
-    return this.request<{ scraped: boolean; count: number }>('/api/scraps/toggle', {
+    return this.request<{ scraped: boolean; count: number }>('/scraps/toggle', {
       method: 'POST',
       body: JSON.stringify({ postId }),
     });
@@ -130,7 +130,7 @@ class ApiClient {
 
   // 배치 상태 조회 API
   async getReactionStatus(postIds: number[]): Promise<Record<number, { liked: boolean; scraped: boolean; likeCount: number; scrapCount: number }>> {
-    return this.request<Record<number, { liked: boolean; scraped: boolean; likeCount: number; scrapCount: number }>>('/api/reactions/status', {
+    return this.request<Record<number, { liked: boolean; scraped: boolean; likeCount: number; scrapCount: number }>>('/reactions/status', {
       method: 'POST',
       body: JSON.stringify({ postIds }),
     });
@@ -162,34 +162,34 @@ class ApiClient {
 
   // 알림 관련 API
   async getNotifications(): Promise<{ notifications: Notification[]; unreadCount: number }> {
-    return this.request<{ notifications: Notification[]; unreadCount: number }>('/api/notifications');
+    return this.request<{ notifications: Notification[]; unreadCount: number }>('/notifications');
   }
 
   async markNotificationAsRead(notificationId: string): Promise<void> {
-    return this.request<void>(`/api/notifications/${notificationId}`, {
+    return this.request<void>(`/notifications/${notificationId}`, {
       method: 'PUT',
       body: JSON.stringify({ isRead: true }),
     });
   }
 
   async markAllNotificationsAsRead(): Promise<void> {
-    return this.request<void>('/api/notifications/read-all', {
+    return this.request<void>('/notifications/read-all', {
       method: 'POST',
     });
   }
 
   // 상점 관련 API
   async getStores(): Promise<Store[]> {
-    return this.request<Store[]>('/api/admin/stores/list');
+    return this.request<Store[]>('/admin/stores/list');
   }
 
   // 사용자 관련 API
   async getUserInfo(): Promise<User> {
-    return this.request<User>('/api/user/info');
+    return this.request<User>('/user/info');
   }
 
   async updateUserProfile(data: Partial<User>): Promise<User> {
-    return this.request<User>('/api/user/profile', {
+    return this.request<User>('/user/profile', {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -198,7 +198,7 @@ class ApiClient {
   // 리뷰 관련 API
   async createReview(productId: string | number, data: { rating: number; content: string; images: string[] }): Promise<any> {
     const id = typeof productId === 'string' ? parseInt(productId) : productId;
-    return this.request<any>(`/api/products/${id}/reviews`, {
+    return this.request<any>(`/products/${id}/reviews`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -210,19 +210,19 @@ class ApiClient {
       page: page.toString(), 
       size: size.toString() 
     });
-    return this.request<any>(`/api/products/${id}/reviews?${params.toString()}`);
+    return this.request<any>(`/products/${id}/reviews?${params.toString()}`);
   }
 
   async toggleReviewHelpful(productId: string | number, reviewId: number): Promise<any> {
     const id = typeof productId === 'string' ? parseInt(productId) : productId;
-    return this.request<any>(`/api/products/${id}/reviews/${reviewId}/helpful`, {
+    return this.request<any>(`/products/${id}/reviews/${reviewId}/helpful`, {
       method: 'POST',
     });
   }
 
   async updateReview(productId: string | number, reviewId: number, data: { rating: number; content: string; images: string[] }): Promise<any> {
     const id = typeof productId === 'string' ? parseInt(productId) : productId;
-    return this.request<any>(`/api/products/${id}/reviews/${reviewId}`, {
+    return this.request<any>(`/products/${id}/reviews/${reviewId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -231,14 +231,14 @@ class ApiClient {
   async deleteReview(productId: string | number, reviewId: number): Promise<void> {
     const id = typeof productId === 'string' ? parseInt(productId) : productId;
     console.log('리뷰 삭제 요청:', { productId: id, reviewId });
-    return this.request<void>(`/api/products/${id}/reviews/${reviewId}`, {
+    return this.request<void>(`/products/${id}/reviews/${reviewId}`, {
       method: 'DELETE',
     });
   }
 
   // 문의 관련 API
   async createInquiry(productId: number, data: { title: string; content: string; isPrivate: boolean }): Promise<any> {
-    return this.request<any>(`/api/products/${productId}/inquiries`, {
+    return this.request<any>(`/products/${productId}/inquiries`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -249,18 +249,18 @@ class ApiClient {
       page: page.toString(), 
       size: size.toString() 
     });
-    return this.request<any>(`/api/products/${productId}/inquiries?${params.toString()}`);
+    return this.request<any>(`/products/${productId}/inquiries?${params.toString()}`);
   }
 
   async answerInquiry(productId: number, inquiryId: number, answer: string): Promise<any> {
-    return this.request<any>(`/api/products/${productId}/inquiries/${inquiryId}/answer`, {
+    return this.request<any>(`/products/${productId}/inquiries/${inquiryId}/answer`, {
       method: 'POST',
       body: JSON.stringify({ answer }),
     });
   }
 
   async deleteInquiry(productId: number, inquiryId: number): Promise<void> {
-    return this.request<void>(`/api/products/${productId}/inquiries/${inquiryId}`, {
+    return this.request<void>(`/products/${productId}/inquiries/${inquiryId}`, {
       method: 'DELETE',
     });
   }
@@ -271,7 +271,7 @@ class ApiClient {
       page: page.toString(),
       size: size.toString()
     });
-    return this.request<any>(`/api/outfits/user/${userId}?${params.toString()}`);
+    return this.request<any>(`/outfits/user/${userId}?${params.toString()}`);
   }
 
   // 사이즈 관련 API
@@ -280,19 +280,19 @@ class ApiClient {
     if (inStockOnly) {
       params.append('inStockOnly', 'true');
     }
-    return this.request<SizeVariant[]>(`/api/products/${productId}/sizes?${params.toString()}`);
+    return this.request<SizeVariant[]>(`/products/${productId}/sizes?${params.toString()}`);
   }
 
   async getSizeVariant(productId: number, sizeVariantId: number): Promise<SizeVariant> {
-    return this.request<SizeVariant>(`/api/products/${productId}/sizes/${sizeVariantId}`);
+    return this.request<SizeVariant>(`/products/${productId}/sizes/${sizeVariantId}`);
   }
 
   async getSizeVariantBySku(sku: string): Promise<SizeVariant> {
-    return this.request<SizeVariant>(`/api/products/sizes/sku/${sku}`);
+    return this.request<SizeVariant>(`/products/sizes/sku/${sku}`);
   }
 
   async getLowStockSizes(productId: number): Promise<SizeVariant[]> {
-    return this.request<SizeVariant[]>(`/api/products/${productId}/sizes/low-stock`);
+    return this.request<SizeVariant[]>(`/products/${productId}/sizes/low-stock`);
   }
 }
 
