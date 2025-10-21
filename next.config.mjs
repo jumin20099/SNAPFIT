@@ -1,4 +1,5 @@
 import withBundleAnalyzer from '@next/bundle-analyzer';
+import path from 'path';
 
 const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
@@ -27,6 +28,13 @@ const nextConfig = {
         fs: false,
       };
     }
+    
+    // 경로 별칭 추가
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(process.cwd(), './src'),
+      '@/api': path.resolve(process.cwd(), './app/api'),
+    };
     
     return config;
   },
@@ -77,10 +85,6 @@ const nextConfig = {
       {
         source: '/api/partner/admin/:path*',
         destination: `${backendUrl}/api/partner/admin/:path*`
-      },
-      {
-        source: '/api/admin/stores/:path*',
-        destination: `${backendUrl}/api/admin/stores/:path*`
       },
       {
         source: '/api/admin/products/:path*',

@@ -44,6 +44,12 @@ public class ReactionController {
             @AuthenticationPrincipal CustomUserDetails principal,
             @CookieValue(value = "snapfit_guest_id", required = false) String guestToken) {
         
+        // 인증되지 않은 사용자의 경우 빈 응답 반환
+        if (principal == null) {
+            log.info("인증되지 않은 사용자입니다. 빈 반응 상태를 반환합니다.");
+            return ResponseEntity.ok(Map.of());
+        }
+        
         @SuppressWarnings("unchecked")
         List<Integer> postIdsRaw = (List<Integer>) request.get("postIds");
         @SuppressWarnings("unchecked")

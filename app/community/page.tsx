@@ -38,6 +38,15 @@ export default function CommunityPage() {
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false)
   const [totalCount, setTotalCount] = useState(0)
   const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined)
+  const handleCreatePost = useCallback(() => {
+    if (activeTab === 'questions') {
+      router.push('/community/questions/create')
+    } else if (activeTab === 'info') {
+      router.push('/community/info/create')
+    } else {
+      router.push('/community/create')
+    }
+  }, [activeTab, router])
 
   const handlePostClick = useCallback((postId: number) => {
     router.push(`/community/${postId}`)
@@ -142,8 +151,14 @@ export default function CommunityPage() {
         <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
 
           <TabsContent value="outfits" className="m-0">
-            <div className="mb-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <span className="text-gray-600">{totalCount.toLocaleString()}개</span>
+              <Button
+                onClick={handleCreatePost}
+                className="bg-light-accent dark:bg-dark-accent hover:bg-light-accent/90 dark:hover:bg-dark-accent/90 text-white px-4 py-2 rounded-lg font-medium whitespace-nowrap"
+              >
+                글 작성
+              </Button>
             </div>
 
             <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2">
@@ -185,8 +200,14 @@ export default function CommunityPage() {
           </TabsContent>
 
           <TabsContent value="questions" className="m-0">
-            <div className="mb-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <span className="text-gray-600">{totalCount.toLocaleString()}개</span>
+              <Button
+                onClick={handleCreatePost}
+                className="bg-light-accent dark:bg-dark-accent hover:bg-light-accent/90 dark:hover:bg-dark-accent/90 text-white px-4 py-2 rounded-lg font-medium whitespace-nowrap"
+              >
+                글 작성
+              </Button>
             </div>
 
             <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2">
@@ -218,8 +239,14 @@ export default function CommunityPage() {
           </TabsContent>
 
           <TabsContent value="info" className="m-0">
-            <div className="mb-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <span className="text-gray-600">{totalCount.toLocaleString()}개</span>
+              <Button
+                onClick={handleCreatePost}
+                className="bg-light-accent dark:bg-dark-accent hover:bg-light-accent/90 dark:hover:bg-dark-accent/90 text-white px-4 py-2 rounded-lg font-medium whitespace-nowrap"
+              >
+                글 작성
+              </Button>
             </div>
 
             <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2">

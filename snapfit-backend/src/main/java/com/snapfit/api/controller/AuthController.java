@@ -1,11 +1,10 @@
 package com.snapfit.api.controller;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -13,10 +12,10 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 
 import com.snapfit.api.entity.User;
 import com.snapfit.api.repository.UserRepository;
@@ -38,7 +37,7 @@ public class AuthController {
     private KakaoUtil kakaoUtil;
 
     @GetMapping("/login/kakao")
-    public ResponseEntity<?> kakaoLogin(@RequestParam String code) {
+    public ResponseEntity<?> kakaoLogin(@RequestParam String code, HttpServletRequest request) {
         if (kakaoUtil == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "Kakao 로그인이 설정되지 않았습니다."));
         }
@@ -61,22 +60,25 @@ public class AuthController {
         String accessToken = jwtUtil.generateAccessToken(email, user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(email);
 
-        // Access Token을 HTTP-only 쿠키로 설정 (개발 환경에서는 secure=false)
+        boolean secureCookie = shouldUseSecureCookies(request);
+        String sameSite = secureCookie ? "Strict" : "Lax";
+
+        // Access Token을 HTTP-only 쿠키로 설정 (환경에 따라 secure/sameSite 결정)
         ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
             .httpOnly(true)
-            .secure(false) // 개발 환경에서는 HTTP에서도 작동하도록
-            .sameSite("Lax")
+            .secure(secureCookie)
+            .sameSite(sameSite)
             .path("/")
-            .maxAge(30 * 60) // 30분
+            .maxAge(Duration.ofMinutes(30))
             .build();
 
-        // Refresh Token을 HTTP-only 쿠키로 설정 (개발 환경에서는 secure=false)
+        // Refresh Token을 HTTP-only 쿠키로 설정 (환경에 따라 secure/sameSite 결정)
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
             .httpOnly(true)
-            .secure(false) // 개발 환경에서는 HTTP에서도 작동하도록
-            .sameSite("Lax")
+            .secure(secureCookie)
+            .sameSite(sameSite)
             .path("/")
-            .maxAge(7 * 24 * 60 * 60) // 7일
+            .maxAge(Duration.ofDays(7))
             .build();
 
         return ResponseEntity.ok()
@@ -90,7 +92,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal User user) {
+    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal User user, HttpServletRequest request) {
         if (user == null) {
             return ResponseEntity.ok().body(Map.of("message", "로그인이 필요합니다."));
         }
@@ -98,22 +100,25 @@ public class AuthController {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
         
-        // Access Token을 HTTP-only 쿠키로 설정 (개발 환경에서는 secure=false)
+        boolean secureCookie = shouldUseSecureCookies(request);
+        String sameSite = secureCookie ? "Strict" : "Lax";
+
+        // Access Token을 HTTP-only 쿠키로 설정 (환경에 따라 secure/sameSite 결정)
         ResponseCookie accessCookie = ResponseCookie.from("access_token", accessToken)
             .httpOnly(true)
-            .secure(false) // 개발 환경에서는 HTTP에서도 작동하도록
-            .sameSite("Lax") // 개발 환경에서는 Lax로 설정
+            .secure(secureCookie)
+            .sameSite(sameSite)
             .path("/")
-            .maxAge(30 * 60) // 30분
+            .maxAge(Duration.ofMinutes(30))
             .build();
 
-        // Refresh Token을 HTTP-only 쿠키로 설정 (개발 환경에서는 secure=false)
+        // Refresh Token을 HTTP-only 쿠키로 설정 (환경에 따라 secure/sameSite 결정)
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
             .httpOnly(true)
-            .secure(false) // 개발 환경에서는 HTTP에서도 작동하도록
-            .sameSite("Lax") // 개발 환경에서는 Lax로 설정
+            .secure(secureCookie)
+            .sameSite(sameSite)
             .path("/")
-            .maxAge(7 * 24 * 60 * 60) // 7일
+            .maxAge(Duration.ofDays(7))
             .build();
 
         return ResponseEntity.ok()
@@ -127,12 +132,15 @@ public class AuthController {
     }
 
     @GetMapping("/logout")
-    public ResponseEntity<?> logout() {
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        boolean secureCookie = shouldUseSecureCookies(request);
+        String sameSite = secureCookie ? "Strict" : "Lax";
+
         // Access Token 쿠키 제거
         ResponseCookie accessCookie = ResponseCookie.from("access_token", "")
             .httpOnly(true)
-            .secure(false)
-            .sameSite("Lax")
+            .secure(secureCookie)
+            .sameSite(sameSite)
             .path("/")
             .maxAge(0)
             .build();
@@ -140,8 +148,8 @@ public class AuthController {
         // Refresh Token 쿠키 제거
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", "")
             .httpOnly(true)
-            .secure(false)
-            .sameSite("Lax")
+            .secure(secureCookie)
+            .sameSite(sameSite)
             .path("/")
             .maxAge(0)
             .build();
@@ -169,7 +177,8 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(
-            @CookieValue(value = "refresh_token", required = false) String refreshTokenFromCookie) {
+            @CookieValue(value = "refresh_token", required = false) String refreshTokenFromCookie,
+            HttpServletRequest request) {
         try {
             // 보안: 쿠키에서만 Refresh Token 가져오기 (JSON 본문에서 받지 않음)
             String refreshToken = refreshTokenFromCookie;
@@ -192,12 +201,15 @@ public class AuthController {
             String newAccessToken = jwtUtil.generateAccessToken(email, user.getRole().name());
             
             // 새로운 Access Token을 HTTP-only 쿠키로 설정 (보안 강화)
+            boolean secureCookie = shouldUseSecureCookies(request);
+            String sameSite = secureCookie ? "Strict" : "Lax";
+
             ResponseCookie accessCookie = ResponseCookie.from("access_token", newAccessToken)
                 .httpOnly(true)
-                .secure(true) // 프로덕션 환경에서 보안 강화
-                .sameSite("Strict") // CSRF 공격 방지 강화
+                .secure(secureCookie)
+                .sameSite(sameSite)
                 .path("/")
-                .maxAge(30 * 60) // 30분
+                .maxAge(Duration.ofMinutes(30))
                 .build();
 
             return ResponseEntity.ok()
@@ -215,4 +227,15 @@ public class AuthController {
 
     // 보안: 테스트 토큰 엔드포인트 제거됨
     // @GetMapping("/test-token") - 프로덕션에서 제거
+
+    private boolean shouldUseSecureCookies(HttpServletRequest request) {
+        if (request == null) {
+            return true;
+        }
+        String forwardedProto = request.getHeader("X-Forwarded-Proto");
+        if (forwardedProto != null && "https".equalsIgnoreCase(forwardedProto)) {
+            return true;
+        }
+        return request.isSecure();
+    }
 }

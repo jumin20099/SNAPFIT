@@ -1,28 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateCsrfToken } from '@/lib/csrf-utils'
+import { extractCsrfHeader } from '@/api/_utils/auth'
+import { fetchBackendWithAuth } from '@/api/_utils/backend-fetch'
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.headers.get('authorization')?.replace('Bearer ', '')
-    
-    if (!token) {
-      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
-    }
-
-    // 백엔드 API 호출
-    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:8080'}/api/admin/products/list`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const { response, refreshedCookie } = await fetchBackendWithAuth(request, {
+      path: '/api/admin/products/list',
+      init: {
+        headers: {
+          'Content-Type': 'application/json',
+        },
       },
     })
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
+      }
       throw new Error(`백엔드 API 오류: ${response.status}`)
     }
 
     const data = await response.json()
-    return NextResponse.json(data)
+    const nextResponse = NextResponse.json(data)
+    if (refreshedCookie) {
+      nextResponse.headers.append('set-cookie', refreshedCookie)
+    }
+    return nextResponse
   } catch (error) {
     console.error('어드민 상품 목록 조회 오류:', error)
     return NextResponse.json(
@@ -34,38 +37,32 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // CSRF 토큰 검증
-    const isValidCsrf = await validateCsrfToken(request)
-    if (!isValidCsrf) {
-      return NextResponse.json(
-        { error: 'CSRF 토큰이 유효하지 않습니다' },
-        { status: 403 }
-      )
-    }
-
-    
-    const token = request.headers.get('authorization')?.replace('Bearer ', '')
-    
-    if (!token) {
-      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
-    }
-
     const body = await request.json()
+    const csrfHeader = extractCsrfHeader(request)
 
-    // 백엔드 API 호출
-    const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:8080'}/api/admin/products/add`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const { response, refreshedCookie } = await fetchBackendWithAuth(request, {
+      path: '/api/admin/products/add',
+      init: {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfHeader ? { 'X-CSRF-TOKEN': csrfHeader } : {}),
+        },
+        body: JSON.stringify(body),
       },
-      body: JSON.stringify(body),
     })
 
     if (response.ok) {
       const data = await response.json()
-      return NextResponse.json(data)
+      const nextResponse = NextResponse.json(data)
+      if (refreshedCookie) {
+        nextResponse.headers.append('set-cookie', refreshedCookie)
+      }
+      return nextResponse
     } else {
+      if (response.status === 401) {
+        return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
+      }
       console.warn(`백엔드 API 응답 오류: ${response.status}`)
       return NextResponse.json(
         { error: '상품 추가에 실패했습니다.' },

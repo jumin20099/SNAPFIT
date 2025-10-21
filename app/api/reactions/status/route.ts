@@ -1,18 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateCsrfToken } from '@/lib/csrf-utils'
 
 export async function POST(request: NextRequest) {
   try {
-    // CSRF 토큰 검증
-    const isValidCsrf = await validateCsrfToken(request)
-    if (!isValidCsrf) {
-      return NextResponse.json(
-        { error: 'CSRF 토큰이 유효하지 않습니다' },
-        { status: 403 }
-      )
-    }
-
-    
     const { postIds, productIds, commentIds } = await request.json()
     
     if ((!postIds || !Array.isArray(postIds)) && 
@@ -25,6 +14,7 @@ export async function POST(request: NextRequest) {
     const cookieHeader = request.headers.get('cookie')
     const forwardedFor = request.headers.get('x-forwarded-for')
     const realIp = request.headers.get('x-real-ip')
+    const csrfHeader = request.headers.get('x-csrf-token')
     
     // 보안: 민감한 정보 로깅 제거
     // console.log('Next.js API 라우트 - 요청 헤더:', {...})
@@ -46,6 +36,9 @@ export async function POST(request: NextRequest) {
     }
     if (realIp) {
       headers['X-Real-IP'] = realIp
+    }
+    if (csrfHeader) {
+      headers['X-CSRF-TOKEN'] = csrfHeader
     }
 
     const response = await fetch(`${backendUrl}/api/reactions/status`, {

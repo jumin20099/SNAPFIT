@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { validateCsrfToken } from '@/lib/csrf-utils'
+import { extractBearerToken } from '@/api/_utils/auth'
 
 // 절대 경로로 변경
 const BACKEND = process.env.BACKEND_ORIGIN ?? 'http://localhost:8080'
@@ -7,16 +7,19 @@ const BACKEND = process.env.BACKEND_ORIGIN ?? 'http://localhost:8080'
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const token = extractTokenFromRequest(req)
-  if (!token) {
-    return new Response(JSON.stringify({ code: 'UNAUTHORIZED', message: 'Missing access token' }), { status: 401 })
+  const token = extractBearerToken(req)
+  
+  // 토큰이 없어도 백엔드로 요청을 보내서 빈 알림 목록을 받을 수 있도록 함
+  const headers: Record<string, string> = { 
+    'Content-Type': 'application/json'
+  }
+  
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
   }
   
   const res = await fetch(`${BACKEND}/api/notifications`, {
-    headers: { 
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` 
-    },
+    headers,
     cache: 'no-store',
   })
   
@@ -28,7 +31,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const token = extractTokenFromRequest(req)
+  const token = extractBearerToken(req)
   if (!token) {
     return new Response(JSON.stringify({ code: 'UNAUTHORIZED', message: 'Missing access token' }), { status: 401 })
   }
@@ -50,19 +53,4 @@ export async function DELETE(req: NextRequest) {
     status: 200,
     headers: { 'Content-Type': 'application/json' }
   })
-}
-
-// 임시로 여기에 토큰 추출 함수 정의
-function extractTokenFromRequest(req: NextRequest): string | null {
-  // 1) 클라이언트가 보낸 Authorization
-  const h = req.headers.get('authorization')
-  if (h?.startsWith('Bearer ')) return h.slice(7)
-
-  // 2) 서버측 쿠키(권장: HTTP-Only로 세팅)
-  const fromCookie = req.cookies.get('access_token')?.value // AuthController에서 발급하는 쿠키 이름
-  if (fromCookie) return fromCookie
-
-  // 3) (임시) 쿼리파라미터 토큰 - SSE 등
-  const fromQuery = req.nextUrl.searchParams.get('token')
-  return fromQuery
 }

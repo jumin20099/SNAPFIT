@@ -310,9 +310,10 @@ export default function CreatePostPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => router.back()}
-                className="p-2"
+                className="flex items-center gap-2 px-3"
               >
                 <ArrowLeft className="w-5 h-5" />
+                <span>뒤로가기</span>
               </Button>
               <h1 className="text-lg font-semibold">{isEditMode ? '글 수정' : '글 작성'}</h1>
             </div>

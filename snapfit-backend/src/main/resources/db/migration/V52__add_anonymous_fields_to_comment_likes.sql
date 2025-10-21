@@ -8,3 +8,4 @@ ALTER TABLE comment_likes ADD CONSTRAINT uk_comment_likes_anonymous
 UNIQUE (comment_id, anonymous_index);
 
 
+

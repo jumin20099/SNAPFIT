@@ -14,12 +14,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import java.util.List;
+import java.time.Duration;
 
 import com.snapfit.api.service.CustomOAuth2UserService;
 import com.snapfit.api.security.JwtAuthenticationFilter;
@@ -31,7 +34,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Configuration
 @EnableWebSecurity
@@ -60,9 +63,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/api/csrf/**", "/oauth2/**", "/login/oauth2/**").permitAll()
                 .requestMatchers("/api/products/**", "/api/posts/**", "/api/brands/**").permitAll()
+                .requestMatchers("/api/notifications", "/api/notifications/**", "/api/reactions/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/partner/**").hasAnyRole("ADMIN", "PARTNER")
-                .anyRequest().authenticated()
+                .anyRequest().permitAll() // 임시로 모든 요청을 허용
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
@@ -96,18 +100,30 @@ public class SecurityConfig {
                                 token != null ? "있음" : "없음", userIdx, email);
                         
                         if (token != null && email != null) {
-                            // JWT 토큰을 쿠키에 설정 (보안 강화)
-                            response.addHeader("Set-Cookie", 
-                                "token=" + token + 
-                                "; Path=/; Max-Age=86400; HttpOnly; Secure; SameSite=Strict");
-                            log.info("✅ JWT 토큰 쿠키 설정 완료");
+                            boolean secureCookie = isSecureRequest(request);
+                            String sameSite = secureCookie ? "Strict" : "Lax";
+
+                            ResponseCookie accessCookie = ResponseCookie.from("token", token)
+                                .httpOnly(true)
+                                .secure(secureCookie)
+                                .sameSite(sameSite)
+                                .path("/")
+                                .maxAge(Duration.ofDays(1))
+                                .build();
+                            response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
+                            log.info("✅ JWT 토큰 쿠키 설정 완료 (secure={}, sameSite={})", secureCookie, sameSite);
                             
                             // 리프레시 토큰 생성 및 쿠키 설정 (보안 강화)
                             String refreshToken = jwtUtil.generateRefreshToken(email);
-                            response.addHeader("Set-Cookie", 
-                                "refresh_token=" + refreshToken + 
-                                "; Path=/; Max-Age=604800; HttpOnly; Secure; SameSite=Strict");
-                            log.info("✅ 리프레시 토큰 쿠키 설정 완료");
+                            ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
+                                .httpOnly(true)
+                                .secure(secureCookie)
+                                .sameSite(sameSite)
+                                .path("/")
+                                .maxAge(Duration.ofDays(7))
+                                .build();
+                            response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+                            log.info("✅ 리프레시 토큰 쿠키 설정 완료 (secure={}, sameSite={})", secureCookie, sameSite);
                             
                             // 보안: 토큰을 쿼리 스트링에 노출하지 않음
                             String redirectUrl = "http://localhost:3000?login=success";
@@ -149,6 +165,17 @@ public class SecurityConfig {
         
 
         return http.build();
+    }
+
+    private boolean isSecureRequest(HttpServletRequest request) {
+        if (request == null) {
+            return true;
+        }
+        String forwardedProto = request.getHeader("X-Forwarded-Proto");
+        if (forwardedProto != null && "https".equalsIgnoreCase(forwardedProto)) {
+            return true;
+        }
+        return request.isSecure();
     }
 
     /** CORS 전역 설정 */

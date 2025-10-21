@@ -2,11 +2,10 @@
 
 import React, { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Bell, Search, User, ChevronDown } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Bell, Search, User } from 'lucide-react'
 import { NotificationModal } from '@/components/ui/NotificationModal'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface CommunityHeaderProps {
   activeTab: 'outfits' | 'questions' | 'info'
@@ -64,20 +63,6 @@ export default function CommunityHeader({
           <div className="flex items-center justify-between">
             <div className="font-bold text-2xl text-light-accent dark:text-dark-accent">SNAP</div>
             <div className="flex items-center gap-4">
-              <Button
-                onClick={() => {
-                  if (activeTab === 'questions') {
-                    router.push('/community/questions/create')
-                  } else if (activeTab === 'info') {
-                    router.push('/community/info/create')
-                  } else {
-                    router.push('/community/create')
-                  }
-                }}
-                className="bg-light-accent dark:bg-dark-accent hover:bg-light-accent/90 dark:hover:bg-dark-accent/90 text-white px-4 py-2 rounded-lg font-medium"
-              >
-                글 작성
-              </Button>
               <button
                 onClick={onSearchToggle}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-dark-border rounded-full transition-colors"

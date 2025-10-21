@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -63,6 +64,7 @@ public class NotificationController {
      * 사용자의 알림 목록을 가져옵니다
      */
     @GetMapping
+    @PreAuthorize("permitAll()")
     public ResponseEntity<List<NotificationResponseDto>> getNotifications(
             @AuthenticationPrincipal UserDetails userDetails,
             HttpServletRequest request) {
@@ -108,14 +110,19 @@ public class NotificationController {
             }
             
             if (userId == null) {
-                log.error("사용자 ID를 추출할 수 없습니다");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+                log.info("사용자 ID를 추출할 수 없습니다. 빈 알림 목록을 반환합니다.");
+                return ResponseEntity.ok(List.of());
             }
             
-            UUID userUuid = UUID.fromString(userId);
-            List<NotificationResponseDto> notifications = notificationService.getUserNotifications(userUuid);
-            log.info("알림 목록 조회 성공: {}개", notifications.size());
-            return ResponseEntity.ok(notifications);
+            try {
+                UUID userUuid = UUID.fromString(userId);
+                List<NotificationResponseDto> notifications = notificationService.getUserNotifications(userUuid);
+                log.info("알림 목록 조회 성공: {}개", notifications.size());
+                return ResponseEntity.ok(notifications);
+            } catch (IllegalArgumentException e) {
+                log.warn("잘못된 사용자 ID 형식: {}. 빈 알림 목록을 반환합니다.", userId);
+                return ResponseEntity.ok(List.of());
+            }
         } catch (Exception e) {
             log.error("알림 목록 조회 실패: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();

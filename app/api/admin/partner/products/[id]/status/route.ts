@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateCsrfToken } from '@/lib/csrf-utils'
-
-const API_BASE = process.env.API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:8080'
+import { extractCsrfHeader } from '@/api/_utils/auth'
+import { fetchBackendWithAuth } from '@/api/_utils/backend-fetch'
 
 export async function GET() {
   return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405 })
@@ -10,17 +9,28 @@ export async function GET() {
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params
   const body = await request.json()
-  const auth = request.headers.get('authorization')
+  const csrfHeader = extractCsrfHeader(request)
 
-  const res = await fetch(`${API_BASE}/api/admin/products/${id}/status`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(auth && { Authorization: auth }),
+  const { response, refreshedCookie } = await fetchBackendWithAuth(request, {
+    path: `/api/admin/products/${id}/status`,
+    init: {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(csrfHeader ? { 'X-CSRF-TOKEN': csrfHeader } : {}),
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
   })
 
-  const data = await res.json()
-  return NextResponse.json(data, { status: res.status })
+  if (response.status === 401) {
+    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
+  }
+
+  const data = await response.json()
+  const nextResponse = NextResponse.json(data, { status: response.status })
+  if (refreshedCookie) {
+    nextResponse.headers.append('set-cookie', refreshedCookie)
+  }
+  return nextResponse
 }

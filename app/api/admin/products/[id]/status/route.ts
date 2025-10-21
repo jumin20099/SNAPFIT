@@ -1,55 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateCsrfToken } from '@/lib/csrf-utils'
+import { extractCsrfHeader } from '@/api/_utils/auth'
+import { fetchBackendWithAuth } from '@/api/_utils/backend-fetch'
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // CSRF 토큰 검증
-    const isValidCsrf = await validateCsrfToken(request)
-    if (!isValidCsrf) {
-      return NextResponse.json(
-        { error: 'CSRF 토큰이 유효하지 않습니다' },
-        { status: 403 }
-      )
-    }
+    const { id } = params
+    const body = await request.json()
+    const csrfHeader = extractCsrfHeader(request)
 
-    
-    const token = request.headers.get('authorization')?.replace('Bearer ', '')
-    
-    if (!token) {
+    const { response, refreshedCookie } = await fetchBackendWithAuth(request, {
+      path: `/api/admin/products/${id}/status`,
+      init: {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfHeader ? { 'X-CSRF-TOKEN': csrfHeader } : {}),
+        },
+        body: JSON.stringify(body),
+      },
+    })
+
+    if (response.status === 401) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
     }
 
-    const { id } = params
-    const body = await request.json()
-
-    // 백엔드 API 호출 시도
-    try {
-      const response = await fetch(`${process.env.BACKEND_URL || 'http://localhost:8080'}/api/admin/products/${id}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
+    if (!response.ok) {
+      console.warn('백엔드 API 호출 실패, mock 응답 사용:', response.status)
+      return NextResponse.json({ 
+        success: true, 
+        message: `상품 ${id}의 상태가 변경되었습니다.`,
+        isActive: body.isActive 
       })
-
-      if (response.ok) {
-        const data = await response.json()
-        return NextResponse.json(data)
-      }
-    } catch (backendError) {
-      console.warn('백엔드 API 호출 실패, mock 응답 사용:', backendError)
     }
 
-    // 백엔드 API가 없을 때 성공 응답 반환
-    return NextResponse.json({ 
-      success: true, 
-      message: `상품 ${id}의 상태가 변경되었습니다.`,
-      isActive: body.isActive 
-    })
+    const data = await response.json()
+    const nextResponse = NextResponse.json(data)
+    if (refreshedCookie) {
+      nextResponse.headers.append('set-cookie', refreshedCookie)
+    }
+    return nextResponse
   } catch (error) {
     console.error('어드민 상품 상태 변경 오류:', error)
     return NextResponse.json(

@@ -1,22 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateCsrfToken } from '@/lib/csrf-utils'
+import { extractBearerToken, extractCsrfHeader } from '@/api/_utils/auth'
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // CSRF 토큰 검증
-    const isValidCsrf = await validateCsrfToken(request)
-    if (!isValidCsrf) {
-      return NextResponse.json(
-        { error: 'CSRF 토큰이 유효하지 않습니다' },
-        { status: 403 }
-      )
-    }
-
-    
-    const token = request.headers.get('authorization')?.replace('Bearer ', '')
+    const token = extractBearerToken(request)
     
     if (!token) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
@@ -24,6 +14,7 @@ export async function PUT(
 
     const { id } = params
     const body = await request.json()
+    const csrfHeader = extractCsrfHeader(request)
 
     // 백엔드 API 호출 시도
     try {
@@ -32,6 +23,7 @@ export async function PUT(
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          ...(csrfHeader ? { 'X-CSRF-TOKEN': csrfHeader } : {}),
         },
         body: JSON.stringify(body),
       })

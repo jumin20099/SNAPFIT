@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { X, Upload, Image as ImageIcon, AlertCircle } from 'lucide-react'
+import { X, Upload, Image as ImageIcon, AlertCircle, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import ApiClient from '@/shared/utils/api-client'
 
@@ -130,6 +130,17 @@ export default function CreateInfoPage({}: CreateInfoProps) {
   return (
     <div className="min-h-screen bg-light-bg dark:bg-dark-bg pb-20">
       <div className="mx-auto max-w-4xl p-4">
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.back()}
+            className="flex items-center gap-2 px-3"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>뒤로가기</span>
+          </Button>
+        </div>
         {/* 헤더 */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
